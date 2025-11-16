@@ -4,6 +4,8 @@ const state = {
   article: null,
   currentBlockId: null,
   editingBlockId: null,
+  undoStack: [],
+  redoStack: [],
 };
 
 const refs = {
@@ -78,6 +80,8 @@ async function loadListView() {
   state.currentBlockId = null;
   state.mode = 'view';
   state.editingBlockId = null;
+  state.undoStack = [];
+  state.redoStack = [];
   setViewMode(false);
   try {
     const articles = await apiRequest('/api/articles');
@@ -106,13 +110,17 @@ async function loadListView() {
 }
 
 async function loadArticle(id, options = {}) {
-  const { desiredBlockId } = options;
+  const { desiredBlockId, resetUndoStacks } = options;
   const switchingArticle = state.articleId !== id;
   state.articleId = id;
   state.mode = state.mode === 'edit' ? 'view' : state.mode;
   state.editingBlockId = null;
   const article = await apiRequest(`/api/articles/${id}`);
   state.article = article;
+  const shouldResetUndo = typeof resetUndoStacks === 'boolean' ? resetUndoStacks : switchingArticle;
+  if (shouldResetUndo) {
+    hydrateUndoRedoFromArticle(article);
+  }
   if (desiredBlockId) {
     const desired = findBlock(desiredBlockId);
     if (desired) {
@@ -130,7 +138,7 @@ async function loadArticleView(id) {
   setViewMode(true);
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
-    await loadArticle(id);
+    await loadArticle(id, { resetUndoStacks: true });
     renderArticle();
     renderArticleActions();
   } catch (error) {
@@ -418,18 +426,30 @@ async function startEditing() {
 
 async function saveEditing() {
   if (state.mode !== 'edit' || !state.editingBlockId) return;
+  const editedBlockId = state.editingBlockId;
+  const previousText = findBlock(editedBlockId)?.block.text || '';
   const textElement = document.querySelector(
     `.block[data-block-id="${state.editingBlockId}"] .block-text`,
   );
   const newText = textElement?.innerHTML || '';
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.editingBlockId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ text: newText }),
-    });
+    const updatedBlock = await apiRequest(
+      `/api/articles/${state.articleId}/blocks/${state.editingBlockId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ text: newText }),
+      },
+    );
     state.mode = 'view';
     state.editingBlockId = null;
-    await loadArticle(state.articleId);
+    if (previousText !== newText) {
+      pushUndoEntry({
+        type: 'text',
+        blockId: editedBlockId,
+        historyEntryId: updatedBlock?.historyEntryId || null,
+      });
+    }
+    await loadArticle(state.articleId, { desiredBlockId: editedBlockId });
     renderArticle();
     showToast('Блок обновлён');
   } catch (error) {
@@ -513,50 +533,236 @@ async function deleteCurrentBlock() {
   }
 }
 
-async function moveCurrentBlock(direction) {
-  if (!state.currentBlockId || !['up', 'down'].includes(direction)) return;
+async function moveBlock(blockId, direction, options = {}) {
+  if (!blockId || !['up', 'down'].includes(direction)) return false;
+  const { skipRecord = false } = options;
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/move`, {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move`, {
       method: 'POST',
       body: JSON.stringify({ direction }),
     });
-    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
+    await loadArticle(state.articleId, { desiredBlockId: blockId });
     renderArticle();
+    if (!skipRecord) {
+      pushUndoEntry({ type: 'structure', action: { kind: 'move', blockId, direction } });
+    }
+    return true;
   } catch (error) {
     showToast(error.message);
+    return false;
   }
 }
 
-async function indentCurrentBlock() {
-  if (!state.currentBlockId) return;
+function moveCurrentBlock(direction) {
+  return moveBlock(state.currentBlockId, direction);
+}
+
+async function indentBlock(blockId, options = {}) {
+  if (!blockId) return false;
+  const { skipRecord = false } = options;
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/indent`, {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/indent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
+    await loadArticle(state.articleId, { desiredBlockId: blockId });
     renderArticle();
+    if (!skipRecord) {
+      pushUndoEntry({ type: 'structure', action: { kind: 'indent', blockId } });
+    }
+    return true;
   } catch (error) {
     showToast(error.message);
+    return false;
   }
 }
 
-async function outdentCurrentBlock() {
-  if (!state.currentBlockId) return;
+function indentCurrentBlock() {
+  return indentBlock(state.currentBlockId);
+}
+
+async function outdentBlock(blockId, options = {}) {
+  if (!blockId) return false;
+  const { skipRecord = false } = options;
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/outdent`, {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/outdent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
+    await loadArticle(state.articleId, { desiredBlockId: blockId });
     renderArticle();
+    if (!skipRecord) {
+      pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });
+    }
+    return true;
   } catch (error) {
     showToast(error.message);
+    return false;
+  }
+}
+
+function outdentCurrentBlock() {
+  return outdentBlock(state.currentBlockId);
+}
+
+function hydrateUndoRedoFromArticle(article) {
+  const toTextEntry = (entry) => ({
+    type: 'text',
+    blockId: entry.blockId,
+    historyEntryId: entry.id,
+  });
+  state.undoStack = (article.history || []).map(toTextEntry);
+  state.redoStack = (article.redoHistory || []).map(toTextEntry);
+}
+
+function pushUndoEntry(entry) {
+  if (!entry) return;
+  state.undoStack.push(entry);
+  state.redoStack = [];
+}
+
+function invertStructureAction(action) {
+  if (!action) return null;
+  if (action.kind === 'move') {
+    return {
+      kind: 'move',
+      blockId: action.blockId,
+      direction: action.direction === 'up' ? 'down' : 'up',
+    };
+  }
+  if (action.kind === 'indent') {
+    return { kind: 'outdent', blockId: action.blockId };
+  }
+  if (action.kind === 'outdent') {
+    return { kind: 'indent', blockId: action.blockId };
+  }
+  return null;
+}
+
+async function executeStructureAction(action, options = {}) {
+  const { skipRecord = false } = options;
+  if (!action) return false;
+  if (action.kind === 'move') {
+    return moveBlock(action.blockId, action.direction, { skipRecord });
+  }
+  if (action.kind === 'indent') {
+    return indentBlock(action.blockId, { skipRecord });
+  }
+  if (action.kind === 'outdent') {
+    return outdentBlock(action.blockId, { skipRecord });
+  }
+  return false;
+}
+
+async function undoTextChange(entry) {
+  if (!state.articleId) return null;
+  try {
+    const result = await apiRequest(
+      `/api/articles/${state.articleId}/blocks/undo-text`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ entryId: entry?.historyEntryId || null }),
+      },
+    );
+    if (!result?.blockId) return null;
+    await loadArticle(state.articleId, { desiredBlockId: result.blockId });
+    renderArticle();
+    return result.blockId;
+  } catch (error) {
+    if (error.message !== 'Nothing to undo') {
+      showToast(error.message);
+    }
+    return null;
+  }
+}
+
+async function redoTextChange(entry) {
+  if (!state.articleId) return null;
+  try {
+    const result = await apiRequest(
+      `/api/articles/${state.articleId}/blocks/redo-text`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ entryId: entry?.historyEntryId || null }),
+      },
+    );
+    if (!result?.blockId) return null;
+    await loadArticle(state.articleId, { desiredBlockId: result.blockId });
+    renderArticle();
+    return result.blockId;
+  } catch (error) {
+    if (error.message !== 'Nothing to redo') {
+      showToast(error.message);
+    }
+    return null;
+  }
+}
+
+async function handleUndoAction() {
+  if (!state.undoStack.length) {
+    showToast('Нечего отменять');
+    return;
+  }
+  const entry = state.undoStack.pop();
+  let success = false;
+  if (entry.type === 'structure') {
+    const inverse = invertStructureAction(entry.action);
+    success = await executeStructureAction(inverse, { skipRecord: true });
+  } else if (entry.type === 'text') {
+    const blockId = await undoTextChange(entry);
+    success = Boolean(blockId);
+  }
+  if (success) {
+    state.redoStack.push(entry);
+  } else {
+    state.undoStack.push(entry);
+    if (entry.type === 'structure') {
+      showToast('Не удалось отменить действие');
+    }
+  }
+}
+
+async function handleRedoAction() {
+  if (!state.redoStack.length) {
+    showToast('Нечего повторять');
+    return;
+  }
+  const entry = state.redoStack.pop();
+  let success = false;
+  if (entry.type === 'structure') {
+    success = await executeStructureAction(entry.action, { skipRecord: true });
+  } else if (entry.type === 'text') {
+    const blockId = await redoTextChange(entry);
+    success = Boolean(blockId);
+  }
+  if (success) {
+    state.undoStack.push(entry);
+  } else {
+    state.redoStack.push(entry);
+    if (entry.type === 'structure') {
+      showToast('Не удалось повторить действие');
+    }
   }
 }
 
 function handleViewKey(event) {
   if (!state.article) return;
+  const key = typeof event.key === 'string' ? event.key.toLowerCase() : '';
+  const code = typeof event.code === 'string' ? event.code : '';
+  const isCtrlZ =
+    event.ctrlKey && !event.shiftKey && (code === 'KeyZ' || key === 'z' || key === 'я');
+  const isCtrlY =
+    event.ctrlKey && !event.shiftKey && (code === 'KeyY' || key === 'y' || key === 'н');
+  if (isCtrlZ) {
+    event.preventDefault();
+    handleUndoAction();
+    return;
+  }
+  if (isCtrlY) {
+    event.preventDefault();
+    handleRedoAction();
+    return;
+  }
   if (event.ctrlKey && event.shiftKey && event.key === 'ArrowDown') {
     event.preventDefault();
     moveCurrentBlock('down');

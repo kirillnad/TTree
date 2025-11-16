@@ -24,6 +24,19 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+function normalizeArticle(article) {
+  if (!article) {
+    return null;
+  }
+  if (!Array.isArray(article.history)) {
+    article.history = [];
+  }
+  if (!Array.isArray(article.redoHistory)) {
+    article.redoHistory = [];
+  }
+  return article;
+}
+
 function ensureSampleArticle() {
   const data = readData();
   if ((data.articles || []).length > 0) {
@@ -55,6 +68,8 @@ function ensureSampleArticle() {
         ],
       },
     ],
+    history: [],
+    redoHistory: [],
   };
 
   const sample = {
@@ -62,6 +77,8 @@ function ensureSampleArticle() {
     title: 'Пример статьи',
     updatedAt: new Date().toISOString(),
     blocks: [introBlock],
+    history: [],
+    redoHistory: [],
   };
 
   data.articles = [sample];
@@ -74,7 +91,8 @@ function getArticles() {
 }
 
 function getArticle(id) {
-  return getArticles().find((article) => article.id === id) || null;
+  const article = getArticles().find((item) => item.id === id) || null;
+  return normalizeArticle(article);
 }
 
 function saveArticle(article) {
@@ -101,6 +119,8 @@ function createArticle(title = 'Новая статья') {
         children: [],
       },
     ],
+    history: [],
+    redoHistory: [],
   };
   saveArticle(article);
   return article;
@@ -120,6 +140,23 @@ function findBlockRecursive(blocks, blockId, parent = null) {
   return null;
 }
 
+function pushTextHistoryEntry(article, blockId, before, after) {
+  if (before === after) {
+    return null;
+  }
+  article.history = article.history || [];
+  article.redoHistory = [];
+  const entry = {
+    id: uuid(),
+    blockId,
+    before,
+    after,
+    timestamp: new Date().toISOString(),
+  };
+  article.history.push(entry);
+  return entry;
+}
+
 function updateBlock(articleId, blockId, attrs) {
   const article = getArticle(articleId);
   if (!article) {
@@ -130,10 +167,84 @@ function updateBlock(articleId, blockId, attrs) {
     return null;
   }
 
-  located.block.text = attrs.text ?? located.block.text;
+  let historyEntryId = null;
+  if (Object.prototype.hasOwnProperty.call(attrs, 'text')) {
+    const previousText = typeof located.block.text === 'string' ? located.block.text : '';
+    const nextText =
+      typeof attrs.text === 'string' ? attrs.text : typeof located.block.text === 'string'
+        ? located.block.text
+        : '';
+    const entry = pushTextHistoryEntry(article, blockId, previousText, nextText);
+    historyEntryId = entry ? entry.id : null;
+    located.block.text = nextText;
+  }
   if (typeof attrs.collapsed === 'boolean') {
     located.block.collapsed = attrs.collapsed;
   }
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  const responseBlock = { ...located.block };
+  if (historyEntryId) {
+    responseBlock.historyEntryId = historyEntryId;
+  }
+  return responseBlock;
+}
+
+function undoBlockTextChange(articleId, entryId = null) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  article.history = article.history || [];
+  article.redoHistory = article.redoHistory || [];
+  if (!article.history.length) {
+    return null;
+  }
+  const index =
+    entryId && entryId !== null
+      ? article.history.findIndex((entry) => entry.id === entryId)
+      : article.history.length - 1;
+  if (index < 0) {
+    return null;
+  }
+  const entry = article.history[index];
+  const located = findBlockRecursive(article.blocks, entry.blockId, null);
+  if (!located) {
+    return null;
+  }
+  located.block.text = entry.before;
+  article.history.splice(index, 1);
+  article.redoHistory.push(entry);
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return located.block;
+}
+
+function redoBlockTextChange(articleId, entryId = null) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  article.history = article.history || [];
+  article.redoHistory = article.redoHistory || [];
+  if (!article.redoHistory.length) {
+    return null;
+  }
+  const index =
+    entryId && entryId !== null
+      ? article.redoHistory.findIndex((entry) => entry.id === entryId)
+      : article.redoHistory.length - 1;
+  if (index < 0) {
+    return null;
+  }
+  const entry = article.redoHistory[index];
+  const located = findBlockRecursive(article.blocks, entry.blockId, null);
+  if (!located) {
+    return null;
+  }
+  located.block.text = entry.after;
+  article.redoHistory.splice(index, 1);
+  article.history.push(entry);
   article.updatedAt = new Date().toISOString();
   saveArticle(article);
   return located.block;
@@ -284,4 +395,6 @@ module.exports = {
   moveBlock,
   indentBlock,
   outdentBlock,
+  undoBlockTextChange,
+  redoBlockTextChange,
 };

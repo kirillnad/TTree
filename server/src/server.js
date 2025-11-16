@@ -12,6 +12,8 @@ const {
   moveBlock,
   indentBlock,
   outdentBlock,
+  undoBlockTextChange,
+  redoBlockTextChange,
 } = require('./dataStore');
 
 const PORT = process.env.PORT || 4000;
@@ -100,6 +102,24 @@ app.post('/api/articles/:articleId/blocks/:blockId/outdent', (req, res) => {
     return res.status(400).json({ message: 'Cannot outdent block' });
   }
   return res.json(outdented);
+});
+
+app.post('/api/articles/:articleId/blocks/undo-text', (req, res) => {
+  const entryId = req.body?.entryId || null;
+  const undone = undoBlockTextChange(req.params.articleId, entryId);
+  if (!undone) {
+    return res.status(400).json({ message: 'Nothing to undo' });
+  }
+  return res.json({ blockId: undone.id, block: undone });
+});
+
+app.post('/api/articles/:articleId/blocks/redo-text', (req, res) => {
+  const entryId = req.body?.entryId || null;
+  const redone = redoBlockTextChange(req.params.articleId, entryId);
+  if (!redone) {
+    return res.status(400).json({ message: 'Nothing to redo' });
+  }
+  return res.json({ blockId: redone.id, block: redone });
 });
 
 app.get('*', (req, res, next) => {

@@ -3,28 +3,34 @@
     {
       "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
       "title": "Пример статьи",
-      "updatedAt": "2025-11-16T20:34:01.989Z",
+      "updatedAt": "2025-11-16T21:48:01.658Z",
       "blocks": [
         {
+          "id": "25137da1-c6af-4033-a53d-3e4d311f92ec",
+          "text": "Новый блок X ссс",
+          "collapsed": false,
+          "children": []
+        },
+        {
           "id": "b61be342-2d43-496a-8b53-2ca035a05bed",
-          "text": "<div>Заголовок статьи - новый</div>",
+          "text": "<div>Заголовок статьи - новый олололол</div>",
           "collapsed": true,
           "children": [
             {
               "id": "de02b932-cffc-4c54-8c79-cb021ffca32e",
-              "text": "Введение",
+              "text": "Введение 123",
               "collapsed": false,
               "children": []
             },
             {
               "id": "cb114275-9baa-4d8a-b319-e9312d5f80d4",
-              "text": "Новый блок",
+              "text": "Новый блок 345",
               "collapsed": false,
               "children": []
             },
             {
               "id": "8c4f5f57-c508-45c1-84dc-8600ce3757b1",
-              "text": "Основной раздел",
+              "text": "Основной раздел 567",
               "collapsed": false,
               "children": []
             },
@@ -92,6 +98,12 @@
           ]
         },
         {
+          "id": "ce89cfc0-3515-4285-938d-33099688e944",
+          "text": "Новый блок 123",
+          "collapsed": false,
+          "children": []
+        },
+        {
           "id": "dd872b76-b46f-40aa-a6c1-7dbf50c450ca",
           "text": "Новый блок 2",
           "collapsed": true,
@@ -122,6 +134,112 @@
               ]
             }
           ]
+        },
+        {
+          "id": "3072e50d-c238-4ef3-ac16-4d87d25c9922",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "a7225fc8-027e-4b6e-83e8-c435e9b79ab4",
+          "text": "Новый блок 123 4545 676767",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "f2734fca-39ba-4595-8bb6-26f30ccad4b2",
+          "text": "Новый блок 789 8888",
+          "collapsed": false,
+          "children": []
+        }
+      ],
+      "history": [
+        {
+          "id": "19f90e97-d791-416a-952a-fea81ebc715d",
+          "blockId": "25137da1-c6af-4033-a53d-3e4d311f92ec",
+          "before": "Новый блок yuyuyu",
+          "after": "Новый блок yuyuyuX",
+          "timestamp": "2025-11-16T21:19:38.142Z"
+        },
+        {
+          "id": "63789b80-6992-4538-b492-50d312a008b9",
+          "blockId": "de02b932-cffc-4c54-8c79-cb021ffca32e",
+          "before": "Введение",
+          "after": "Введение 123",
+          "timestamp": "2025-11-16T21:38:32.571Z"
+        },
+        {
+          "id": "2c69d731-b642-4cab-a834-2508ae87168a",
+          "blockId": "cb114275-9baa-4d8a-b319-e9312d5f80d4",
+          "before": "Новый блок",
+          "after": "Новый блок 345",
+          "timestamp": "2025-11-16T21:38:35.870Z"
+        },
+        {
+          "id": "7222f2e7-8576-45c3-8d1d-d0bf21fd3444",
+          "blockId": "8c4f5f57-c508-45c1-84dc-8600ce3757b1",
+          "before": "Основной раздел",
+          "after": "Основной раздел 567",
+          "timestamp": "2025-11-16T21:38:40.019Z"
+        },
+        {
+          "id": "34ee3a8d-cdd3-41d7-8a17-0080520e3687",
+          "blockId": "f2734fca-39ba-4595-8bb6-26f30ccad4b2",
+          "before": "Новый блок",
+          "after": "Новый блок 789",
+          "timestamp": "2025-11-16T21:38:47.569Z"
+        },
+        {
+          "id": "1c72d328-5198-4de5-a98e-c26d782fd0f0",
+          "blockId": "25137da1-c6af-4033-a53d-3e4d311f92ec",
+          "before": "Новый блок ",
+          "after": "Новый блок X",
+          "timestamp": "2025-11-16T21:41:01.054Z"
+        },
+        {
+          "id": "5316705a-4812-4a6b-acff-7890ea6f4bc9",
+          "blockId": "ce89cfc0-3515-4285-938d-33099688e944",
+          "before": "Новый блок",
+          "after": "Новый блок 123",
+          "timestamp": "2025-11-16T21:42:45.404Z"
+        },
+        {
+          "id": "217805ee-9625-459f-a7b1-a9818fa957cc",
+          "blockId": "25137da1-c6af-4033-a53d-3e4d311f92ec",
+          "before": "Новый блок X",
+          "after": "Новый блок X ссс",
+          "timestamp": "2025-11-16T21:43:00.513Z"
+        },
+        {
+          "id": "13a41897-014a-4891-b12e-4625a4d4a35d",
+          "blockId": "f2734fca-39ba-4595-8bb6-26f30ccad4b2",
+          "before": "Новый блок 789",
+          "after": "Новый блок 789 8888",
+          "timestamp": "2025-11-16T21:43:06.659Z"
+        },
+        {
+          "id": "231fe993-0b83-41d9-a8b9-8274996170ba",
+          "blockId": "ce89cfc0-3515-4285-938d-33099688e944",
+          "before": "Новый блок 123",
+          "after": "Новый блок 123 шщщшщш",
+          "timestamp": "2025-11-16T21:44:02.966Z"
+        },
+        {
+          "id": "d9b92d39-060c-4101-bdbc-5f94690d7297",
+          "blockId": "ce89cfc0-3515-4285-938d-33099688e944",
+          "before": "Новый блок 123 шщщшщш",
+          "after": "Новый блок 123",
+          "timestamp": "2025-11-16T21:47:23.457Z"
+        }
+      ],
+      "redoHistory": [
+        {
+          "id": "781a4d4f-823d-4c59-b859-2f37d1937f4b",
+          "blockId": "8c4f5f57-c508-45c1-84dc-8600ce3757b1",
+          "before": "Основной раздел 567",
+          "after": "Основной раздел <div><br></div>",
+          "timestamp": "2025-11-16T21:47:55.051Z"
         }
       ]
     },
