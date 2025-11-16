@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Иерархические заметки</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>Редактор статей</h1>
+        <p class="subtitle">UUID статьи в адресной строке определяет загруженную заметку.</p>
+      </div>
+      <div class="article-actions" id="articleActions"></div>
+    </header>
+
+    <main id="app">
+      <section id="articleListView" class="panel hidden">
+        <div class="panel-header">
+          <h2>Список статей</h2>
+          <button id="createArticleBtn" class="primary">Создать статью</button>
+        </div>
+        <ul id="articleList"></ul>
+      </section>
+
+      <section id="articleView" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h2 id="articleTitle"></h2>
+            <p id="updatedAt" class="meta"></p>
+          </div>
+          <button id="backToList" class="ghost">К списку статей</button>
+        </div>
+
+        <div class="hint">
+          <strong>Режим просмотра:</strong> ↑/↓ — навигация · Enter — редактировать · Ctrl+↑/↓ — добавить блок.
+          <br />
+          <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
+        </div>
+
+        <div id="blocksContainer" class="blocks"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

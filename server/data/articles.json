@@ -1,0 +1,104 @@
+{
+  "articles": [
+    {
+      "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
+      "title": "Пример статьи",
+      "updatedAt": "2025-11-16T19:30:13.593Z",
+      "blocks": [
+        {
+          "id": "b61be342-2d43-496a-8b53-2ca035a05bed",
+          "text": "Заголовок статьи - новый",
+          "collapsed": false,
+          "children": [
+            {
+              "id": "de02b932-cffc-4c54-8c79-cb021ffca32e",
+              "text": "Введение",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "8c4f5f57-c508-45c1-84dc-8600ce3757b1",
+              "text": "Основной раздел",
+              "collapsed": true,
+              "children": [
+                {
+                  "id": "e2a55b5a-b18d-4b57-89d9-73d4c268c8e2",
+                  "text": "Подраздел олодлыва",
+                  "collapsed": true,
+                  "children": []
+                },
+                {
+                  "id": "1b8b2b3d-6bfa-4bcf-9b03-aff04bbfb4a7",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "f35892aa-7d1a-4678-9184-111b31e121b0",
+                  "text": "это новый блок\n\nьтлувапаыв\nываа\nывп\nыв\nпыв\n - \n - \n\n",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "053449e6-90a8-49af-b5f7-f8820bae971c",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "ece12b11-19b0-480a-a674-1086540e254a",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "3560484e-a45f-4d9c-b6d2-8fef2af5c59f",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "abe3684c-9d59-42f8-8bef-351606463615",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "44624c0b-70d3-41ec-aa4c-7d60b49bd8a5",
+                  "text": "Ещё блок\n\n\n\n",
+                  "collapsed": false,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "9183881e-851c-4cc1-85b9-0703900aaf96",
+              "text": "Новый блок",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "29eed526-aa41-4bdd-9245-5df68435ed13",
+              "text": "Новый блок",
+              "collapsed": false,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6f9f869b-e932-4aed-8a28-0064e9b842bf",
+      "title": "Новая статья",
+      "updatedAt": "2025-11-16T19:20:08.699Z",
+      "blocks": [
+        {
+          "id": "6cdb9b8a-0323-4088-adcb-1c2685227adf",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
