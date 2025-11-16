@@ -173,13 +173,13 @@ function flattenVisible(blocks = [], acc = []) {
   return acc;
 }
 
-function findBlock(blockId, blocks = state.article?.blocks || [], parent = null) {
+function findBlock(blockId, blocks = state.article?.blocks || [], parent = null, ancestors = []) {
   for (let i = 0; i < blocks.length; i += 1) {
     const block = blocks[i];
     if (block.id === blockId) {
-      return { block, parent, index: i, siblings: blocks };
+      return { block, parent, index: i, siblings: blocks, ancestors };
     }
-    const nested = findBlock(blockId, block.children || [], block);
+    const nested = findBlock(blockId, block.children || [], block, [...ancestors, block]);
     if (nested) {
       return nested;
     }
@@ -605,6 +605,17 @@ function outdentCurrentBlock() {
   return outdentBlock(state.currentBlockId);
 }
 
+async function ensureBlockVisible(blockId) {
+  if (!blockId) return;
+  const located = findBlock(blockId);
+  if (!located) return;
+  const ancestorsToExpand = (located.ancestors || []).filter((ancestor) => ancestor.collapsed);
+  for (const ancestor of ancestorsToExpand) {
+    // eslint-disable-next-line no-await-in-loop
+    await setCollapseState(ancestor.id, false);
+  }
+}
+
 function hydrateUndoRedoFromArticle(article) {
   const toTextEntry = (entry) => ({
     type: 'text',
@@ -619,6 +630,12 @@ function pushUndoEntry(entry) {
   if (!entry) return;
   state.undoStack.push(entry);
   state.redoStack = [];
+}
+
+async function focusBlock(blockId) {
+  if (!blockId) return;
+  await ensureBlockVisible(blockId);
+  setCurrentBlock(blockId);
 }
 
 function invertStructureAction(action) {
@@ -642,16 +659,18 @@ function invertStructureAction(action) {
 async function executeStructureAction(action, options = {}) {
   const { skipRecord = false } = options;
   if (!action) return false;
+  let success = false;
   if (action.kind === 'move') {
-    return moveBlock(action.blockId, action.direction, { skipRecord });
+    success = await moveBlock(action.blockId, action.direction, { skipRecord });
+  } else if (action.kind === 'indent') {
+    success = await indentBlock(action.blockId, { skipRecord });
+  } else if (action.kind === 'outdent') {
+    success = await outdentBlock(action.blockId, { skipRecord });
   }
-  if (action.kind === 'indent') {
-    return indentBlock(action.blockId, { skipRecord });
+  if (success) {
+    await focusBlock(action.blockId);
   }
-  if (action.kind === 'outdent') {
-    return outdentBlock(action.blockId, { skipRecord });
-  }
-  return false;
+  return success;
 }
 
 async function undoTextChange(entry) {
@@ -667,6 +686,7 @@ async function undoTextChange(entry) {
     if (!result?.blockId) return null;
     await loadArticle(state.articleId, { desiredBlockId: result.blockId });
     renderArticle();
+    await focusBlock(result.blockId);
     return result.blockId;
   } catch (error) {
     if (error.message !== 'Nothing to undo') {
@@ -689,6 +709,7 @@ async function redoTextChange(entry) {
     if (!result?.blockId) return null;
     await loadArticle(state.articleId, { desiredBlockId: result.blockId });
     renderArticle();
+    await focusBlock(result.blockId);
     return result.blockId;
   } catch (error) {
     if (error.message !== 'Nothing to redo') {
