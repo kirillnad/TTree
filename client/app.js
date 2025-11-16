@@ -105,13 +105,20 @@ async function loadListView() {
   }
 }
 
-async function loadArticle(id) {
+async function loadArticle(id, options = {}) {
+  const { desiredBlockId } = options;
   const switchingArticle = state.articleId !== id;
   state.articleId = id;
   state.mode = state.mode === 'edit' ? 'view' : state.mode;
   state.editingBlockId = null;
   const article = await apiRequest(`/api/articles/${id}`);
   state.article = article;
+  if (desiredBlockId) {
+    const desired = findBlock(desiredBlockId);
+    if (desired) {
+      state.currentBlockId = desired.block.id;
+    }
+  }
   if (switchingArticle || !findBlock(state.currentBlockId)) {
     const firstBlock = flattenVisible(article.blocks)[0];
     state.currentBlockId = firstBlock ? firstBlock.id : null;
@@ -159,9 +166,10 @@ function flattenVisible(blocks = [], acc = []) {
 }
 
 function findBlock(blockId, blocks = state.article?.blocks || [], parent = null) {
-  for (const block of blocks) {
+  for (let i = 0; i < blocks.length; i += 1) {
+    const block = blocks[i];
     if (block.id === blockId) {
-      return { block, parent };
+      return { block, parent, index: i, siblings: blocks };
     }
     const nested = findBlock(blockId, block.children || [], block);
     if (nested) {
@@ -459,8 +467,88 @@ async function createSibling(direction) {
         body: JSON.stringify({ direction }),
       },
     );
-    await loadArticle(state.articleId);
-    state.currentBlockId = data.block.id;
+    await loadArticle(state.articleId, { desiredBlockId: data.block.id });
+    renderArticle();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function findCollapsibleTarget(blockId, desiredState) {
+  let current = findBlock(blockId);
+  while (current) {
+    const hasChildren = Boolean(current.block.children && current.block.children.length);
+    if (hasChildren && current.block.collapsed !== desiredState) {
+      return current.block.id;
+    }
+    if (!current.parent) {
+      break;
+    }
+    current = findBlock(current.parent.id);
+  }
+  return null;
+}
+
+function findFallbackBlockId(blockId) {
+  const located = findBlock(blockId);
+  if (!located) return null;
+  const next = located.siblings?.[located.index + 1];
+  if (next) return next.id;
+  const prev = located.siblings?.[located.index - 1];
+  if (prev) return prev.id;
+  return located.parent ? located.parent.id : null;
+}
+
+async function deleteCurrentBlock() {
+  if (!state.currentBlockId) return;
+  const fallbackId = findFallbackBlockId(state.currentBlockId);
+  try {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}`, {
+      method: 'DELETE',
+    });
+    await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+    renderArticle();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function moveCurrentBlock(direction) {
+  if (!state.currentBlockId || !['up', 'down'].includes(direction)) return;
+  try {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ direction }),
+    });
+    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
+    renderArticle();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function indentCurrentBlock() {
+  if (!state.currentBlockId) return;
+  try {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/indent`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
+    renderArticle();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function outdentCurrentBlock() {
+  if (!state.currentBlockId) return;
+  try {
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}/outdent`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    await loadArticle(state.articleId, { desiredBlockId: state.currentBlockId });
     renderArticle();
   } catch (error) {
     showToast(error.message);
@@ -469,14 +557,39 @@ async function createSibling(direction) {
 
 function handleViewKey(event) {
   if (!state.article) return;
-  if (event.key === 'ArrowDown' && event.ctrlKey) {
+  if (event.ctrlKey && event.shiftKey && event.key === 'ArrowDown') {
+    event.preventDefault();
+    moveCurrentBlock('down');
+    return;
+  }
+  if (event.ctrlKey && event.shiftKey && event.key === 'ArrowUp') {
+    event.preventDefault();
+    moveCurrentBlock('up');
+    return;
+  }
+  if (event.ctrlKey && !event.shiftKey && event.key === 'ArrowDown') {
     event.preventDefault();
     createSibling('after');
     return;
   }
-  if (event.key === 'ArrowUp' && event.ctrlKey) {
+  if (event.ctrlKey && !event.shiftKey && event.key === 'ArrowUp') {
     event.preventDefault();
     createSibling('before');
+    return;
+  }
+  if (event.ctrlKey && event.key === 'Delete') {
+    event.preventDefault();
+    deleteCurrentBlock();
+    return;
+  }
+  if (event.ctrlKey && event.key === 'ArrowRight') {
+    event.preventDefault();
+    indentCurrentBlock();
+    return;
+  }
+  if (event.ctrlKey && event.key === 'ArrowLeft') {
+    event.preventDefault();
+    outdentCurrentBlock();
     return;
   }
   if (event.key === 'ArrowDown') {
@@ -491,12 +604,21 @@ function handleViewKey(event) {
   }
   if (event.key === 'ArrowLeft') {
     event.preventDefault();
-    setCollapseState(state.currentBlockId, true);
+    const targetId = findCollapsibleTarget(state.currentBlockId, true);
+    if (targetId) {
+      if (state.currentBlockId !== targetId) {
+        setCurrentBlock(targetId);
+      }
+      setCollapseState(targetId, true);
+    }
     return;
   }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
-    setCollapseState(state.currentBlockId, false);
+    const targetId = findCollapsibleTarget(state.currentBlockId, false);
+    if (targetId) {
+      setCollapseState(targetId, false);
+    }
     return;
   }
   if (event.key === 'Enter') {

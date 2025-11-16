@@ -3,12 +3,12 @@
     {
       "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
       "title": "Пример статьи",
-      "updatedAt": "2025-11-16T19:30:13.593Z",
+      "updatedAt": "2025-11-16T20:34:01.989Z",
       "blocks": [
         {
           "id": "b61be342-2d43-496a-8b53-2ca035a05bed",
-          "text": "Заголовок статьи - новый",
-          "collapsed": false,
+          "text": "<div>Заголовок статьи - новый</div>",
+          "collapsed": true,
           "children": [
             {
               "id": "de02b932-cffc-4c54-8c79-cb021ffca32e",
@@ -17,34 +17,40 @@
               "children": []
             },
             {
+              "id": "cb114275-9baa-4d8a-b319-e9312d5f80d4",
+              "text": "Новый блок",
+              "collapsed": false,
+              "children": []
+            },
+            {
               "id": "8c4f5f57-c508-45c1-84dc-8600ce3757b1",
               "text": "Основной раздел",
-              "collapsed": true,
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "e2a55b5a-b18d-4b57-89d9-73d4c268c8e2",
+              "text": "Подраздел олодлыва",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "1b8b2b3d-6bfa-4bcf-9b03-aff04bbfb4a7",
+              "text": "<div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div><br></div></div></div></div></div></div></div></div><div><br></div>",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "f35892aa-7d1a-4678-9184-111b31e121b0",
+              "text": "это новый блок\n\nьтлувапаыв\nываа\nывп\nыв\nпыв\n - \n - \n\n",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "053449e6-90a8-49af-b5f7-f8820bae971c",
+              "text": "Новый блок",
+              "collapsed": false,
               "children": [
-                {
-                  "id": "e2a55b5a-b18d-4b57-89d9-73d4c268c8e2",
-                  "text": "Подраздел олодлыва",
-                  "collapsed": true,
-                  "children": []
-                },
-                {
-                  "id": "1b8b2b3d-6bfa-4bcf-9b03-aff04bbfb4a7",
-                  "text": "Новый блок",
-                  "collapsed": false,
-                  "children": []
-                },
-                {
-                  "id": "f35892aa-7d1a-4678-9184-111b31e121b0",
-                  "text": "это новый блок\n\nьтлувапаыв\nываа\nывп\nыв\nпыв\n - \n - \n\n",
-                  "collapsed": false,
-                  "children": []
-                },
-                {
-                  "id": "053449e6-90a8-49af-b5f7-f8820bae971c",
-                  "text": "Новый блок",
-                  "collapsed": false,
-                  "children": []
-                },
                 {
                   "id": "ece12b11-19b0-480a-a674-1086540e254a",
                   "text": "Новый блок",
@@ -68,20 +74,52 @@
                   "text": "Ещё блок\n\n\n\n",
                   "collapsed": false,
                   "children": []
+                },
+                {
+                  "id": "9183881e-851c-4cc1-85b9-0703900aaf96",
+                  "text": "Картинка \nЫВАЫВАЫ\nЫВАЫ\n\n\nбжджджд\nоллоло",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "29eed526-aa41-4bdd-9245-5df68435ed13",
+                  "text": "Новый блок",
+                  "collapsed": false,
+                  "children": []
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "id": "dd872b76-b46f-40aa-a6c1-7dbf50c450ca",
+          "text": "Новый блок 2",
+          "collapsed": true,
+          "children": [
             {
-              "id": "9183881e-851c-4cc1-85b9-0703900aaf96",
+              "id": "5d4cea6e-b20b-4887-9f91-ae20c7a416e0",
               "text": "Новый блок",
-              "collapsed": false,
-              "children": []
-            },
-            {
-              "id": "29eed526-aa41-4bdd-9245-5df68435ed13",
-              "text": "Новый блок",
-              "collapsed": false,
-              "children": []
+              "collapsed": true,
+              "children": [
+                {
+                  "id": "3f8d003e-562f-432a-8b92-19751145782f",
+                  "text": "Новый блок11",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "28b2315d-dc7a-4539-9bae-3c61a3d731b3",
+                  "text": "Новый блок12",
+                  "collapsed": false,
+                  "children": []
+                },
+                {
+                  "id": "f92f392a-0684-466a-8095-b475893d81aa",
+                  "text": "Новый блок13",
+                  "collapsed": false,
+                  "children": []
+                }
+              ]
             }
           ]
         }

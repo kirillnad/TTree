@@ -139,6 +139,114 @@ function updateBlock(articleId, blockId, attrs) {
   return located.block;
 }
 
+function deleteBlock(articleId, blockId) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const located = findBlockRecursive(article.blocks, blockId, null);
+  if (!located) {
+    return null;
+  }
+  const removed = located.siblings.splice(located.index, 1)[0];
+  if (!removed) {
+    return null;
+  }
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return {
+    removedBlockId: removed.id,
+    parentId: located.parent ? located.parent.id : null,
+  };
+}
+
+function moveBlock(articleId, blockId, direction) {
+  if (!['up', 'down'].includes(direction)) {
+    return null;
+  }
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const located = findBlockRecursive(article.blocks, blockId, null);
+  if (!located) {
+    return null;
+  }
+  const { siblings, index } = located;
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= siblings.length) {
+    return null;
+  }
+  const [block] = siblings.splice(index, 1);
+  siblings.splice(targetIndex, 0, block);
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return {
+    block,
+    parentId: located.parent ? located.parent.id : null,
+  };
+}
+
+function indentBlock(articleId, blockId) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const located = findBlockRecursive(article.blocks, blockId, null);
+  if (!located) {
+    return null;
+  }
+  const { siblings, index } = located;
+  const previousSibling = siblings[index - 1];
+  if (!previousSibling) {
+    return null;
+  }
+  const [block] = siblings.splice(index, 1);
+  previousSibling.children = previousSibling.children || [];
+  previousSibling.children.push(block);
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return {
+    block,
+    parentId: previousSibling.id,
+  };
+}
+
+function outdentBlock(articleId, blockId) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const located = findBlockRecursive(article.blocks, blockId, null);
+  if (!located || !located.parent) {
+    return null;
+  }
+  const parentInfo = findBlockRecursive(article.blocks, located.parent.id, null);
+  if (!parentInfo) {
+    return null;
+  }
+
+  const { siblings, index } = located;
+  const followingSiblings = siblings.splice(index + 1);
+  const [block] = siblings.splice(index, 1);
+  if (!block) {
+    return null;
+  }
+  block.children = block.children || [];
+  block.children.push(...followingSiblings);
+
+  const targetSiblings = parentInfo.siblings;
+  const insertionIndex = parentInfo.index + 1;
+  targetSiblings.splice(insertionIndex, 0, block);
+
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return {
+    block,
+    parentId: parentInfo.parent ? parentInfo.parent.id : null,
+  };
+}
+
 function insertBlock(articleId, targetBlockId, direction = 'after') {
   const article = getArticle(articleId);
   if (!article) {
@@ -172,4 +280,8 @@ module.exports = {
   createArticle,
   updateBlock,
   insertBlock,
+  deleteBlock,
+  moveBlock,
+  indentBlock,
+  outdentBlock,
 };
