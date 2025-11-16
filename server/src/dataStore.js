@@ -42,7 +42,7 @@ function sanitizeContent(html = '') {
   return sanitizeHtml(html || '', SANITIZE_OPTIONS);
 }
 
-const DEFAULT_BLOCK_TEXT = sanitizeContent('');
+const DEFAULT_BLOCK_TEXT = sanitizeContent('Новый блок');
 
 function createDefaultBlock() {
   return {
@@ -50,6 +50,18 @@ function createDefaultBlock() {
     text: DEFAULT_BLOCK_TEXT,
     collapsed: false,
     children: [],
+  };
+}
+
+function cloneBlockPayload(block) {
+  if (!block) {
+    return createDefaultBlock();
+  }
+  return {
+    id: block.id || uuid(),
+    text: sanitizeContent(block.text || ''),
+    collapsed: Boolean(block.collapsed),
+    children: (block.children || []).map((child) => cloneBlockPayload(child)),
   };
 }
 
@@ -325,6 +337,8 @@ function deleteBlock(articleId, blockId) {
   return {
     removedBlockId: removed.id,
     parentId: located.parent ? located.parent.id : null,
+    index: located.index,
+    block: removed,
   };
 }
 
@@ -415,7 +429,7 @@ function outdentBlock(articleId, blockId) {
   };
 }
 
-function insertBlock(articleId, targetBlockId, direction = 'after') {
+function insertBlock(articleId, targetBlockId, direction = 'after', blockPayload = null) {
   const article = getArticle(articleId);
   if (!article) {
     return null;
@@ -426,14 +440,33 @@ function insertBlock(articleId, targetBlockId, direction = 'after') {
   }
 
   const { parent, siblings, index } = located;
-  const newBlock = createDefaultBlock();
+  const newBlock = blockPayload ? cloneBlockPayload(blockPayload) : createDefaultBlock();
 
   const insertionIndex = direction === 'before' ? index : index + 1;
   siblings.splice(insertionIndex, 0, newBlock);
 
   article.updatedAt = new Date().toISOString();
   saveArticle(article);
-  return { block: newBlock, parentId: parent ? parent.id : null };
+  return { block: newBlock, parentId: parent ? parent.id : null, index: insertionIndex };
+}
+
+function restoreBlock(articleId, parentId, index, blockPayload) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const siblingsInfo = parentId ? findBlockRecursive(article.blocks, parentId, null) : null;
+  const siblings = parentId ? siblingsInfo?.block?.children : article.blocks;
+  if (!siblings) {
+    return null;
+  }
+  const insertionIndex =
+    typeof index === 'number' && index >= 0 && index <= siblings.length ? index : siblings.length;
+  const restoredBlock = cloneBlockPayload(blockPayload);
+  siblings.splice(insertionIndex, 0, restoredBlock);
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return { block: restoredBlock, parentId: parentId || null, index: insertionIndex };
 }
 
 module.exports = {
@@ -449,4 +482,5 @@ module.exports = {
   outdentBlock,
   undoBlockTextChange,
   redoBlockTextChange,
+  restoreBlock,
 };

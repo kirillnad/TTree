@@ -14,6 +14,7 @@ const {
   outdentBlock,
   undoBlockTextChange,
   redoBlockTextChange,
+  restoreBlock,
 } = require('./dataStore');
 
 const PORT = process.env.PORT || 4000;
@@ -61,7 +62,13 @@ app.patch('/api/articles/:articleId/blocks/:blockId', (req, res) => {
 
 app.post('/api/articles/:articleId/blocks/:blockId/siblings', (req, res) => {
   const direction = req.body?.direction === 'before' ? 'before' : 'after';
-  const inserted = insertBlock(req.params.articleId, req.params.blockId, direction);
+  console.log('[API] insert sibling', req.params.articleId, req.params.blockId, direction);
+  const inserted = insertBlock(
+    req.params.articleId,
+    req.params.blockId,
+    direction,
+    req.body?.payload || null,
+  );
   if (!inserted) {
     return res.status(404).json({ message: 'Cannot insert block' });
   }
@@ -69,6 +76,7 @@ app.post('/api/articles/:articleId/blocks/:blockId/siblings', (req, res) => {
 });
 
 app.delete('/api/articles/:articleId/blocks/:blockId', (req, res) => {
+  console.log('[API] delete block', req.params.articleId, req.params.blockId);
   const removed = deleteBlock(req.params.articleId, req.params.blockId);
   if (!removed) {
     return res.status(404).json({ message: 'Block not found' });
@@ -120,6 +128,19 @@ app.post('/api/articles/:articleId/blocks/redo-text', (req, res) => {
     return res.status(400).json({ message: 'Nothing to redo' });
   }
   return res.json({ blockId: redone.id, block: redone });
+});
+
+app.post('/api/articles/:articleId/blocks/restore', (req, res) => {
+  console.log('[API] restore block', req.params.articleId, req.body?.parentId, req.body?.index);
+  const { parentId = null, index = null, block } = req.body || {};
+  if (!block) {
+    return res.status(400).json({ message: 'Missing block payload' });
+  }
+  const restored = restoreBlock(req.params.articleId, parentId, index, block);
+  if (!restored) {
+    return res.status(400).json({ message: 'Cannot restore block' });
+  }
+  return res.json(restored);
 });
 
 app.get('*', (req, res, next) => {

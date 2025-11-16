@@ -9,6 +9,11 @@ const state = {
   pendingTextPreview: null,
 };
 
+function logDebug(...args) {
+  // eslint-disable-next-line no-console
+  console.log('[undo]', ...args);
+}
+
 const refs = {
   articleListView: document.getElementById('articleListView'),
   articleView: document.getElementById('articleView'),
@@ -482,6 +487,7 @@ async function createArticle() {
 
 async function createSibling(direction) {
   if (!state.currentBlockId) return;
+  const anchorBlockId = state.currentBlockId;
   try {
     const data = await apiRequest(
       `/api/articles/${state.articleId}/blocks/${state.currentBlockId}/siblings`,
@@ -492,6 +498,20 @@ async function createSibling(direction) {
     );
     await loadArticle(state.articleId, { desiredBlockId: data.block.id });
     renderArticle();
+    if (data?.block) {
+      const snapshot = cloneBlockSnapshot(data.block);
+      pushUndoEntry({
+        type: 'structure',
+        action: {
+          kind: 'create',
+          parentId: data.parentId || null,
+          index: data.index ?? null,
+          blockId: data.block.id,
+          block: snapshot,
+          fallbackId: anchorBlockId,
+        },
+      });
+    }
   } catch (error) {
     showToast(error.message);
   }
@@ -526,11 +546,26 @@ async function deleteCurrentBlock() {
   if (!state.currentBlockId) return;
   const fallbackId = findFallbackBlockId(state.currentBlockId);
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}`, {
+    const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}`, {
       method: 'DELETE',
     });
+    logDebug('deleteCurrentBlock result', result);
     await loadArticle(state.articleId, { desiredBlockId: fallbackId });
     renderArticle();
+    if (result?.block) {
+      const snapshot = cloneBlockSnapshot(result.block);
+      pushUndoEntry({
+        type: 'structure',
+        action: {
+          kind: 'delete',
+          parentId: result.parentId || null,
+          index: result.index ?? null,
+          block: snapshot,
+          blockId: snapshot?.id,
+          fallbackId,
+        },
+      });
+    }
   } catch (error) {
     showToast(error.message);
   }
@@ -632,8 +667,17 @@ function hydrateUndoRedoFromArticle(article) {
 
 function pushUndoEntry(entry) {
   if (!entry) return;
+  logDebug('pushUndoEntry', entry);
   state.undoStack.push(entry);
   state.redoStack = [];
+}
+
+function cloneBlockSnapshot(block) {
+  try {
+    return JSON.parse(JSON.stringify(block || {}));
+  } catch {
+    return null;
+  }
 }
 
 async function focusBlock(blockId) {
@@ -833,24 +877,78 @@ function invertStructureAction(action) {
   if (action.kind === 'outdent') {
     return { kind: 'indent', blockId: action.blockId };
   }
+  if (action.kind === 'create') {
+    return { kind: 'delete', blockId: action.blockId, fallbackId: action.fallbackId || null };
+  }
+  if (action.kind === 'delete') {
+    return {
+      kind: 'restore',
+      block: action.block,
+      parentId: action.parentId || null,
+      index: action.index ?? null,
+    };
+  }
   return null;
 }
 
 async function executeStructureAction(action, options = {}) {
   const { skipRecord = false } = options;
-  if (!action) return false;
+  if (!action) return { success: false };
   let success = false;
+  let payload = null;
+  logDebug('executeStructureAction start', action);
   if (action.kind === 'move') {
     success = await moveBlock(action.blockId, action.direction, { skipRecord });
   } else if (action.kind === 'indent') {
     success = await indentBlock(action.blockId, { skipRecord });
   } else if (action.kind === 'outdent') {
     success = await outdentBlock(action.blockId, { skipRecord });
+  } else if (action.kind === 'delete') {
+    const targetId = action.blockId || action.block?.id;
+    if (!targetId) {
+      return { success: false };
+    }
+    try {
+      payload = await apiRequest(`/api/articles/${state.articleId}/blocks/${targetId}`, {
+        method: 'DELETE',
+      });
+      await loadArticle(state.articleId, { desiredBlockId: action.fallbackId || payload?.parentId });
+      renderArticle();
+      success = true;
+    } catch (error) {
+      showToast(error.message);
+      success = false;
+    }
+  } else if (action.kind === 'restore' || action.kind === 'create') {
+    const blockPayload = action.block || action.blockSnapshot;
+    if (!blockPayload) {
+      return { success: false };
+    }
+    try {
+      payload = await apiRequest(`/api/articles/${state.articleId}/blocks/restore`, {
+        method: 'POST',
+        body: JSON.stringify({
+          parentId: action.parentId || null,
+          index: action.index ?? null,
+          block: blockPayload,
+        }),
+      });
+      await loadArticle(state.articleId, { desiredBlockId: payload.block?.id });
+      renderArticle();
+      success = true;
+    } catch (error) {
+      showToast(error.message);
+      success = false;
+    }
   }
   if (success) {
-    await focusBlock(action.blockId);
+    const focusId = action.blockId || payload?.block?.id || action.block?.id;
+    if (focusId) {
+      await focusBlock(focusId);
+    }
   }
-  return success;
+  logDebug('executeStructureAction result', { success, payload });
+  return { success, payload };
 }
 
 async function undoTextChange(entry) {
@@ -912,11 +1010,18 @@ async function handleUndoAction() {
     return;
   }
   const entry = state.undoStack[state.undoStack.length - 1];
+  logDebug('handleUndoAction entry', entry);
+  logDebug('handleUndoAction entry', entry);
   if (entry.type === 'structure') {
     state.undoStack.pop();
     const inverse = invertStructureAction(entry.action);
-    const success = await executeStructureAction(inverse, { skipRecord: true });
-    if (success) {
+    const result = await executeStructureAction(inverse, { skipRecord: true });
+    if (result.success) {
+      if (entry.action.kind === 'create' && result.payload?.block) {
+        entry.action.block = result.payload.block;
+        entry.action.parentId = result.payload.parentId || null;
+        entry.action.index = result.payload.index ?? null;
+      }
       state.redoStack.push(entry);
     } else {
       state.undoStack.push(entry);
@@ -949,10 +1054,12 @@ async function handleRedoAction() {
     return;
   }
   const entry = state.redoStack[state.redoStack.length - 1];
+  logDebug('handleRedoAction entry', entry);
+  logDebug('handleRedoAction entry', entry);
   if (entry.type === 'structure') {
     state.redoStack.pop();
-    const success = await executeStructureAction(entry.action, { skipRecord: true });
-    if (success) {
+    const result = await executeStructureAction(entry.action, { skipRecord: true });
+    if (result.success) {
       state.undoStack.push(entry);
     } else {
       state.redoStack.push(entry);
