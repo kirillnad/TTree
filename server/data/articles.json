@@ -3,11 +3,11 @@
     {
       "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
       "title": "Пример статьи",
-      "updatedAt": "2025-11-16T21:55:07.322Z",
+      "updatedAt": "2025-11-16T22:59:53.853Z",
       "blocks": [
         {
-          "id": "25137da1-c6af-4033-a53d-3e4d311f92ec",
-          "text": "Новый блок X ссс",
+          "id": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "text": "Новый блок 123<b> </b>олололололо",
           "collapsed": false,
           "children": []
         },
@@ -42,7 +42,7 @@
             },
             {
               "id": "1b8b2b3d-6bfa-4bcf-9b03-aff04bbfb4a7",
-              "text": "<div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div><br></div></div></div></div></div></div></div></div><div><br></div>",
+              "text": "<div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>рыба</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div><br></div></div></div></div></div></div></div></div><div><br></div><div><br></div>",
               "collapsed": false,
               "children": []
             },
@@ -134,12 +134,6 @@
               ]
             }
           ]
-        },
-        {
-          "id": "3072e50d-c238-4ef3-ac16-4d87d25c9922",
-          "text": "Новый блок",
-          "collapsed": false,
-          "children": []
         },
         {
           "id": "a7225fc8-027e-4b6e-83e8-c435e9b79ab4",
@@ -238,9 +232,52 @@
           "before": "Основной раздел 567",
           "after": "Основной раздел <div><br></div>",
           "timestamp": "2025-11-16T21:47:55.051Z"
+        },
+        {
+          "id": "9adb446c-0954-48df-b250-f3f101a296bf",
+          "blockId": "1b8b2b3d-6bfa-4bcf-9b03-aff04bbfb4a7",
+          "before": "<div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div><br></div></div></div></div></div></div></div></div><div><br></div>",
+          "after": "<div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>рыба</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div>Новый блок<div>ваываываыав</div><div>ыав</div><div>ыва</div><div>ываы</div><div>аыв</div><div>а</div><div>ыв</div><div>а</div><div>ыва</div><div><br></div></div></div></div></div></div></div></div><div><br></div><div><br></div>",
+          "timestamp": "2025-11-16T22:10:23.219Z"
+        },
+        {
+          "id": "5338143f-b8a1-463f-a99f-bdac1831fcbc",
+          "blockId": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "before": "Новый блок",
+          "after": "Новый блок <b>123 </b>олололололо",
+          "timestamp": "2025-11-16T22:53:14.906Z"
+        },
+        {
+          "id": "a3158067-55c1-4820-872a-7be40d77da9e",
+          "blockId": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "before": "Новый блок <b>123 </b>олололололо",
+          "after": "Новый блок 123<b> </b>олололололо",
+          "timestamp": "2025-11-16T22:53:23.226Z"
         }
       ],
-      "redoHistory": []
+      "redoHistory": [
+        {
+          "id": "777726c1-9a58-4d34-8624-a3d6872249d3",
+          "blockId": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "before": "Новый блок 123<b> </b>олололололо ощ",
+          "after": "Новый блок 123<b> </b>олололололо",
+          "timestamp": "2025-11-16T22:54:15.687Z"
+        },
+        {
+          "id": "62469980-5536-4506-b275-b3f28b8c28d3",
+          "blockId": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "before": "Новый блок 123<b> </b>олололололо о",
+          "after": "Новый блок 123<b> </b>олололололо ощ",
+          "timestamp": "2025-11-16T22:54:05.655Z"
+        },
+        {
+          "id": "535e8bb2-9ea5-4b2a-bc15-4a7e2e75c8cf",
+          "blockId": "adb9175a-9472-45e1-8b57-726e9db74691",
+          "before": "Новый блок 123<b> </b>олололололо",
+          "after": "Новый блок 123<b> </b>олололололо о",
+          "timestamp": "2025-11-16T22:53:51.770Z"
+        }
+      ]
     },
     {
       "id": "6f9f869b-e932-4aed-8a28-0064e9b842bf",
@@ -254,6 +291,21 @@
           "children": []
         }
       ]
+    },
+    {
+      "id": "408f714b-2f89-436c-9567-c8388779e561",
+      "title": "Новая статья",
+      "updatedAt": "2025-11-16T22:42:26.995Z",
+      "blocks": [
+        {
+          "id": "95afec8e-2868-4931-a705-ddd80144325e",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        }
+      ],
+      "history": [],
+      "redoHistory": []
     }
   ]
 }

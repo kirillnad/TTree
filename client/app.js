@@ -6,6 +6,7 @@ const state = {
   editingBlockId: null,
   undoStack: [],
   redoStack: [],
+  pendingTextPreview: null,
 };
 
 const refs = {
@@ -82,6 +83,7 @@ async function loadListView() {
   state.editingBlockId = null;
   state.undoStack = [];
   state.redoStack = [];
+  clearPendingTextPreview({ restoreDom: false });
   setViewMode(false);
   try {
     const articles = await apiRequest('/api/articles');
@@ -285,6 +287,7 @@ function renderArticle() {
   };
 
   renderBlocks(article.blocks, refs.blocksContainer);
+  applyPendingPreviewMarkup();
 }
 
 function placeCaretAtEnd(element) {
@@ -617,6 +620,7 @@ async function ensureBlockVisible(blockId) {
 }
 
 function hydrateUndoRedoFromArticle(article) {
+  clearPendingTextPreview({ restoreDom: false });
   const toTextEntry = (entry) => ({
     type: 'text',
     blockId: entry.blockId,
@@ -636,6 +640,182 @@ async function focusBlock(blockId) {
   if (!blockId) return;
   await ensureBlockVisible(blockId);
   setCurrentBlock(blockId);
+}
+
+function clearPendingTextPreview({ restoreDom = true } = {}) {
+  const pending = state.pendingTextPreview;
+  if (!pending) return;
+  if (restoreDom) {
+    const textEl = document.querySelector(
+      `.block[data-block-id="${pending.blockId}"] .block-text`,
+    );
+    if (textEl) {
+      textEl.innerHTML = pending.originalHTML;
+    }
+  }
+  state.pendingTextPreview = null;
+}
+
+function diffTextSegments(currentText = '', nextText = '') {
+  const a = Array.from(currentText);
+  const b = Array.from(nextText);
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i -= 1) {
+    for (let j = n - 1; j >= 0; j -= 1) {
+      if (a[i] === b[j]) {
+        dp[i][j] = dp[i + 1][j + 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+  const operations = [];
+  let i = 0;
+  let j = 0;
+  while (i < m && j < n) {
+    if (a[i] === b[j]) {
+      operations.push({ type: 'same', value: a[i] });
+      i += 1;
+      j += 1;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      operations.push({ type: 'removed', value: a[i] });
+      i += 1;
+    } else {
+      operations.push({ type: 'added', value: b[j] });
+      j += 1;
+    }
+  }
+  while (i < m) {
+    operations.push({ type: 'removed', value: a[i] });
+    i += 1;
+  }
+  while (j < n) {
+    operations.push({ type: 'added', value: b[j] });
+    j += 1;
+  }
+
+  const chunks = [];
+  operations.forEach((op) => {
+    if (!op.value) return;
+    const last = chunks[chunks.length - 1];
+    if (last && last.type === op.type) {
+      last.value += op.value;
+    } else {
+      chunks.push({ type: op.type, value: op.value });
+    }
+  });
+  return chunks;
+}
+
+function renderDiffPreview(element, mode, chunks) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'diff-inline';
+  const content = document.createElement('div');
+  content.className = 'diff-inline__content';
+  chunks.forEach((chunk) => {
+    const span = document.createElement('span');
+    if (chunk.type === 'added') {
+      span.className = 'diff-inline__segment diff-inline__segment--added';
+    } else if (chunk.type === 'removed') {
+      span.className = 'diff-inline__segment diff-inline__segment--removed';
+    }
+    span.textContent = chunk.value;
+    content.appendChild(span);
+  });
+  const hint = document.createElement('div');
+  hint.className = 'diff-inline__hint';
+  hint.textContent =
+    mode === 'undo'
+      ? 'Повторно нажмите Ctrl+Z, чтобы подтвердить отмену'
+      : 'Повторно нажмите Ctrl+Y, чтобы подтвердить повтор';
+  wrapper.append(content, hint);
+  element.innerHTML = '';
+  element.appendChild(wrapper);
+}
+
+function findHistoryEntry(entryId, source = 'history') {
+  const collection =
+    source === 'redo'
+      ? state.article?.redoHistory || []
+      : state.article?.history || [];
+  return collection.find((item) => item.id === entryId) || null;
+}
+
+function buildDiffPreviewMarkup({ mode, nextHtml, currentHtml }) {
+  return buildInlineDiffMarkup({ mode, currentHtml, nextHtml });
+}
+
+async function showTextDiffPreview(entry, mode) {
+  clearPendingTextPreview();
+  const source = mode === 'undo' ? 'history' : 'redo';
+  const historyEntry = findHistoryEntry(entry.historyEntryId, source);
+  if (!historyEntry) {
+    return false;
+  }
+  await focusBlock(entry.blockId);
+  const textEl = document.querySelector(`.block[data-block-id="${entry.blockId}"] .block-text`);
+  if (!textEl) {
+    return false;
+  }
+  const currentHtml = textEl.innerHTML;
+  const nextHtml = mode === 'undo' ? historyEntry.before : historyEntry.after;
+  const currentText = textEl.textContent || '';
+  const nextText = (() => {
+    const template = document.createElement('template');
+    template.innerHTML = nextHtml || '';
+    return template.content.textContent || '';
+  })();
+  const chunks = diffTextSegments(currentText, nextText);
+  const hasChanges = chunks.some((chunk) => chunk.type !== 'same');
+  if (!hasChanges) {
+    return false;
+  }
+  renderDiffPreview(textEl, mode, chunks);
+  state.pendingTextPreview = {
+    mode,
+    blockId: entry.blockId,
+    originalHTML: currentHtml,
+    chunks,
+  };
+  return true;
+}
+
+async function applyPendingTextPreview(mode) {
+  const pending = state.pendingTextPreview;
+  clearPendingTextPreview({ restoreDom: false });
+  if (!pending) {
+    return;
+  }
+  if (mode === 'undo') {
+    const entry = state.undoStack.pop();
+    if (!entry) return;
+    const blockId = await undoTextChange(entry);
+    if (blockId) {
+      state.redoStack.push(entry);
+    } else {
+      state.undoStack.push(entry);
+    }
+  } else if (mode === 'redo') {
+    const entry = state.redoStack.pop();
+    if (!entry) return;
+    const blockId = await redoTextChange(entry);
+    if (blockId) {
+      state.undoStack.push(entry);
+    } else {
+      state.redoStack.push(entry);
+    }
+  }
+}
+
+function applyPendingPreviewMarkup() {
+  const pending = state.pendingTextPreview;
+  if (!pending) return;
+  const textEl = document.querySelector(`.block[data-block-id="${pending.blockId}"] .block-text`);
+  if (textEl) {
+    renderDiffPreview(textEl, pending.mode, pending.chunks);
+  }
 }
 
 function invertStructureAction(action) {
@@ -720,60 +900,102 @@ async function redoTextChange(entry) {
 }
 
 async function handleUndoAction() {
+  if (state.pendingTextPreview?.mode === 'redo') {
+    clearPendingTextPreview();
+  }
+  if (state.pendingTextPreview?.mode === 'undo') {
+    await applyPendingTextPreview('undo');
+    return;
+  }
   if (!state.undoStack.length) {
     showToast('Нечего отменять');
     return;
   }
-  const entry = state.undoStack.pop();
-  let success = false;
+  const entry = state.undoStack[state.undoStack.length - 1];
   if (entry.type === 'structure') {
+    state.undoStack.pop();
     const inverse = invertStructureAction(entry.action);
-    success = await executeStructureAction(inverse, { skipRecord: true });
-  } else if (entry.type === 'text') {
-    const blockId = await undoTextChange(entry);
-    success = Boolean(blockId);
-  }
-  if (success) {
-    state.redoStack.push(entry);
-  } else {
-    state.undoStack.push(entry);
-    if (entry.type === 'structure') {
+    const success = await executeStructureAction(inverse, { skipRecord: true });
+    if (success) {
+      state.redoStack.push(entry);
+    } else {
+      state.undoStack.push(entry);
       showToast('Не удалось отменить действие');
+    }
+    return;
+  }
+  const previewReady = await showTextDiffPreview(entry, 'undo');
+  if (!previewReady) {
+    state.undoStack.pop();
+    const blockId = await undoTextChange(entry);
+    if (blockId) {
+      state.redoStack.push(entry);
+    } else {
+      state.undoStack.push(entry);
     }
   }
 }
 
 async function handleRedoAction() {
+  if (state.pendingTextPreview?.mode === 'undo') {
+    clearPendingTextPreview();
+  }
+  if (state.pendingTextPreview?.mode === 'redo') {
+    await applyPendingTextPreview('redo');
+    return;
+  }
   if (!state.redoStack.length) {
     showToast('Нечего повторять');
     return;
   }
-  const entry = state.redoStack.pop();
-  let success = false;
+  const entry = state.redoStack[state.redoStack.length - 1];
   if (entry.type === 'structure') {
-    success = await executeStructureAction(entry.action, { skipRecord: true });
-  } else if (entry.type === 'text') {
-    const blockId = await redoTextChange(entry);
-    success = Boolean(blockId);
-  }
-  if (success) {
-    state.undoStack.push(entry);
-  } else {
-    state.redoStack.push(entry);
-    if (entry.type === 'structure') {
+    state.redoStack.pop();
+    const success = await executeStructureAction(entry.action, { skipRecord: true });
+    if (success) {
+      state.undoStack.push(entry);
+    } else {
+      state.redoStack.push(entry);
       showToast('Не удалось повторить действие');
+    }
+    return;
+  }
+  const previewReady = await showTextDiffPreview(entry, 'redo');
+  if (!previewReady) {
+    state.redoStack.pop();
+    const blockId = await redoTextChange(entry);
+    if (blockId) {
+      state.undoStack.push(entry);
+    } else {
+      state.redoStack.push(entry);
     }
   }
 }
 
 function handleViewKey(event) {
   if (!state.article) return;
-  const key = typeof event.key === 'string' ? event.key.toLowerCase() : '';
   const code = typeof event.code === 'string' ? event.code : '';
-  const isCtrlZ =
-    event.ctrlKey && !event.shiftKey && (code === 'KeyZ' || key === 'z' || key === 'я');
-  const isCtrlY =
-    event.ctrlKey && !event.shiftKey && (code === 'KeyY' || key === 'y' || key === 'н');
+  const isCtrlZ = event.ctrlKey && !event.shiftKey && code === 'KeyZ';
+  const isCtrlY = event.ctrlKey && !event.shiftKey && code === 'KeyY';
+  if (state.pendingTextPreview) {
+    if (state.pendingTextPreview.mode === 'undo' && isCtrlZ) {
+      event.preventDefault();
+      applyPendingTextPreview('undo');
+      return;
+    }
+    if (state.pendingTextPreview.mode === 'redo' && isCtrlY) {
+      event.preventDefault();
+      applyPendingTextPreview('redo');
+      return;
+    }
+    if (code === 'Escape') {
+      event.preventDefault();
+      clearPendingTextPreview();
+      return;
+    }
+    event.preventDefault();
+    return;
+  }
   if (isCtrlZ) {
     event.preventDefault();
     handleUndoAction();
@@ -784,52 +1006,52 @@ function handleViewKey(event) {
     handleRedoAction();
     return;
   }
-  if (event.ctrlKey && event.shiftKey && event.key === 'ArrowDown') {
+  if (event.ctrlKey && event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
     moveCurrentBlock('down');
     return;
   }
-  if (event.ctrlKey && event.shiftKey && event.key === 'ArrowUp') {
+  if (event.ctrlKey && event.shiftKey && event.code === 'ArrowUp') {
     event.preventDefault();
     moveCurrentBlock('up');
     return;
   }
-  if (event.ctrlKey && !event.shiftKey && event.key === 'ArrowDown') {
+  if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
     createSibling('after');
     return;
   }
-  if (event.ctrlKey && !event.shiftKey && event.key === 'ArrowUp') {
+  if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowUp') {
     event.preventDefault();
     createSibling('before');
     return;
   }
-  if (event.ctrlKey && event.key === 'Delete') {
+  if (event.ctrlKey && event.code === 'Delete') {
     event.preventDefault();
     deleteCurrentBlock();
     return;
   }
-  if (event.ctrlKey && event.key === 'ArrowRight') {
+  if (event.ctrlKey && event.code === 'ArrowRight') {
     event.preventDefault();
     indentCurrentBlock();
     return;
   }
-  if (event.ctrlKey && event.key === 'ArrowLeft') {
+  if (event.ctrlKey && event.code === 'ArrowLeft') {
     event.preventDefault();
     outdentCurrentBlock();
     return;
   }
-  if (event.key === 'ArrowDown') {
+  if (event.code === 'ArrowDown') {
     event.preventDefault();
     moveSelection(1);
     return;
   }
-  if (event.key === 'ArrowUp') {
+  if (event.code === 'ArrowUp') {
     event.preventDefault();
     moveSelection(-1);
     return;
   }
-  if (event.key === 'ArrowLeft') {
+  if (event.code === 'ArrowLeft') {
     event.preventDefault();
     const targetId = findCollapsibleTarget(state.currentBlockId, true);
     if (targetId) {
@@ -840,7 +1062,7 @@ function handleViewKey(event) {
     }
     return;
   }
-  if (event.key === 'ArrowRight') {
+  if (event.code === 'ArrowRight') {
     event.preventDefault();
     const targetId = findCollapsibleTarget(state.currentBlockId, false);
     if (targetId) {
@@ -848,19 +1070,19 @@ function handleViewKey(event) {
     }
     return;
   }
-  if (event.key === 'Enter') {
+  if (event.code === 'Enter') {
     event.preventDefault();
     startEditing();
   }
 }
 
 function handleEditKey(event) {
-  if (event.key === 'Enter' && event.ctrlKey) {
+  if (event.code === 'Enter' && event.ctrlKey) {
     event.preventDefault();
     saveEditing();
     return;
   }
-  if (event.key === 'Escape') {
+  if (event.code === 'Escape') {
     event.preventDefault();
     cancelEditing();
   }

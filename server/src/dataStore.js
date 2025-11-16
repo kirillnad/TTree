@@ -1,8 +1,57 @@
 const fs = require('fs');
 const path = require('path');
 const { v4: uuid } = require('uuid');
+const sanitizeHtml = require('sanitize-html');
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'articles.json');
+
+const SANITIZE_OPTIONS = {
+  allowedTags: [
+    'b',
+    'strong',
+    'i',
+    'em',
+    'u',
+    's',
+    'mark',
+    'code',
+    'pre',
+    'blockquote',
+    'p',
+    'br',
+    'div',
+    'span',
+    'ul',
+    'ol',
+    'li',
+    'a',
+    'img',
+  ],
+  allowedAttributes: {
+    a: ['href', 'title', 'target', 'rel'],
+    img: ['src', 'alt', 'title'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto', 'data'],
+  allowedSchemesByTag: {
+    img: ['http', 'https', 'data'],
+  },
+  allowProtocolRelative: false,
+};
+
+function sanitizeContent(html = '') {
+  return sanitizeHtml(html || '', SANITIZE_OPTIONS);
+}
+
+const DEFAULT_BLOCK_TEXT = sanitizeContent('');
+
+function createDefaultBlock() {
+  return {
+    id: uuid(),
+    text: DEFAULT_BLOCK_TEXT,
+    collapsed: false,
+    children: [],
+  };
+}
 
 function readData() {
   try {
@@ -24,16 +73,27 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-function normalizeArticle(article) {
-  if (!article) {
-    return null;
-  }
+function sanitizeBlock(block) {
+  if (!block) return;
+  block.text = sanitizeContent(block.text || '');
+  (block.children || []).forEach((child) => sanitizeBlock(child));
+}
+
+function ensureHistoryArrays(article) {
   if (!Array.isArray(article.history)) {
     article.history = [];
   }
   if (!Array.isArray(article.redoHistory)) {
     article.redoHistory = [];
   }
+}
+
+function normalizeArticle(article) {
+  if (!article) {
+    return null;
+  }
+  ensureHistoryArrays(article);
+  (article.blocks || []).forEach((block) => sanitizeBlock(block));
   return article;
 }
 
@@ -97,11 +157,12 @@ function getArticle(id) {
 
 function saveArticle(article) {
   const data = readData();
-  const idx = data.articles.findIndex((a) => a.id === article.id);
+  const prepared = normalizeArticle(article);
+  const idx = data.articles.findIndex((a) => a.id === prepared.id);
   if (idx >= 0) {
-    data.articles[idx] = article;
+    data.articles[idx] = prepared;
   } else {
-    data.articles.push(article);
+    data.articles.push(prepared);
   }
   writeData(data);
 }
@@ -111,14 +172,7 @@ function createArticle(title = 'Новая статья') {
     id: uuid(),
     title,
     updatedAt: new Date().toISOString(),
-    blocks: [
-      {
-        id: uuid(),
-        text: 'Новый блок',
-        collapsed: false,
-        children: [],
-      },
-    ],
+    blocks: [createDefaultBlock()],
     history: [],
     redoHistory: [],
   };
@@ -170,10 +224,13 @@ function updateBlock(articleId, blockId, attrs) {
   let historyEntryId = null;
   if (Object.prototype.hasOwnProperty.call(attrs, 'text')) {
     const previousText = typeof located.block.text === 'string' ? located.block.text : '';
-    const nextText =
-      typeof attrs.text === 'string' ? attrs.text : typeof located.block.text === 'string'
-        ? located.block.text
-        : '';
+    const rawNextText =
+      typeof attrs.text === 'string'
+        ? attrs.text
+        : typeof located.block.text === 'string'
+          ? located.block.text
+          : '';
+    const nextText = sanitizeContent(rawNextText);
     const entry = pushTextHistoryEntry(article, blockId, previousText, nextText);
     historyEntryId = entry ? entry.id : null;
     located.block.text = nextText;
@@ -369,12 +426,7 @@ function insertBlock(articleId, targetBlockId, direction = 'after') {
   }
 
   const { parent, siblings, index } = located;
-  const newBlock = {
-    id: uuid(),
-    text: 'Новый блок',
-    collapsed: false,
-    children: [],
-  };
+  const newBlock = createDefaultBlock();
 
   const insertionIndex = direction === 'before' ? index : index + 1;
   siblings.splice(insertionIndex, 0, newBlock);
