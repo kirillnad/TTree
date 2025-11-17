@@ -8,6 +8,7 @@ const {
   getArticle,
   getArticles,
   createArticle,
+  updateArticleMeta,
   updateBlock,
   insertBlock,
   deleteBlock,
@@ -81,6 +82,14 @@ app.post('/api/articles', (req, res) => {
 
 app.get('/api/articles/:articleId', (req, res) => {
   const article = getArticle(req.params.articleId);
+  if (!article) {
+    return res.status(404).json({ message: 'Article not found' });
+  }
+  return res.json(article);
+});
+
+app.patch('/api/articles/:articleId', (req, res) => {
+  const article = updateArticleMeta(req.params.articleId, req.body || {});
   if (!article) {
     return res.status(404).json({ message: 'Article not found' });
   }

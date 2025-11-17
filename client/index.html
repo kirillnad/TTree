@@ -7,49 +7,84 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <header class="app-header">
-      <div class="search-panel">
-        <input
-          id="searchInput"
-          type="text"
-          placeholder="Поиск по блокам..."
-          autocomplete="off"
-        />
-        <div id="searchResults" class="search-results hidden"></div>
-      </div>
-    </header>
-
-    <main id="app">
-      <section id="articleListView" class="panel hidden">
-        <div class="panel-header">
-          <h2>Список статей</h2>
-          <button id="createArticleBtn" class="primary">Создать статью</button>
-        </div>
-        <ul id="articleList"></ul>
-      </section>
-
-      <section id="articleView" class="panel hidden">
-        <div class="panel-header">
-          <div>
-            <h2 id="articleTitle"></h2>
-            <p id="updatedAt" class="meta"></p>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <button
+          id="sidebarToggle"
+          class="ghost sidebar-toggle"
+          type="button"
+          aria-expanded="true"
+          title="Свернуть панель"
+        >
+          ⟨
+        </button>
+        <div class="sidebar-content">
+          <div class="sidebar-header">
+            <h1 class="app-logo">TTree</h1>
+            <p class="sidebar-caption">Быстро ищите и управляйте блоками</p>
           </div>
-          <button id="backToList" class="ghost">К списку статей</button>
+          <div class="search-panel">
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Поиск по блокам..."
+              autocomplete="off"
+            />
+            <div id="searchResults" class="search-results hidden"></div>
+          </div>
+          <div class="sidebar-actions">
+            <button id="backToList" class="ghost full-width hidden">К списку статей</button>
+            <button id="createArticleBtn" class="primary full-width">Создать статью</button>
+            <div class="hint-control">
+              <button
+                id="hintToggleBtn"
+                class="ghost hint-toggle-btn"
+                type="button"
+                aria-expanded="false"
+                title="Советы по навигации"
+              >
+                ?
+              </button>
+              <div id="hintPopover" class="hint-popover hidden">
+                <div class="hint">
+                  <strong>Советы по навигации:</strong> ↑/↓ — сменить выделение, Enter — редактировать блок, Ctrl+↑/↓ — добавить соседний блок.
+                  <br />
+                  <strong>Горячие клавиши управления:</strong> Ctrl+Delete — удалить, Ctrl+Shift+↑/↓ — переместить блок в своей ветке, Ctrl+→ — сделать дочерним, Ctrl+← — поднять уровень вложенности.
+                  <br />
+                  <strong>Отмена и повтор:</strong> Ctrl+Z — вернуть последнее действие, Ctrl+Y — повторить отменённое.
+                  <br />
+                  <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </aside>
 
-        <div class="hint">
-          <strong>Советы по навигации:</strong> ↑/↓ — сменить выделение, Enter — редактировать блок, Ctrl+↑/↓ — добавить соседний блок.
-          <br />
-          <strong>Горячие клавиши управления:</strong> Ctrl+Delete — удалить, Ctrl+Shift+↑/↓ — переместить блок в своей ветке, Ctrl+→ — сделать дочерним, Ctrl+← — поднять уровень вложенности.
-          <br />
-          <strong>Отмена и повтор:</strong> Ctrl+Z — вернуть последнее действие, Ctrl+Y — повторить отменённое.
-          <br />
-          <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
-        </div>
+      <main id="app" class="content">
+        <section id="articleListView" class="panel">
+          <div class="panel-header list-header">
+            <h2>Список статей</h2>
+          </div>
+          <ul id="articleList"></ul>
+        </section>
 
-        <div id="blocksContainer" class="blocks"></div>
-      </section>
-    </main>
+        <section id="articleView" class="panel hidden">
+          <div class="panel-header article-header">
+            <div class="title-block">
+              <div class="title-row">
+                <h2 id="articleTitle"></h2>
+                <input id="articleTitleInput" class="hidden" type="text" />
+                <button id="editTitleBtn" class="ghost small" title="Редактировать заголовок">✎</button>
+              </div>
+              <p id="updatedAt" class="meta"></p>
+            </div>
+          </div>
+
+          <div id="blocksContainer" class="blocks"></div>
+        </section>
+      </main>
+    </div>
 
     <div id="toast" class="toast hidden"></div>
 

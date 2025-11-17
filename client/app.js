@@ -13,7 +13,12 @@ const state = {
   searchLoading: false,
   searchRequestId: 0,
   scrollTargetBlockId: null,
+  isEditingTitle: false,
+  isSidebarCollapsed: false,
 };
+
+let isSavingTitle = false;
+let isHintVisible = false;
 
 function logDebug(...args) {
   // eslint-disable-next-line no-console
@@ -33,6 +38,12 @@ const refs = {
   searchInput: document.getElementById('searchInput'),
   searchResults: document.getElementById('searchResults'),
   searchPanel: document.querySelector('.search-panel'),
+  articleTitleInput: document.getElementById('articleTitleInput'),
+  editTitleBtn: document.getElementById('editTitleBtn'),
+  hintToggleBtn: document.getElementById('hintToggleBtn'),
+  hintPopover: document.getElementById('hintPopover'),
+  sidebar: document.getElementById('sidebar'),
+  sidebarToggle: document.getElementById('sidebarToggle'),
 };
 
 const routing = {
@@ -259,6 +270,12 @@ function route(pathname) {
 function setViewMode(showArticle) {
   refs.articleView.classList.toggle('hidden', !showArticle);
   refs.articleListView.classList.toggle('hidden', showArticle);
+  if (!showArticle) {
+    hideHintPopover();
+  }
+  if (refs.backToList) {
+    refs.backToList.classList.toggle('hidden', !showArticle);
+  }
 }
 
 async function loadListView() {
@@ -305,6 +322,7 @@ async function loadArticle(id, options = {}) {
   state.editingBlockId = null;
   const article = await apiRequest(`/api/articles/${id}`);
   state.article = article;
+  state.isEditingTitle = false;
   const shouldResetUndo = typeof resetUndoStacks === 'boolean' ? resetUndoStacks : switchingArticle;
   if (shouldResetUndo) {
     hydrateUndoRedoFromArticle(article);
@@ -433,7 +451,18 @@ function renderArticle() {
   const article = state.article;
   if (!article) return;
 
-  refs.articleTitle.textContent = `${article.title} — ${article.id}`;
+  const titleText = article.title || 'Без названия';
+  refs.articleTitle.textContent = titleText;
+  if (!state.isEditingTitle && refs.articleTitleInput) {
+    refs.articleTitleInput.value = titleText;
+  }
+  refs.articleTitle.classList.toggle('hidden', state.isEditingTitle);
+  if (refs.articleTitleInput) {
+    refs.articleTitleInput.classList.toggle('hidden', !state.isEditingTitle);
+  }
+  if (refs.editTitleBtn) {
+    refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
+  }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
 
@@ -563,6 +592,158 @@ function renderArticle() {
       state.scrollTargetBlockId = null;
     });
   }
+}
+
+function focusTitleInput() {
+  if (!refs.articleTitleInput) return;
+  requestAnimationFrame(() => {
+    refs.articleTitleInput.focus();
+    refs.articleTitleInput.select();
+  });
+}
+
+function startTitleEditingMode() {
+  if (!state.article || !refs.articleTitleInput) return;
+  if (state.mode === 'edit') {
+    showToast('Сначала завершите редактирование блока');
+    return;
+  }
+  if (state.isEditingTitle) {
+    focusTitleInput();
+    return;
+  }
+  state.isEditingTitle = true;
+  refs.articleTitleInput.value = state.article.title || '';
+  renderArticle();
+  focusTitleInput();
+}
+
+function cancelTitleEditingMode() {
+  if (!state.isEditingTitle) return;
+  state.isEditingTitle = false;
+  if (refs.articleTitleInput && state.article) {
+    refs.articleTitleInput.value = state.article.title || '';
+  }
+  renderArticle();
+}
+
+function updateSearchTitlesCache(article) {
+  if (!article) return;
+  let changed = false;
+  state.searchResults = state.searchResults.map((result) => {
+    if (result.articleId === article.id && result.articleTitle !== article.title) {
+      changed = true;
+      return { ...result, articleTitle: article.title };
+    }
+    return result;
+  });
+  if (changed) {
+    renderSearchResults();
+  }
+}
+
+async function saveTitleEditingMode() {
+  if (!state.isEditingTitle || !refs.articleTitleInput || !state.articleId || !state.article) {
+    return;
+  }
+  const newTitle = refs.articleTitleInput.value.trim();
+  const currentTitle = (state.article.title || '').trim();
+  if (!newTitle && !currentTitle) {
+    state.isEditingTitle = false;
+    renderArticle();
+    return;
+  }
+  if (newTitle === currentTitle) {
+    state.isEditingTitle = false;
+    renderArticle();
+    return;
+  }
+  if (isSavingTitle) return;
+  isSavingTitle = true;
+  refs.articleTitleInput.disabled = true;
+  try {
+    const updatedArticle = await apiRequest(`/api/articles/${state.articleId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title: newTitle }),
+    });
+    state.article = {
+      ...state.article,
+      title: updatedArticle.title,
+      updatedAt: updatedArticle.updatedAt,
+    };
+    state.isEditingTitle = false;
+    renderArticle();
+    updateSearchTitlesCache(updatedArticle);
+    showToast('Заголовок обновлён');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    isSavingTitle = false;
+    if (refs.articleTitleInput) {
+      refs.articleTitleInput.disabled = false;
+    }
+  }
+}
+
+function setHintVisibility(visible) {
+  isHintVisible = visible;
+  if (refs.hintPopover) {
+    refs.hintPopover.classList.toggle('hidden', !visible);
+  }
+  if (refs.hintToggleBtn) {
+    refs.hintToggleBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+    refs.hintToggleBtn.classList.toggle('active', visible);
+  }
+}
+
+function toggleHintPopover(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  setHintVisibility(!isHintVisible);
+}
+
+function hideHintPopover() {
+  if (!isHintVisible) return;
+  setHintVisibility(false);
+}
+
+function setSidebarCollapsed(collapsed) {
+  if (!refs.sidebar) return;
+  state.isSidebarCollapsed = collapsed;
+  refs.sidebar.classList.toggle('collapsed', collapsed);
+  if (refs.sidebarToggle) {
+    refs.sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    refs.sidebarToggle.title = collapsed ? 'Показать панель' : 'Свернуть панель';
+    refs.sidebarToggle.textContent = collapsed ? '⟩' : '⟨';
+  }
+  if (collapsed) {
+    hideHintPopover();
+    hideSearchResults();
+  }
+}
+
+function toggleSidebarCollapsed() {
+  setSidebarCollapsed(!state.isSidebarCollapsed);
+}
+
+function handleTitleInputKeydown(event) {
+  if (!state.isEditingTitle) return;
+  if (event.code === 'Enter') {
+    event.preventDefault();
+    event.stopPropagation();
+    saveTitleEditingMode();
+  } else if (event.code === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    cancelTitleEditingMode();
+  }
+}
+
+function handleTitleInputBlur() {
+  if (!state.isEditingTitle || isSavingTitle) return;
+  saveTitleEditingMode();
 }
 
 async function expandCollapsedAncestors(blockId) {
@@ -1451,6 +1632,18 @@ async function handleRedoAction() {
 
 function handleViewKey(event) {
   if (!state.article) return;
+  if (
+    state.isEditingTitle &&
+    refs.articleTitleInput &&
+    refs.articleTitleInput.contains(event.target)
+  ) {
+    return;
+  }
+  if (isHintVisible && event.code === 'Escape') {
+    event.preventDefault();
+    hideHintPopover();
+    return;
+  }
   const code = typeof event.code === 'string' ? event.code : '';
   const isCtrlZ = event.ctrlKey && !event.shiftKey && code === 'KeyZ';
   const isCtrlY = event.ctrlKey && !event.shiftKey && code === 'KeyY';
@@ -1584,9 +1777,33 @@ function attachEvents() {
       }
     });
   }
+  if (refs.editTitleBtn) {
+    refs.editTitleBtn.addEventListener('click', startTitleEditingMode);
+  }
+  if (refs.articleTitle) {
+    refs.articleTitle.addEventListener('dblclick', startTitleEditingMode);
+  }
+  if (refs.articleTitleInput) {
+    refs.articleTitleInput.addEventListener('keydown', handleTitleInputKeydown);
+    refs.articleTitleInput.addEventListener('blur', handleTitleInputBlur);
+  }
+  if (refs.hintToggleBtn) {
+    refs.hintToggleBtn.addEventListener('click', toggleHintPopover);
+  }
+  if (refs.sidebarToggle) {
+    refs.sidebarToggle.addEventListener('click', toggleSidebarCollapsed);
+  }
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
       hideSearchResults();
+    }
+    if (
+      isHintVisible &&
+      refs.hintPopover &&
+      (!refs.hintPopover.contains(event.target) &&
+        !(refs.hintToggleBtn && refs.hintToggleBtn.contains(event.target)))
+    ) {
+      hideHintPopover();
     }
   });
 }

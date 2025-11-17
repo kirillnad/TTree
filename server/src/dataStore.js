@@ -469,6 +469,30 @@ function restoreBlock(articleId, parentId, index, blockPayload) {
   return { block: restoredBlock, parentId: parentId || null, index: insertionIndex };
 }
 
+function updateArticleMeta(articleId, attrs = {}) {
+  const data = readData();
+  const idx = data.articles.findIndex((article) => article.id === articleId);
+  if (idx < 0) {
+    return null;
+  }
+  const article = data.articles[idx];
+  let changed = false;
+  if (typeof attrs.title === 'string') {
+    const newTitle = sanitizeHtml(attrs.title || '', { allowedTags: [], allowedAttributes: {} }).trim() || 'Без названия';
+    if (newTitle !== article.title) {
+      article.title = newTitle;
+      changed = true;
+    }
+  }
+  if (!changed) {
+    return article;
+  }
+  article.updatedAt = new Date().toISOString();
+  data.articles[idx] = article;
+  writeData(data);
+  return article;
+}
+
 function searchBlocks(query, limit = 20) {
   const term = (query || '').trim().toLowerCase();
   if (!term) {
@@ -516,6 +540,7 @@ module.exports = {
   undoBlockTextChange,
   redoBlockTextChange,
   restoreBlock,
+  updateArticleMeta,
   searchBlocks,
 };
 function stripHtml(text = '') {
