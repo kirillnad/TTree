@@ -246,12 +246,31 @@ button:hover {
   line-height: 1.5;
 }
 
+.block-body--no-title {
+  margin-top: 0;
+}
+
 .block-text img {
   max-width: 100%;
   border-radius: 12px;
   display: block;
   margin: 0.4rem 0;
   box-shadow: 0 6px 18px rgba(15, 30, 40, 0.1);
+}
+
+.block-title {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.35rem;
+}
+
+.block-title__placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.block-body.collapsed {
+  display: none;
 }
 
 .block-text[contenteditable='true'] {

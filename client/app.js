@@ -368,6 +368,56 @@ function setCurrentBlock(blockId) {
   renderArticle();
 }
 
+function isSeparatorNode(node) {
+  if (!node) return false;
+  if (node.nodeType === Node.TEXT_NODE) {
+    return /\n\s*\n/.test(node.textContent || '');
+  }
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    if (node.tagName === 'BR') return true;
+    if (
+      (node.tagName === 'P' || node.tagName === 'DIV') &&
+      node.innerHTML.replace(/<br\s*\/?>/gi, '').trim() === ''
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function serializeNodes(nodes = []) {
+  const wrapper = document.createElement('div');
+  nodes.forEach((node) => wrapper.appendChild(node));
+  return wrapper.innerHTML.trim();
+}
+
+function extractBlockSections(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const nodes = Array.from(template.content.childNodes);
+  const titleNodes = [];
+  const bodyNodes = [];
+  let separatorFound = false;
+  nodes.forEach((node) => {
+    if (!separatorFound && isSeparatorNode(node)) {
+      separatorFound = true;
+      return;
+    }
+    if (!separatorFound) {
+      titleNodes.push(node.cloneNode(true));
+    } else {
+      bodyNodes.push(node.cloneNode(true));
+    }
+  });
+
+  if (!separatorFound) {
+    return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
+  }
+  const titleHtml = serializeNodes(titleNodes);
+  const bodyHtml = serializeNodes(bodyNodes);
+  return { titleHtml, bodyHtml };
+}
+
 function moveSelection(offset) {
   if (!state.article) return;
   const ordered = flattenVisible(state.article.blocks);
@@ -399,23 +449,41 @@ function renderArticle() {
         blockEl.classList.add('editing');
       }
 
-      const text = document.createElement('div');
-      text.className = 'block-text';
-      text.innerHTML = block.text || '';
-      text.spellcheck = false;
-      text.setAttribute('data-placeholder', 'Введите текст');
-
-      if (state.mode === 'edit' && state.editingBlockId === block.id) {
-        text.setAttribute('contenteditable', 'true');
-        requestAnimationFrame(() => {
-          text.focus();
-          placeCaretAtEnd(text);
-        });
-      } else {
-        text.setAttribute('contenteditable', 'false');
+      const sections = extractBlockSections(block.text || '');
+      const hasTitle = Boolean(sections.titleHtml);
+      let titleEl = null;
+      if (hasTitle) {
+        titleEl = document.createElement('div');
+        titleEl.className = 'block-title';
+        titleEl.innerHTML = sections.titleHtml;
       }
 
-      text.addEventListener('click', (event) => {
+      const body = document.createElement('div');
+      body.className = 'block-text block-body';
+      const rawHtml = block.text || '';
+      const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
+      body.innerHTML = bodyHtml || '';
+      if (!hasTitle) {
+        body.classList.add('block-body--no-title');
+      }
+      if (!bodyHtml) {
+        body.classList.add('block-body--empty');
+      }
+      body.spellcheck = false;
+      body.setAttribute('data-placeholder', 'Введите текст');
+
+      if (state.mode === 'edit' && state.editingBlockId === block.id) {
+        body.setAttribute('contenteditable', 'true');
+        body.innerHTML = rawHtml;
+        requestAnimationFrame(() => {
+          body.focus();
+          placeCaretAtEnd(body);
+        });
+      } else {
+        body.setAttribute('contenteditable', 'false');
+      }
+
+      body.addEventListener('click', (event) => {
         event.stopPropagation();
         if (state.mode === 'view') {
           setCurrentBlock(block.id);
@@ -436,16 +504,33 @@ function renderArticle() {
         });
         header.appendChild(collapseBtn);
       }
-      header.appendChild(text);
+      if (titleEl) {
+        header.appendChild(titleEl);
+      }
 
-      blockEl.appendChild(header);
-      attachRichContentHandlers(text, block.id);
+      if (state.mode === 'edit' && state.editingBlockId === block.id) {
+        blockEl.appendChild(body);
+      } else {
+        if (hasTitle && titleEl) {
+          header.appendChild(titleEl);
+        }
+        blockEl.appendChild(header);
+        if (!body.classList.contains('block-body--empty')) {
+          blockEl.appendChild(body);
+        }
+      }
+      attachRichContentHandlers(body, block.id);
 
       blockEl.addEventListener('click', () => {
         if (state.mode === 'view') {
           setCurrentBlock(block.id);
         }
       });
+
+      const hideBody = block.collapsed && state.mode === 'view' && hasTitle;
+      if (!body.classList.contains('block-body--empty')) {
+        body.classList.toggle('collapsed', hideBody);
+      }
 
       if (block.children && block.children.length > 0 && !block.collapsed) {
         const childrenContainer = document.createElement('div');
