@@ -3,12 +3,12 @@
     {
       "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
       "title": "Пример статьи",
-      "updatedAt": "2025-11-16T23:45:20.663Z",
+      "updatedAt": "2025-11-17T06:15:46.583Z",
       "blocks": [
         {
           "id": "b61be342-2d43-496a-8b53-2ca035a05bed",
           "text": "<div>Заголовок статьи - новый олололол</div>",
-          "collapsed": true,
+          "collapsed": false,
           "children": [
             {
               "id": "de02b932-cffc-4c54-8c79-cb021ffca32e",
@@ -263,16 +263,65 @@
     {
       "id": "408f714b-2f89-436c-9567-c8388779e561",
       "title": "Новая статья",
-      "updatedAt": "2025-11-17T00:52:26.163Z",
+      "updatedAt": "2025-11-17T06:15:40.462Z",
       "blocks": [
         {
           "id": "95afec8e-2868-4931-a705-ddd80144325e",
           "text": "Новый блок",
-          "collapsed": false,
+          "collapsed": true,
           "children": [
             {
               "id": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
               "text": "Новый блок<div><br /></div><br />",
+              "collapsed": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "2d2baaa4-4062-4c06-9631-112cefed902e",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "9b4a2923-9632-49a9-945a-95228165eac6",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "4779c495-912f-4447-a017-ad379378bdce",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "9307c6bc-188e-4bea-9b0e-391490f7c09e",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "95612f42-e936-4656-a460-baca366e88ea",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "b3ef0e8d-1030-4c7d-8e17-265a2d131848",
+          "text": "Новый блок",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "07622e6f-9782-4aff-9ab2-363e1917e63a",
+          "text": "Новый блок 1123",
+          "collapsed": true,
+          "children": [
+            {
+              "id": "f8f57b18-750f-47b9-b2c2-94d8ee18e2c5",
+              "text": "Новый блок 4455<div><br /></div>",
               "collapsed": false,
               "children": []
             }
@@ -335,6 +384,20 @@
           "before": "Новый блок<div><br /></div><img src=\"/uploads/2025/11/1763340519169-398846176.png\" alt=\"image.png\" />",
           "after": "Новый блок<div><br /></div><br />",
           "timestamp": "2025-11-17T00:48:47.881Z"
+        },
+        {
+          "id": "17742a0c-cc32-4237-b5ea-da8c4743f68a",
+          "blockId": "07622e6f-9782-4aff-9ab2-363e1917e63a",
+          "before": "Новый блок",
+          "after": "Новый блок 1123",
+          "timestamp": "2025-11-17T05:51:05.453Z"
+        },
+        {
+          "id": "10b9a1c3-7b64-4f04-a546-6ddb9beb919a",
+          "blockId": "f8f57b18-750f-47b9-b2c2-94d8ee18e2c5",
+          "before": "Новый блок",
+          "after": "Новый блок 4455<div><br /></div>",
+          "timestamp": "2025-11-17T05:51:25.737Z"
         }
       ],
       "redoHistory": []

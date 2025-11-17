@@ -17,6 +17,7 @@ const {
   undoBlockTextChange,
   redoBlockTextChange,
   restoreBlock,
+  searchBlocks,
 } = require('./dataStore');
 
 const PORT = process.env.PORT || 4000;
@@ -180,6 +181,15 @@ app.post('/api/uploads', (req, res) => {
     const url = `/uploads/${relativePath}`;
     return res.status(201).json({ url });
   });
+});
+
+app.get('/api/search', (req, res) => {
+  const query = (req.query.q || '').trim();
+  if (!query) {
+    return res.json([]);
+  }
+  const results = searchBlocks(query, 30);
+  return res.json(results);
 });
 
 app.post('/api/articles/:articleId/blocks/restore', (req, res) => {

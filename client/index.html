@@ -8,11 +8,15 @@
   </head>
   <body>
     <header class="app-header">
-      <div>
-        <h1>Редактор статей</h1>
-        <p class="subtitle">UUID статьи в адресной строке определяет загруженную заметку.</p>
+      <div class="search-panel">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Поиск по блокам..."
+          autocomplete="off"
+        />
+        <div id="searchResults" class="search-results hidden"></div>
       </div>
-      <div class="article-actions" id="articleActions"></div>
     </header>
 
     <main id="app">

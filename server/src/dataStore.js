@@ -469,6 +469,39 @@ function restoreBlock(articleId, parentId, index, blockPayload) {
   return { block: restoredBlock, parentId: parentId || null, index: insertionIndex };
 }
 
+function searchBlocks(query, limit = 20) {
+  const term = (query || '').trim().toLowerCase();
+  if (!term) {
+    return [];
+  }
+  const articles = getArticles();
+  const results = [];
+  articles.forEach((article) => {
+    const stack = [...(article.blocks || [])];
+    while (stack.length) {
+      const block = stack.shift();
+      const plain = stripHtml(block.text || '');
+      if (plain.toLowerCase().includes(term)) {
+        const idx = plain.toLowerCase().indexOf(term);
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(plain.length, idx + term.length + 40);
+        const snippet = plain.slice(start, end);
+        results.push({
+          articleId: article.id,
+          articleTitle: article.title,
+          blockId: block.id,
+          snippet,
+        });
+        if (results.length >= limit) {
+          return;
+        }
+      }
+      (block.children || []).forEach((child) => stack.push(child));
+    }
+  });
+  return results;
+}
+
 module.exports = {
   ensureSampleArticle,
   getArticles,
@@ -483,4 +516,8 @@ module.exports = {
   undoBlockTextChange,
   redoBlockTextChange,
   restoreBlock,
+  searchBlocks,
 };
+function stripHtml(text = '') {
+  return sanitizeContent(text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}

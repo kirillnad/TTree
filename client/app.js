@@ -7,6 +7,12 @@ const state = {
   undoStack: [],
   redoStack: [],
   pendingTextPreview: null,
+  searchQuery: '',
+  searchResults: [],
+  searchError: '',
+  searchLoading: false,
+  searchRequestId: 0,
+  scrollTargetBlockId: null,
 };
 
 function logDebug(...args) {
@@ -24,7 +30,9 @@ const refs = {
   createArticleBtn: document.getElementById('createArticleBtn'),
   backToList: document.getElementById('backToList'),
   toast: document.getElementById('toast'),
-  articleActions: document.getElementById('articleActions'),
+  searchInput: document.getElementById('searchInput'),
+  searchResults: document.getElementById('searchResults'),
+  searchPanel: document.querySelector('.search-panel'),
 };
 
 const routing = {
@@ -56,6 +64,180 @@ function showToast(message) {
   }, 2500);
 }
 
+function escapeHtml(text = '') {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightSnippet(snippet = '') {
+  const term = state.searchQuery.trim();
+  if (!term) return escapeHtml(snippet);
+  const regex = new RegExp(escapeRegExp(term), 'gi');
+  return escapeHtml(snippet).replace(regex, (match) => `<mark>${match}</mark>`);
+}
+
+function renderSearchResults() {
+  if (!refs.searchResults) return;
+  const query = state.searchQuery.trim();
+  if (!query) {
+    refs.searchResults.classList.add('hidden');
+    refs.searchResults.innerHTML = '';
+    return;
+  }
+  refs.searchResults.classList.remove('hidden');
+  if (state.searchLoading) {
+    refs.searchResults.innerHTML = '<div class="search-result-empty">Поиск...</div>';
+    return;
+  }
+  if (state.searchError) {
+    refs.searchResults.innerHTML = `<div class="search-result-empty">${escapeHtml(state.searchError)}</div>`;
+    return;
+  }
+  if (!state.searchResults.length) {
+    refs.searchResults.innerHTML = '<div class="search-result-empty">Ничего не найдено</div>';
+    return;
+  }
+  refs.searchResults.innerHTML = '';
+  state.searchResults.forEach((result) => {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `
+      <div class="search-result-item__title">${escapeHtml(result.articleTitle || 'Без названия')}</div>
+      <div class="search-result-item__snippet">${highlightSnippet(result.snippet || '')}</div>
+    `;
+    item.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      handleSearchResultClick(result);
+    });
+    refs.searchResults.appendChild(item);
+  });
+}
+
+function hideSearchResults() {
+  if (!refs.searchResults) return;
+  refs.searchResults.classList.add('hidden');
+}
+
+async function handleSearchInput(event) {
+  const value = event.target.value;
+  state.searchQuery = value;
+  if (!value.trim()) {
+    state.searchResults = [];
+    state.searchError = '';
+    state.searchLoading = false;
+    renderSearchResults();
+    return;
+  }
+  state.searchLoading = true;
+  const requestId = Date.now();
+  state.searchRequestId = requestId;
+  renderSearchResults();
+  try {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(value.trim())}`);
+    if (!response.ok) {
+      const details = await response.json().catch(() => ({}));
+      throw new Error(details.message || 'Ошибка поиска');
+    }
+    if (state.searchRequestId !== requestId) return;
+    const data = await response.json();
+    state.searchResults = data;
+    state.searchError = '';
+  } catch (error) {
+    if (state.searchRequestId !== requestId) return;
+    logDebug('search API failed, fallback to client search', error.message);
+    state.searchLoading = true;
+    renderSearchResults();
+    try {
+      const fallback = await clientSideSearch(value.trim(), 20);
+      if (state.searchRequestId !== requestId) return;
+      state.searchResults = fallback;
+      state.searchError = fallback.length ? '' : 'Ничего не найдено';
+    } catch (fallbackError) {
+      if (state.searchRequestId !== requestId) return;
+      state.searchResults = [];
+      state.searchError = fallbackError.message || error.message;
+    }
+  } finally {
+    if (state.searchRequestId === requestId) {
+      state.searchLoading = false;
+      renderSearchResults();
+    }
+  }
+}
+
+function handleSearchResultClick(result) {
+  hideSearchResults();
+  if (refs.searchInput) {
+    refs.searchInput.value = '';
+  }
+  state.searchQuery = '';
+  state.searchResults = [];
+  state.searchError = '';
+  state.scrollTargetBlockId = result.blockId;
+  state.currentBlockId = result.blockId;
+  navigate(routing.article(result.articleId));
+}
+
+function htmlToPlainText(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  return (template.content.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+async function clientSideSearch(query, limit = 20) {
+  const term = (query || '').trim().toLowerCase();
+  if (!term) {
+    return [];
+  }
+  const results = [];
+  try {
+    const articles = await apiRequest('/api/articles');
+    for (const article of articles) {
+      const data = await apiRequest(`/api/articles/${article.id}`);
+      const traverse = (blocks = []) => {
+        for (const block of blocks) {
+          const plain = htmlToPlainText(block.text || '');
+          if (plain.toLowerCase().includes(term)) {
+            const idx = plain.toLowerCase().indexOf(term);
+            const start = Math.max(0, idx - 40);
+            const end = Math.min(plain.length, idx + term.length + 40);
+            const snippet = plain.slice(start, end);
+            results.push({
+              articleId: data.id,
+              articleTitle: data.title,
+              blockId: block.id,
+              snippet,
+            });
+            if (results.length >= limit) {
+              return true;
+            }
+          }
+          if (block.children?.length) {
+            const stop = traverse(block.children);
+            if (stop) return true;
+          }
+        }
+        return false;
+      };
+      const shouldStop = traverse(data.blocks || []);
+      if (results.length >= limit || shouldStop) {
+        break;
+      }
+    }
+  } catch (error) {
+    throw new Error(error.message || 'Ошибка локального поиска');
+  }
+  return results;
+}
+
 function navigate(path) {
   if (window.location.pathname === path) {
     route(path);
@@ -77,7 +259,6 @@ function route(pathname) {
 function setViewMode(showArticle) {
   refs.articleView.classList.toggle('hidden', !showArticle);
   refs.articleListView.classList.toggle('hidden', showArticle);
-  refs.articleActions.innerHTML = '';
 }
 
 async function loadListView() {
@@ -128,13 +309,16 @@ async function loadArticle(id, options = {}) {
   if (shouldResetUndo) {
     hydrateUndoRedoFromArticle(article);
   }
+  let targetSet = false;
   if (desiredBlockId) {
     const desired = findBlock(desiredBlockId);
     if (desired) {
+      await expandCollapsedAncestors(desired.block.id);
       state.currentBlockId = desired.block.id;
+      targetSet = true;
     }
   }
-  if (switchingArticle || !findBlock(state.currentBlockId)) {
+  if (!targetSet && (switchingArticle || !findBlock(state.currentBlockId))) {
     const firstBlock = flattenVisible(article.blocks)[0];
     state.currentBlockId = firstBlock ? firstBlock.id : null;
   }
@@ -145,29 +329,12 @@ async function loadArticleView(id) {
   setViewMode(true);
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
-    await loadArticle(id, { resetUndoStacks: true });
+    const desired = state.scrollTargetBlockId || undefined;
+    await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired });
     renderArticle();
-    renderArticleActions();
   } catch (error) {
     refs.blocksContainer.innerHTML = `<p class="meta">Не удалось загрузить статью: ${error.message}</p>`;
   }
-}
-
-function renderArticleActions() {
-  refs.articleActions.innerHTML = '';
-  if (!state.article) return;
-  const linkButton = document.createElement('button');
-  linkButton.className = 'ghost';
-  linkButton.textContent = 'Скопировать ссылку';
-  linkButton.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      showToast('Ссылка скопирована');
-    } catch {
-      showToast('Невозможно скопировать ссылку');
-    }
-  });
-  refs.articleActions.appendChild(linkButton);
 }
 
 function flattenVisible(blocks = [], acc = []) {
@@ -293,6 +460,49 @@ function renderArticle() {
 
   renderBlocks(article.blocks, refs.blocksContainer);
   applyPendingPreviewMarkup();
+  if (state.scrollTargetBlockId) {
+    const targetId = state.scrollTargetBlockId;
+    requestAnimationFrame(() => {
+      const target = document.querySelector(`.block[data-block-id="${targetId}"]`);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        const prevSelected = refs.blocksContainer?.querySelector('.block.selected');
+        if (prevSelected && prevSelected !== target) {
+          prevSelected.classList.remove('selected');
+        }
+        target.classList.add('selected');
+      }
+      state.currentBlockId = targetId;
+      state.scrollTargetBlockId = null;
+    });
+  }
+}
+
+async function expandCollapsedAncestors(blockId) {
+  let current = findBlock(blockId);
+  if (!current) return;
+  const ancestorIds = [];
+  while (current.parent) {
+    ancestorIds.push(current.parent.id);
+    current = findBlock(current.parent.id);
+    if (!current) break;
+  }
+  for (const ancestorId of ancestorIds.reverse()) {
+    const ancestorNode = findBlock(ancestorId);
+    if (!ancestorNode || !ancestorNode.block.collapsed) continue;
+    try {
+      await apiRequest(`/api/articles/${state.articleId}/blocks/${ancestorNode.block.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ collapsed: false }),
+      });
+      ancestorNode.block.collapsed = false;
+    } catch (error) {
+      showToast(error.message);
+      break;
+    }
+  }
 }
 
 function placeCaretAtEnd(element) {
@@ -1281,6 +1491,19 @@ function attachEvents() {
 
   refs.createArticleBtn.addEventListener('click', createArticle);
   refs.backToList.addEventListener('click', () => navigate(routing.list));
+  if (refs.searchInput) {
+    refs.searchInput.addEventListener('input', handleSearchInput);
+    refs.searchInput.addEventListener('focus', () => {
+      if (state.searchQuery.trim()) {
+        renderSearchResults();
+      }
+    });
+  }
+  document.addEventListener('click', (event) => {
+    if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
+      hideSearchResults();
+    }
+  });
 }
 
 window.addEventListener('popstate', () => route(window.location.pathname));
