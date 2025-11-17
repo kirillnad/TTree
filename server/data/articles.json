@@ -263,25 +263,81 @@
     {
       "id": "408f714b-2f89-436c-9567-c8388779e561",
       "title": "Новая статья",
-      "updatedAt": "2025-11-16T23:58:42.881Z",
+      "updatedAt": "2025-11-17T00:52:26.163Z",
       "blocks": [
         {
           "id": "95afec8e-2868-4931-a705-ddd80144325e",
           "text": "Новый блок",
           "collapsed": false,
-          "children": []
+          "children": [
+            {
+              "id": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+              "text": "Новый блок<div><br /></div><br />",
+              "collapsed": false,
+              "children": []
+            }
+          ]
         }
       ],
-      "history": [],
-      "redoHistory": [
+      "history": [
         {
-          "id": "c48c0af2-3a63-4037-bb31-5b9e2b5d3482",
-          "blockId": "c606fec2-63be-4e0e-a822-00c11667dc4d",
+          "id": "395d4994-9152-42f1-9e1b-777eea70f3d8",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
           "before": "Новый блок",
-          "after": "Новый блок 1<div><br /></div><div><br /></div>",
-          "timestamp": "2025-11-16T23:58:29.012Z"
+          "after": "Новый блок<div><img src=\"/uploads/2025/11/1763338790332-721600503.png\" alt=\"image.png\" /><br /></div>",
+          "timestamp": "2025-11-17T00:19:52.839Z"
+        },
+        {
+          "id": "0dcda47b-f2a5-4541-8f36-b443024da6e3",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><img src=\"/uploads/2025/11/1763338790332-721600503.png\" alt=\"image.png\" /><br /></div>",
+          "after": "Новый блок<div><br /></div>",
+          "timestamp": "2025-11-17T00:35:49.365Z"
+        },
+        {
+          "id": "ab891b6b-cdd6-4f35-b90d-58a302d38a62",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><br /></div>",
+          "after": "Новый блок<div><br /></div><img src=\"/uploads/2025/11/1763339773746-789649885.png\" alt=\"image.png\" />",
+          "timestamp": "2025-11-17T00:36:14.738Z"
+        },
+        {
+          "id": "a7444b20-dd1a-4a69-a264-5c391decfd15",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><br /></div><img src=\"/uploads/2025/11/1763339773746-789649885.png\" alt=\"image.png\" />",
+          "after": "Новый блок<div><br /></div><br />",
+          "timestamp": "2025-11-17T00:36:27.900Z"
+        },
+        {
+          "id": "2252f255-2504-431a-8614-91729adba0b8",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><br /></div><br />",
+          "after": "Новый блок<div><img src=\"/uploads/2025/11/1763340286999-807687050.png\" alt=\"image.png\" /><br /></div>",
+          "timestamp": "2025-11-17T00:44:48.364Z"
+        },
+        {
+          "id": "86979a0c-a9b5-4de5-9d5c-26b941f2c29f",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><img src=\"/uploads/2025/11/1763340286999-807687050.png\" alt=\"image.png\" /><br /></div>",
+          "after": "Новый блок<div><br /></div>",
+          "timestamp": "2025-11-17T00:45:17.070Z"
+        },
+        {
+          "id": "b2db5e29-661d-4f43-a411-c8a86233318b",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><br /></div>",
+          "after": "Новый блок<div><br /></div><img src=\"/uploads/2025/11/1763340519169-398846176.png\" alt=\"image.png\" />",
+          "timestamp": "2025-11-17T00:48:40.231Z"
+        },
+        {
+          "id": "6edb2329-339d-4b15-be2e-abe287ebe23d",
+          "blockId": "607d1efd-e861-4ef5-adb6-d55ad41b902f",
+          "before": "Новый блок<div><br /></div><img src=\"/uploads/2025/11/1763340519169-398846176.png\" alt=\"image.png\" />",
+          "after": "Новый блок<div><br /></div><br />",
+          "timestamp": "2025-11-17T00:48:47.881Z"
         }
-      ]
+      ],
+      "redoHistory": []
     }
   ]
 }

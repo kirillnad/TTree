@@ -363,22 +363,31 @@ async function insertImagesSequentially(element, files) {
   }
 }
 
-async function insertImageFromFile(element, file) {
-  const dataUrl = await readFileAsDataUrl(file);
-  const safeName = (file.name || 'image').replace(/"/g, '&quot;');
-  insertHtmlAtCaret(
-    element,
-    `<img src="${dataUrl}" alt="${safeName}" draggable="false" />`,
-  );
+async function uploadImageFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch('/api/uploads', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.message || 'Не удалось загрузить изображение');
+  }
+  return response.json();
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+async function insertImageFromFile(element, file) {
+  try {
+    const { url } = await uploadImageFile(file);
+    const safeName = (file.name || 'image').replace(/"/g, '&quot;');
+    insertHtmlAtCaret(
+      element,
+      `<img src="${url}" alt="${safeName}" draggable="false" />`,
+    );
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function insertHtmlAtCaret(element, html) {
@@ -700,6 +709,22 @@ function clearPendingTextPreview({ restoreDom = true } = {}) {
   state.pendingTextPreview = null;
 }
 
+function textareaToTextContent(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  return template.content.textContent || '';
+}
+
+function extractImagesFromHtml(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const nodes = template.content.querySelectorAll('img');
+  return Array.from(nodes).map((node) => ({
+    src: node.getAttribute('src') || '',
+    alt: node.getAttribute('alt') || '',
+  }));
+}
+
 function diffTextSegments(currentText = '', nextText = '') {
   const a = Array.from(currentText);
   const b = Array.from(nextText);
@@ -753,7 +778,59 @@ function diffTextSegments(currentText = '', nextText = '') {
   return chunks;
 }
 
-function renderDiffPreview(element, mode, chunks) {
+function buildImageDiff(currentImages = [], nextImages = []) {
+  const key = (img) => `${img.src}||${img.alt || ''}`;
+  const nextCounts = {};
+  nextImages.forEach((img) => {
+    const k = key(img);
+    nextCounts[k] = (nextCounts[k] || 0) + 1;
+  });
+  const removed = [];
+  currentImages.forEach((img) => {
+    const k = key(img);
+    if (nextCounts[k]) {
+      nextCounts[k] -= 1;
+    } else {
+      removed.push({ type: 'removed', ...img });
+    }
+  });
+  const currentCounts = {};
+  currentImages.forEach((img) => {
+    const k = key(img);
+    currentCounts[k] = (currentCounts[k] || 0) + 1;
+  });
+  const added = [];
+  nextImages.forEach((img) => {
+    const k = key(img);
+    if (currentCounts[k]) {
+      currentCounts[k] -= 1;
+    } else {
+      added.push({ type: 'added', ...img });
+    }
+  });
+  return [...removed, ...added];
+}
+
+function renderImageDiff(container, imageDiff) {
+  if (!imageDiff.length) return;
+  const gallery = document.createElement('div');
+  gallery.className = 'diff-images';
+  imageDiff.forEach((diff) => {
+    const card = document.createElement('div');
+    card.className = `diff-image-card diff-image-card--${diff.type}`;
+    const label = document.createElement('div');
+    label.className = 'diff-image-card__label';
+    label.textContent = diff.type === 'added' ? 'Добавлено' : 'Удалено';
+    const img = document.createElement('img');
+    img.src = diff.src;
+    img.alt = diff.alt || '';
+    card.append(label, img);
+    gallery.appendChild(card);
+  });
+  container.appendChild(gallery);
+}
+
+function renderDiffPreview(element, mode, chunks, imageDiff = []) {
   const wrapper = document.createElement('div');
   wrapper.className = 'diff-inline';
   const content = document.createElement('div');
@@ -768,6 +845,7 @@ function renderDiffPreview(element, mode, chunks) {
     span.textContent = chunk.value;
     content.appendChild(span);
   });
+  renderImageDiff(content, imageDiff);
   const hint = document.createElement('div');
   hint.className = 'diff-inline__hint';
   hint.textContent =
@@ -787,10 +865,6 @@ function findHistoryEntry(entryId, source = 'history') {
   return collection.find((item) => item.id === entryId) || null;
 }
 
-function buildDiffPreviewMarkup({ mode, nextHtml, currentHtml }) {
-  return buildInlineDiffMarkup({ mode, currentHtml, nextHtml });
-}
-
 async function showTextDiffPreview(entry, mode) {
   clearPendingTextPreview();
   const source = mode === 'undo' ? 'history' : 'redo';
@@ -806,22 +880,23 @@ async function showTextDiffPreview(entry, mode) {
   const currentHtml = textEl.innerHTML;
   const nextHtml = mode === 'undo' ? historyEntry.before : historyEntry.after;
   const currentText = textEl.textContent || '';
-  const nextText = (() => {
-    const template = document.createElement('template');
-    template.innerHTML = nextHtml || '';
-    return template.content.textContent || '';
-  })();
+  const nextText = textareaToTextContent(nextHtml);
   const chunks = diffTextSegments(currentText, nextText);
   const hasChanges = chunks.some((chunk) => chunk.type !== 'same');
-  if (!hasChanges) {
+  const imageDiff = buildImageDiff(
+    extractImagesFromHtml(currentHtml),
+    extractImagesFromHtml(nextHtml),
+  );
+  if (!hasChanges && !imageDiff.length) {
     return false;
   }
-  renderDiffPreview(textEl, mode, chunks);
+  renderDiffPreview(textEl, mode, chunks, imageDiff);
   state.pendingTextPreview = {
     mode,
     blockId: entry.blockId,
     originalHTML: currentHtml,
     chunks,
+    imageDiff,
   };
   return true;
 }
@@ -858,7 +933,7 @@ function applyPendingPreviewMarkup() {
   if (!pending) return;
   const textEl = document.querySelector(`.block[data-block-id="${pending.blockId}"] .block-text`);
   if (textEl) {
-    renderDiffPreview(textEl, pending.mode, pending.chunks);
+    renderDiffPreview(textEl, pending.mode, pending.chunks, pending.imageDiff || []);
   }
 }
 
