@@ -228,7 +228,14 @@ button:hover {
 
 .block.editing {
   border-color: #c084fc;
+  background: transparent;
+}
+
+.block.editing > .block-header {
   background: #fdf4ff;
+  border-radius: 8px;
+  padding: 0.25rem 0.3rem;
+  margin: -0.25rem -0.3rem 0.35rem;
 }
 
 .block-text {

@@ -3,12 +3,12 @@
     {
       "id": "1c8efb0b-12b2-40c1-977f-03d242c1cace",
       "title": "Пример статьи",
-      "updatedAt": "2025-11-17T06:15:46.583Z",
+      "updatedAt": "2025-11-17T06:43:48.843Z",
       "blocks": [
         {
           "id": "b61be342-2d43-496a-8b53-2ca035a05bed",
-          "text": "<div>Заголовок статьи - новый олололол</div>",
-          "collapsed": false,
+          "text": "<div>Заголовок статьи - новый олололол оловапвал</div><div>ваполо авпол</div><div>вапавапвло</div>",
+          "collapsed": true,
           "children": [
             {
               "id": "de02b932-cffc-4c54-8c79-cb021ffca32e",
@@ -235,17 +235,16 @@
           "before": "Новый блок1<div><br></div>",
           "after": "Новый блок1",
           "timestamp": "2025-11-16T23:07:49.837Z"
+        },
+        {
+          "id": "6435e80f-5f77-412f-bf51-9d0a5fed14fe",
+          "blockId": "b61be342-2d43-496a-8b53-2ca035a05bed",
+          "before": "<div>Заголовок статьи - новый олололол</div>",
+          "after": "<div>Заголовок статьи - новый олололол оловапвал</div><div>ваполо авпол</div><div>вапавапвло</div>",
+          "timestamp": "2025-11-17T06:43:29.430Z"
         }
       ],
-      "redoHistory": [
-        {
-          "id": "86869c31-ec5a-4ea0-98c8-b9b4be767f4c",
-          "blockId": "3cac7358-f8cd-405c-ab23-663fd19e6f3a",
-          "before": "Новый блок",
-          "after": "Новый блок1",
-          "timestamp": "2025-11-16T23:32:56.764Z"
-        }
-      ]
+      "redoHistory": []
     },
     {
       "id": "6f9f869b-e932-4aed-8a28-0064e9b842bf",
