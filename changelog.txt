@@ -102,4 +102,34 @@
 [2025-11-18 13:33:00] Request: Ответ /collapse не должен включать весь блок. Response: Вернул из updateBlockCollapse только updatedAt, так что клиент теперь получает минимальный JSON и сам выставляет collapsed.
 [2025-11-18 13:40:00] Request: Сворачивание блоков тормозит из-за запроса. Response: Применил оптимистичное обновление: collapsed меняется и рендерится сразу, затем PATCH выполняется в фоне, а при ошибке откатываем изменение.
 [2025-11-18 13:55:00] Request: Уменьши отступы уровней и сдвинь линию, чтобы была по центру кнопки свёртки. Response: Ввел переменные для размера кнопки, уменьшил padding блоков, сделал .block-children со своим padding и псевдо-линией, а collapse-кнопки стали круглыми и фиксированного размера.
-[2025-11-18 14:00:00] Request: Вернуть кнопку к прежней форме и править линию так, чтобы центр совпадал с центром кнопки. Response: Вернул collapse-btn к изначальному квадратному виду с padding, добавил переменные и псевдоэлемент для .block-children, чтобы линия шла под центром кнопки без изменения внешнего вида.
+[2025-11-18 19:14:30] Request: сделай по первому варианту (лемматизация). Response: Реализовал лемматизацию через snowball-stemmers, сохранил normalized_text / lemma, и searchBlocks теперь MATCHит по lemma:*.
+[2025-11-18 19:23:11] Request: npm run migrate:sqlite - давай сделаем, чтобы он работал, если в базе уже есть статьи? Response: Миграция теперь очищает таблицы и всегда перезаписывает данные: скрипт удаляет locks_fts, locks, rticles, затем повторно импортирует JSON, так что 
+pm run migrate:sqlite безопасно запускается даже при существующих записях.
+
+Да, всё верно, но не совсем так, как звучит в вопросе: normalized_text и поле lemma заполняется один раз за блок — когда блок сохраняется или импортируется, мы делаем stripHtml, разбиваем весь текст на слова и для каждого слова вычисляем его стемму через buildLemma/buildLemmaTokens. Получив строку лемм (normalized_text), мы сохраняем её в таблицу blocks и пишем в blocks_fts одно значение lemma, которое уже содержит все стеммы подряд. При поиске searchBlocks строит lemma:<токен>* для каждого пользовательского слова и MATCH’ит по этой колонке, так что новые формы покрываются.
+
+То есть переработка происходит один раз в момент сохранения/миграции/реиндексации блока, а не «для каждого слова по отдельности» при каждом запросе: потом الجенерация запроса просто использует уже посчитанные леммы. Если нужно обновить существующие данные — npm run reindex:fts пересчитает normalized_text/lemma для всех текущих записей.
+
+[2025-11-18 19:48:05] Request: делай (поисковая доработка). Response: Добавил normalized_text в FTS и в базовую таблицу, сохраняю сразу стеммы и токены (text-utils.buildLemma/buildNormalizedTokens) и строю MATCH по lemma:* OR normalized_text:*, кроме того 
+eindex:fts/migrate:sqlite обновляют новый индекс.
+[2025-11-18 21:38:32] Request: собери сервер на питоне в отдельной папке servpy. Response: Создал FastAPI-сервер + sqlite3/pymorphy2 в servpy/ с переносом логики CRUD/поиска, загрузок и скриптов миграции/реиндексации; добавил requirements и точки входа.
+
+------------------------------------------ Python -----------------------------------
+
+В servpy/ появился полный FastAPI‑сервер с теми же маршрутами и поведением, что в Node:
+
+servpy/app/text_utils.py + pymorphy2 — лемматизация и нормализация текста (lemma + normalized_text) для каждого блока;
+servpy/app/db.py + schema.py — чистый sqlite3, WAL, FTS5 с колонками lemma и normalized_text, миграция/реиндексация (скрипты migrate_json.py и reindex_fts.py);
+servpy/app/data_store.py — CRUD, история, indent/outdent/move, поиск (lemma:* OR normalized_text:*), ensure_sample_article, create_article и весь набор операций, которые раньше делал dataStore.js;
+servpy/app/main.py — FastAPI-приложение с CORS, загрузкой изображений (5 МБ, MIME:image), сервингом /uploads и клиентского client/, API /api/..., /api/search, /changelog.txt и SPA-фолбеком;
+servpy/requirements.txt + .gitignore (новые sqlite/Uploads) чтобы можно было установить uvicorn, fastapi, pymorphy2, aiofiles.
+Скрипты на Python/FTS позволяют импортировать server/data/articles.json (python -m servpy.app.migrate_json) и заново индексировать (python -m servpy.app.reindex_fts).
+
+Следующие шаги.
+
+Установите зависимости pip install -r servpy/requirements.txt.
+Запустите ключевой сервис uvicorn servpy.app.main:app --reload --host 0.0.0.0 --port 4500 (или другой порт, если Node всё ещё слушает).
+Проверьте CRUD, undo/redo, поиск и загрузки, а затем обновите changelog/CI.[2025-11-18 22:59:40] Request: pip install -r servpy/requirements.txt — aiofiles 0.9.0 не нашёлся. Response: Установить с помощью iofiles==25.1.0, обновил servpy/requirements.txt и можно повторно запустить pip install -r servpy/requirements.txt.
+[2025-11-18 23:02:18] Request: python -m servpy.app.migrate_json — pymorphy2 падал на inspect.getargspec. Response: Добавил полифилл (inspect.getargspec = inspect.getfullargspec) перед импортом pymorphy2 в servpy/app/text_utils.py, теперь pymorphy2 успешно инициализируется на Python 3.11.
+[2025-11-18 23:03:01] Request: python -m servpy.app.migrate_json — pymorphy2 снова падал (ValueError). Response: Патчил inspect.getargspec через wrapper, выдающий tuple (args,varargs,varkw,defaults), и повторно запустил migrate_json — всё мигрировано (4 статьи).
+[2025-11-18 23:08:26] Request: uvicorn servpy.app.main:app — ошибка python-multipart. Response: Добавил python-multipart==0.0.6 в servpy/requirements.txt, чтобы FastAPI мог обрабатывать загрузки форм.

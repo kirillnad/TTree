@@ -294,6 +294,7 @@ html {
   font-size: 0.9rem;
   color: #475569;
   margin-top: 0.25rem;
+  line-height: 1.4;
 }
 
 .search-result-item mark {
@@ -619,9 +620,9 @@ button:hover {
 }
 
 .block-children {
-  margin-left: 1.25rem;
+  /* margin-left: 1.25rem; */
   border-left: 2px dashed #e0e7ff;
-  padding-left: 1rem;
+  /* padding-left: 1rem; */
   margin-top: 0.35rem;
 }
 

@@ -1,48 +1,19 @@
-const fs = require('fs');
-const path = require('path');
-const { v4: uuid } = require('uuid');
+﻿const { v4: uuid } = require('uuid');
 const sanitizeHtml = require('sanitize-html');
+const db = require('./db');
+const initSchema = require('./schema');
+const {
+  sanitizeContent,
+  stripHtml,
+  buildLemma,
+  buildLemmaTokens,
+  buildNormalizedTokens,
+} = require('./text-utils');
 
-const DATA_FILE = path.join(__dirname, '..', 'data', 'articles.json');
-
-const SANITIZE_OPTIONS = {
-  allowedTags: [
-    'b',
-    'strong',
-    'i',
-    'em',
-    'u',
-    's',
-    'mark',
-    'code',
-    'pre',
-    'blockquote',
-    'p',
-    'br',
-    'div',
-    'span',
-    'ul',
-    'ol',
-    'li',
-    'a',
-    'img',
-  ],
-  allowedAttributes: {
-    a: ['href', 'title', 'target', 'rel'],
-    img: ['src', 'alt', 'title'],
-  },
-  allowedSchemes: ['http', 'https', 'mailto', 'data'],
-  allowedSchemesByTag: {
-    img: ['http', 'https', 'data'],
-  },
-  allowProtocolRelative: false,
-};
-
-function sanitizeContent(html = '') {
-  return sanitizeHtml(html || '', SANITIZE_OPTIONS);
-}
+initSchema();
 
 const DEFAULT_BLOCK_TEXT = sanitizeContent('Новый блок');
+
 
 function createDefaultBlock() {
   return {
@@ -65,125 +36,193 @@ function cloneBlockPayload(block) {
   };
 }
 
-function readData() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    const normalized = raw.replace(/^\uFEFF/, '');
-    if (!normalized.trim()) {
-      return { articles: [] };
-    }
-    return JSON.parse(normalized);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return { articles: [] };
-    }
-    throw error;
-  }
-}
-
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
-
 function sanitizeBlock(block) {
   if (!block) return;
   block.text = sanitizeContent(block.text || '');
   (block.children || []).forEach((child) => sanitizeBlock(child));
 }
 
-function ensureHistoryArrays(article) {
-  if (!Array.isArray(article.history)) {
-    article.history = [];
-  }
-  if (!Array.isArray(article.redoHistory)) {
-    article.redoHistory = [];
-  }
-}
-
 function normalizeArticle(article) {
   if (!article) {
     return null;
   }
-  ensureHistoryArrays(article);
-  (article.blocks || []).forEach((block) => sanitizeBlock(block));
+  article.blocks = Array.isArray(article.blocks) ? article.blocks : [];
+  article.history = Array.isArray(article.history) ? article.history : [];
+  article.redoHistory = Array.isArray(article.redoHistory) ? article.redoHistory : [];
+  article.blocks.forEach((block) => sanitizeBlock(block));
   return article;
 }
 
-function ensureSampleArticle() {
-  const data = readData();
-  if ((data.articles || []).length > 0) {
-    return;
+function parseHistory(json) {
+  try {
+    return JSON.parse(json || '[]') || [];
+  } catch {
+    return [];
   }
+}
 
-  const introBlock = {
-    id: uuid(),
-    text: 'Заголовок статьи',
-    collapsed: false,
-    children: [
-      {
-        id: uuid(),
-        text: 'Введение',
-        collapsed: false,
-        children: [],
-      },
-      {
-        id: uuid(),
-        text: 'Основной раздел',
-        collapsed: false,
-        children: [
-          {
-            id: uuid(),
-            text: 'Подраздел',
-            collapsed: false,
-            children: [],
-          },
-        ],
-      },
-    ],
-    history: [],
-    redoHistory: [],
+function serializeHistory(entries) {
+  return JSON.stringify(entries || []);
+}
+
+function buildBlockTree(articleId) {
+  const rows = db
+    .prepare(
+      `
+      SELECT block_rowid, id, parent_id, text, collapsed, position
+      FROM blocks
+      WHERE article_id = ?
+      ORDER BY position ASC
+    `,
+    )
+    .all(articleId);
+  const map = new Map();
+  const roots = [];
+
+  rows.forEach((row) => {
+    map.set(row.id, {
+      id: row.id,
+      text: row.text,
+      collapsed: Boolean(row.collapsed),
+      children: [],
+      __position: row.position,
+    });
+  });
+
+  rows.forEach((row) => {
+    const block = map.get(row.id);
+    if (!row.parent_id) {
+      roots.push(block);
+      return;
+    }
+    const parent = map.get(row.parent_id);
+    if (parent) {
+      parent.children.push(block);
+    } else {
+      roots.push(block);
+    }
+  });
+
+  const sortChildren = (nodes = []) => {
+    nodes.sort((a, b) => (a.__position || 0) - (b.__position || 0));
+    nodes.forEach((node) => sortChildren(node.children));
   };
 
-  const sample = {
-    id: uuid(),
-    title: 'Пример статьи',
-    updatedAt: new Date().toISOString(),
-    blocks: [introBlock],
-    history: [],
-    redoHistory: [],
+  const cleanNode = (node) => {
+    delete node.__position;
+    node.children.forEach(cleanNode);
   };
 
-  data.articles = [sample];
-  writeData(data);
+  sortChildren(roots);
+  roots.forEach(cleanNode);
+  return roots;
+}
+
+function buildArticleFromRow(row) {
+  if (!row) return null;
+  const article = {
+    id: row.id,
+    title: row.title,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+    history: parseHistory(row.history),
+    redoHistory: parseHistory(row.redo_history),
+    blocks: buildBlockTree(row.id),
+  };
+  return article;
 }
 
 function getArticles() {
-  const data = readData();
-  return data.articles;
+  const rows = db.prepare('SELECT * FROM articles ORDER BY updated_at DESC').all();
+  return rows.map((row) => buildArticleFromRow(row));
 }
 
 function getArticle(id) {
-  const article = getArticles().find((item) => item.id === id) || null;
-  return normalizeArticle(article);
+  const row = db.prepare('SELECT * FROM articles WHERE id = ?').get(id);
+  return buildArticleFromRow(row);
 }
+
+const insertArticleStmt = db.prepare(
+  `
+    INSERT INTO articles (id, title, created_at, updated_at, history, redo_history)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `,
+);
+const updateArticleStmt = db.prepare(
+  `
+    UPDATE articles
+    SET title = ?, updated_at = ?, history = ?, redo_history = ?
+    WHERE id = ?
+  `,
+);
+const deleteBlocksStmt = db.prepare('DELETE FROM blocks WHERE article_id = ?');
+const deleteBlocksFtsStmt = db.prepare('DELETE FROM blocks_fts WHERE article_id = ?');
+const insertBlockStmt = db.prepare(
+  `
+    INSERT INTO blocks (id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+);
+const insertBlockFtsStmt = db.prepare(
+  `
+    INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text)
+    VALUES (?, ?, ?, ?, ?)
+  `,
+);
+
+function insertBlocksRecursive(articleId, blocks, articleUpdatedAt, parentId = null) {
+  blocks.forEach((block, index) => {
+    const plainText = stripHtml(block.text || '');
+    const normalizedLemma = buildLemma(plainText);
+    const normalizedTokens = buildNormalizedTokens(plainText);
+    const result = insertBlockStmt.run(
+      block.id,
+      articleId,
+      parentId,
+      index,
+      block.text || '',
+      normalizedTokens,
+      block.collapsed ? 1 : 0,
+      articleUpdatedAt,
+      articleUpdatedAt,
+    );
+    const blockRowId = result.lastInsertRowid;
+    insertBlockFtsStmt.run(blockRowId, articleId, block.text || '', normalizedLemma, normalizedTokens);
+    if (block.children && block.children.length > 0) {
+      insertBlocksRecursive(articleId, block.children, articleUpdatedAt, block.id);
+    }
+  });
+}
+
+const saveArticleTransaction = db.transaction((article) => {
+  const normalized = normalizeArticle(article);
+  if (!normalized) return;
+  const now = normalized.updatedAt || new Date().toISOString();
+  normalized.updatedAt = now;
+  const existing = db.prepare('SELECT created_at FROM articles WHERE id = ?').get(normalized.id);
+  const historyJson = serializeHistory(normalized.history);
+  const redoJson = serializeHistory(normalized.redoHistory);
+  if (existing) {
+    updateArticleStmt.run(normalized.title, now, historyJson, redoJson, normalized.id);
+  } else {
+    insertArticleStmt.run(normalized.id, normalized.title || 'РќРѕРІР°СЏ СЃС‚Р°С‚СЊСЏ', now, now, historyJson, redoJson);
+  }
+  deleteBlocksStmt.run(normalized.id);
+  deleteBlocksFtsStmt.run(normalized.id);
+  insertBlocksRecursive(normalized.id, normalized.blocks, now, null);
+});
 
 function saveArticle(article) {
-  const data = readData();
-  const prepared = normalizeArticle(article);
-  const idx = data.articles.findIndex((a) => a.id === prepared.id);
-  if (idx >= 0) {
-    data.articles[idx] = prepared;
-  } else {
-    data.articles.push(prepared);
-  }
-  writeData(data);
+  saveArticleTransaction(article);
 }
 
-function createArticle(title = 'Новая статья') {
+function createArticle(title = 'РќРѕРІР°СЏ СЃС‚Р°С‚СЊСЏ') {
+  const now = new Date().toISOString();
   const article = {
     id: uuid(),
     title,
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
     blocks: [createDefaultBlock()],
     history: [],
     redoHistory: [],
@@ -232,7 +271,6 @@ function updateBlock(articleId, blockId, attrs) {
   if (!located) {
     return null;
   }
-
   let historyEntryId = null;
   if (Object.prototype.hasOwnProperty.call(attrs, 'text')) {
     const previousText = typeof located.block.text === 'string' ? located.block.text : '';
@@ -240,8 +278,8 @@ function updateBlock(articleId, blockId, attrs) {
       typeof attrs.text === 'string'
         ? attrs.text
         : typeof located.block.text === 'string'
-          ? located.block.text
-          : '';
+        ? located.block.text
+        : '';
     const nextText = sanitizeContent(rawNextText);
     const entry = pushTextHistoryEntry(article, blockId, previousText, nextText);
     historyEntryId = entry ? entry.id : null;
@@ -422,7 +460,6 @@ function outdentBlock(articleId, blockId) {
   if (!parentInfo) {
     return null;
   }
-
   const { siblings, index } = located;
   const followingSiblings = siblings.splice(index + 1);
   const [block] = siblings.splice(index, 1);
@@ -431,11 +468,9 @@ function outdentBlock(articleId, blockId) {
   }
   block.children = block.children || [];
   block.children.push(...followingSiblings);
-
   const targetSiblings = parentInfo.siblings;
   const insertionIndex = parentInfo.index + 1;
   targetSiblings.splice(insertionIndex, 0, block);
-
   article.updatedAt = new Date().toISOString();
   saveArticle(article);
   return {
@@ -453,13 +488,10 @@ function insertBlock(articleId, targetBlockId, direction = 'after', blockPayload
   if (!located) {
     return null;
   }
-
   const { parent, siblings, index } = located;
   const newBlock = blockPayload ? cloneBlockPayload(blockPayload) : createDefaultBlock();
-
   const insertionIndex = direction === 'before' ? index : index + 1;
   siblings.splice(insertionIndex, 0, newBlock);
-
   article.updatedAt = new Date().toISOString();
   saveArticle(article);
   return { block: newBlock, parentId: parent ? parent.id : null, index: insertionIndex };
@@ -485,15 +517,13 @@ function restoreBlock(articleId, parentId, index, blockPayload) {
 }
 
 function updateArticleMeta(articleId, attrs = {}) {
-  const data = readData();
-  const idx = data.articles.findIndex((article) => article.id === articleId);
-  if (idx < 0) {
+  const article = getArticle(articleId);
+  if (!article) {
     return null;
   }
-  const article = data.articles[idx];
   let changed = false;
   if (typeof attrs.title === 'string') {
-    const newTitle = sanitizeHtml(attrs.title || '', { allowedTags: [], allowedAttributes: {} }).trim() || 'Без названия';
+    const newTitle = sanitizeHtml(attrs.title || '', { allowedTags: [], allowedAttributes: {} }).trim() || 'РќРѕРІР°СЏ СЃС‚Р°С‚СЊСЏ';
     if (newTitle !== article.title) {
       article.title = newTitle;
       changed = true;
@@ -503,42 +533,104 @@ function updateArticleMeta(articleId, attrs = {}) {
     return article;
   }
   article.updatedAt = new Date().toISOString();
-  data.articles[idx] = article;
-  writeData(data);
+  saveArticle(article);
   return article;
 }
 
+function buildFtsQuery(term) {
+  const lemmaTokens = buildLemmaTokens(term);
+  const normalizedTokensQuery = buildNormalizedTokens(term)
+    .split(/\s+/)
+    .filter(Boolean);
+  const predicateParts = [];
+  if (lemmaTokens.length) {
+    predicateParts.push(
+      lemmaTokens.map((token) => `lemma:${token}*`).join(' OR '),
+    );
+  }
+  if (normalizedTokensQuery.length) {
+    predicateParts.push(
+      normalizedTokensQuery.map((token) => `normalized_text:${token}*`).join(' OR '),
+    );
+  }
+  return predicateParts.filter(Boolean).join(' OR ');
+}
+
+const searchStatement = db.prepare(
+  `
+    SELECT
+      blocks.id AS blockId,
+      articles.id AS articleId,
+      articles.title AS articleTitle,
+      snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
+      blocks.text AS blockText
+    FROM blocks_fts
+    JOIN blocks ON blocks.rowid = blocks_fts.block_rowid
+    JOIN articles ON articles.id = blocks.article_id
+    WHERE blocks_fts MATCH ?
+    ORDER BY bm25(blocks_fts) ASC
+    LIMIT ?
+  `,
+);
+
 function searchBlocks(query, limit = 20) {
-  const term = (query || '').trim().toLowerCase();
+  const term = (query || '').trim();
   if (!term) {
     return [];
   }
-  const articles = getArticles();
-  const results = [];
-  articles.forEach((article) => {
-    const stack = [...(article.blocks || [])];
-    while (stack.length) {
-      const block = stack.shift();
-      const plain = stripHtml(block.text || '');
-      if (plain.toLowerCase().includes(term)) {
-        const idx = plain.toLowerCase().indexOf(term);
-        const start = Math.max(0, idx - 40);
-        const end = Math.min(plain.length, idx + term.length + 40);
-        const snippet = plain.slice(start, end);
-        results.push({
-          articleId: article.id,
-          articleTitle: article.title,
-          blockId: block.id,
-          snippet,
-        });
-        if (results.length >= limit) {
-          return;
-        }
-      }
-      (block.children || []).forEach((child) => stack.push(child));
-    }
-  });
-  return results;
+  const ftsQuery = buildFtsQuery(term);
+  if (!ftsQuery) {
+    return [];
+  }
+  const rows = searchStatement.all(ftsQuery, limit);
+  return rows.map((row) => ({
+    articleId: row.articleId,
+    articleTitle: row.articleTitle,
+    blockId: row.blockId,
+    snippet: row.snippet || stripHtml(row.blockText || '').slice(0, 160),
+  }));
+}
+
+function ensureSampleArticle() {
+  const exists = db.prepare('SELECT 1 FROM articles LIMIT 1').get();
+  if (exists) {
+    return;
+  }
+  const introBlock = {
+    id: uuid(),
+    text: 'РџСЂРёРјРµСЂРЅС‹Р№ Р±Р»РѕРє',
+    collapsed: false,
+    children: [
+      {
+        id: uuid(),
+        text: 'Р”РѕС‡РµСЂРЅРёР№ СЌР»РµРјРµРЅС‚',
+        collapsed: false,
+        children: [],
+      },
+      {
+        id: uuid(),
+        text: 'Р Р°Р·РІРёРІР°СЋС‰Р°СЏ РІРµС‚РєР°',
+        collapsed: false,
+        children: [
+          {
+            id: uuid(),
+            text: 'Р“Р»СѓР±РѕРєРѕ РІР»РѕР¶РµРЅРЅС‹Р№ Р±Р»РѕРє',
+            collapsed: false,
+            children: [],
+          },
+        ],
+      },
+    ],
+  };
+  const sample = {
+    id: uuid(),
+    title: 'РџСЂРёРјРµСЂ СЃС‚Р°С‚СЊРё',
+    updatedAt: new Date().toISOString(),
+    blocks: [introBlock],
+    history: [],
+    redoHistory: [],
+  };
+  saveArticle(sample);
 }
 
 module.exports = {
@@ -559,6 +651,3 @@ module.exports = {
   updateArticleMeta,
   searchBlocks,
 };
-function stripHtml(text = '') {
-  return sanitizeContent(text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-}

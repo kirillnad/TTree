@@ -1,1 +1,4 @@
 node_modules
+server/data/*.sqlite*
+servpy/data/*.sqlite*
+servpy/servpy_uploads

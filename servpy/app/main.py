@@ -1,0 +1,221 @@
+from __future__ import annotations
+
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import aiofiles
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+
+from .data_store import (
+    create_article,
+    delete_block,
+    ensure_sample_article,
+    indent_block,
+    insert_block,
+    move_block,
+    outdent_block,
+    redo_block_text_change,
+    restore_block,
+    search_blocks,
+    undo_block_text_change,
+    update_article_meta,
+    update_block,
+    update_block_collapse,
+    get_articles,
+    get_article,
+)
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+CLIENT_DIR = BASE_DIR / 'client'
+UPLOADS_DIR = BASE_DIR / 'servpy_uploads'
+UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
+
+ensure_sample_article()
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+app.mount('/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
+if CLIENT_DIR.exists():
+    app.mount('/assets', StaticFiles(directory=str(CLIENT_DIR)), name='client')
+
+
+@app.get('/api/articles')
+def list_articles():
+    return [
+        {'id': article['id'], 'title': article['title'], 'updatedAt': article['updatedAt']}
+        for article in get_articles()
+    ]
+
+
+@app.post('/api/articles')
+def post_article(payload: dict[str, Any]):
+    article = create_article(payload.get('title'))
+    return article
+
+
+@app.get('/api/articles/{article_id}')
+def read_article(article_id: str):
+    article = get_article(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return article
+
+
+@app.patch('/api/articles/{article_id}')
+def patch_article(article_id: str, payload: dict[str, Any]):
+    article = update_article_meta(article_id, payload)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return article
+
+
+@app.patch('/api/articles/{article_id}/blocks/{block_id}')
+def patch_block(article_id: str, block_id: str, payload: dict[str, Any]):
+    block = update_block(article_id, block_id, payload)
+    if not block:
+        raise HTTPException(status_code=404, detail='Block not found')
+    return block
+
+
+@app.patch('/api/articles/{article_id}/collapse')
+def patch_collapse(article_id: str, payload: dict[str, Any]):
+    block_id = payload.get('blockId')
+    collapsed = payload.get('collapsed')
+    if block_id is None or not isinstance(collapsed, bool):
+        raise HTTPException(status_code=400, detail='Missing blockId or collapsed flag')
+    block = update_block_collapse(article_id, block_id, collapsed)
+    if not block:
+        raise HTTPException(status_code=404, detail='Block not found')
+    return block
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
+def post_sibling(article_id: str, block_id: str, payload: dict[str, Any]):
+    direction = payload.get('direction', 'after') if payload else 'after'
+    result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
+    if not result:
+        raise HTTPException(status_code=404, detail='Cannot insert block')
+    return result
+
+
+@app.delete('/api/articles/{article_id}/blocks/{block_id}')
+def remove_block(article_id: str, block_id: str):
+    result = delete_block(article_id, block_id)
+    if not result:
+        raise HTTPException(status_code=404, detail='Block not found')
+    return result
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/move')
+def post_move(article_id: str, block_id: str, payload: dict[str, Any]):
+    direction = payload.get('direction')
+    if direction not in {'up', 'down'}:
+        raise HTTPException(status_code=400, detail='Unknown move direction')
+    result = move_block(article_id, block_id, direction)
+    if not result:
+        raise HTTPException(status_code=400, detail='Cannot move block')
+    return result
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/indent')
+def post_indent(article_id: str, block_id: str):
+    result = indent_block(article_id, block_id)
+    if not result:
+        raise HTTPException(status_code=400, detail='Cannot indent block')
+    return result
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/outdent')
+def post_outdent(article_id: str, block_id: str):
+    result = outdent_block(article_id, block_id)
+    if not result:
+        raise HTTPException(status_code=400, detail='Cannot outdent block')
+    return result
+
+
+@app.post('/api/articles/{article_id}/blocks/undo-text')
+def post_undo(article_id: str, payload: dict[str, Any]):
+    entry_id = payload.get('entryId')
+    block = undo_block_text_change(article_id, entry_id)
+    if not block:
+        raise HTTPException(status_code=400, detail='Nothing to undo')
+    return {'blockId': block['id'], 'block': block}
+
+
+@app.post('/api/articles/{article_id}/blocks/redo-text')
+def post_redo(article_id: str, payload: dict[str, Any]):
+    entry_id = payload.get('entryId')
+    block = redo_block_text_change(article_id, entry_id)
+    if not block:
+        raise HTTPException(status_code=400, detail='Nothing to redo')
+    return {'blockId': block['id'], 'block': block}
+
+
+@app.post('/api/uploads')
+async def upload_file(file: UploadFile = File(...)):
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail='Доступны только изображения')
+    now = datetime.utcnow()
+    target_dir = UPLOADS_DIR / str(now.year) / f'{now.month:02}'
+    target_dir.mkdir(parents=True, exist_ok=True)
+    filename = f'{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{Path(file.filename).suffix or ".bin"}'
+    dest = target_dir / filename
+    size = 0
+    async with aiofiles.open(dest, 'wb') as out_file:
+        while chunk := await file.read(1024 * 256):
+            size += len(chunk)
+            if size > 5 * 1024 * 1024:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(status_code=400, detail='Файл слишком большой')
+            await out_file.write(chunk)
+    return {'url': f'/uploads/{dest.relative_to(UPLOADS_DIR).as_posix()}'}
+
+
+@app.get('/api/search')
+def get_search(q: str = ''):
+    query = q.strip()
+    if not query:
+        return []
+    return search_blocks(query, 30)
+
+
+@app.post('/api/articles/{article_id}/blocks/restore')
+def post_restore(article_id: str, payload: dict[str, Any]):
+    block = payload.get('block')
+    if not block:
+        raise HTTPException(status_code=400, detail='Missing block payload')
+    parent_id = payload.get('parentId')
+    index = payload.get('index')
+    result = restore_block(article_id, parent_id, index, block)
+    if not result:
+        raise HTTPException(status_code=400, detail='Cannot restore block')
+    return result
+
+
+@app.get('/changelog.txt')
+def get_changelog():
+    changelog = BASE_DIR / 'changelog.txt'
+    if not changelog.exists():
+        raise HTTPException(status_code=404, detail='Changelog not found')
+    return PlainTextResponse(changelog.read_text(encoding='utf-8'))
+
+
+@app.get('/api/health')
+def health():
+    return {'status': 'ok'}
+
+
+@app.get('/{full_path:path}')
+def spa(full_path: str):
+    return FileResponse(CLIENT_DIR / 'index.html')

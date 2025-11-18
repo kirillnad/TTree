@@ -156,9 +156,14 @@ function renderSearchResults() {
   state.searchResults.forEach((result) => {
     const item = document.createElement('div');
     item.className = 'search-result-item';
+    const lines = htmlToLines(result.blockText || '');
+    const previewLines = lines.slice(0, 2);
+    const previewContent = previewLines.length
+      ? previewLines.map((line) => highlightSnippet(line)).join('<br />')
+      : highlightSnippet(result.snippet || '');
     item.innerHTML = `
-      <div class="search-result-item__title">${escapeHtml(result.articleTitle || 'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ')}</div>
-      <div class="search-result-item__snippet">${highlightSnippet(result.snippet || '')}</div>
+      <div class="search-result-item__title">${escapeHtml(result.articleTitle || 'Новая статья')}</div>
+      <div class="search-result-item__snippet">${previewContent}</div>
     `;
     item.addEventListener('mousedown', (event) => {
       event.preventDefault();
@@ -311,6 +316,19 @@ function htmlToPlainText(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
   return (template.content.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+
+function htmlToLines(html = '') {
+  const normalized = (html || '')
+    .replace(/<br\s*\/?/gi, '\n')
+    .replace(/<\/(?:div|p|li|h[1-6])>/gi, '\n');
+  const template = document.createElement('template');
+  template.innerHTML = normalized;
+  return (template.content.textContent || '')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter((line) => line.length);
 }
 
 async function clientSideSearch(query, limit = 20) {
