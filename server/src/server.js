@@ -10,6 +10,7 @@ const {
   createArticle,
   updateArticleMeta,
   updateBlock,
+  updateBlockCollapse,
   insertBlock,
   deleteBlock,
   moveBlock,
@@ -21,7 +22,7 @@ const {
   searchBlocks,
 } = require('./dataStore');
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4500;
 
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -98,6 +99,18 @@ app.patch('/api/articles/:articleId', (req, res) => {
 
 app.patch('/api/articles/:articleId/blocks/:blockId', (req, res) => {
   const updated = updateBlock(req.params.articleId, req.params.blockId, req.body || {});
+  if (!updated) {
+    return res.status(404).json({ message: 'Block not found' });
+  }
+  return res.json(updated);
+});
+
+app.patch('/api/articles/:articleId/collapse', (req, res) => {
+  const { blockId, collapsed } = req.body || {};
+  if (!blockId || typeof collapsed !== 'boolean') {
+    return res.status(400).json({ message: 'Missing blockId or collapsed flag' });
+  }
+  const updated = updateBlockCollapse(req.params.articleId, blockId, collapsed);
   if (!updated) {
     return res.status(404).json({ message: 'Block not found' });
   }
@@ -212,6 +225,17 @@ app.post('/api/articles/:articleId/blocks/restore', (req, res) => {
     return res.status(400).json({ message: 'Cannot restore block' });
   }
   return res.json(restored);
+});
+
+app.get('/changelog.txt', (req, res) => {
+  const changelogPath = path.join(__dirname, '..', '..', 'changelog.txt');
+  fs.readFile(changelogPath, 'utf-8', (err, data) => {
+    if (err) {
+      console.error('[API] changelog read error', err.message);
+      return res.status(500).json({ message: 'Cannot read changelog' });
+    }
+    res.type('text/plain').send(data);
+  });
 });
 
 app.get('*', (req, res, next) => {

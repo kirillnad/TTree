@@ -15,6 +15,8 @@ const state = {
   scrollTargetBlockId: null,
   isEditingTitle: false,
   isSidebarCollapsed: false,
+  articlesIndex: [],
+  articleFilterQuery: '',
 };
 
 let isSavingTitle = false;
@@ -23,6 +25,36 @@ let isHintVisible = false;
 function logDebug(...args) {
   // eslint-disable-next-line no-console
   console.log('[undo]', ...args);
+}
+
+function refreshLastChangeTimestamp() {
+  if (!refs.lastChangeValue) return;
+  if (!state.lastChangeTimestamp) {
+    refs.lastChangeValue.textContent = 'нет данных';
+    return;
+  }
+  const lastChange = new Date(state.lastChangeTimestamp);
+  refs.lastChangeValue.textContent = lastChange.toLocaleString();
+}
+
+async function loadLastChangeFromChangelog() {
+  try {
+    const resp = await fetch('/changelog.txt', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('Не удалось загрузить changelog');
+    const text = await resp.text();
+    const lines = text.trim().split(/\r?\n/).filter((line) => line.trim());
+    for (let i = lines.length - 1; i >= 0; i -= 1) {
+      const match = lines[i].match(/^\[([^\]]+)\]/);
+      if (match) {
+        state.lastChangeTimestamp = match[1];
+        refreshLastChangeTimestamp();
+        return;
+      }
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('changelog load error', error);
+  }
 }
 
 const refs = {
@@ -44,6 +76,10 @@ const refs = {
   hintPopover: document.getElementById('hintPopover'),
   sidebar: document.getElementById('sidebar'),
   sidebarToggle: document.getElementById('sidebarToggle'),
+  sidebarArticleList: document.getElementById('sidebarArticleList'),
+  sidebarNewArticleBtn: document.getElementById('sidebarNewArticleBtn'),
+  articleFilterInput: document.getElementById('articleFilterInput'),
+  lastChangeValue: document.getElementById('lastChangeValue'),
 };
 
 const routing = {
@@ -130,6 +166,80 @@ function renderSearchResults() {
     });
     refs.searchResults.appendChild(item);
   });
+}
+
+function setArticlesIndex(articles = []) {
+  const sorted = Array.isArray(articles)
+    ? [...articles].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    : [];
+  state.articlesIndex = sorted;
+  renderSidebarArticleList();
+}
+
+function handleArticleFilterInput(event) {
+  state.articleFilterQuery = event.target.value || '';
+  renderSidebarArticleList();
+  renderMainArticleList();
+}
+
+function upsertArticleIndex(article) {
+  if (!article || !article.id) return;
+  const summary = {
+    id: article.id,
+    title: article.title || 'Без названия',
+    updatedAt: article.updatedAt || new Date().toISOString(),
+  };
+  const idx = state.articlesIndex.findIndex((item) => item.id === summary.id);
+  if (idx >= 0) {
+    state.articlesIndex[idx] = { ...state.articlesIndex[idx], ...summary };
+  } else {
+    state.articlesIndex.unshift(summary);
+  }
+  renderSidebarArticleList();
+}
+
+function renderSidebarArticleList(articles = state.articlesIndex) {
+  if (!refs.sidebarArticleList) return;
+  refs.sidebarArticleList.innerHTML = '';
+  const query = (state.articleFilterQuery || '').trim().toLowerCase();
+  const filtered = articles
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .filter((article) => (!query ? true : (article.title || '').toLowerCase().includes(query)));
+  if (!filtered.length) {
+    const empty = document.createElement('li');
+    empty.className = 'sidebar-article-empty';
+    empty.textContent = query ? 'Нет совпадений' : 'Нет статей';
+    refs.sidebarArticleList.appendChild(empty);
+    return;
+  }
+  filtered.forEach((article) => {
+    const item = document.createElement('li');
+    item.className = 'sidebar-article-item';
+    const button = document.createElement('button');
+    button.type = 'button';
+    if (article.id === state.articleId) {
+      button.classList.add('active');
+    }
+    button.innerHTML = `<span>${escapeHtml(article.title || 'Без названия')}</span>`;
+    button.addEventListener('click', () => navigate(routing.article(article.id)));
+    item.appendChild(button);
+    refs.sidebarArticleList.appendChild(item);
+  });
+}
+
+async function fetchArticlesIndex() {
+  const articles = await apiRequest('/api/articles');
+  setArticlesIndex(articles);
+  return articles;
+}
+
+async function ensureArticlesIndexLoaded() {
+  if (state.articlesIndex.length) {
+    renderSidebarArticleList();
+    return state.articlesIndex;
+  }
+  return fetchArticlesIndex();
 }
 
 function hideSearchResults() {
@@ -289,29 +399,40 @@ async function loadListView() {
   clearPendingTextPreview({ restoreDom: false });
   setViewMode(false);
   try {
-    const articles = await apiRequest('/api/articles');
-    refs.articleList.innerHTML = '';
-    if (!articles.length) {
-      const empty = document.createElement('li');
-      empty.textContent = 'Пока нет статей. Создайте первую!';
-      refs.articleList.appendChild(empty);
-      return;
-    }
-    articles.forEach((article) => {
-      const item = document.createElement('li');
-      item.innerHTML = `
-        <span>
-          <strong>${article.title}</strong><br />
-          <small>${new Date(article.updatedAt).toLocaleString()}</small>
-        </span>
-        <button class="ghost">Открыть</button>
-      `;
-      item.addEventListener('click', () => navigate(routing.article(article.id)));
-      refs.articleList.appendChild(item);
-    });
+    const articles = await fetchArticlesIndex();
+    renderMainArticleList(articles);
   } catch (error) {
     refs.articleList.innerHTML = `<li>Не удалось загрузить список: ${error.message}</li>`;
   }
+}
+
+function renderMainArticleList(articles = null) {
+  if (!refs.articleList) return;
+  refs.articleList.innerHTML = '';
+  const base = Array.isArray(articles) && articles.length ? articles : state.articlesIndex;
+  if (!base.length) {
+    const empty = document.createElement('li');
+    empty.textContent = 'Пока нет статей. Создайте первую!';
+    refs.articleList.appendChild(empty);
+    return;
+  }
+  const query = (state.articleFilterQuery || '').trim().toLowerCase();
+  base
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .filter((article) => (!query ? true : (article.title || '').toLowerCase().includes(query)))
+    .forEach((article) => {
+    const item = document.createElement('li');
+    item.innerHTML = `
+      <span>
+        <strong>${escapeHtml(article.title)}</strong><br />
+        <small>${new Date(article.updatedAt).toLocaleString()}</small>
+      </span>
+      <button class="ghost">Открыть</button>
+    `;
+    item.addEventListener('click', () => navigate(routing.article(article.id)));
+      refs.articleList.appendChild(item);
+    });
 }
 
 async function loadArticle(id, options = {}) {
@@ -340,10 +461,12 @@ async function loadArticle(id, options = {}) {
     const firstBlock = flattenVisible(article.blocks)[0];
     state.currentBlockId = firstBlock ? firstBlock.id : null;
   }
+  upsertArticleIndex(article);
   return article;
 }
 
 async function loadArticleView(id) {
+  await ensureArticlesIndexLoaded();
   setViewMode(true);
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
@@ -450,6 +573,7 @@ function moveSelection(offset) {
 function renderArticle() {
   const article = state.article;
   if (!article) return;
+  renderSidebarArticleList();
 
   const titleText = article.title || 'Без названия';
   refs.articleTitle.textContent = titleText;
@@ -487,6 +611,9 @@ function renderArticle() {
         titleEl.innerHTML = sections.titleHtml;
       }
 
+      const hasChildren = Boolean(block.children && block.children.length);
+      blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);
+
       const body = document.createElement('div');
       body.className = 'block-text block-body';
       const rawHtml = block.text || '';
@@ -521,7 +648,6 @@ function renderArticle() {
 
       const header = document.createElement('div');
       header.className = 'block-header';
-      const hasChildren = Boolean(block.children && block.children.length);
       if (hasChildren) {
         const collapseBtn = document.createElement('button');
         collapseBtn.className = 'collapse-btn';
@@ -556,9 +682,9 @@ function renderArticle() {
         }
       });
 
-      const hideBody = block.collapsed && state.mode === 'view' && hasTitle;
+      const shouldHideBody = block.collapsed && block.id !== state.editingBlockId && hasTitle;
       if (!body.classList.contains('block-body--empty')) {
-        body.classList.toggle('collapsed', hideBody);
+        body.classList.toggle('collapsed', shouldHideBody);
       }
 
       if (block.children && block.children.length > 0 && !block.collapsed) {
@@ -671,6 +797,7 @@ async function saveTitleEditingMode() {
       title: updatedArticle.title,
       updatedAt: updatedArticle.updatedAt,
     };
+    upsertArticleIndex(updatedArticle);
     state.isEditingTitle = false;
     renderArticle();
     updateSearchTitlesCache(updatedArticle);
@@ -759,9 +886,9 @@ async function expandCollapsedAncestors(blockId) {
     const ancestorNode = findBlock(ancestorId);
     if (!ancestorNode || !ancestorNode.block.collapsed) continue;
     try {
-      await apiRequest(`/api/articles/${state.articleId}/blocks/${ancestorNode.block.id}`, {
+      await apiRequest(`/api/articles/${state.articleId}/collapse`, {
         method: 'PATCH',
-        body: JSON.stringify({ collapsed: false }),
+        body: JSON.stringify({ blockId: ancestorNode.block.id, collapsed: false }),
       });
       ancestorNode.block.collapsed = false;
     } catch (error) {
@@ -899,13 +1026,23 @@ async function setCollapseState(blockId, collapsed) {
     return;
   }
   try {
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ collapsed }),
-    });
-    await loadArticle(state.articleId);
+    if (located.block) {
+      located.block.collapsed = collapsed;
+    }
     renderArticle();
+    const response = await apiRequest(`/api/articles/${state.articleId}/collapse`, {
+      method: 'PATCH',
+      body: JSON.stringify({ blockId, collapsed }),
+    });
+    if (response?.updatedAt) {
+      state.article.updatedAt = response.updatedAt;
+      renderArticle();
+    }
   } catch (error) {
+    if (located.block) {
+      located.block.collapsed = !collapsed;
+    }
+    renderArticle();
     showToast(error.message);
   }
 }
@@ -958,15 +1095,18 @@ function cancelEditing() {
 }
 
 async function createArticle() {
-  refs.createArticleBtn.disabled = true;
+  if (refs.createArticleBtn) refs.createArticleBtn.disabled = true;
+  if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = true;
   try {
     const article = await apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({}) });
+    upsertArticleIndex(article);
     navigate(routing.article(article.id));
     showToast('Статья создана');
   } catch (error) {
     showToast(error.message);
   } finally {
-    refs.createArticleBtn.disabled = false;
+    if (refs.createArticleBtn) refs.createArticleBtn.disabled = false;
+    if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = false;
   }
 }
 
@@ -1767,7 +1907,12 @@ function attachEvents() {
     }
   });
 
-  refs.createArticleBtn.addEventListener('click', createArticle);
+  if (refs.createArticleBtn) {
+    refs.createArticleBtn.addEventListener('click', createArticle);
+  }
+  if (refs.sidebarNewArticleBtn) {
+    refs.sidebarNewArticleBtn.addEventListener('click', createArticle);
+  }
   refs.backToList.addEventListener('click', () => navigate(routing.list));
   if (refs.searchInput) {
     refs.searchInput.addEventListener('input', handleSearchInput);
@@ -1793,6 +1938,9 @@ function attachEvents() {
   if (refs.sidebarToggle) {
     refs.sidebarToggle.addEventListener('click', toggleSidebarCollapsed);
   }
+  if (refs.articleFilterInput) {
+    refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
+  }
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
       hideSearchResults();
@@ -1806,6 +1954,8 @@ function attachEvents() {
       hideHintPopover();
     }
   });
+  refreshLastChangeTimestamp();
+  loadLastChangeFromChangelog();
 }
 
 window.addEventListener('popstate', () => route(window.location.pathname));

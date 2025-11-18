@@ -18,12 +18,35 @@
         >
           ⟨
         </button>
-        <div class="sidebar-content">
-          <div class="sidebar-header">
-            <h1 class="app-logo">TTree</h1>
-            <p class="sidebar-caption">Быстро ищите и управляйте блоками</p>
+        <div class="hint-control">
+          <button
+            id="hintToggleBtn"
+            class="ghost hint-toggle-btn"
+            type="button"
+            aria-expanded="false"
+            title="Советы по навигации"
+          >
+            ?
+          </button>
+          <div id="hintPopover" class="hint-popover hidden">
+            <div class="hint">
+              <strong>Советы по навигации:</strong> ↑/↓ — сменить выделение, Enter — редактировать блок, Ctrl+↑/↓ — добавить соседний блок.
+              <br />
+              <strong>Горячие клавиши управления:</strong> Ctrl+Delete — удалить, Ctrl+Shift+↑/↓ — переместить блок в своей ветке, Ctrl+→ — сделать дочерним, Ctrl+← — поднять уровень вложенности.
+              <br />
+              <strong>Отмена и повтор:</strong> Ctrl+Z — вернуть последнее действие, Ctrl+Y — повторить отменённое.
+              <br />
+              <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
+            </div>
           </div>
-          <div class="search-panel">
+        </div>
+        <div class="sidebar-header">
+          <h1 class="app-logo">TTree</h1>
+          <p class="sidebar-caption">Ваши мысли здесь</p>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="search-panel sidebar-section">
             <input
               id="searchInput"
               type="text"
@@ -32,31 +55,23 @@
             />
             <div id="searchResults" class="search-results hidden"></div>
           </div>
+          <div class="sidebar-articles sidebar-section">
+            <div class="sidebar-articles__header">
+              <span>Статьи</span>
+              <button id="sidebarNewArticleBtn" class="ghost small" title="Создать статью">＋</button>
+            </div>
+            <div class="sidebar-articles__filter">
+              <input id="articleFilterInput" type="text" placeholder="Фильтр по названию..." />
+            </div>
+            <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
+          </div>
           <div class="sidebar-actions">
             <button id="backToList" class="ghost full-width hidden">К списку статей</button>
             <button id="createArticleBtn" class="primary full-width">Создать статью</button>
-            <div class="hint-control">
-              <button
-                id="hintToggleBtn"
-                class="ghost hint-toggle-btn"
-                type="button"
-                aria-expanded="false"
-                title="Советы по навигации"
-              >
-                ?
-              </button>
-              <div id="hintPopover" class="hint-popover hidden">
-                <div class="hint">
-                  <strong>Советы по навигации:</strong> ↑/↓ — сменить выделение, Enter — редактировать блок, Ctrl+↑/↓ — добавить соседний блок.
-                  <br />
-                  <strong>Горячие клавиши управления:</strong> Ctrl+Delete — удалить, Ctrl+Shift+↑/↓ — переместить блок в своей ветке, Ctrl+→ — сделать дочерним, Ctrl+← — поднять уровень вложенности.
-                  <br />
-                  <strong>Отмена и повтор:</strong> Ctrl+Z — вернуть последнее действие, Ctrl+Y — повторить отменённое.
-                  <br />
-                  <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
-                </div>
-              </div>
-            </div>
+          </div>
+          <div class="sidebar-footer">
+            <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>
+            <span id="lastChangeValue"></span>
           </div>
         </div>
       </aside>

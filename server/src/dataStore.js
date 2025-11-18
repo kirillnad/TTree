@@ -259,6 +259,21 @@ function updateBlock(articleId, blockId, attrs) {
   return responseBlock;
 }
 
+function updateBlockCollapse(articleId, blockId, collapsed) {
+  const article = getArticle(articleId);
+  if (!article) {
+    return null;
+  }
+  const located = findBlockRecursive(article.blocks, blockId, null);
+  if (!located) {
+    return null;
+  }
+  located.block.collapsed = Boolean(collapsed);
+  article.updatedAt = new Date().toISOString();
+  saveArticle(article);
+  return { updatedAt: article.updatedAt };
+}
+
 function undoBlockTextChange(articleId, entryId = null) {
   const article = getArticle(articleId);
   if (!article) {
@@ -532,6 +547,7 @@ module.exports = {
   getArticle,
   createArticle,
   updateBlock,
+  updateBlockCollapse,
   insertBlock,
   deleteBlock,
   moveBlock,
