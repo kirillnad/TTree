@@ -17,6 +17,7 @@ from .data_store import (
     InvalidOperation,
     create_article,
     delete_block,
+    delete_article,
     ensure_sample_article,
     indent_block,
     insert_block,
@@ -88,6 +89,14 @@ def read_article(article_id: str):
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
+
+
+@app.delete('/api/articles/{article_id}')
+def remove_article(article_id: str):
+    deleted = delete_article(article_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return {'status': 'deleted'}
 
 
 @app.patch('/api/articles/{article_id}')

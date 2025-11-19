@@ -21,7 +21,7 @@ export const refs = {
   sidebarNewArticleBtn: document.getElementById('sidebarNewArticleBtn'),
   articleFilterInput: document.getElementById('articleFilterInput'),
   lastChangeValue: document.getElementById('lastChangeValue'),
-  articleMenuBtn: document.getElementById('article-menu-btn'),
-  articleMenu: document.getElementById('article-menu'),
-  deleteArticleBtn: document.getElementById('delete-article-btn'),
+  articleMenuBtn: document.getElementById('articleMenuBtn'),
+  articleMenu: document.getElementById('articleMenu'),
+  deleteArticleBtn: document.getElementById('deleteArticleBtn'),
 };

@@ -1,10 +1,14 @@
 import { state, isSavingTitle, setSavingTitle } from './state.js';
 import { refs } from './refs.js';
-import { apiRequest } from './api.js';
+import { apiRequest, deleteArticle } from './api.js';
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
-import { upsertArticleIndex } from './sidebar.js';
+import { upsertArticleIndex, removeArticleFromIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
+import { navigate, routing } from './routing.js';
+import { showConfirm } from './modal.js';
+
+let isArticleMenuOpen = false;
 
 function focusTitleInput() {
   if (!refs.articleTitleInput) return;
@@ -92,4 +96,49 @@ export function handleTitleInputKeydown(event) {
 export function handleTitleInputBlur() {
   if (!state.isEditingTitle || isSavingTitle) return;
   saveTitleEditingMode();
+}
+
+function setArticleMenuVisibility(open) {
+  if (!refs.articleMenu || !refs.articleMenuBtn) return;
+  isArticleMenuOpen = open;
+  refs.articleMenu.classList.toggle('hidden', !open);
+  refs.articleMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+export function toggleArticleMenu(event) {
+  if (event) event.stopPropagation();
+  if (!state.article) return;
+  setArticleMenuVisibility(!isArticleMenuOpen);
+}
+
+export function closeArticleMenu() {
+  setArticleMenuVisibility(false);
+}
+
+export function isArticleMenuVisible() {
+  return isArticleMenuOpen;
+}
+
+export async function handleDeleteArticle(event) {
+  if (event) event.stopPropagation();
+  closeArticleMenu();
+  if (!state.articleId) return;
+  const confirmed = await showConfirm({
+    title: 'Удалить статью?',
+    message: 'Действие нельзя отменить.',
+    confirmText: 'Удалить',
+    cancelText: 'Отмена',
+  });
+  if (!confirmed) return;
+  try {
+    await deleteArticle(state.articleId);
+    removeArticleFromIndex(state.articleId);
+    state.article = null;
+    state.articleId = null;
+    state.currentBlockId = null;
+    navigate(routing.list);
+    showToast('Статья удалена');
+  } catch (error) {
+    showToast(error.message);
+  }
 }

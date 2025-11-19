@@ -127,6 +127,18 @@ def get_article(article_id: str) -> Optional[Dict[str, Any]]:
     return build_article_from_row(row)
 
 
+def delete_article(article_id: str) -> bool:
+    """Удаляет статью и связанные блоки/индексы. Возвращает True, если статья существовала."""
+    with CONN:
+        exists = CONN.execute('SELECT 1 FROM articles WHERE id = ?', (article_id,)).fetchone()
+        if not exists:
+            return False
+        CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
+        CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
+        CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
+    return True
+
+
 def insert_blocks_recursive(
     article_id: str,
     blocks: List[Dict[str, Any]],

@@ -5,7 +5,7 @@ import { moveCurrentBlock, indentCurrentBlock, outdentCurrentBlock } from './und
 import { createSibling, deleteCurrentBlock, startEditing, saveEditing, cancelEditing, handleGlobalPaste } from './actions.js';
 import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
-import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur } from './title.js';
+import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle } from './title.js';
 import { toggleHintPopover, hideHintPopover } from './sidebar.js';
 import { toggleSidebarCollapsed, handleArticleFilterInput } from './sidebar.js';
 import { createArticle } from './article.js';
@@ -171,6 +171,12 @@ export function attachEvents() {
   if (refs.articleTitle) {
     refs.articleTitle.addEventListener('dblclick', startTitleEditingMode);
   }
+  if (refs.articleMenuBtn) {
+    refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);
+  }
+  if (refs.deleteArticleBtn) {
+    refs.deleteArticleBtn.addEventListener('click', handleDeleteArticle);
+  }
   if (refs.articleTitleInput) {
     refs.articleTitleInput.addEventListener('keydown', handleTitleInputKeydown);
     refs.articleTitleInput.addEventListener('blur', handleTitleInputBlur);
@@ -195,6 +201,14 @@ export function attachEvents() {
       !(refs.hintToggleBtn && refs.hintToggleBtn.contains(event.target))
     ) {
       hideHintPopover();
+    }
+    if (
+      isArticleMenuVisible() &&
+      refs.articleMenu &&
+      !refs.articleMenu.contains(event.target) &&
+      !(refs.articleMenuBtn && refs.articleMenuBtn.contains(event.target))
+    ) {
+      closeArticleMenu();
     }
   });
 }

@@ -91,6 +91,24 @@
                 <h2 id="articleTitle"></h2>
                 <input id="articleTitleInput" class="hidden" type="text" />
                 <button id="editTitleBtn" class="ghost small" title="Редактировать заголовок">✎</button>
+                <div class="article-actions">
+                  <button
+                    id="articleMenuBtn"
+                    class="ghost icon-button"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="article-menu"
+                    title="Действия со статьёй"
+                  >
+                    &#8942;
+                  </button>
+                  <div id="articleMenu" class="article-menu hidden" role="menu">
+                    <button id="deleteArticleBtn" class="menu-item danger" type="button" role="menuitem">
+                      Удалить статью
+                    </button>
+                  </div>
+                </div>
               </div>
               <p id="updatedAt" class="meta"></p>
             </div>
@@ -102,6 +120,7 @@
     </div>
 
     <div id="toast" class="toast hidden"></div>
+    <div id="modal-root"></div>
 
     <script type="module" src="/app.js"></script>
   </body>

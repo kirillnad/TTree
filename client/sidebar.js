@@ -40,6 +40,16 @@ export function upsertArticleIndex(article) {
   renderSidebarArticleList();
 }
 
+export function removeArticleFromIndex(articleId) {
+  if (!articleId) return;
+  const before = state.articlesIndex.length;
+  state.articlesIndex = state.articlesIndex.filter((item) => item.id !== articleId);
+  if (before !== state.articlesIndex.length) {
+    renderSidebarArticleList();
+    renderMainArticleList();
+  }
+}
+
 export function renderSidebarArticleList(articles = state.articlesIndex) {
   if (!refs.sidebarArticleList) return;
   refs.sidebarArticleList.innerHTML = '';
