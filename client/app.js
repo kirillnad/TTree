@@ -534,14 +534,30 @@ function isSeparatorNode(node) {
   }
   if (node.nodeType === Node.ELEMENT_NODE) {
     if (node.tagName === 'BR') return true;
-    if (
-      (node.tagName === 'P' || node.tagName === 'DIV') &&
-      node.innerHTML.replace(/<br\s*\/?>/gi, '').trim() === ''
-    ) {
-      return true;
+    if (node.tagName === 'P' || node.tagName === 'DIV') {
+      const normalizedHtml = (node.innerHTML || '')
+        .replace(/<br\s*\/?>/gi, '')
+        .replace(/&(nbsp|#160);/gi, '')
+        .trim();
+      if (!normalizedHtml) {
+        return true;
+      }
+      const textContent = (node.textContent || '').replace(/\u00a0/g, '').trim();
+      if (!textContent && !node.querySelector('img')) {
+        return true;
+      }
     }
   }
   return false;
+}
+
+function isExplicitHeaderNode(node) {
+  return (
+    node &&
+    node.nodeType === Node.ELEMENT_NODE &&
+    node.classList &&
+    node.classList.contains('block-header')
+  );
 }
 
 function serializeNodes(nodes = []) {
@@ -554,6 +570,26 @@ function extractBlockSections(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
   const nodes = Array.from(template.content.childNodes);
+
+  const explicitHeaderIndex = nodes.findIndex((node) => isExplicitHeaderNode(node));
+  if (explicitHeaderIndex !== -1) {
+    const headerNode = nodes[explicitHeaderIndex];
+    const headerContent = Array.from(headerNode.childNodes).map((child) => child.cloneNode(true));
+    if (!headerContent.length) {
+      headerContent.push(headerNode.cloneNode(true));
+    }
+    const bodyNodes = nodes
+      .filter((_, index) => index !== explicitHeaderIndex)
+      .map((node) => node.cloneNode(true));
+    while (bodyNodes.length && isSeparatorNode(bodyNodes[0])) {
+      bodyNodes.shift();
+    }
+    return {
+      titleHtml: serializeNodes(headerContent),
+      bodyHtml: serializeNodes(bodyNodes),
+    };
+  }
+
   const titleNodes = [];
   const bodyNodes = [];
   let separatorFound = false;
@@ -575,6 +611,29 @@ function extractBlockSections(html = '') {
   const titleHtml = serializeNodes(titleNodes);
   const bodyHtml = serializeNodes(bodyNodes);
   return { titleHtml, bodyHtml };
+}
+
+function buildEditableBlockHtml(html = '') {
+  const sections = extractBlockSections(html);
+  if (!sections.titleHtml) {
+    return html || '';
+  }
+  const separator = '<div><br /></div>';
+  const bodyPart = sections.bodyHtml || '';
+  return `${sections.titleHtml}${separator}${bodyPart}`;
+}
+
+function buildStoredBlockHtml(html = '') {
+  const sections = extractBlockSections(html);
+  if (!sections.titleHtml) {
+    return html || '';
+  }
+  const header = `<div class="block-header">${sections.titleHtml}</div>`;
+  if (!sections.bodyHtml) {
+    return header;
+  }
+  const separator = '<div><br /></div>';
+  return `${header}${separator}${sections.bodyHtml}`;
 }
 
 function moveSelection(offset) {
@@ -630,6 +689,7 @@ function renderArticle() {
       }
 
       const hasChildren = Boolean(block.children && block.children.length);
+      const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);
 
       const body = document.createElement('div');
@@ -648,7 +708,7 @@ function renderArticle() {
 
       if (state.mode === 'edit' && state.editingBlockId === block.id) {
         body.setAttribute('contenteditable', 'true');
-        body.innerHTML = rawHtml;
+        body.innerHTML = buildEditableBlockHtml(rawHtml);
         requestAnimationFrame(() => {
           body.focus();
           placeCaretAtEnd(body);
@@ -666,7 +726,7 @@ function renderArticle() {
 
       const header = document.createElement('div');
       header.className = 'block-header';
-      if (hasChildren) {
+      if (canCollapse) {
         const collapseBtn = document.createElement('button');
         collapseBtn.className = 'collapse-btn';
         collapseBtn.textContent = block.collapsed ? '+' : '−';
@@ -1034,13 +1094,13 @@ function insertHtmlAtCaret(element, html) {
 
 async function toggleCollapse(blockId) {
   const located = findBlock(blockId);
-  if (!located || !(located.block.children || []).length) return;
+  if (!located) return;
   setCollapseState(blockId, !located.block.collapsed);
 }
 
 async function setCollapseState(blockId, collapsed) {
   const located = findBlock(blockId);
-  if (!located || !(located.block.children || []).length || located.block.collapsed === collapsed) {
+  if (!located || located.block.collapsed === collapsed) {
     return;
   }
   try {
@@ -1079,7 +1139,8 @@ async function saveEditing() {
   const textElement = document.querySelector(
     `.block[data-block-id="${state.editingBlockId}"] .block-text`,
   );
-  const newText = textElement?.innerHTML || '';
+  const editableHtml = textElement?.innerHTML || '';
+  const newText = buildStoredBlockHtml(editableHtml);
   try {
     const updatedBlock = await apiRequest(
       `/api/articles/${state.articleId}/blocks/${state.editingBlockId}`,
@@ -1163,8 +1224,11 @@ async function createSibling(direction) {
 function findCollapsibleTarget(blockId, desiredState) {
   let current = findBlock(blockId);
   while (current) {
+    const sections = extractBlockSections(current.block.text || '');
+    const hasTitle = Boolean(sections.titleHtml);
     const hasChildren = Boolean(current.block.children && current.block.children.length);
-    if (hasChildren && current.block.collapsed !== desiredState) {
+    const canCollapse = hasTitle || hasChildren;
+    if (canCollapse && current.block.collapsed !== desiredState) {
       return current.block.id;
     }
     if (!current.parent) {

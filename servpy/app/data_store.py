@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .db import CONN
 from .schema import init_schema
+from .html_sanitizer import sanitize_html
 from .text_utils import (
     build_lemma,
     build_lemma_tokens,
@@ -244,7 +245,7 @@ def create_default_block() -> Dict[str, Any]:
 def clone_block(block: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'id': block.get('id') or str(uuid.uuid4()),
-        'text': strip_html(block.get('text', '')),
+        'text': sanitize_html(block.get('text', '')),
         'collapsed': bool(block.get('collapsed')),
         'children': [clone_block(child) for child in block.get('children', [])],
     }
@@ -286,7 +287,7 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
     history_entry = None
     if 'text' in attrs:
         previous = block.get('text', '')
-        new_text = attrs['text'] or ''
+        new_text = sanitize_html(attrs['text'] or '')
         history_entry = push_text_history_entry(article, block_id, previous, new_text)
         block['text'] = new_text
     if 'collapsed' in attrs:
