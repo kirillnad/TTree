@@ -1,0 +1,31 @@
+export const state = {
+  mode: 'view',
+  articleId: null,
+  article: null,
+  currentBlockId: null,
+  editingBlockId: null,
+  undoStack: [],
+  redoStack: [],
+  pendingTextPreview: null,
+  searchQuery: '',
+  searchResults: [],
+  searchError: '',
+  searchLoading: false,
+  searchRequestId: 0,
+  scrollTargetBlockId: null,
+  isEditingTitle: false,
+  isSidebarCollapsed: false,
+  articlesIndex: [],
+  articleFilterQuery: '',
+  lastChangeTimestamp: null,
+};
+
+export let isSavingTitle = false;
+export let isHintVisible = false;
+
+export function setSavingTitle(value) {
+  isSavingTitle = value;
+}
+export function setHintVisibility(visible) {
+  isHintVisible = visible;
+}

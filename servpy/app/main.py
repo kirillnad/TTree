@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 
 import aiofiles
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .data_store import (
@@ -34,7 +34,7 @@ from .data_store import (
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-CLIENT_DIR = BASE_DIR / 'client'
+CLIENT_DIR = BASE_DIR / "client"
 UPLOADS_DIR = BASE_DIR / 'servpy_uploads'
 UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -49,8 +49,23 @@ app.add_middleware(
 )
 
 app.mount('/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
-if CLIENT_DIR.exists():
-    app.mount('/assets', StaticFiles(directory=str(CLIENT_DIR)), name='client')
+
+@app.middleware("http")
+async def spa_middleware(request: Request, call_next):
+    """
+    Middleware для поддержки Single Page Application (SPA).
+    Если запрос не является API, файлом или загрузкой, возвращает index.html.
+    """
+    response = await call_next(request)
+    if response.status_code == 404:
+        path = PurePath(request.url.path)
+        if path.suffix:
+            return response
+        if request.url.path.startswith("/api"):
+            return response
+        return FileResponse(f"{CLIENT_DIR}/index.html")
+    return response
+
 
 
 @app.get('/api/articles')
@@ -229,7 +244,7 @@ def _handle_undo_redo(func, article_id, entry_id):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@app.get('/changelog.txt')
+@app.get('/api/changelog')
 def get_changelog():
     changelog = BASE_DIR / 'changelog.txt'
     if not changelog.exists():
@@ -241,7 +256,14 @@ def get_changelog():
 def health():
     return {'status': 'ok'}
 
+@app.get('/favicon.ico')
+def favicon():
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect width="64" height="64" fill="#0d6efd"/>
+<path d="M18 18h8v20h-8zM30 18h8l8 12-8 12h-8l8-12z" fill="#fff"/>
+</svg>"""
+    return Response(content=svg, media_type='image/svg+xml')
 
-@app.get('/{full_path:path}')
-def spa(full_path: str):
-    return FileResponse(CLIENT_DIR / 'index.html')
+
+# Mount client SPA after API routes so /api/* keeps working
+app.mount("/", StaticFiles(directory=CLIENT_DIR, html=True), name="client")
