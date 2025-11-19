@@ -12,6 +12,9 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .data_store import (
+    ArticleNotFound,
+    BlockNotFound,
+    InvalidOperation,
     create_article,
     delete_block,
     ensure_sample_article,
@@ -74,18 +77,23 @@ def read_article(article_id: str):
 
 @app.patch('/api/articles/{article_id}')
 def patch_article(article_id: str, payload: dict[str, Any]):
-    article = update_article_meta(article_id, payload)
-    if not article:
-        raise HTTPException(status_code=404, detail='Article not found')
-    return article
+    try:
+        article = update_article_meta(article_id, payload)
+        if not article:
+            # Если функция вернула None, значит, не было изменений
+            return get_article(article_id)
+        return article
+    except ArticleNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.patch('/api/articles/{article_id}/blocks/{block_id}')
 def patch_block(article_id: str, block_id: str, payload: dict[str, Any]):
-    block = update_block(article_id, block_id, payload)
-    if not block:
-        raise HTTPException(status_code=404, detail='Block not found')
-    return block
+    try:
+        block = update_block(article_id, block_id, payload)
+        return block
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.patch('/api/articles/{article_id}/collapse')
@@ -94,27 +102,32 @@ def patch_collapse(article_id: str, payload: dict[str, Any]):
     collapsed = payload.get('collapsed')
     if block_id is None or not isinstance(collapsed, bool):
         raise HTTPException(status_code=400, detail='Missing blockId or collapsed flag')
-    block = update_block_collapse(article_id, block_id, collapsed)
-    if not block:
-        raise HTTPException(status_code=404, detail='Block not found')
-    return block
+    try:
+        block = update_block_collapse(article_id, block_id, collapsed)
+        return block
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
 def post_sibling(article_id: str, block_id: str, payload: dict[str, Any]):
     direction = payload.get('direction', 'after') if payload else 'after'
-    result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
-    if not result:
-        raise HTTPException(status_code=404, detail='Cannot insert block')
-    return result
+    try:
+        result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
+        return result
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.delete('/api/articles/{article_id}/blocks/{block_id}')
 def remove_block(article_id: str, block_id: str):
-    result = delete_block(article_id, block_id)
+    try:
+        result = delete_block(article_id, block_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result:
-        raise HTTPException(status_code=404, detail='Block not found')
-    return result
+        raise HTTPException(status_code=404, detail='Статья или блок не найдены')
+    return result # result может быть None, если декоратор не нашел статью
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/move')
@@ -122,44 +135,45 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any]):
     direction = payload.get('direction')
     if direction not in {'up', 'down'}:
         raise HTTPException(status_code=400, detail='Unknown move direction')
-    result = move_block(article_id, block_id, direction)
-    if not result:
-        raise HTTPException(status_code=400, detail='Cannot move block')
-    return result
+    try:
+        result = move_block(article_id, block_id, direction)
+        return result
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/indent')
 def post_indent(article_id: str, block_id: str):
-    result = indent_block(article_id, block_id)
-    if not result:
-        raise HTTPException(status_code=400, detail='Cannot indent block')
-    return result
+    try:
+        return indent_block(article_id, block_id)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/outdent')
 def post_outdent(article_id: str, block_id: str):
-    result = outdent_block(article_id, block_id)
-    if not result:
-        raise HTTPException(status_code=400, detail='Cannot outdent block')
-    return result
+    try:
+        return outdent_block(article_id, block_id)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @app.post('/api/articles/{article_id}/blocks/undo-text')
 def post_undo(article_id: str, payload: dict[str, Any]):
     entry_id = payload.get('entryId')
-    block = undo_block_text_change(article_id, entry_id)
-    if not block:
-        raise HTTPException(status_code=400, detail='Nothing to undo')
-    return {'blockId': block['id'], 'block': block}
+    return _handle_undo_redo(undo_block_text_change, article_id, entry_id)
 
 
 @app.post('/api/articles/{article_id}/blocks/redo-text')
 def post_redo(article_id: str, payload: dict[str, Any]):
     entry_id = payload.get('entryId')
-    block = redo_block_text_change(article_id, entry_id)
-    if not block:
-        raise HTTPException(status_code=400, detail='Nothing to redo')
-    return {'blockId': block['id'], 'block': block}
+    return _handle_undo_redo(redo_block_text_change, article_id, entry_id)
 
 
 @app.post('/api/uploads')
@@ -197,10 +211,22 @@ def post_restore(article_id: str, payload: dict[str, Any]):
         raise HTTPException(status_code=400, detail='Missing block payload')
     parent_id = payload.get('parentId')
     index = payload.get('index')
-    result = restore_block(article_id, parent_id, index, block)
-    if not result:
-        raise HTTPException(status_code=400, detail='Cannot restore block')
-    return result
+    try:
+        return restore_block(article_id, parent_id, index, block)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+def _handle_undo_redo(func, article_id, entry_id):
+    try:
+        block = func(article_id, entry_id)
+        return {'blockId': block['id'], 'block': block}
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @app.get('/changelog.txt')

@@ -62,7 +62,7 @@ html {
   width: 300px;
   background: #111c2c;
   color: #f8fafc;
-  padding: 1rem 1.65rem 2rem;
+  padding: 1rem 1rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -71,6 +71,12 @@ html {
   transition: width 0.25s ease, padding 0.25s ease;
   overflow: visible;
   box-sizing: border-box;
+}
+
+.sidebar-footer {
+  font-size: 11px;
+  text-align: center;
+  padding-top: 13px;
 }
 
 .sidebar.collapsed {
@@ -306,7 +312,7 @@ html {
 
 main.content {
   flex: 1;
-  padding: 2rem 3rem;
+  padding: 1rem 3rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -511,12 +517,16 @@ button:hover {
 }
 
 .block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   border: 1px solid transparent;
   padding: 0.45rem 0.6rem;
   border-radius: 10px;
   transition: border 0.15s ease, background 0.15s ease;
   cursor: pointer;
   position: relative;
+  gap: 0.35rem;
 }
 
 .block:focus {
@@ -576,6 +586,7 @@ button:hover {
 }
 
 .block.block--no-title {
+  gap: 0;
   padding-left: 2.2rem;
   padding-top: 0.3rem;
 }
@@ -620,9 +631,12 @@ button:hover {
 }
 
 .block-children {
-  /* margin-left: 1.25rem; */
+  margin-left: 1.25rem;
   border-left: 2px dashed #e0e7ff;
-  /* padding-left: 1rem; */
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   margin-top: 0.35rem;
 }
 
@@ -630,6 +644,13 @@ button:hover {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.block-header + .block-text {
+  margin-top: 0;
+  width: 100%;
 }
 
 .collapse-btn {
