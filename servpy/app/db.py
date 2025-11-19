@@ -7,7 +7,7 @@ DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / 'servpy.sqlite'
 
-CONN = sqlite3.connect(DB_PATH, check_same_thread=False)
+CONN = sqlite3.connect(DB_PATH, check_same_thread=False, isolation_level=None)
 CONN.row_factory = sqlite3.Row
 CONN.execute('PRAGMA foreign_keys = ON')
 CONN.execute('PRAGMA journal_mode = WAL')
