@@ -673,6 +673,38 @@ button:hover {
   color: #b91c1c;
   background: #fef2f2;
 }
+.rich-context-menu {
+  position: fixed;
+  z-index: 2000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 30, 40, 0.18);
+}
+.rich-context-menu.hidden {
+  display: none;
+}
+.rich-context-menu button {
+  border: 1px solid transparent;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.rich-context-menu button:hover {
+  border-color: #cbd5f5;
+  background: #eef2ff;
+}
+.rich-context-menu .divider {
+  width: 1px;
+  height: 20px;
+  background: #e5e7eb;
+}
 
 .block-title {
   font-weight: 600;

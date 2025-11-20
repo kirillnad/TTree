@@ -447,6 +447,7 @@ async function insertAttachmentFromFile(element, file) {
 }
 
 export function attachRichContentHandlers(element, blockId) {
+  attachContextMenu(element, blockId);
   element.addEventListener('paste', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     const imageFiles = collectImageFiles(event.clipboardData?.items);
@@ -508,6 +509,138 @@ export function attachRichContentHandlers(element, blockId) {
     if (hasFiles) {
       event.preventDefault();
     }
+  });
+}
+
+let richContextMenu = null;
+let richContextRange = null;
+
+function ensureContextMenu() {
+  if (richContextMenu) return richContextMenu;
+  const menu = document.createElement('div');
+  menu.className = 'rich-context-menu hidden';
+  menu.innerHTML = `
+    <button data-action="bold"><strong>B</strong></button>
+    <button data-action="italic"><em>I</em></button>
+    <button data-action="underline"><u>U</u></button>
+    <span class="divider"></span>
+    <button data-action="ul">• Список</button>
+    <button data-action="ol">1. Список</button>
+    <button data-action="quote">Цитата</button>
+    <button data-action="code">Код</button>
+    <span class="divider"></span>
+    <button data-action="link">Ссылка</button>
+    <button data-action="unlink">Убрать ссылку</button>
+    <button data-action="remove-format">Очистить</button>
+  `;
+  document.body.appendChild(menu);
+
+  const hideContextMenu = () => {
+    menu.classList.add('hidden');
+    richContextRange = null;
+  };
+
+  const restoreSelection = () => {
+    if (richContextRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(richContextRange);
+    }
+  };
+
+  const applyAction = (action) => {
+    restoreSelection();
+    switch (action) {
+      case 'bold':
+        document.execCommand('bold');
+        break;
+      case 'italic':
+        document.execCommand('italic');
+        break;
+      case 'underline':
+        document.execCommand('underline');
+        break;
+      case 'ul':
+        document.execCommand('insertUnorderedList');
+        break;
+      case 'ol':
+        document.execCommand('insertOrderedList');
+        break;
+      case 'quote':
+        document.execCommand('formatBlock', false, 'blockquote');
+        break;
+      case 'code':
+        document.execCommand('formatBlock', false, 'pre');
+        break;
+      case 'link': {
+        const sel = window.getSelection();
+        const focusNode = sel.anchorNode;
+        const anchor = focusNode ? focusNode.parentElement?.closest('a') : null;
+        const currentHref = anchor?.getAttribute('href') || '';
+        const url = window.prompt('Ссылка', currentHref);
+        if (!url) break;
+        const safeUrl = url.match(/^[a-z]+:/i) ? url : `https://${url}`;
+        document.execCommand('createLink', false, safeUrl);
+        const newAnchor = sel.anchorNode?.parentElement?.closest('a');
+        if (newAnchor) {
+          newAnchor.setAttribute('target', '_blank');
+          newAnchor.setAttribute('rel', 'noopener noreferrer');
+        }
+        break;
+      }
+      case 'unlink':
+        document.execCommand('unlink');
+        break;
+      case 'remove-format':
+        document.execCommand('removeFormat');
+        break;
+      default:
+        break;
+    }
+    hideContextMenu();
+  };
+
+  menu.addEventListener('click', (event) => {
+    const target = event.target.closest('button[data-action]');
+    if (!target) return;
+    const action = target.dataset.action;
+    applyAction(action);
+  });
+
+  document.addEventListener('click', (event) => {
+    if (menu.classList.contains('hidden')) return;
+    if (!menu.contains(event.target)) hideContextMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.code === 'Escape') hideContextMenu();
+  });
+  window.addEventListener('scroll', hideContextMenu, true);
+
+  richContextMenu = menu;
+  return menu;
+}
+
+function showContextMenu(event) {
+  const menu = ensureContextMenu();
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    richContextRange = sel.getRangeAt(0).cloneRange();
+  } else {
+    richContextRange = null;
+  }
+  const rect = menu.getBoundingClientRect();
+  const safeX = Math.min(event.clientX, window.innerWidth - rect.width - 10);
+  const safeY = Math.min(event.clientY, window.innerHeight - rect.height - 10);
+  menu.style.left = `${safeX}px`;
+  menu.style.top = `${safeY}px`;
+  menu.classList.remove('hidden');
+}
+
+function attachContextMenu(element, blockId) {
+  element.addEventListener('contextmenu', (event) => {
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    event.preventDefault();
+    showContextMenu(event);
   });
 }
 
