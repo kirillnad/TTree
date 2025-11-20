@@ -33,6 +33,22 @@ def init_schema():
         CREATE INDEX IF NOT EXISTS idx_blocks_article_parent
         ON blocks(article_id, parent_id, position)
         ''',
+        '''
+        CREATE TABLE IF NOT EXISTS attachments (
+            id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL,
+            stored_path TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            content_type TEXT,
+            size INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_attachments_article
+        ON attachments(article_id)
+        ''',
     ]
 
     for stmt in statements:

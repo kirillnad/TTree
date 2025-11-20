@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import mimetypes
 from datetime import datetime
 from pathlib import Path, PurePath
 from typing import Any
+from uuid import uuid4
 
 import aiofiles
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request
@@ -32,12 +34,25 @@ from .data_store import (
     update_block_collapse,
     get_articles,
     get_article,
+    create_attachment,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 CLIENT_DIR = BASE_DIR / "client"
 UPLOADS_DIR = BASE_DIR / 'uploads'
 UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
+ALLOWED_ATTACHMENT_TYPES = {
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/csv',
+    'application/rtf',
+}
 
 ensure_sample_article()
 
@@ -218,6 +233,40 @@ async def upload_file(file: UploadFile = File(...)):
                 raise HTTPException(status_code=400, detail='Файл слишком большой')
             await out_file.write(chunk)
     return {'url': f'/uploads/{dest.relative_to(UPLOADS_DIR).as_posix()}'}
+
+
+@app.post('/api/articles/{article_id}/attachments')
+async def upload_attachment(article_id: str, file: UploadFile = File(...)):
+    article = get_article(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    content_type = file.content_type or ''
+    if not content_type:
+        content_type = mimetypes.guess_type(file.filename or '')[0] or ''
+    if not content_type or content_type not in ALLOWED_ATTACHMENT_TYPES:
+        raise HTTPException(status_code=400, detail='Недопустимый тип файла')
+
+    target_dir = UPLOADS_DIR / article_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+    filename = f'{uuid4().hex}{Path(file.filename).suffix or ""}'
+    dest = target_dir / filename
+
+    size = 0
+    try:
+        async with aiofiles.open(dest, 'wb') as out_file:
+            while chunk := await file.read(1024 * 256):
+                size += len(chunk)
+                if size > 20 * 1024 * 1024:
+                    dest.unlink(missing_ok=True)
+                    raise HTTPException(status_code=400, detail='Файл слишком большой (макс 20 МБ)')
+                await out_file.write(chunk)
+    except Exception:
+        dest.unlink(missing_ok=True)
+        raise
+
+    stored_path = f'/uploads/{article_id}/{filename}'
+    attachment = create_attachment(article_id, stored_path, file.filename or filename, content_type or '', size)
+    return attachment
 
 
 @app.get('/api/search')

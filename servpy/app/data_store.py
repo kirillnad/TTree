@@ -757,6 +757,55 @@ def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
     return {'blockId': block_id, 'block': {'id': block_id, 'text': new_text}}
 
 
+def _attachment_from_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        'id': row['id'],
+        'articleId': row['article_id'],
+        'storedPath': row['stored_path'],
+        'originalName': row['original_name'],
+        'contentType': row['content_type'] or '',
+        'size': row['size'],
+        'createdAt': row['created_at'],
+        'url': row['stored_path'],
+    }
+
+
+@with_article
+def create_attachment(article: Dict[str, Any], stored_path: str, original_name: str, content_type: str, size: int) -> Dict[str, Any]:
+    attachment_id = str(uuid.uuid4())
+    now = iso_now()
+    CONN.execute(
+        '''
+        INSERT INTO attachments (id, article_id, stored_path, original_name, content_type, size, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (attachment_id, article['id'], stored_path, original_name, content_type or '', size or 0, now),
+    )
+    return {
+        'id': attachment_id,
+        'articleId': article['id'],
+        'storedPath': stored_path,
+        'originalName': original_name,
+        'contentType': content_type or '',
+        'size': size or 0,
+        'createdAt': now,
+        'url': stored_path,
+    }
+
+
+def list_attachments(article_id: str) -> List[Dict[str, Any]]:
+    rows = CONN.execute(
+        '''
+        SELECT id, article_id, stored_path, original_name, content_type, size, created_at
+        FROM attachments
+        WHERE article_id = ?
+        ORDER BY created_at DESC
+        ''',
+        (article_id,),
+    ).fetchall()
+    return [_attachment_from_row(row) for row in rows]
+
+
 def build_fts_query(term: str) -> str:
     lemma_tokens = build_lemma_tokens(term)
     normalized_tokens = [token for token in build_normalized_tokens(term).split() if token]

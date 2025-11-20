@@ -1,8 +1,8 @@
 import { state } from './state.js';
-import { apiRequest, uploadImageFile } from './api.js';
+import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from './api.js';
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
-import { escapeHtml, insertHtmlAtCaret } from './utils.js';
+import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -385,6 +385,22 @@ function collectImageFiles(items = [], fallbackFiles = []) {
   return files;
 }
 
+function collectNonImageFiles(items = [], fallbackFiles = []) {
+  const files = [];
+  Array.from(items || []).forEach((item) => {
+    if (item.kind === 'file' && (!item.type || !item.type.startsWith('image/'))) {
+      const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
+      if (file) files.push(file);
+    }
+  });
+  if (!files.length && fallbackFiles?.length) {
+    Array.from(fallbackFiles).forEach((file) => {
+      if (!file.type || !file.type.startsWith('image/')) files.push(file);
+    });
+  }
+  return files;
+}
+
 async function insertImageFromFile(element, file) {
   try {
     const { url } = await uploadImageFile(file);
@@ -395,13 +411,53 @@ async function insertImageFromFile(element, file) {
   }
 }
 
+async function insertAttachmentFromFile(element, file) {
+  if (!state.articleId) {
+    showToast('Не выбрана статья для загрузки файла');
+    return;
+  }
+  logDebug('attachment: start upload', { name: file?.name, type: file?.type, size: file?.size, articleId: state.articleId });
+  const tempId = `att-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  insertHtmlAtCaret(element, `<span class="attachment-upload" data-temp-id="${tempId}">Загрузка ${escapeHtml(file?.name || '')}…</span>`);
+  const placeholder = element.querySelector(`.attachment-upload[data-temp-id="${tempId}"]`);
+  try {
+    const meta = await uploadAttachmentFileWithProgress(state.articleId, file, (percent) => {
+      if (placeholder) placeholder.textContent = `Загрузка ${file?.name || ''}… ${percent}%`;
+    });
+    logDebug('attachment: uploaded', meta);
+    const safeUrl = escapeHtml(meta?.url || meta?.storedPath || '');
+    const safeName = escapeHtml(meta?.originalName || file.name || 'file');
+    const linkHtml = `<a href="${safeUrl}" class="attachment-link" target="_blank" rel="noopener noreferrer" download="${safeName}">${safeName}</a>`;
+    if (placeholder) {
+      placeholder.outerHTML = linkHtml;
+    } else {
+      insertHtmlAtCaret(element, linkHtml);
+    }
+    logDebug('attachment: inserted into DOM', {
+      html: element.innerHTML.slice(0, 200),
+    });
+  } catch (error) {
+    logDebug('attachment: upload failed', error);
+    if (placeholder) {
+      placeholder.textContent = `Ошибка загрузки: ${error.message}`;
+      placeholder.classList.add('attachment-upload--error');
+    }
+    showToast(error.message);
+  }
+}
+
 export function attachRichContentHandlers(element, blockId) {
   element.addEventListener('paste', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    const files = collectImageFiles(event.clipboardData?.items);
-    if (files.length > 0) {
+    const imageFiles = collectImageFiles(event.clipboardData?.items);
+    const otherFiles = collectNonImageFiles(event.clipboardData?.items);
+    if (imageFiles.length > 0) {
       event.preventDefault();
-      files.forEach((file) => insertImageFromFile(element, file));
+      imageFiles.forEach((file) => insertImageFromFile(element, file));
+    } else if (otherFiles.length > 0) {
+      event.preventDefault();
+      logDebug('paste: non-image files detected', otherFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
+      otherFiles.forEach((file) => insertAttachmentFromFile(element, file));
     } else {
       const htmlData = (event.clipboardData?.getData('text/html') || '').trim();
       event.preventDefault();
@@ -429,16 +485,27 @@ export function attachRichContentHandlers(element, blockId) {
   });
 
   element.addEventListener('drop', (event) => {
-    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    const files = collectImageFiles(event.dataTransfer?.items, event.dataTransfer?.files);
-    if (!files.length) return;
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) {
+      logDebug('drop ignored', { mode: state.mode, editingBlockId: state.editingBlockId, targetBlockId: blockId });
+      return;
+    }
+    const allFiles = Array.from(event.dataTransfer?.files || []);
+    if (!allFiles.length) return;
+    const imageFiles = allFiles.filter((file) => file.type?.startsWith('image/'));
+    const otherFiles = allFiles.filter((file) => !file.type || !file.type.startsWith('image/'));
+    if (!imageFiles.length && !otherFiles.length) return;
     event.preventDefault();
-    files.forEach((file) => insertImageFromFile(element, file));
+    logDebug('drop: files detected', allFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
+    imageFiles.forEach((file) => insertImageFromFile(element, file));
+    otherFiles.forEach((file) => insertAttachmentFromFile(element, file));
   });
 
   element.addEventListener('dragover', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    if (collectImageFiles(event.dataTransfer?.items).length > 0) {
+    const hasFiles =
+      collectImageFiles(event.dataTransfer?.items).length > 0 ||
+      collectNonImageFiles(event.dataTransfer?.items).length > 0;
+    if (hasFiles) {
       event.preventDefault();
     }
   });

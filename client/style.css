@@ -642,6 +642,37 @@ button:hover {
   margin: 0.4rem 0;
   box-shadow: 0 6px 18px rgba(15, 30, 40, 0.1);
 }
+.block-text .attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  text-decoration: none;
+}
+.block-text .attachment-link:hover {
+  border-color: #818cf8;
+  text-decoration: underline;
+}
+.block-text .attachment-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-style: italic;
+}
+.block-text .attachment-upload--error {
+  border-color: #ef4444;
+  color: #b91c1c;
+  background: #fef2f2;
+}
 
 .block-title {
   font-weight: 600;
