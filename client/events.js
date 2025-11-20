@@ -133,6 +133,16 @@ function handleEditKey(event) {
     saveEditing();
     return;
   }
+  if (event.ctrlKey && event.code === 'ArrowRight') {
+    event.preventDefault();
+    indentCurrentBlock({ keepEditing: true });
+    return;
+  }
+  if (event.ctrlKey && event.code === 'ArrowLeft') {
+    event.preventDefault();
+    outdentCurrentBlock({ keepEditing: true });
+    return;
+  }
   if (event.code === 'Escape') {
     event.preventDefault();
     cancelEditing();

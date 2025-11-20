@@ -497,13 +497,20 @@ export function moveCurrentBlock(direction) {
 
 export async function indentBlock(blockId, options = {}) {
   if (!blockId) return false;
-  const { skipRecord = false } = options;
+  const { skipRecord = false, keepEditing = false } = options;
   try {
+    if (keepEditing) {
+      state.pendingEditBlockId = blockId;
+      state.scrollTargetBlockId = blockId;
+    }
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/indent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, { desiredBlockId: blockId });
+    await loadArticle(state.articleId, {
+      desiredBlockId: blockId,
+      editBlockId: keepEditing ? blockId : undefined,
+    });
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'indent', blockId } });
@@ -515,19 +522,26 @@ export async function indentBlock(blockId, options = {}) {
   }
 }
 
-export function indentCurrentBlock() {
-  return indentBlock(state.currentBlockId);
+export function indentCurrentBlock(options = {}) {
+  return indentBlock(state.currentBlockId, options);
 }
 
 export async function outdentBlock(blockId, options = {}) {
   if (!blockId) return false;
-  const { skipRecord = false } = options;
+  const { skipRecord = false, keepEditing = false } = options;
   try {
+    if (keepEditing) {
+      state.pendingEditBlockId = blockId;
+      state.scrollTargetBlockId = blockId;
+    }
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/outdent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, { desiredBlockId: blockId });
+    await loadArticle(state.articleId, {
+      desiredBlockId: blockId,
+      editBlockId: keepEditing ? blockId : undefined,
+    });
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });
@@ -539,6 +553,6 @@ export async function outdentBlock(blockId, options = {}) {
   }
 }
 
-export function outdentCurrentBlock() {
-  return outdentBlock(state.currentBlockId);
+export function outdentCurrentBlock(options = {}) {
+  return outdentBlock(state.currentBlockId, options);
 }
