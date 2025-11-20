@@ -91,6 +91,7 @@ export function buildEditableBlockHtml(html = '') {
   if (!sections.titleHtml) return html || '';
   const template = document.createElement('template');
   template.innerHTML = sections.titleHtml;
+  // Распаковываем возможный .block-header из сохранённого HTML
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
     if (!parent) return;
@@ -104,38 +105,11 @@ export function buildEditableBlockHtml(html = '') {
 }
 
 export function buildStoredBlockHtml(html = '') {
-  if (!html) return '';
-  const container = document.createElement('div');
-  container.innerHTML = html;
-
-  // Normalize occasional nested `<div><br><div>…</div></div>` that may appear after editing.
-  const normalized = [];
-  Array.from(container.childNodes).forEach((node) => {
-    if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      node.tagName === 'DIV' &&
-      node.firstChild?.nodeName === 'BR' &&
-      node.childNodes.length > 1
-    ) {
-      const separator = document.createElement('div');
-      separator.appendChild(document.createElement('br'));
-
-      const tail = document.createElement('div');
-      Array.from(node.childNodes)
-        .slice(1)
-        .forEach((child) => tail.appendChild(child.cloneNode(true)));
-
-      normalized.push(separator, tail);
-      return;
-    }
-    normalized.push(node.cloneNode(true));
-  });
-
-  const wrapper = document.createElement('div');
-  normalized.forEach((n) => wrapper.appendChild(n));
-  const sections = extractBlockSections(wrapper.innerHTML);
-  if (!sections.titleHtml) return sections.bodyHtml || '';
-  return `${sections.titleHtml}<div><br /></div>${sections.bodyHtml || ''}`;
+  const sections = extractBlockSections(html);
+  if (!sections.titleHtml) return html || '';
+  const header = `<div class="block-header">${sections.titleHtml}</div>`;
+  if (!sections.bodyHtml) return header;
+  return `${header}<div><br /></div>${sections.bodyHtml}`;
 }
 
 export async function toggleCollapse(blockId) {
@@ -267,3 +241,4 @@ export async function ensureBlockVisible(blockId) {
       await setCollapseState(ancestor.id, false);
     }
   }
+
