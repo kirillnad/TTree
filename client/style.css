@@ -692,6 +692,14 @@ button:hover {
   margin-bottom: 0.35rem;
 }
 
+.block-header.block-header--no-title {
+  display: none;
+}
+
+.block.editing .block-header {
+  display: none !important;
+}
+
 .block-header + .block-text {
   margin-top: 0;
   width: 100%;

@@ -13,6 +13,7 @@ export const state = {
   searchLoading: false,
   searchRequestId: 0,
   scrollTargetBlockId: null,
+  pendingEditBlockId: null,
   isEditingTitle: false,
   isSidebarCollapsed: false,
   articlesIndex: [],

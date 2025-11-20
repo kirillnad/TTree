@@ -69,7 +69,7 @@ export async function createSibling(direction) {
         body: JSON.stringify({ direction }),
       },
     );
-    await loadArticle(state.articleId, { desiredBlockId: data.block.id });
+    await loadArticle(state.articleId, { desiredBlockId: data.block.id, editBlockId: data.block.id });
     renderArticle();
     if (data?.block) {
       const snapshot = cloneBlockSnapshot(data.block);

@@ -19,21 +19,27 @@ import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
 
 export async function loadArticle(id, options = {}) {
-  const { desiredBlockId, resetUndoStacks } = options;
+  const { desiredBlockId, resetUndoStacks, editBlockId } = options;
   const switchingArticle = state.articleId !== id;
   state.articleId = id;
-  state.mode = state.mode === 'edit' ? 'view' : state.mode;
-  state.editingBlockId = null;
+  state.isEditingTitle = false;
+  state.pendingTextPreview = null;
+
   const article = await fetchArticle(id);
   state.article = article;
-  state.isEditingTitle = false;
+
   const shouldResetUndo = typeof resetUndoStacks === 'boolean' ? resetUndoStacks : switchingArticle;
   if (shouldResetUndo) {
     hydrateUndoRedoFromArticle(article);
   }
+
+  const autoEditTarget = editBlockId || state.pendingEditBlockId || null;
+  state.pendingEditBlockId = null;
+  const primaryTarget = desiredBlockId || autoEditTarget || null;
+
   let targetSet = false;
-  if (desiredBlockId) {
-    const desired = findBlock(desiredBlockId);
+  if (primaryTarget) {
+    const desired = findBlock(primaryTarget);
     if (desired) {
       await expandCollapsedAncestors(desired.block.id);
       state.currentBlockId = desired.block.id;
@@ -44,6 +50,15 @@ export async function loadArticle(id, options = {}) {
     const firstBlock = flattenVisible(article.blocks)[0];
     state.currentBlockId = firstBlock ? firstBlock.id : null;
   }
+
+  if (autoEditTarget && findBlock(autoEditTarget)) {
+    state.mode = 'edit';
+    state.editingBlockId = autoEditTarget;
+  } else {
+    state.mode = 'view';
+    state.editingBlockId = null;
+  }
+
   upsertArticleIndex(article);
   return article;
 }
@@ -53,8 +68,9 @@ export async function loadArticleView(id) {
   setViewMode(true);
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
-    const desired = state.scrollTargetBlockId || undefined;
-    await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired });
+    const editTarget = state.pendingEditBlockId || undefined;
+    const desired = state.scrollTargetBlockId || editTarget || undefined;
+    await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired, editBlockId: editTarget });
     renderArticle();
   } catch (error) {
     refs.blocksContainer.innerHTML = `<p class="meta">Не удалось загрузить статью: ${error.message}</p>`;
@@ -69,6 +85,7 @@ export async function loadListView() {
   state.editingBlockId = null;
   state.undoStack = [];
   state.redoStack = [];
+  state.pendingEditBlockId = null;
   clearPendingTextPreview({ restoreDom: false });
   setViewMode(false);
   try {
@@ -100,8 +117,8 @@ export function renderArticle() {
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
 
-  const renderBlocks = (blocks, container) => {
-    blocks.forEach((block) => {
+  const renderBlocks = async (blocks, container) => {
+    for (const block of blocks) {
       const blockEl = document.createElement('div');
       blockEl.className = 'block';
       blockEl.dataset.blockId = block.id;
@@ -125,8 +142,11 @@ export function renderArticle() {
       body.setAttribute('data-placeholder', 'Введите текст');
 
       if (state.mode === 'edit' && state.editingBlockId === block.id) {
+        const { buildEditableBlockHtml } = await import('./block.js');
         body.setAttribute('contenteditable', 'true');
-        body.innerHTML = buildEditableBlockHtml(rawHtml);
+        body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<div><br /></div>';
+        body.classList.remove('block-body--empty');
+        // body.classList.remove('block-body--no-title'); // Оставляем класс для корректных стилей
         requestAnimationFrame(() => {
           body.focus();
           placeCaretAtEnd(body);
@@ -140,31 +160,39 @@ export function renderArticle() {
         if (state.mode === 'view') setCurrentBlock(block.id);
       });
 
-      const header = document.createElement('div');
-      header.className = 'block-header';
-      if (canCollapse) {
-        const collapseBtn = document.createElement('button');
-        collapseBtn.className = 'collapse-btn';
-        collapseBtn.textContent = block.collapsed ? '+' : '−';
-        collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
-        collapseBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          toggleCollapse(block.id);
-        });
-        header.appendChild(collapseBtn);
+      let header = null;
+      const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
+      if (!isEditingThisBlock) {
+        header = document.createElement('div');
+        header.className = 'block-header';
+        if (!hasTitle) {
+          header.classList.add('block-header--no-title');
+        }
+        if (canCollapse) {
+          const collapseBtn = document.createElement('button');
+          collapseBtn.className = 'collapse-btn';
+          collapseBtn.textContent = block.collapsed ? '+' : '−';
+          collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
+          collapseBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleCollapse(block.id);
+          });
+          header.appendChild(collapseBtn);
+        }
+
+        if (hasTitle) {
+          const titleEl = document.createElement('div');
+          titleEl.className = 'block-title';
+          titleEl.innerHTML = sections.titleHtml;
+          header.appendChild(titleEl);
+        }
       }
 
-      if (hasTitle) {
-        const titleEl = document.createElement('div');
-        titleEl.className = 'block-title';
-        titleEl.innerHTML = sections.titleHtml;
-        header.appendChild(titleEl);
-      }
+      if (header) blockEl.appendChild(header);
+      // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
+      // Это предотвращает "прыжки" при переключении в режим редактирования.
+      blockEl.appendChild(body);
 
-      blockEl.appendChild(header);
-      if (!body.classList.contains('block-body--empty')) {
-        blockEl.appendChild(body);
-      }
       attachRichContentHandlers(body, block.id);
 
       blockEl.addEventListener('click', () => {
@@ -184,10 +212,10 @@ export function renderArticle() {
       }
 
       container.appendChild(blockEl);
-    });
+    }
   };
 
-  renderBlocks(article.blocks, refs.blocksContainer);
+  renderBlocks(article.blocks, refs.blocksContainer).then(() => {
   applyPendingPreviewMarkup();
   if (state.scrollTargetBlockId) {
     const targetId = state.scrollTargetBlockId;
@@ -207,6 +235,7 @@ export function renderArticle() {
       state.scrollTargetBlockId = null;
     });
   }
+  });
 }
 
 export async function createArticle() {
@@ -215,6 +244,8 @@ export async function createArticle() {
   try {
     const article = await createArticleApi();
     upsertArticleIndex(article);
+    state.pendingEditBlockId = article?.blocks?.[0]?.id || null;
+    state.scrollTargetBlockId = state.pendingEditBlockId;
     navigate(routing.article(article.id));
     showToast('Статья создана');
   } catch (error) {

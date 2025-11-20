@@ -89,15 +89,23 @@ export function extractBlockSections(html = '') {
 export function buildEditableBlockHtml(html = '') {
   const sections = extractBlockSections(html);
   if (!sections.titleHtml) return html || '';
-  return `${sections.titleHtml}<div><br /></div>${sections.bodyHtml || ''}`;
+  const template = document.createElement('template');
+  template.innerHTML = sections.titleHtml;
+  template.content.querySelectorAll('.block-header').forEach((node) => {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) {
+      parent.insertBefore(node.firstChild, node);
+    }
+    parent.removeChild(node);
+  });
+  const titleContent = template.innerHTML || sections.titleHtml;
+  return `${titleContent}<div><br /></div>${sections.bodyHtml || ''}`;
 }
 
 export function buildStoredBlockHtml(html = '') {
   const sections = extractBlockSections(html);
-  if (!sections.titleHtml) return html || '';
-  const header = `<div class="block-header">${sections.titleHtml}</div>`;
-  if (!sections.bodyHtml) return header;
-  return `${header}<div><br /></div>${sections.bodyHtml}`;
+  return html || '';
 }
 
 export async function toggleCollapse(blockId) {

@@ -37,11 +37,12 @@ export function isEditableElement(element) {
 }
 
 export function placeCaretAtEnd(element) {
-  if (!element) return;
+  if (!element || !element.isConnected) return;
+  const selection = window.getSelection();
+  if (!selection) return;
   const range = document.createRange();
   range.selectNodeContents(element);
   range.collapse(false);
-  const selection = window.getSelection();
   selection.removeAllRanges();
   selection.addRange(range);
 }
