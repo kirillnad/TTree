@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { apiRequest, uploadImageFile } from './api.js';
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
-import { insertHtmlAtCaret } from './utils.js';
+import { escapeHtml, insertHtmlAtCaret } from './utils.js';
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -215,7 +215,7 @@ export function cleanupEditableHtml(html = '') {
     template.content.appendChild(p);
   }
 
-  return template.innerHTML;
+  return linkifyHtml(template.innerHTML);
 }
 
 export async function toggleCollapse(blockId) {
@@ -286,6 +286,89 @@ export function countBlocks(blocks = []) {
   return (blocks || []).reduce((acc, block) => acc + 1 + countBlocks(block.children || []), 0);
 }
 
+const URL_REGEX = /((?:https?:\/\/|www\.)[^\s<>"']+)/gi;
+function linkifyHtml(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+
+  const linkifyNode = (node) => {
+    if (!node) return;
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'A') {
+      return; // skip existing links
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      URL_REGEX.lastIndex = 0;
+      const hasMatch = URL_REGEX.test(text);
+      if (!hasMatch) return;
+
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      URL_REGEX.lastIndex = 0;
+      let current;
+      while ((current = URL_REGEX.exec(text)) !== null) {
+        const [url] = current;
+        if (current.index > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, current.index)));
+        }
+        const href = url.startsWith('http') ? url : `https://${url}`;
+        const anchor = document.createElement('a');
+        anchor.href = href;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.textContent = url;
+        fragment.appendChild(anchor);
+        lastIndex = current.index + url.length;
+      }
+      if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      }
+      if (node.parentNode) {
+        node.parentNode.replaceChild(fragment, node);
+      }
+      return;
+    }
+    Array.from(node.childNodes || []).forEach(linkifyNode);
+  };
+
+  Array.from(template.content.childNodes).forEach(linkifyNode);
+  return template.innerHTML;
+}
+
+function sanitizePastedHtml(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+
+  // Remove scripts/styles entirely
+  template.content.querySelectorAll('script, style').forEach((node) => node.remove());
+
+  const isUnsafeUrl = (value = '') => /^javascript:/i.test(value.trim());
+
+  const cleanNode = (node) => {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      Array.from(node?.childNodes || []).forEach(cleanNode);
+      return;
+    }
+
+    Array.from(node.attributes || []).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value || '';
+      if (name.startsWith('on') || name === 'style') {
+        node.removeAttribute(attr.name);
+        return;
+      }
+      if ((name === 'href' || name === 'src') && isUnsafeUrl(value)) {
+        node.removeAttribute(attr.name);
+      }
+    });
+
+    Array.from(node.childNodes || []).forEach(cleanNode);
+  };
+
+  Array.from(template.content.childNodes || []).forEach(cleanNode);
+  return template.innerHTML;
+}
+
 function collectImageFiles(items = [], fallbackFiles = []) {
   const files = [];
   Array.from(items || []).forEach((item) => {
@@ -320,9 +403,28 @@ export function attachRichContentHandlers(element, blockId) {
       event.preventDefault();
       files.forEach((file) => insertImageFromFile(element, file));
     } else {
+      const htmlData = (event.clipboardData?.getData('text/html') || '').trim();
       event.preventDefault();
-      const text = event.clipboardData?.getData('text/plain') || '';
-      document.execCommand('insertText', false, text);
+
+      if (htmlData) {
+        const safeHtml = sanitizePastedHtml(htmlData);
+        insertHtmlAtCaret(element, linkifyHtml(safeHtml));
+      } else {
+        const text = event.clipboardData?.getData('text/plain') || '';
+        const trimmed = text.trim();
+        const isLikelyUrl = /^https?:\/\/\S+$/i.test(trimmed);
+        if (isLikelyUrl) {
+          const safeUrl = escapeHtml(trimmed);
+          insertHtmlAtCaret(
+            element,
+            `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`,
+          );
+        } else {
+          const safeTextHtml = escapeHtml(text).replace(/\n/g, '<br />');
+          const safeHtml = linkifyHtml(safeTextHtml);
+          insertHtmlAtCaret(element, safeHtml);
+        }
+      }
     }
   });
 

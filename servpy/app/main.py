@@ -36,7 +36,7 @@ from .data_store import (
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 CLIENT_DIR = BASE_DIR / "client"
-UPLOADS_DIR = BASE_DIR / 'servpy_uploads'
+UPLOADS_DIR = BASE_DIR / 'uploads'
 UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 
 ensure_sample_article()
@@ -245,8 +245,12 @@ def post_restore(article_id: str, payload: dict[str, Any]):
 
 def _handle_undo_redo(func, article_id, entry_id):
     try:
-        block = func(article_id, entry_id)
-        return {'blockId': block['id'], 'block': block}
+        result = func(article_id, entry_id)
+        if not result:
+            raise InvalidOperation('Nothing to undo')
+        block_id = result.get('blockId') or result.get('id')
+        block_payload = result.get('block') or {'id': block_id, **{k: v for k, v in result.items() if k != 'blockId'}}
+        return {'blockId': block_id, 'block': block_payload}
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:
