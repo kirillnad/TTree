@@ -319,6 +319,80 @@ def find_block_recursive(blocks: List[Dict[str, Any]], block_id: str, parent: Op
     return None
 
 
+def _parent_clause(parent_id: Optional[str]) -> Tuple[str, Tuple]:
+    if parent_id is None:
+        return 'parent_id IS NULL', ()
+    return 'parent_id = ?', (parent_id,)
+
+
+def _fetch_siblings(article_id: str, parent_id: Optional[str]) -> List[sqlite3.Row]:
+    clause, params = _parent_clause(parent_id)
+    return CONN.execute(
+        f'''
+        SELECT block_rowid, id, parent_id, position, text, collapsed, created_at, updated_at
+        FROM blocks
+        WHERE article_id = ? AND {clause}
+        ORDER BY position ASC
+        ''',
+        (article_id, *params),
+    ).fetchall()
+
+
+def _reindex_siblings(article_id: str, parent_id: Optional[str]) -> None:
+    siblings = _fetch_siblings(article_id, parent_id)
+    with CONN:
+        for idx, row in enumerate(siblings):
+            if row['position'] != idx:
+                clause, params = _parent_clause(parent_id)
+                CONN.execute(
+                    f'UPDATE blocks SET position = ? WHERE article_id = ? AND {clause} AND id = ?',
+                    (idx, article_id, *params, row['id']),
+                )
+
+
+def _insert_block_tree(article_id: str, block: Dict[str, Any], parent_id: Optional[str], position: int, timestamp: str) -> Dict[str, Any]:
+    block_id = block.get('id') or str(uuid.uuid4())
+    text = sanitize_html(block.get('text', ''))
+    plain_text = strip_html(text)
+    lemma = block.get('lemma') or build_lemma(plain_text)
+    normalized_text = block.get('normalized_text') or build_normalized_tokens(plain_text)
+    created_at = block.get('createdAt', timestamp)
+    collapsed = int(bool(block.get('collapsed')))
+
+    with CONN:
+        clause, params = _parent_clause(parent_id)
+        CONN.execute(
+            f'''
+            UPDATE blocks
+            SET position = position + 1
+            WHERE article_id = ? AND {clause} AND position >= ?
+            ''',
+            (article_id, *params, position),
+        )
+        CONN.execute(
+            '''
+            INSERT INTO blocks
+              (id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (block_id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, timestamp),
+        )
+        block_rowid = CONN.execute('SELECT last_insert_rowid() as block_rowid').fetchone()['block_rowid']
+        CONN.execute(
+            '''
+            INSERT OR REPLACE INTO blocks_fts
+              (block_rowid, article_id, text, lemma, normalized_text)
+            VALUES (?, ?, ?, ?, ?)
+            ''',
+            (block_rowid, article_id, text, lemma, normalized_text),
+        )
+    for idx, child in enumerate(block.get('children') or []):
+        _insert_block_tree(article_id, child, block_id, idx, timestamp)
+    inserted = clone_block(block)
+    inserted['id'] = block_id
+    return inserted
+
+
 def push_text_history_entry(article: Dict[str, Any], block_id: str, before: str, after: str) -> Optional[Dict[str, Any]]:
     if before == after:
         return None
@@ -400,150 +474,287 @@ def update_block_collapse(article_id: str, block_id: str, collapsed: bool) -> Op
     return update_block(article_id, block_id, {'collapsed': collapsed})
 
 
-@with_article
-def insert_block(article: Dict[str, Any], target_block_id: str, direction: str, payload: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-    located = find_block_recursive(article['blocks'], target_block_id)
-    if not located:
-        raise BlockNotFound(f'Целевой блок с ID {target_block_id} не найден')
-    siblings = located['siblings']
-    index = located['index']
-    parent = located['parent']
+def insert_block(article_id: str, target_block_id: str, direction: str, payload: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    target = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (target_block_id, article_id),
+    ).fetchone()
+    if not target:
+        raise BlockNotFound(f'Block {target_block_id} not found')
+
+    siblings = _fetch_siblings(article_id, target['parent_id'])
+    target_index = next((i for i, row in enumerate(siblings) if row['id'] == target_block_id), None)
+    if target_index is None:
+        raise BlockNotFound(f'Block {target_block_id} not found')
+    insertion = target_index if direction == 'before' else target_index + 1
+    now = iso_now()
     new_block = clone_block(payload or create_default_block())
-    insertion = index if direction == 'before' else index + 1
-    siblings.insert(insertion, new_block)
-    return {'block': new_block, 'parentId': parent['id'] if parent else None, 'index': insertion}
+    inserted = _insert_block_tree(article_id, new_block, target['parent_id'], insertion, now)
+    with CONN:
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+    return {'block': inserted, 'parentId': target['parent_id'], 'index': insertion}
 
 
-@with_article
-def delete_block(article: Dict[str, Any], block_id: str) -> Optional[Dict[str, Any]]:
+def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
+    article = get_article(article_id)
+    if not article:
+        raise ArticleNotFound(f'Article {article_id} not found')
     if count_blocks(article['blocks']) <= 1:
-        raise ValueError('Нельзя удалять последний блок')
+        raise ValueError('Need to keep at least one block')
     located = find_block_recursive(article['blocks'], block_id)
     if not located:
-        raise BlockNotFound(f'Блок с ID {block_id} не найден')
-    siblings = located['siblings']
+        raise BlockNotFound(f'Block {block_id} not found')
+    target_row = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
+    if not target_row:
+        raise BlockNotFound(f'Block {block_id} not found')
+    removed = clone_block(located['block'])
+    parent_id = located['parent']['id'] if located['parent'] else None
     index = located['index']
-    removed = siblings.pop(index)
+    now = iso_now()
+    clause, params = _parent_clause(parent_id)
+    with CONN:
+        rowids = [
+            row['block_rowid']
+            for row in CONN.execute(
+                '''
+                WITH RECURSIVE subtree(id) AS (
+                    SELECT id FROM blocks WHERE id = ? AND article_id = ?
+                    UNION ALL
+                    SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
+                )
+                SELECT block_rowid FROM blocks WHERE article_id = ? AND id IN (SELECT id FROM subtree)
+                ''',
+                (block_id, article_id, article_id),
+            ).fetchall()
+        ]
+        if rowids:
+            placeholders = ','.join('?' for _ in rowids)
+            CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', rowids)
+        CONN.execute('DELETE FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id))
+        CONN.execute(
+            f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',
+            (article_id, *params, target_row['position']),
+        )
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
     return {
-        'removedBlockId': removed['id'],
-        'parentId': located['parent']['id'] if located['parent'] else None,
+        'removedBlockId': block_id,
+        'parentId': parent_id,
         'index': index,
         'block': removed,
     }
 
 
-@with_article
-def move_block(article: Dict[str, Any], block_id: str, direction: str) -> Optional[Dict[str, Any]]:
-    if direction not in {'up', 'down'}: return None
-    located = find_block_recursive(article['blocks'], block_id)
-    if not located:
-        raise BlockNotFound(f'Блок с ID {block_id} не найден')
-    siblings = located['siblings']
-    index = located['index']
-    target = index - 1 if direction == 'up' else index + 1
-    if target < 0 or target >= len(siblings):
-        raise InvalidOperation(f'Невозможно переместить блок {direction}')
-    block = siblings.pop(index)
-    siblings.insert(target, block)
-    return {'block': block, 'parentId': located['parent']['id'] if located['parent'] else None}
+def move_block(article_id: str, block_id: str, direction: str) -> Optional[Dict[str, Any]]:
+    if direction not in {'up', 'down'}:
+        return None
+    target = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
+    if not target:
+        raise BlockNotFound(f'Block {block_id} not found')
+    siblings = _fetch_siblings(article_id, target['parent_id'])
+    index = next((i for i, row in enumerate(siblings) if row['id'] == block_id), None)
+    if index is None:
+        raise BlockNotFound(f'Block {block_id} not found')
+    target_index = index - 1 if direction == 'up' else index + 1
+    if target_index < 0 or target_index >= len(siblings):
+        raise InvalidOperation(f'Cannot move {direction}')
+
+    order = [row['id'] for row in siblings]
+    order.pop(index)
+    order.insert(target_index, block_id)
+    now = iso_now()
+    with CONN:
+        for pos, bid in enumerate(order):
+            CONN.execute('UPDATE blocks SET position = ? WHERE id = ? AND article_id = ?', (pos, bid, article_id))
+        CONN.execute('UPDATE blocks SET updated_at = ? WHERE id = ? AND article_id = ?', (now, block_id, article_id))
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+    return {'block': {'id': block_id}, 'parentId': target['parent_id']}
 
 
-@with_article
-def indent_block(article: Dict[str, Any], block_id: str) -> Optional[Dict[str, Any]]:
-    located = find_block_recursive(article['blocks'], block_id)
-    if not located:
-        raise BlockNotFound(f'Блок с ID {block_id} не найден')
-    siblings = located['siblings']
-    index = located['index']
+def indent_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
+    target = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
+    if not target:
+        raise BlockNotFound(f'Block {block_id} not found')
+    siblings = _fetch_siblings(article_id, target['parent_id'])
+    index = next((i for i, row in enumerate(siblings) if row['id'] == block_id), None)
+    if index is None:
+        raise BlockNotFound(f'Block {block_id} not found')
     if index == 0:
-        raise InvalidOperation('Невозможно сдвинуть первый блок в списке')
-    previous = siblings[index - 1]
-    block = siblings.pop(index)
-    previous.setdefault('children', []).append(block)
-    return {'block': block, 'parentId': previous['id']}
+        raise InvalidOperation('Cannot indent first item')
+
+    new_parent_id = siblings[index - 1]['id']
+    clause_old, params_old = _parent_clause(target['parent_id'])
+    child_clause, child_params = _parent_clause(new_parent_id)
+    child_count = CONN.execute(
+        f'SELECT COUNT(*) as cnt FROM blocks WHERE article_id = ? AND {child_clause}',
+        (article_id, *child_params),
+    ).fetchone()['cnt']
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause_old} AND position > ?',
+            (article_id, *params_old, target['position']),
+        )
+        CONN.execute(
+            'UPDATE blocks SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+            (new_parent_id, child_count, now, block_id, article_id),
+        )
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+    return {'block': {'id': block_id}, 'parentId': new_parent_id}
 
 
-@with_article
-def outdent_block(article: Dict[str, Any], block_id: str) -> Optional[Dict[str, Any]]:
-    located = find_block_recursive(article['blocks'], block_id)
-    if not located or not located['parent']:
-        raise InvalidOperation('Невозможно сдвинуть блок верхнего уровня')
-    parent = located['parent']
-    grand_parent = find_block_recursive(article['blocks'], parent['id'])
-    siblings = located['siblings']
-    index = located['index']
-    block = siblings.pop(index)
-    block.setdefault('children', []).extend(siblings[index:])
-    del siblings[index:]
-    target_siblings = grand_parent['siblings'] if grand_parent else article['blocks']
-    parent_index = target_siblings.index(parent)
-    target_siblings.insert(parent_index + 1, block)
-    article['updatedAt'] = iso_now()
-    save_article(article)
-    return {'block': block, 'parentId': grand_parent['parent']['id'] if grand_parent and grand_parent['parent'] else None}
+def outdent_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
+    target = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
+    if not target:
+        raise BlockNotFound(f'Block {block_id} not found')
+    if not target['parent_id']:
+        raise InvalidOperation('Cannot outdent root')
+
+    parent_row = CONN.execute(
+        'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+        (target['parent_id'], article_id),
+    ).fetchone()
+    if not parent_row:
+        raise InvalidOperation('Invalid parent structure')
+
+    clause_old, params_old = _parent_clause(target['parent_id'])
+    target_clause, target_params = _parent_clause(parent_row['parent_id'])
+    insert_pos = parent_row['position'] + 1
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause_old} AND position > ?',
+            (article_id, *params_old, target['position']),
+        )
+        CONN.execute(
+            f'UPDATE blocks SET position = position + 1 WHERE article_id = ? AND {target_clause} AND position >= ?',
+            (article_id, *target_params, insert_pos),
+        )
+        CONN.execute(
+            'UPDATE blocks SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+            (parent_row['parent_id'], insert_pos, now, block_id, article_id),
+        )
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+    return {'block': {'id': block_id}, 'parentId': parent_row['parent_id']}
 
 
-@with_article
 def restore_block(article_id: str, parent_id: Optional[str], index: Optional[int], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    siblings = article['blocks']
-    if parent_id:
-        parent_loc = find_block_recursive(article['blocks'], parent_id)
-        if not parent_loc:
-            raise BlockNotFound(f'Родительский блок с ID {parent_id} не найден')
-        siblings = parent_loc['block'].setdefault('children', [])
-    insertion = index if isinstance(index, int) else len(siblings)
+    siblings = _fetch_siblings(article_id, parent_id)
+    insertion = index if isinstance(index, int) and 0 <= index <= len(siblings) else len(siblings)
+    now = iso_now()
     restored = clone_block(payload)
-    siblings.insert(insertion, restored)
-    return {'block': restored, 'parentId': parent_id or None, 'index': insertion}
+    inserted = _insert_block_tree(article_id, restored, parent_id, insertion, now)
+    with CONN:
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+    return {'block': inserted, 'parentId': parent_id or None, 'index': insertion}
 
 
-@with_article
-def update_article_meta(article: Dict[str, Any], attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    article = get_article(article_id)
+    if not article:
+        raise ArticleNotFound(f'Article {article_id} not found')
     title = attrs.get('title')
-    if title and title != article['title']:
-        article['title'] = title
-        return article  # Возвращаем статью для сохранения
-    return None  # Ничего не изменилось, сохранять не нужно
+    if not title or title == article['title']:
+        return None
+    now = iso_now()
+    with CONN:
+        CONN.execute('UPDATE articles SET title = ?, updated_at = ? WHERE id = ?', (title, now, article_id))
+    article['title'] = title
+    article['updatedAt'] = now
+    return article
 
 
-@with_article
-def undo_block_text_change(article: Dict[str, Any], entry_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    if not article.get('history'):
-        raise InvalidOperation('История изменений пуста, нечего отменять')
-    history = article['history']
+def undo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    article_row = CONN.execute('SELECT history, redo_history FROM articles WHERE id = ?', (article_id,)).fetchone()
+    if not article_row:
+        raise ArticleNotFound(f'Article {article_id} not found')
+    history = deserialize_history(article_row['history'])
+    redo = deserialize_history(article_row['redo_history'])
+    if not history:
+        raise InvalidOperation('Nothing to undo')
     if entry_id:
         index = next((i for i, item in enumerate(history) if item['id'] == entry_id), None)
     else:
         index = len(history) - 1
-    if index is None or index < 0:
-        raise InvalidOperation('Запись в истории для отмены не найдена')
+    if index is None or index < 0 or index >= len(history):
+        raise InvalidOperation('Nothing to undo')
     entry = history.pop(index)
-    block = find_block_recursive(article['blocks'], entry['blockId'])
-    if not block:
-        return None
-    block['block']['text'] = entry['before']
-    article.setdefault('redoHistory', []).append(entry)
-    return block['block']
+    redo.append(entry)
+    block_id = entry['blockId']
+    block_row = CONN.execute('SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id)).fetchone()
+    if not block_row:
+        raise BlockNotFound(f'Block {block_id} not found')
+    new_text = sanitize_html(entry.get('before') or '')
+    plain_text = strip_html(new_text)
+    lemma = build_lemma(plain_text)
+    normalized_text = build_normalized_tokens(plain_text)
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            'UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+            (new_text, normalized_text, now, block_id, article_id),
+        )
+        CONN.execute(
+            'INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text) VALUES (?, ?, ?, ?, ?)',
+            (block_row['block_rowid'], article_id, new_text, lemma, normalized_text),
+        )
+        CONN.execute(
+            'UPDATE articles SET history = ?, redo_history = ?, updated_at = ? WHERE id = ?',
+            (serialize_history(history), serialize_history(redo), now, article_id),
+        )
+    return {'blockId': block_id, 'block': {'id': block_id, 'text': new_text}}
 
 
-@with_article
-def redo_block_text_change(article: Dict[str, Any], entry_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    if not article.get('redoHistory'):
-        raise InvalidOperation('История повторов пуста, нечего повторять')
-    redo = article['redoHistory']
+def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    article_row = CONN.execute('SELECT history, redo_history FROM articles WHERE id = ?', (article_id,)).fetchone()
+    if not article_row:
+        raise ArticleNotFound(f'Article {article_id} not found')
+    history = deserialize_history(article_row['history'])
+    redo = deserialize_history(article_row['redo_history'])
+    if not redo:
+        raise InvalidOperation('Nothing to redo')
     if entry_id:
         index = next((i for i, item in enumerate(redo) if item['id'] == entry_id), None)
     else:
         index = len(redo) - 1
-    if index is None or index < 0:
-        raise InvalidOperation('Запись в истории для повтора не найдена')
+    if index is None or index < 0 or index >= len(redo):
+        raise InvalidOperation('Nothing to redo')
     entry = redo.pop(index)
-    block = find_block_recursive(article['blocks'], entry['blockId'])
-    if not block:
-        return None
-    block['block']['text'] = entry['after']
-    article.setdefault('history', []).append(entry)
-    return block['block']
+    history.append(entry)
+    block_id = entry['blockId']
+    block_row = CONN.execute('SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id)).fetchone()
+    if not block_row:
+        raise BlockNotFound(f'Block {block_id} not found')
+    new_text = sanitize_html(entry.get('after') or '')
+    plain_text = strip_html(new_text)
+    lemma = build_lemma(plain_text)
+    normalized_text = build_normalized_tokens(plain_text)
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            'UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+            (new_text, normalized_text, now, block_id, article_id),
+        )
+        CONN.execute(
+            'INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text) VALUES (?, ?, ?, ?, ?)',
+            (block_row['block_rowid'], article_id, new_text, lemma, normalized_text),
+        )
+        CONN.execute(
+            'UPDATE articles SET history = ?, redo_history = ?, updated_at = ? WHERE id = ?',
+            (serialize_history(history), serialize_history(redo), now, article_id),
+        )
+    return {'blockId': block_id, 'block': {'id': block_id, 'text': new_text}}
 
 
 def build_fts_query(term: str) -> str:

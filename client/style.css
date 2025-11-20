@@ -701,7 +701,7 @@ button:hover {
 }
 
 .block-header + .block-text {
-  margin-top: 0;
+  margin-top: 0.25rem;
   width: 100%;
 }
 
