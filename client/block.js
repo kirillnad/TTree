@@ -66,9 +66,63 @@ function serializeNodes(nodes = []) {
   return wrapper.innerHTML.trim();
 }
 
+function normalizeToParagraphs(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const paragraphs = [];
+  const pushParagraph = (contentHtml = '') => {
+    const p = document.createElement('p');
+    if (contentHtml) {
+      p.innerHTML = contentHtml;
+    } else {
+      p.appendChild(document.createElement('br'));
+    }
+    paragraphs.push(p);
+  };
+
+  Array.from(template.content.childNodes).forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent || '').trim();
+      if (text) pushParagraph(text);
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (node.tagName === 'P') {
+      paragraphs.push(node.cloneNode(true));
+      return;
+    }
+    if (node.tagName === 'BR') {
+      pushParagraph('');
+      return;
+    }
+    if (node.tagName === 'DIV') {
+      pushParagraph(node.innerHTML);
+      return;
+    }
+    // Any other element: wrap inside paragraph
+    pushParagraph(node.outerHTML);
+  });
+
+  if (!paragraphs.length) pushParagraph('');
+  const out = document.createElement('div');
+  paragraphs.forEach((p) => out.appendChild(p));
+  return out.innerHTML;
+}
+
 export function extractBlockSections(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
+
+  // Убираем возможные обертки .block-header, чтобы корректно выделять заголовок/тело
+  template.content.querySelectorAll('.block-header').forEach((node) => {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) {
+      parent.insertBefore(node.firstChild, node);
+    }
+    parent.removeChild(node);
+  });
+
   const nodes = Array.from(template.content.childNodes);
   const titleNodes = [];
   const bodyNodes = [];
@@ -83,15 +137,28 @@ export function extractBlockSections(html = '') {
   });
 
   if (!separatorFound) return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
+  // debug: логируем разбор секций
+  try {
+    // eslint-disable-next-line no-console
+    console.log('extractBlockSections result', { html, title: serializeNodes(titleNodes), body: serializeNodes(bodyNodes) });
+  } catch (e) {
+    // ignore
+  }
   return { titleHtml: serializeNodes(titleNodes), bodyHtml: serializeNodes(bodyNodes) };
 }
 
 export function buildEditableBlockHtml(html = '') {
   const sections = extractBlockSections(html);
   if (!sections.titleHtml) return html || '';
+  const titleContent = normalizeToParagraphs(sections.titleHtml);
+  const bodyContent = normalizeToParagraphs(sections.bodyHtml || '');
+  return `${titleContent}<p><br /></p>${bodyContent}`;
+}
+
+export function buildStoredBlockHtml(html = '') {
   const template = document.createElement('template');
-  template.innerHTML = sections.titleHtml;
-  // Распаковываем возможный .block-header из сохранённого HTML
+  template.innerHTML = html || '';
+  // Убираем вложенные block-header, оставляя только контент
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
     if (!parent) return;
@@ -100,16 +167,65 @@ export function buildEditableBlockHtml(html = '') {
     }
     parent.removeChild(node);
   });
-  const titleContent = template.innerHTML || sections.titleHtml;
-  return `${titleContent}<div><br /></div>${sections.bodyHtml || ''}`;
-}
 
-export function buildStoredBlockHtml(html = '') {
-  const sections = extractBlockSections(html);
+  const cleanedHtml = template.innerHTML;
+  const sections = extractBlockSections(cleanedHtml);
+  try {
+    // eslint-disable-next-line no-console
+    console.log('buildStoredBlockHtml', { input: html, cleanedHtml, sections });
+  } catch (e) {
+    // ignore
+  }
   if (!sections.titleHtml) return html || '';
   const header = `<div class="block-header">${sections.titleHtml}</div>`;
   if (!sections.bodyHtml) return header;
   return `${header}<div><br /></div>${sections.bodyHtml}`;
+}
+
+export function cleanupEditableHtml(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const parts = [];
+  const pushParagraph = (inner) => {
+    const p = document.createElement('p');
+    if (inner) {
+      p.innerHTML = inner;
+    } else {
+      p.appendChild(document.createElement('br'));
+    }
+    parts.push(p.outerHTML);
+  };
+
+  Array.from(template.content.childNodes).forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent || '').trim();
+      if (text) {
+        const p = document.createElement('p');
+        p.textContent = text;
+        parts.push(p.outerHTML);
+      }
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (node.tagName === 'P' || node.tagName === 'DIV') {
+      const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').trim();
+      if (!inner || inner === '<br>' || inner === '<br/>') {
+        pushParagraph(''); // пустая строка
+      } else {
+        pushParagraph(node.innerHTML);
+      }
+      return;
+    }
+    if (node.tagName === 'BR') {
+      pushParagraph('');
+      return;
+    }
+    // прочие элементы — заворачиваем в абзац
+    pushParagraph(node.outerHTML);
+  });
+
+  if (!parts.length) pushParagraph('');
+  return parts.join('');
 }
 
 export async function toggleCollapse(blockId) {
@@ -210,9 +326,14 @@ export function attachRichContentHandlers(element, blockId) {
   element.addEventListener('paste', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     const files = collectImageFiles(event.clipboardData?.items);
-    if (!files.length) return;
-    event.preventDefault();
-    files.forEach((file) => insertImageFromFile(element, file));
+    if (files.length > 0) {
+      event.preventDefault();
+      files.forEach((file) => insertImageFromFile(element, file));
+    } else {
+      event.preventDefault();
+      const text = event.clipboardData?.getData('text/plain') || '';
+      document.execCommand('insertText', false, text);
+    }
   });
 
   element.addEventListener('drop', (event) => {
@@ -241,4 +362,3 @@ export async function ensureBlockVisible(blockId) {
       await setCollapseState(ancestor.id, false);
     }
   }
-

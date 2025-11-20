@@ -142,6 +142,13 @@ export function renderArticle() {
       const hasChildren = Boolean(block.children?.length);
       const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);
+      // debug
+      try {
+        // eslint-disable-next-line no-console
+        console.log('render block', block.id, { text: block.text, sections });
+      } catch (e) {
+        // ignore
+      }
 
       const body = document.createElement('div');
       body.className = 'block-text block-body';
@@ -156,10 +163,12 @@ export function renderArticle() {
       if (state.mode === 'edit' && state.editingBlockId === block.id) {
         const { buildEditableBlockHtml } = await import('./block.js');
         body.setAttribute('contenteditable', 'true');
-        body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<div><br /></div>';
+        body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<br />';
         body.classList.remove('block-body--empty');
         // body.classList.remove('block-body--no-title'); // Оставляем класс для корректных стилей
         requestAnimationFrame(() => {
+          // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
+          document.execCommand('defaultParagraphSeparator', false, 'p');
           body.focus();
           placeCaretAtEnd(body);
         });

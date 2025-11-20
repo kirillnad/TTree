@@ -134,10 +134,10 @@ def patch_collapse(article_id: str, payload: dict[str, Any]):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
-def post_sibling(article_id: str, block_id: str, payload: dict[str, Any] | None = None):
+def post_sibling(article_id: str, block_id: str, payload: dict[str, Any]):
     direction = payload.get('direction', 'after') if payload else 'after'
     try:
-        result = insert_block(article_id, block_id, direction, payload.get('payload', {}) if payload else {})
+        result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
         return result
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
