@@ -563,6 +563,15 @@ button:hover {
   white-space: pre-wrap;
   line-height: 1.5;
 }
+.block-text p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.block-header p,
+.block-title p {
+  margin: 0;
+  padding: 0;
+}
 
 .block-body--no-title {
   margin-top: 0;
@@ -640,9 +649,9 @@ button:hover {
 
 .block-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: 0.35rem;
 }
 
@@ -658,6 +667,7 @@ button:hover {
   background: #e0e7ff;
   color: #3730a3;
   cursor: pointer;
+  align-self: flex-start;
 }
 
 .toast {
