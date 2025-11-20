@@ -104,8 +104,38 @@ export function buildEditableBlockHtml(html = '') {
 }
 
 export function buildStoredBlockHtml(html = '') {
-  const sections = extractBlockSections(html);
-  return html || '';
+  if (!html) return '';
+  const container = document.createElement('div');
+  container.innerHTML = html;
+
+  // Normalize occasional nested `<div><br><div>…</div></div>` that may appear after editing.
+  const normalized = [];
+  Array.from(container.childNodes).forEach((node) => {
+    if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      node.tagName === 'DIV' &&
+      node.firstChild?.nodeName === 'BR' &&
+      node.childNodes.length > 1
+    ) {
+      const separator = document.createElement('div');
+      separator.appendChild(document.createElement('br'));
+
+      const tail = document.createElement('div');
+      Array.from(node.childNodes)
+        .slice(1)
+        .forEach((child) => tail.appendChild(child.cloneNode(true)));
+
+      normalized.push(separator, tail);
+      return;
+    }
+    normalized.push(node.cloneNode(true));
+  });
+
+  const wrapper = document.createElement('div');
+  normalized.forEach((n) => wrapper.appendChild(n));
+  const sections = extractBlockSections(wrapper.innerHTML);
+  if (!sections.titleHtml) return sections.bodyHtml || '';
+  return `${sections.titleHtml}<div><br /></div>${sections.bodyHtml || ''}`;
 }
 
 export async function toggleCollapse(blockId) {

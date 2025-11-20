@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { apiRequest } from './api.js';
+import { refs } from './refs.js';
 import { showToast } from './toast.js';
 import { loadArticle } from './article.js';
 import { renderArticle } from './article.js';
@@ -7,6 +8,17 @@ import { pushUndoEntry, cloneBlockSnapshot } from './undo.js';
 import { findBlock, countBlocks, findFallbackBlockId } from './block.js';
 import { buildBlockPayloadFromParsed, parseMarkdownBlocksInput, looksLikeMarkdownBlocks } from './markdown.js';
 import { isEditableElement } from './utils.js';
+
+function setPasteProgress(active, message = 'Вставляем Markdown...') {
+  state.isMarkdownInserting = active;
+  const node = refs.pasteProgress;
+  if (!node) return;
+  const textNode = node.querySelector('.inline-progress__text');
+  if (textNode && message) {
+    textNode.textContent = message;
+  }
+  node.classList.toggle('hidden', !active);
+}
 
 export async function startEditing() {
   if (!state.currentBlockId) return;
@@ -124,42 +136,51 @@ export async function deleteCurrentBlock() {
 
 export async function insertParsedMarkdownBlocks(parsedBlocks = []) {
   if (!parsedBlocks.length) {
-    showToast('Не удалось распознать структуру блоков');
+    showToast('Нельзя вставлять пустые блоки из Markdown');
     return;
   }
   if (!state.articleId) {
-    showToast('Сначала выберите статью');
+    showToast('Нельзя вставлять блоки без выбранной статьи');
     return;
   }
   if (!state.currentBlockId) {
-    showToast('Сначала выберите блок для вставки');
+    showToast('Нельзя вставлять блоки без выбранного блока');
     return;
   }
-  let anchorId = state.currentBlockId;
-  let lastInsertedId = null;
-  for (const parsed of parsedBlocks) {
-    const payload = buildBlockPayloadFromParsed(parsed);
-    if (!payload) {
-      // eslint-disable-next-line no-continue
-      continue;
-    }
-    // eslint-disable-next-line no-await-in-loop
-    const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${anchorId}/siblings`, {
-      method: 'POST',
-      body: JSON.stringify({ direction: 'after', payload }),
-    });
-    if (result?.block?.id) {
-      anchorId = result.block.id;
-      lastInsertedId = result.block.id;
-    }
-  }
-  if (!lastInsertedId) {
-    showToast('Не удалось создать блоки');
+  if (state.isMarkdownInserting) {
+    showToast('Идёт вставка Markdown, пожалуйста, подождите...');
     return;
   }
-  await loadArticle(state.articleId, { desiredBlockId: lastInsertedId });
-  renderArticle();
-  showToast('Блоки вставлены из Markdown');
+  setPasteProgress(true);
+  try {
+    let anchorId = state.currentBlockId;
+    let lastInsertedId = null;
+    for (const parsed of parsedBlocks) {
+      const payload = buildBlockPayloadFromParsed(parsed);
+      if (!payload) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${anchorId}/siblings`, {
+        method: 'POST',
+        body: JSON.stringify({ direction: 'after', payload }),
+      });
+      if (result?.block?.id) {
+        anchorId = result.block.id;
+        lastInsertedId = result.block.id;
+      }
+    }
+    if (!lastInsertedId) {
+      showToast('Не удалось добавить ни одного блока');
+      return;
+    }
+    await loadArticle(state.articleId, { desiredBlockId: lastInsertedId });
+    renderArticle();
+    showToast('Блоки добавлены из Markdown');
+  } finally {
+    setPasteProgress(false);
+  }
 }
 
 export function handleGlobalPaste(event) {

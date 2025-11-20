@@ -24,4 +24,5 @@ export const refs = {
   articleMenuBtn: document.getElementById('articleMenuBtn'),
   articleMenu: document.getElementById('articleMenu'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
+  pasteProgress: document.getElementById('pasteProgress'),
 };

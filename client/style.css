@@ -736,6 +736,33 @@ button:hover {
   display: none;
 }
 
+.inline-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.15);
+  font-weight: 600;
+}
+
+.inline-progress__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4f46e5;
+  animation: spin 0.75s linear infinite;
+}
+
+.inline-progress__text {
+  font-size: 0.9rem;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -796,6 +823,15 @@ button:hover {
   }
   to {
     opacity: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 .diff-inline {

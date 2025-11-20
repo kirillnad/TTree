@@ -19,6 +19,7 @@ export const state = {
   articlesIndex: [],
   articleFilterQuery: '',
   lastChangeTimestamp: null,
+  isMarkdownInserting: false,
 };
 
 export let isSavingTitle = false;
