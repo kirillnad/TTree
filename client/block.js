@@ -137,13 +137,6 @@ export function extractBlockSections(html = '') {
   });
 
   if (!separatorFound) return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
-  // debug: логируем разбор секций
-  try {
-    // eslint-disable-next-line no-console
-    console.log('extractBlockSections result', { html, title: serializeNodes(titleNodes), body: serializeNodes(bodyNodes) });
-  } catch (e) {
-    // ignore
-  }
   return { titleHtml: serializeNodes(titleNodes), bodyHtml: serializeNodes(bodyNodes) };
 }
 
@@ -170,12 +163,6 @@ export function buildStoredBlockHtml(html = '') {
 
   const cleanedHtml = template.innerHTML;
   const sections = extractBlockSections(cleanedHtml);
-  try {
-    // eslint-disable-next-line no-console
-    console.log('buildStoredBlockHtml', { input: html, cleanedHtml, sections });
-  } catch (e) {
-    // ignore
-  }
   if (!sections.titleHtml) return html || '';
   const header = `<div class="block-header">${sections.titleHtml}</div>`;
   if (!sections.bodyHtml) return header;
@@ -185,47 +172,50 @@ export function buildStoredBlockHtml(html = '') {
 export function cleanupEditableHtml(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
-  const parts = [];
-  const pushParagraph = (inner) => {
-    const p = document.createElement('p');
-    if (inner) {
-      p.innerHTML = inner;
-    } else {
-      p.appendChild(document.createElement('br'));
-    }
-    parts.push(p.outerHTML);
-  };
 
-  Array.from(template.content.childNodes).forEach((node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = (node.textContent || '').trim();
-      if (text) {
-        const p = document.createElement('p');
-        p.textContent = text;
-        parts.push(p.outerHTML);
-      }
-      return;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
-    if (node.tagName === 'P' || node.tagName === 'DIV') {
-      const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').trim();
-      if (!inner || inner === '<br>' || inner === '<br/>') {
-        pushParagraph(''); // пустая строка
-      } else {
-        pushParagraph(node.innerHTML);
-      }
-      return;
-    }
-    if (node.tagName === 'BR') {
-      pushParagraph('');
-      return;
-    }
-    // прочие элементы — заворачиваем в абзац
-    pushParagraph(node.outerHTML);
+  // разворачиваем .block-header, убираем классы
+  template.content.querySelectorAll('.block-header').forEach((node) => {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) parent.insertBefore(node.firstChild, node);
+    parent.removeChild(node);
   });
 
-  if (!parts.length) pushParagraph('');
-  return parts.join('');
+  const convertDivsToParagraphs = (root) => {
+    Array.from(root.childNodes).forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.tagName === 'DIV') {
+          // заменяем div на p, сохраняя содержимое
+          const p = document.createElement('p');
+          p.innerHTML = node.innerHTML;
+          node.parentNode.replaceChild(p, node);
+          convertDivsToParagraphs(p);
+          return;
+        }
+        convertDivsToParagraphs(node);
+      }
+    });
+  };
+
+  convertDivsToParagraphs(template.content);
+
+  // приводим к чистым <p>, гарантируем пустые строки как <p><br/></p>
+  template.content.querySelectorAll('p').forEach((p) => {
+    const inner = (p.innerHTML || '').replace(/&nbsp;/g, '').trim();
+    if (!inner || inner === '<br>' || inner === '<br/>') {
+      p.innerHTML = '';
+      p.appendChild(document.createElement('br'));
+    }
+  });
+
+  // если нет ни одного абзаца — добавляем пустой
+  if (!template.content.querySelector('p')) {
+    const p = document.createElement('p');
+    p.appendChild(document.createElement('br'));
+    template.content.appendChild(p);
+  }
+
+  return template.innerHTML;
 }
 
 export async function toggleCollapse(blockId) {

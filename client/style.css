@@ -595,15 +595,36 @@ button:hover {
 }
 
 .block.block--no-title {
-  gap: 0;
-  padding-left: 2.2rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: flex-start;
+  column-gap: 0.5rem;
   padding-top: 0.3rem;
 }
 
 .block.block--no-title .block-header {
   position: static;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
 }
+
+.block-header.block-header--no-title {
+  display: flex;
+}
+
+.block.block--no-title .block-text {
+  grid-column: 2;
+  margin-top: 0;
+}
+
+.block.block--no-title .block-children {
+  grid-column: 2;
+  margin-left: 0;
+  padding-left: 1rem;
+}
+
+
 
 .block.block--no-title .block-text {
   margin-top: 0;

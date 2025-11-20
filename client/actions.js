@@ -35,18 +35,7 @@ export async function saveEditing() {
     `.block[data-block-id="${state.editingBlockId}"] .block-text`,
   );
   const editableHtml = textElement?.innerHTML || '';
-  const { cleanupEditableHtml, extractBlockSections } = await import('./block.js');
-  // debug log
-  try {
-    // eslint-disable-next-line no-console
-    console.log('saveEditing', {
-      blockId: editedBlockId,
-      editableHtml,
-      sections: extractBlockSections(editableHtml),
-    });
-  } catch (e) {
-    // ignore logging errors
-  }
+  const { cleanupEditableHtml } = await import('./block.js');
   const newText = cleanupEditableHtml(editableHtml);
   try {
     const updatedBlock = await apiRequest(

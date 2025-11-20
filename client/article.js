@@ -142,13 +142,6 @@ export function renderArticle() {
       const hasChildren = Boolean(block.children?.length);
       const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);
-      // debug
-      try {
-        // eslint-disable-next-line no-console
-        console.log('render block', block.id, { text: block.text, sections });
-      } catch (e) {
-        // ignore
-      }
 
       const body = document.createElement('div');
       body.className = 'block-text block-body';
