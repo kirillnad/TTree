@@ -117,6 +117,18 @@ export function renderArticle() {
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
 
+  const focusEditingBlock = () => {
+    if (state.mode !== 'edit' || !state.editingBlockId) return;
+    const editable = refs.blocksContainer?.querySelector(
+      `.block[data-block-id="${state.editingBlockId}"] .block-text[contenteditable="true"]`,
+    );
+    if (!editable) return;
+    const active = document.activeElement;
+    if (editable === active || editable.contains(active)) return;
+    editable.focus({ preventScroll: true });
+    placeCaretAtEnd(editable);
+  };
+
   const renderBlocks = async (blocks, container) => {
     for (const block of blocks) {
       const blockEl = document.createElement('div');
@@ -216,25 +228,32 @@ export function renderArticle() {
   };
 
   renderBlocks(article.blocks, refs.blocksContainer).then(() => {
-  applyPendingPreviewMarkup();
-  if (state.scrollTargetBlockId) {
-    const targetId = state.scrollTargetBlockId;
-    requestAnimationFrame(() => {
-      const target = document.querySelector(`.block[data-block-id="${targetId}"]`);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        target.setAttribute('tabindex', '-1');
-        target.focus({ preventScroll: true });
-        const prevSelected = refs.blocksContainer?.querySelector('.block.selected');
-        if (prevSelected && prevSelected !== target) {
-          prevSelected.classList.remove('selected');
+    applyPendingPreviewMarkup();
+    if (state.scrollTargetBlockId) {
+      const targetId = state.scrollTargetBlockId;
+      requestAnimationFrame(() => {
+        const target = document.querySelector(`.block[data-block-id="${targetId}"]`);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const editable = target.querySelector('.block-text[contenteditable="true"]');
+          if (editable && state.mode === 'edit' && state.editingBlockId === targetId) {
+            editable.focus({ preventScroll: true });
+            placeCaretAtEnd(editable);
+          } else {
+            target.setAttribute('tabindex', '-1');
+            target.focus({ preventScroll: true });
+          }
+          const prevSelected = refs.blocksContainer?.querySelector('.block.selected');
+          if (prevSelected && prevSelected !== target) {
+            prevSelected.classList.remove('selected');
+          }
+          target.classList.add('selected');
         }
-        target.classList.add('selected');
-      }
-      state.currentBlockId = targetId;
-      state.scrollTargetBlockId = null;
-    });
-  }
+        state.currentBlockId = targetId;
+        state.scrollTargetBlockId = null;
+      });
+    }
+    focusEditingBlock();
   });
 }
 
