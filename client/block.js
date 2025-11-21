@@ -31,6 +31,9 @@ export function findBlock(blockId, blocks = state.article?.blocks || [], parent 
 export function setCurrentBlock(blockId) {
   if (!blockId || state.currentBlockId === blockId) return;
   state.currentBlockId = blockId;
+  if (state.mode === 'view') {
+    state.scrollTargetBlockId = blockId;
+  }
   renderArticle();
 }
 
@@ -545,6 +548,34 @@ export function attachRichContentHandlers(element, blockId) {
     if (hasFiles) {
       event.preventDefault();
     }
+  });
+
+  element.addEventListener('keydown', (event) => {
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    if (event.code === 'PageDown' || event.code === 'PageUp') {
+      event.preventDefault();
+      const distance = element.clientHeight || 0;
+      const delta = event.code === 'PageDown' ? distance : -distance;
+      const maxScroll = element.scrollHeight - element.clientHeight;
+      if (maxScroll > 0) {
+        element.scrollTop = Math.min(Math.max(element.scrollTop + delta, 0), maxScroll);
+      }
+    }
+  });
+
+  element.addEventListener('wheel', (event) => {
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    // Прокручиваем только внутри блока, не цепляя контейнер статьи
+    const maxScroll = element.scrollHeight - element.clientHeight;
+    if (maxScroll <= 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const next = Math.min(Math.max(element.scrollTop + event.deltaY, 0), maxScroll);
+    element.scrollTop = next;
   });
 }
 

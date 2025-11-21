@@ -388,6 +388,7 @@ main.content {
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.35rem;
+  overscroll-behavior: contain;
 }
 
 .title-block {
@@ -603,6 +604,7 @@ button:hover {
   margin-top: 0.05rem;
   white-space: pre-wrap;
   line-height: 1.5;
+  overscroll-behavior: contain;
 }
 .block-text p {
   margin-top: 0;
@@ -620,6 +622,8 @@ button:hover {
 
 .block-text[contenteditable='true'] {
   outline: none;
+  overflow-y: auto;
+  max-height: 65vh;
 }
 
 .block.editing .block-text {

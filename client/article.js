@@ -126,7 +126,28 @@ export function renderArticle() {
     const active = document.activeElement;
     if (editable === active || editable.contains(active)) return;
     editable.focus({ preventScroll: true });
+    if (editable.scrollHeight > editable.clientHeight) {
+      editable.scrollTop = editable.scrollHeight;
+    }
     placeCaretAtEnd(editable);
+  };
+
+  const ensureEditingBlockVisible = () => {
+    if (!state.editingBlockId) return;
+    const container = refs.blocksContainer;
+    if (!container) return;
+    const blockEl = container.querySelector(`.block[data-block-id="${state.editingBlockId}"]`);
+    if (!blockEl) return;
+    const blockRect = blockEl.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const bottomOverflow = blockRect.bottom - containerRect.bottom;
+    const topOverflow = containerRect.top - blockRect.top;
+    const padding = 16;
+    if (bottomOverflow > 0) {
+      container.scrollTop += bottomOverflow + padding;
+    } else if (topOverflow > 0) {
+      container.scrollTop -= topOverflow + padding;
+    }
   };
 
   const renderBlocks = async (blocks, container) => {
@@ -252,11 +273,12 @@ export function renderArticle() {
           }
           target.classList.add('selected');
         }
-        state.currentBlockId = targetId;
-        state.scrollTargetBlockId = null;
-      });
-    }
-    focusEditingBlock();
+    state.currentBlockId = targetId;
+    state.scrollTargetBlockId = null;
+  });
+  }
+  ensureEditingBlockVisible();
+  focusEditingBlock();
   });
 }
 
