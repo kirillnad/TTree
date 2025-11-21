@@ -5,7 +5,7 @@ import { moveCurrentBlock, indentCurrentBlock, outdentCurrentBlock } from './und
 import { createSibling, deleteCurrentBlock, startEditing, saveEditing, cancelEditing, handleGlobalPaste } from './actions.js';
 import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
-import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle } from './title.js';
+import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import { toggleHintPopover, hideHintPopover } from './sidebar.js';
 import { toggleSidebarCollapsed, handleArticleFilterInput } from './sidebar.js';
 import { createArticle } from './article.js';
@@ -180,6 +180,7 @@ export function attachEvents() {
   }
   if (refs.articleTitle) {
     refs.articleTitle.addEventListener('dblclick', startTitleEditingMode);
+    refs.articleTitle.addEventListener('click', handleTitleClick);
   }
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);

@@ -18,6 +18,7 @@ function buildModal({ title, message, confirmText, cancelText }) {
   card.className = 'modal-card';
   card.setAttribute('role', 'dialog');
   card.setAttribute('aria-modal', 'true');
+  card.tabIndex = -1;
 
   const header = document.createElement('div');
   header.className = 'modal-header';
@@ -55,39 +56,38 @@ export function showConfirm(options = {}) {
   const root = ensureRoot();
   const { overlay, card, confirmBtn, cancelBtn } = buildModal(options);
   let resolved = false;
+  let resolvePromise = () => {};
 
   const cleanup = () => {
-    if (overlay.parentNode) {
-      overlay.classList.add('modal-overlay--hide');
-      setTimeout(() => overlay.remove(), 150);
-    }
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
     document.removeEventListener('keydown', onKeyDown);
   };
 
-  const resolve = (value) => {
+  const resolveResult = (value) => {
     if (resolved) return;
     resolved = true;
     cleanup();
-    return value;
+    resolvePromise(value);
   };
 
   const onKeyDown = (event) => {
     if (event.code === 'Escape') {
       event.preventDefault();
-      resolver(false);
+      resolveResult(false);
+    }
+    if (event.code === 'Enter') {
+      event.preventDefault();
+      resolveResult(true);
     }
   };
 
-  const resolver = (value) => {
-    resolve(value);
-    return value;
-  };
-
-  return new Promise((resolvePromise) => {
-    confirmBtn.addEventListener('click', () => resolvePromise(resolver(true)));
-    cancelBtn.addEventListener('click', () => resolvePromise(resolver(false)));
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.addEventListener('click', () => resolveResult(true));
+    cancelBtn.addEventListener('click', () => resolveResult(false));
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) resolvePromise(resolver(false));
+      if (event.target === overlay) resolveResult(false);
     });
     document.addEventListener('keydown', onKeyDown);
 

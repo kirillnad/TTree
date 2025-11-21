@@ -20,10 +20,6 @@ function focusTitleInput() {
 
 export function startTitleEditingMode() {
   if (!state.article || !refs.articleTitleInput) return;
-  if (state.mode === 'edit') {
-    showToast('Сначала завершите редактирование блока');
-    return;
-  }
   if (state.isEditingTitle) {
     focusTitleInput();
     return;
@@ -32,6 +28,12 @@ export function startTitleEditingMode() {
   refs.articleTitleInput.value = state.article.title || '';
   renderArticle();
   focusTitleInput();
+}
+
+export function handleTitleClick() {
+  if (!state.article) return;
+  if (state.isEditingTitle) return;
+  startTitleEditingMode();
 }
 
 function cancelTitleEditingMode() {
@@ -78,7 +80,7 @@ async function saveTitleEditingMode() {
     state.isEditingTitle = false;
     renderArticle();
     updateSearchTitlesCache(updatedArticle);
-    showToast('Заголовок обновлён');
+    showToast('Заголовок обновлен');
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -123,12 +125,17 @@ export async function handleDeleteArticle(event) {
   if (event) event.stopPropagation();
   closeArticleMenu();
   if (!state.articleId) return;
-  const confirmed = await showConfirm({
-    title: 'Удалить статью?',
-    message: 'Действие нельзя отменить.',
-    confirmText: 'Удалить',
-    cancelText: 'Отмена',
-  });
+  let confirmed = false;
+  try {
+    confirmed = await showConfirm({
+      title: 'Удалить статью?',
+      message: 'Действие нельзя отменить.',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+    });
+  } catch (error) {
+    confirmed = window.confirm('Удалить статью?');
+  }
   if (!confirmed) return;
   try {
     await deleteArticle(state.articleId);
