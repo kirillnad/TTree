@@ -10,7 +10,7 @@ function ensureRoot() {
   return root;
 }
 
-function buildModal({ title, message, confirmText, cancelText }) {
+function buildModal({ title, message, confirmText, cancelText, renderBody }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
 
@@ -28,7 +28,18 @@ function buildModal({ title, message, confirmText, cancelText }) {
 
   const body = document.createElement('div');
   body.className = 'modal-body';
-  body.textContent = message || '';
+  if (typeof renderBody === 'function') {
+    const content = renderBody();
+    if (Array.isArray(content)) {
+      content.forEach((node) => {
+        if (node) body.appendChild(node);
+      });
+    } else if (content) {
+      body.appendChild(content);
+    }
+  } else {
+    body.textContent = message || '';
+  }
 
   const footer = document.createElement('div');
   footer.className = 'modal-footer';
@@ -94,6 +105,108 @@ export function showConfirm(options = {}) {
     root.appendChild(overlay);
     requestAnimationFrame(() => {
       card.focus({ preventScroll: true });
+    });
+  });
+}
+
+export function showPrompt(options = {}) {
+  const root = ensureRoot();
+  let inputRef = null;
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    ...options,
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      if (options.message) {
+        const msg = document.createElement('p');
+        msg.className = 'modal-body__text';
+        msg.textContent = options.message;
+        fragment.appendChild(msg);
+      }
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'modal-input';
+      input.placeholder = options.placeholder || '';
+      input.value = options.defaultValue || '';
+      input.autocomplete = 'off';
+      fragment.appendChild(input);
+      inputRef = input;
+      return fragment;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+      return;
+    }
+    if (event.code === 'Enter' && inputRef) {
+      const nextValue = inputRef.value.trim();
+      if (!nextValue) return;
+      event.preventDefault();
+      resolveResult(nextValue);
+    }
+  };
+
+  const updateConfirmState = () => {
+    if (!confirmBtn || !inputRef) return;
+    const hasValue = Boolean(inputRef.value.trim());
+    confirmBtn.disabled = !hasValue;
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('danger-btn');
+    confirmBtn.textContent = options.confirmText || 'OK';
+    cancelBtn.textContent = options.cancelText || 'Cancel';
+
+    confirmBtn.addEventListener('click', () => {
+      if (!inputRef) {
+        resolveResult(null);
+        return;
+      }
+      const nextValue = inputRef.value.trim();
+      if (!nextValue) {
+        inputRef.focus();
+        return;
+      }
+      resolveResult(nextValue);
+    });
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    if (inputRef) {
+      inputRef.addEventListener('input', updateConfirmState);
+    }
+    updateConfirmState();
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      if (inputRef) {
+        inputRef.focus({ preventScroll: true });
+        inputRef.select();
+      } else {
+        card.focus({ preventScroll: true });
+      }
     });
   });
 }

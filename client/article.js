@@ -17,6 +17,7 @@ import { placeCaretAtEnd } from './utils.js';
 import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
+import { showPrompt } from './modal.js';
 
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
@@ -286,7 +287,23 @@ export async function createArticle() {
   if (refs.createArticleBtn) refs.createArticleBtn.disabled = true;
   if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = true;
   try {
-    const article = await createArticleApi();
+    let title = '';
+    try {
+      title = await showPrompt({
+        title: 'Новая страница',
+        message: 'Введите заголовок для новой страницы.',
+        confirmText: 'Создать',
+        cancelText: 'Отмена',
+        placeholder: 'Заголовок страницы',
+        defaultValue: '',
+      });
+    } catch (error) {
+      title = window.prompt('Введите заголовок страницы') || '';
+    }
+    title = (title || '').trim();
+    if (!title) return;
+
+    const article = await createArticleApi(title);
     upsertArticleIndex(article);
     state.pendingEditBlockId = article?.blocks?.[0]?.id || null;
     state.scrollTargetBlockId = state.pendingEditBlockId;
