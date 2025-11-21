@@ -137,16 +137,12 @@ export function renderArticle() {
       if (block.id === state.currentBlockId) blockEl.classList.add('selected');
       if (block.id === state.editingBlockId) blockEl.classList.add('editing');
 
-      let sections = extractBlockSections(block.text || '');
-      let hasTitle = Boolean(sections.titleHtml);
-      if (hasTitle && !sections.bodyHtml) {
-        // if only title present, treat content as body to avoid empty block body
-        sections = { titleHtml: '', bodyHtml: sections.titleHtml };
-        hasTitle = false;
-      }
+      const sections = extractBlockSections(block.text || '');
+      const hasTitle = Boolean(sections.titleHtml);
+      const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
       const hasChildren = Boolean(block.children?.length);
-      const canCollapse = hasTitle || hasChildren;
-      blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);
+      const canCollapse = hasTitle || hasChildren || hasBodyContent;
+      blockEl.classList.toggle('block--no-title', !hasTitle);
 
       const body = document.createElement('div');
       body.className = 'block-text block-body';
