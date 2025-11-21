@@ -108,6 +108,16 @@ html {
   pointer-events: none;
 }
 
+.sidebar.collapsed .sidebar-header {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .hint-control {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .sidebar-content {
   display: flex;
   flex-direction: column;
