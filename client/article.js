@@ -137,8 +137,13 @@ export function renderArticle() {
       if (block.id === state.currentBlockId) blockEl.classList.add('selected');
       if (block.id === state.editingBlockId) blockEl.classList.add('editing');
 
-      const sections = extractBlockSections(block.text || '');
-      const hasTitle = Boolean(sections.titleHtml);
+      let sections = extractBlockSections(block.text || '');
+      let hasTitle = Boolean(sections.titleHtml);
+      if (hasTitle && !sections.bodyHtml) {
+        // if only title present, treat content as body to avoid empty block body
+        sections = { titleHtml: '', bodyHtml: sections.titleHtml };
+        hasTitle = false;
+      }
       const hasChildren = Boolean(block.children?.length);
       const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle && hasChildren);

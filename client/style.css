@@ -636,7 +636,7 @@ button:hover {
 .block.block--no-title .block-header {
   position: static;
   margin: 0;
-  display: flex;
+  display: none;
   align-items: center;
 }
 

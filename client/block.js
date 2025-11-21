@@ -199,6 +199,24 @@ export function cleanupEditableHtml(html = '') {
 
   convertDivsToParagraphs(template.content);
 
+  // Оборачиваем верхнеуровневые текстовые узлы в абзацы
+  const wrapTextNodes = (root) => {
+    const nodes = Array.from(root.childNodes || []);
+    nodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = (node.textContent || '').trim();
+        if (!text) {
+          root.removeChild(node);
+          return;
+        }
+        const p = document.createElement('p');
+        p.textContent = text;
+        root.replaceChild(p, node);
+      }
+    });
+  };
+  wrapTextNodes(template.content);
+
   // приводим к чистым <p>, гарантируем пустые строки как <p><br/></p>
   template.content.querySelectorAll('p').forEach((p) => {
     const inner = (p.innerHTML || '').replace(/&nbsp;/g, '').trim();
@@ -207,6 +225,24 @@ export function cleanupEditableHtml(html = '') {
       p.appendChild(document.createElement('br'));
     }
   });
+
+  // remove trailing empty paragraphs
+  const nodes = Array.from(template.content.childNodes || []);
+  for (let i = nodes.length - 1; i >= 0; i -= 1) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim()) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+      continue;
+    }
+    if (node.tagName === 'P') {
+      const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').replace(/<br\s*\/?>/gi, '').trim();
+      if (!inner) {
+        if (node.parentNode) node.parentNode.removeChild(node);
+        continue;
+      }
+    }
+    break;
+  }
 
   // если нет ни одного абзаца — добавляем пустой
   if (!template.content.querySelector('p')) {
