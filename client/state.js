@@ -22,6 +22,7 @@ export const state = {
   lastChangeTimestamp: null,
   isMarkdownInserting: false,
   isTrashView: false,
+  favoriteArticles: [],
 };
 
 export let isSavingTitle = false;

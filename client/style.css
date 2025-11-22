@@ -283,6 +283,10 @@ html {
   font-size: 0.9rem;
   line-height: 1.3;
   transition: border 0.2s ease, background 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .sidebar-article-item button:hover {
@@ -302,6 +306,20 @@ html {
   color: #0ea5e9;
   font-weight: 600;
   font-size: 0.9rem;
+}
+.star-btn {
+  border: none;
+  background: transparent;
+  color: #cbd5f5;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+.star-btn.active {
+  color: #facc15;
+}
+.star-btn:hover {
+  color: #facc15;
 }
 
 .sidebar-actions {

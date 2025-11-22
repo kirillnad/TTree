@@ -11,6 +11,48 @@ import {
 } from './api.js';
 import { showToast } from './toast.js';
 
+const FAVORITES_KEY = 'ttree_favorites';
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    state.favoriteArticles = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    state.favoriteArticles = [];
+  }
+}
+
+function saveFavorites() {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(state.favoriteArticles || []));
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function sortArticles(arr = []) {
+  const favs = new Set(state.favoriteArticles || []);
+  return [...arr].sort((a, b) => {
+    const fa = favs.has(a.id);
+    const fb = favs.has(b.id);
+    if (fa !== fb) return fa ? -1 : 1;
+    return new Date(b.updatedAt || b.deletedAt || 0) - new Date(a.updatedAt || a.deletedAt || 0);
+  });
+}
+
+function toggleFavorite(articleId) {
+  if (!articleId) return;
+  if (!state.favoriteArticles) state.favoriteArticles = [];
+  const set = new Set(state.favoriteArticles);
+  if (set.has(articleId)) set.delete(articleId);
+  else set.add(articleId);
+  state.favoriteArticles = Array.from(set);
+  saveFavorites();
+  renderSidebarArticleList();
+  renderMainArticleList();
+}
+
 export function setViewMode(showArticle) {
   refs.articleView.classList.toggle('hidden', !showArticle);
   refs.articleListView.classList.toggle('hidden', showArticle);
@@ -23,15 +65,14 @@ export function setViewMode(showArticle) {
 }
 
 export function setArticlesIndex(articles = []) {
-  const sorted = Array.isArray(articles) ? [...articles].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) : [];
+  if (!state.favoriteArticles || !state.favoriteArticles.length) loadFavorites();
+  const sorted = sortArticles(Array.isArray(articles) ? articles : []);
   state.articlesIndex = sorted;
   renderSidebarArticleList();
 }
 
 export function setDeletedArticlesIndex(articles = []) {
-  const sorted = Array.isArray(articles)
-    ? [...articles].sort((a, b) => new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt))
-    : [];
+  const sorted = sortArticles(Array.isArray(articles) ? articles : []);
   state.deletedArticlesIndex = sorted;
   renderSidebarArticleList();
 }
@@ -88,9 +129,15 @@ export function renderSidebarArticleList() {
   refs.sidebarArticleList.innerHTML = '';
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
+  const favs = new Set(state.favoriteArticles || []);
   const filtered = source
     .slice()
-    .sort((a, b) => new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt))
+    .sort((a, b) => {
+      const fa = favs.has(a.id);
+      const fb = favs.has(b.id);
+      if (fa !== fb) return fa ? -1 : 1;
+      return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
+    })
     .filter((article) => (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)));
   if (!filtered.length) {
     const empty = document.createElement('li');
@@ -105,8 +152,16 @@ export function renderSidebarArticleList() {
     const button = document.createElement('button');
     button.type = 'button';
     if (!state.isTrashView && article.id === state.articleId) button.classList.add('active');
-    button.innerHTML = `<span>${escapeHtml(article.title || 'Без названия')}</span>`;
+    const isFav = favs.has(article.id);
+    button.innerHTML = `<span>${escapeHtml(article.title || 'Без названия')}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
     button.addEventListener('click', () => navigate(routing.article(article.id)));
+    const star = button.querySelector('.star-btn');
+    if (star) {
+      star.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleFavorite(article.id);
+      });
+    }
     item.appendChild(button);
     refs.sidebarArticleList.appendChild(item);
   });
@@ -117,6 +172,7 @@ export function renderMainArticleList(articles = null) {
   refs.articleList.innerHTML = '';
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const base = Array.isArray(articles) && articles.length ? articles : (state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex);
+  const favs = new Set(state.favoriteArticles || []);
   if (!base.length) {
     const empty = document.createElement('li');
     empty.textContent = state.isTrashView ? (query ? 'No deleted pages match the filter' : 'Trash is empty') : (query ? 'Ничего не найдено' : 'Список пуст.');
@@ -125,7 +181,12 @@ export function renderMainArticleList(articles = null) {
   }
   base
     .slice()
-    .sort((a, b) => new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt))
+    .sort((a, b) => {
+      const fa = favs.has(a.id);
+      const fb = favs.has(b.id);
+      if (fa !== fb) return fa ? -1 : 1;
+      return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
+    })
     .filter((article) => (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)))
     .forEach((article) => {
       const item = document.createElement('li');
@@ -157,13 +218,22 @@ export function renderMainArticleList(articles = null) {
           });
         }
       } else {
+        const isFav = favs.has(article.id);
         item.innerHTML = `
       <span>
         <strong>${escapeHtml(article.title)}</strong><br />
         <small>${new Date(article.updatedAt).toLocaleString()}</small>
       </span>
-      <button class="ghost">Open</button>
+      <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</button>
     `;
+        const star = item.querySelector('.star-btn');
+        if (star) {
+          star.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleFavorite(article.id);
+          });
+        }
         item.addEventListener('click', () => navigate(routing.article(article.id)));
       }
       refs.articleList.appendChild(item);
