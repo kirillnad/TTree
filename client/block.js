@@ -411,6 +411,49 @@ function sanitizePastedHtml(html = '') {
   return template.innerHTML;
 }
 
+function trimPastedHtml(html = '') {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+
+  const isEmptyNode = (node) => {
+    if (!node) return true;
+    if (node.nodeType === Node.TEXT_NODE) {
+      return !(node.textContent || '').replace(/\u00a0/g, '').trim();
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+    if (node.tagName === 'BR') return true;
+    const content = (node.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
+    const text = (node.textContent || '').replace(/\u00a0/g, '').trim();
+    const hasMedia = !!node.querySelector('img,video,audio,iframe');
+    return !content && !text && !hasMedia;
+  };
+
+  while (template.content.firstChild && isEmptyNode(template.content.firstChild)) {
+    template.content.removeChild(template.content.firstChild);
+  }
+  while (template.content.lastChild && isEmptyNode(template.content.lastChild)) {
+    template.content.removeChild(template.content.lastChild);
+  }
+
+  return template.innerHTML;
+}
+
+function clearEmptyPlaceholder(element) {
+  if (!element) return;
+  const inner = (element.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
+  if (!inner) {
+    element.innerHTML = '';
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(true);
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+}
+
 function collectImageFiles(items = [], fallbackFiles = []) {
   const files = [];
   Array.from(items || []).forEach((item) => {
@@ -507,20 +550,24 @@ export function attachRichContentHandlers(element, blockId) {
 
       if (htmlData) {
         const safeHtml = sanitizePastedHtml(htmlData);
-        insertHtmlAtCaret(element, linkifyHtml(safeHtml));
+        const trimmed = trimPastedHtml(safeHtml);
+        clearEmptyPlaceholder(element);
+        insertHtmlAtCaret(element, linkifyHtml(trimmed));
       } else {
         const text = event.clipboardData?.getData('text/plain') || '';
         const trimmed = text.trim();
         const isLikelyUrl = /^https?:\/\/\S+$/i.test(trimmed);
         if (isLikelyUrl) {
           const safeUrl = escapeHtml(trimmed);
+          clearEmptyPlaceholder(element);
           insertHtmlAtCaret(
             element,
             `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`,
           );
         } else {
           const safeTextHtml = escapeHtml(text).replace(/\n/g, '<br />');
-          const safeHtml = linkifyHtml(safeTextHtml);
+          const safeHtml = linkifyHtml(trimPastedHtml(safeTextHtml));
+          clearEmptyPlaceholder(element);
           insertHtmlAtCaret(element, safeHtml);
         }
       }
