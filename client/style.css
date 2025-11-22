@@ -775,6 +775,13 @@ button:hover {
   height: 20px;
   background: #e5e7eb;
 }
+.article-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.article-link:hover {
+  color: #1d4ed8;
+}
 
 .modal-overlay {
   position: fixed;
@@ -825,6 +832,30 @@ button:hover {
   outline: none;
   border-color: #6c63ff;
   box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
+}
+.modal-suggestions {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.modal-suggestions.hidden {
+  display: none;
+}
+.modal-suggestion {
+  text-align: left;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.modal-suggestion:hover {
+  border-color: #6c63ff;
+  background: #eef2ff;
 }
 .modal-footer {
   display: flex;

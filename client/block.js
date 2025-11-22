@@ -3,6 +3,9 @@ import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from '.
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
+import { showPrompt } from './modal.js';
+import { fetchArticlesIndex } from './api.js';
+import { routing } from './routing.js';
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -581,6 +584,7 @@ export function attachRichContentHandlers(element, blockId) {
 
 let richContextMenu = null;
 let richContextRange = null;
+let richContextTarget = null;
 
 function ensureContextMenu() {
   if (richContextMenu) return richContextMenu;
@@ -599,12 +603,15 @@ function ensureContextMenu() {
     <button data-action="link">Ссылка</button>
     <button data-action="unlink">Убрать ссылку</button>
     <button data-action="remove-format">Очистить</button>
+    <span class="divider"></span>
+    <button data-action="insert-article-link">Вставить ссылку на статью</button>
   `;
   document.body.appendChild(menu);
 
   const hideContextMenu = () => {
     menu.classList.add('hidden');
     richContextRange = null;
+    richContextTarget = null;
   };
 
   const restoreSelection = () => {
@@ -617,6 +624,65 @@ function ensureContextMenu() {
 
   const applyAction = (action) => {
     restoreSelection();
+    const applyInsertArticleLink = async () => {
+      if (!richContextTarget) return;
+      const list = state.articlesIndex.length ? state.articlesIndex : await fetchArticlesIndex();
+      const suggestions = list.map((item) => ({
+        id: item.id,
+        title: item.title || 'Без названия',
+      }));
+      let input = '';
+      let selectedId = '';
+      try {
+        const result = await showPrompt({
+          title: 'Вставить ссылку на статью',
+          message: 'Введите название или ID статьи. Будет вставлен заголовок как ссылка.',
+          confirmText: 'Вставить',
+          cancelText: 'Отмена',
+          suggestions,
+          returnMeta: true,
+          hideConfirm: true,
+        });
+        if (result && typeof result === 'object') {
+          input = result.value || '';
+          selectedId = result.selectedId || '';
+        } else {
+          input = result || '';
+        }
+      } catch (_) {
+        input = window.prompt('Введите название или ID статьи') || '';
+      }
+      const target = richContextTarget;
+      const term = (input || '').trim().toLowerCase();
+      if (!term && !selectedId) return;
+      const match = list.find((item) => {
+        const titleLc = (item.title || '').toLowerCase();
+        return (
+          (selectedId && item.id === selectedId) ||
+          (item.id && item.id.toLowerCase() === term) ||
+          titleLc === term ||
+          titleLc.includes(term)
+        );
+      });
+      if (!match) {
+        showToast('Статья не найдена');
+        return;
+      }
+      if (!target || !document.contains(target)) {
+        showToast('Не удалось вставить ссылку');
+        return;
+      }
+      restoreSelection();
+      target.focus();
+      const linkHtml = `<a href="${routing.article(match.id)}" class="article-link" data-article-id="${match.id}">${escapeHtml(match.title || 'Без названия')}</a>`;
+      insertHtmlAtCaret(target, linkHtml);
+      const htmlNow = (target.innerHTML || '').trim();
+      if (!htmlNow || htmlNow === '<br>' || htmlNow === '<br/>' || htmlNow === '<br />') {
+        target.innerHTML = linkHtml;
+      }
+      target.classList.remove('block-body--empty');
+    };
+
     switch (action) {
       case 'bold':
         document.execCommand('bold');
@@ -661,6 +727,11 @@ function ensureContextMenu() {
       case 'remove-format':
         document.execCommand('removeFormat');
         break;
+      case 'insert-article-link':
+        applyInsertArticleLink().finally(() => {
+          hideContextMenu();
+        });
+        return;
       default:
         break;
     }
@@ -707,6 +778,7 @@ function attachContextMenu(element, blockId) {
   element.addEventListener('contextmenu', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     event.preventDefault();
+    richContextTarget = element;
     showContextMenu(event);
   });
 }

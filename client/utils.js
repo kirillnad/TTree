@@ -64,6 +64,7 @@ export function extractImagesFromHtml(html = '') {
 }
 
 export function insertHtmlAtCaret(element, html) {
+  if (!element || !document.contains(element)) return;
   element.focus();
   const selection = window.getSelection();
   if (!selection) return;

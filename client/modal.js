@@ -112,6 +112,8 @@ export function showConfirm(options = {}) {
 export function showPrompt(options = {}) {
   const root = ensureRoot();
   let inputRef = null;
+  let suggestions = Array.isArray(options.suggestions) ? options.suggestions : [];
+  let suggestionsBox = null;
   const { overlay, card, confirmBtn, cancelBtn } = buildModal({
     ...options,
     renderBody: () => {
@@ -129,6 +131,11 @@ export function showPrompt(options = {}) {
       input.value = options.defaultValue || '';
       input.autocomplete = 'off';
       fragment.appendChild(input);
+      if (suggestions.length) {
+        suggestionsBox = document.createElement('div');
+        suggestionsBox.className = 'modal-suggestions';
+        fragment.appendChild(suggestionsBox);
+      }
       inputRef = input;
       return fragment;
     },
@@ -147,7 +154,15 @@ export function showPrompt(options = {}) {
     if (resolved) return;
     resolved = true;
     cleanup();
-    resolvePromise(value);
+    if (options.returnMeta) {
+      const payload = {
+        value: value ?? null,
+        selectedId: inputRef?.dataset?.selectedId || null,
+      };
+      resolvePromise(payload);
+    } else {
+      resolvePromise(value);
+    }
   };
 
   const onKeyDown = (event) => {
@@ -156,7 +171,7 @@ export function showPrompt(options = {}) {
       resolveResult(null);
       return;
     }
-    if (event.code === 'Enter' && inputRef) {
+    if (event.code === 'Enter' && inputRef && !options.hideConfirm) {
       const nextValue = inputRef.value.trim();
       if (!nextValue) return;
       event.preventDefault();
@@ -170,10 +185,43 @@ export function showPrompt(options = {}) {
     confirmBtn.disabled = !hasValue;
   };
 
+  const renderSuggestions = () => {
+    if (!suggestionsBox || !inputRef) return;
+    const term = inputRef.value.trim().toLowerCase();
+    inputRef.dataset.selectedId = '';
+    const filtered = suggestions
+      .filter((item) => (item.title || '').toLowerCase().includes(term) || (item.id || '').toLowerCase().includes(term))
+      .slice(0, 8);
+    suggestionsBox.innerHTML = '';
+    if (!term || !filtered.length) {
+      suggestionsBox.classList.add('hidden');
+      return;
+    }
+    suggestionsBox.classList.remove('hidden');
+    filtered.forEach((item) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'modal-suggestion';
+      btn.textContent = item.title || item.id || '';
+      btn.addEventListener('click', () => {
+        inputRef.value = item.title || item.id || '';
+        inputRef.dataset.selectedId = item.id || '';
+        updateConfirmState();
+        renderSuggestions();
+        resolveResult(inputRef.value);
+      });
+      suggestionsBox.appendChild(btn);
+    });
+  };
+
   return new Promise((resolver) => {
     resolvePromise = resolver;
     confirmBtn.classList.remove('danger-btn');
-    confirmBtn.textContent = options.confirmText || 'OK';
+    if (options.hideConfirm) {
+      confirmBtn.style.display = 'none';
+    } else {
+      confirmBtn.textContent = options.confirmText || 'OK';
+    }
     cancelBtn.textContent = options.cancelText || 'Cancel';
 
     confirmBtn.addEventListener('click', () => {
@@ -195,9 +243,17 @@ export function showPrompt(options = {}) {
     document.addEventListener('keydown', onKeyDown);
 
     if (inputRef) {
-      inputRef.addEventListener('input', updateConfirmState);
+      inputRef.dataset.selectedId = '';
+      inputRef.addEventListener('input', () => {
+        inputRef.dataset.selectedId = '';
+        updateConfirmState();
+        if (suggestions.length) renderSuggestions();
+      });
+      updateConfirmState();
+      if (suggestions.length) renderSuggestions();
+    } else {
+      updateConfirmState();
     }
-    updateConfirmState();
 
     root.appendChild(overlay);
     requestAnimationFrame(() => {
