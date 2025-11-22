@@ -10,7 +10,8 @@ def init_schema():
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             history TEXT NOT NULL DEFAULT '[]',
-            redo_history TEXT NOT NULL DEFAULT '[]'
+            redo_history TEXT NOT NULL DEFAULT '[]',
+            deleted_at TEXT
         )
         ''',
         '''
@@ -53,6 +54,12 @@ def init_schema():
 
     for stmt in statements:
         execute(stmt)
+
+    # migrate older DBs that do not have deleted_at
+    execute("PRAGMA table_info(articles)")
+    has_deleted = any(col['name'] == 'deleted_at' for col in execute("PRAGMA table_info(articles)").fetchall())
+    if not has_deleted:
+        execute("ALTER TABLE articles ADD COLUMN deleted_at TEXT")
 
     execute('DROP TABLE IF EXISTS blocks_fts')
     execute(

@@ -3,7 +3,7 @@ import { refs } from './refs.js';
 import { apiRequest, deleteArticle } from './api.js';
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
-import { upsertArticleIndex, removeArticleFromIndex } from './sidebar.js';
+import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
 import { navigate, routing } from './routing.js';
 import { showConfirm } from './modal.js';
@@ -80,9 +80,9 @@ async function saveTitleEditingMode() {
     state.isEditingTitle = false;
     renderArticle();
     updateSearchTitlesCache(updatedArticle);
-    showToast('Заголовок обновлен');
+    showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
   } catch (error) {
-    showToast(error.message);
+    showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
   } finally {
     setSavingTitle(false);
     if (refs.articleTitleInput) refs.articleTitleInput.disabled = false;
@@ -121,30 +121,39 @@ export function isArticleMenuVisible() {
   return isArticleMenuOpen;
 }
 
+
 export async function handleDeleteArticle(event) {
   if (event) event.stopPropagation();
   closeArticleMenu();
   if (!state.articleId) return;
+  const isPermanent = Boolean(state.article?.deletedAt || state.isTrashView);
   let confirmed = false;
   try {
     confirmed = await showConfirm({
-      title: 'Удалить статью?',
-      message: 'Действие нельзя отменить.',
-      confirmText: 'Удалить',
-      cancelText: 'Отмена',
+      title: isPermanent ? "Удалить безвозвратно?" : "Удалить в корзину?",
+      message: isPermanent
+        ? "Страница будет удалена без возможности восстановления."
+        : "Страница будет перемещена в корзину.",
+      confirmText: isPermanent ? "Удалить" : "В корзину",
+      cancelText: "Отмена",
     });
   } catch (error) {
-    confirmed = window.confirm('Удалить статью?');
+    confirmed = window.confirm(isPermanent ? "Удалить безвозвратно?" : "Удалить в корзину?");
   }
   if (!confirmed) return;
   try {
-    await deleteArticle(state.articleId);
-    removeArticleFromIndex(state.articleId);
+    await deleteArticle(state.articleId, { force: isPermanent });
+    if (isPermanent) {
+      removeArticleFromTrashIndex(state.articleId);
+    } else {
+      removeArticleFromIndex(state.articleId);
+    }
+
     state.article = null;
     state.articleId = null;
     state.currentBlockId = null;
     navigate(routing.list);
-    showToast('Статья удалена');
+    showToast(isPermanent ? "Статья удалена безвозвратно" : "Статья перемещена в корзину");
   } catch (error) {
     showToast(error.message);
   }

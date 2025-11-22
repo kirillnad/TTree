@@ -17,9 +17,11 @@ export const state = {
   isEditingTitle: false,
   isSidebarCollapsed: false,
   articlesIndex: [],
+  deletedArticlesIndex: [],
   articleFilterQuery: '',
   lastChangeTimestamp: null,
   isMarkdownInserting: false,
+  isTrashView: false,
 };
 
 export let isSavingTitle = false;

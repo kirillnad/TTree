@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { refs } from './refs.js';
 import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi } from './api.js';
 import { clearPendingTextPreview, hydrateUndoRedoFromArticle } from './undo.js';
-import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded } from './sidebar.js';
+import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode } from './sidebar.js';
 import {
   findBlock,
   flattenVisible,
@@ -90,9 +90,14 @@ export async function loadListView() {
   clearPendingTextPreview({ restoreDom: false });
   setViewMode(false);
   try {
-    const articles = await fetchArticlesIndex();
-    upsertArticleIndex(articles);
-    renderMainArticleList(articles);
+    if (state.isTrashView) {
+      const deleted = await ensureDeletedArticlesIndexLoaded();
+      renderMainArticleList(deleted);
+    } else {
+      const articles = await fetchArticlesIndex();
+      upsertArticleIndex(articles);
+      renderMainArticleList(articles);
+    }
   } catch (error) {
     refs.articleList.innerHTML = `<li>Не удалось загрузить список: ${error.message}</li>`;
   }
@@ -288,7 +293,7 @@ export async function createArticle() {
   if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = true;
   try {
     let title = '';
-    try {
+  try {
       title = await showPrompt({
         title: 'Новая страница',
         message: 'Введите заголовок для новой страницы.',
@@ -316,3 +321,6 @@ export async function createArticle() {
     if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = false;
   }
 }
+
+
+

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
   color: #111827;
   background: #eef2f8;
@@ -296,6 +296,13 @@ html {
   color: #ffffff;
   box-shadow: 0 6px 16px rgba(108, 99, 255, 0.33);
 }
+.sidebar-article-item .label {
+  display: inline-block;
+  margin-left: 0.35rem;
+  color: #0ea5e9;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
 
 .sidebar-actions {
   display: flex;
@@ -380,6 +387,18 @@ main.content {
 
 .list-header {
   justify-content: flex-start;
+}
+.list-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.list-tabs button {
+  padding: 0.25rem 0.6rem;
+}
+.list-tabs .active {
+  background: #0ea5e9;
+  color: #ffffff;
+  border-color: #0ea5e9;
 }
 
 #articleList,

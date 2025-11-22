@@ -17,6 +17,10 @@ export function fetchArticlesIndex() {
   return apiRequest('/api/articles');
 }
 
+export function fetchDeletedArticlesIndex() {
+  return apiRequest('/api/articles/deleted');
+}
+
 export function fetchArticle(id) {
   return apiRequest(`/api/articles/${id}`);
 }
@@ -29,8 +33,13 @@ export function createArticle(title) {
   return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
 }
 
-export function deleteArticle(id) {
-  return apiRequest(`/api/articles/${id}`, { method: 'DELETE' });
+export function deleteArticle(id, options = {}) {
+  const force = options.force ? '?force=true' : '';
+  return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' });
+}
+
+export function restoreArticle(id) {
+  return apiRequest(`/api/articles/${id}/restore`, { method: 'POST' });
 }
 
 export function uploadImageFile(file) {

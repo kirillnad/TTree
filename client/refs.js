@@ -20,6 +20,8 @@ export const refs = {
   sidebarArticleList: document.getElementById('sidebarArticleList'),
   sidebarNewArticleBtn: document.getElementById('sidebarNewArticleBtn'),
   articleFilterInput: document.getElementById('articleFilterInput'),
+  trashTabBtn: document.getElementById('trashTabBtn'),
+  articlesTabBtn: document.getElementById('articlesTabBtn'),
   lastChangeValue: document.getElementById('lastChangeValue'),
   articleMenuBtn: document.getElementById('articleMenuBtn'),
   articleMenu: document.getElementById('articleMenu'),

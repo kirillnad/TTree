@@ -26,6 +26,7 @@ from .data_store import (
     move_block,
     outdent_block,
     redo_block_text_change,
+    restore_article,
     restore_block,
     search_blocks,
     undo_block_text_change,
@@ -33,6 +34,7 @@ from .data_store import (
     update_block,
     update_block_collapse,
     get_articles,
+    get_deleted_articles,
     get_article,
     create_attachment,
 )
@@ -92,6 +94,19 @@ def list_articles():
     ]
 
 
+@app.get('/api/articles/deleted')
+def list_deleted_articles():
+    return [
+        {
+            'id': article['id'],
+            'title': article['title'],
+            'updatedAt': article['updatedAt'],
+            'deletedAt': article['deletedAt'],
+        }
+        for article in get_deleted_articles()
+    ]
+
+
 @app.post('/api/articles')
 def post_article(payload: dict[str, Any]):
     article = create_article(payload.get('title'))
@@ -107,11 +122,11 @@ def read_article(article_id: str):
 
 
 @app.delete('/api/articles/{article_id}')
-def remove_article(article_id: str):
-    deleted = delete_article(article_id)
+def remove_article(article_id: str, force: bool = False):
+    deleted = delete_article(article_id, force=force)
     if not deleted:
         raise HTTPException(status_code=404, detail='Article not found')
-    return {'status': 'deleted'}
+    return {'status': 'deleted' if not force else 'purged'}
 
 
 @app.patch('/api/articles/{article_id}')
@@ -213,6 +228,14 @@ def post_undo(article_id: str, payload: dict[str, Any]):
 def post_redo(article_id: str, payload: dict[str, Any]):
     entry_id = payload.get('entryId')
     return _handle_undo_redo(redo_block_text_change, article_id, entry_id)
+
+
+@app.post('/api/articles/{article_id}/restore')
+def post_restore_article(article_id: str):
+    article = restore_article(article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found or not deleted')
+    return article
 
 
 @app.post('/api/uploads')

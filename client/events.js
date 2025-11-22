@@ -6,7 +6,7 @@ import { createSibling, deleteCurrentBlock, startEditing, saveEditing, cancelEdi
 import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
-import { toggleHintPopover, hideHintPopover } from './sidebar.js';
+import { toggleHintPopover, hideHintPopover, setTrashMode } from './sidebar.js';
 import { toggleSidebarCollapsed, handleArticleFilterInput } from './sidebar.js';
 import { createArticle } from './article.js';
 import { navigate, routing } from './routing.js';
@@ -128,6 +128,22 @@ function handleViewKey(event) {
 }
 
 function handleEditKey(event) {
+  if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
+    event.preventDefault();
+    (async () => {
+      await saveEditing();
+      await createSibling('after');
+    })();
+    return;
+  }
+  if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowUp') {
+    event.preventDefault();
+    (async () => {
+      await saveEditing();
+      await createSibling('before');
+    })();
+    return;
+  }
   if (event.code === 'Enter' && event.ctrlKey) {
     event.preventDefault();
     saveEditing();
@@ -200,6 +216,12 @@ export function attachEvents() {
   }
   if (refs.articleFilterInput) {
     refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
+  }
+  if (refs.articlesTabBtn) {
+    refs.articlesTabBtn.addEventListener('click', () => setTrashMode(false));
+  }
+  if (refs.trashTabBtn) {
+    refs.trashTabBtn.addEventListener('click', () => setTrashMode(true));
   }
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {

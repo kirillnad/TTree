@@ -111,6 +111,7 @@ def build_article_from_row(row: sqlite3.Row) -> Optional[Dict[str, Any]]:
         'title': row['title'],
         'createdAt': row['created_at'],
         'updatedAt': row['updated_at'],
+        'deletedAt': row['deleted_at'],
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
         'blocks': rows_to_tree(row['id']),
@@ -118,26 +119,57 @@ def build_article_from_row(row: sqlite3.Row) -> Optional[Dict[str, Any]]:
 
 
 def get_articles() -> List[Dict[str, Any]]:
-    rows = CONN.execute('SELECT * FROM articles ORDER BY updated_at DESC').fetchall()
+    rows = CONN.execute(
+        'SELECT * FROM articles WHERE deleted_at IS NULL ORDER BY updated_at DESC'
+    ).fetchall()
     return [build_article_from_row(row) for row in rows if row]
 
 
-def get_article(article_id: str) -> Optional[Dict[str, Any]]:
-    row = CONN.execute('SELECT * FROM articles WHERE id = ?', (article_id,)).fetchone()
+def get_deleted_articles() -> List[Dict[str, Any]]:
+    rows = CONN.execute(
+        'SELECT * FROM articles WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+    ).fetchall()
+    return [build_article_from_row(row) for row in rows if row]
+
+
+def get_article(article_id: str, include_deleted: bool = False) -> Optional[Dict[str, Any]]:
+    row = CONN.execute(
+        'SELECT * FROM articles WHERE id = ?' + ('' if include_deleted else ' AND deleted_at IS NULL'),
+        (article_id,),
+    ).fetchone()
     return build_article_from_row(row)
 
 
-def delete_article(article_id: str) -> bool:
-    """Удаляет статью и связанные блоки/индексы. Возвращает True, если статья существовала."""
+def delete_article(article_id: str, force: bool = False) -> bool:
+    """Soft-delete article or remove permanently when force=True."""
     with CONN:
         exists = CONN.execute('SELECT 1 FROM articles WHERE id = ?', (article_id,)).fetchone()
         if not exists:
             return False
-        CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
-        CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
-        CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
+        if force:
+            CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
+            CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
+            CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
+        else:
+            now = iso_now()
+            CONN.execute(
+                'UPDATE articles SET deleted_at = ?, updated_at = ? WHERE id = ?',
+                (now, now, article_id),
+            )
     return True
-
+def restore_article(article_id: str) -> Optional[Dict[str, Any]]:
+    with CONN:
+        row = CONN.execute(
+            'SELECT * FROM articles WHERE id = ? AND deleted_at IS NOT NULL', (article_id,)
+        ).fetchone()
+        if not row:
+            return None
+        now = iso_now()
+        CONN.execute(
+            'UPDATE articles SET deleted_at = NULL, updated_at = ? WHERE id = ?',
+            (now, article_id),
+        )
+    return get_article(article_id, include_deleted=True)
 
 def insert_blocks_recursive(
     article_id: str,
@@ -832,7 +864,7 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
         FROM blocks_fts
         JOIN blocks ON blocks.rowid = blocks_fts.block_rowid
         JOIN articles ON articles.id = blocks.article_id
-        WHERE blocks_fts MATCH ?
+        WHERE blocks_fts MATCH ? AND articles.deleted_at IS NULL
         ORDER BY bm25(blocks_fts) ASC
         LIMIT ?
         ''',
@@ -852,3 +884,4 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
             }
         )
     return results
+
