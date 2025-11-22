@@ -29,6 +29,7 @@ from .data_store import (
     restore_article,
     restore_block,
     search_blocks,
+    search_everything,
     undo_block_text_change,
     update_article_meta,
     update_block,
@@ -37,6 +38,7 @@ from .data_store import (
     get_deleted_articles,
     get_article,
     create_attachment,
+    rebuild_search_indexes,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -57,6 +59,7 @@ ALLOWED_ATTACHMENT_TYPES = {
 }
 
 ensure_sample_article()
+rebuild_search_indexes()
 
 app = FastAPI()
 app.add_middleware(
@@ -297,7 +300,7 @@ def get_search(q: str = ''):
     query = q.strip()
     if not query:
         return []
-    return search_blocks(query, 30)
+    return search_everything(query, block_limit=30, article_limit=15)
 
 
 @app.post('/api/articles/{article_id}/blocks/restore')

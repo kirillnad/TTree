@@ -148,6 +148,7 @@ def delete_article(article_id: str, force: bool = False) -> bool:
             return False
         if force:
             CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
+            CONN.execute('DELETE FROM articles_fts WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
         else:
@@ -223,12 +224,32 @@ def normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return article
 
 
+def _article_search_fields(title: str = '') -> Tuple[str, str, str]:
+    plain_title = strip_html(title or '')
+    lemma = build_lemma(plain_title)
+    normalized = build_normalized_tokens(plain_title)
+    return plain_title, lemma, normalized
+
+
+def upsert_article_search_index(article_id: str, title: str) -> None:
+    plain_title, lemma, normalized = _article_search_fields(title)
+    with CONN:
+        CONN.execute(
+            '''
+            INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
+            VALUES (?, ?, ?, ?)
+            ''',
+            (article_id, plain_title, lemma, normalized),
+        )
+
+
 def save_article(article: Dict[str, Any]) -> None:
     normalized = normalize_article(article)
     if not normalized:
         return
     now = normalized.get('updatedAt', iso_now())
     normalized['updatedAt'] = now
+    title_value = normalized.get('title') or 'Новая статья'
     with CONN:
         exists = CONN.execute(
             'SELECT created_at FROM articles WHERE id = ?', (normalized['id'],)
@@ -241,7 +262,7 @@ def save_article(article: Dict[str, Any]) -> None:
                 WHERE id = ?
                 ''',
                 (
-                    normalized.get('title', 'Новая статья'),
+                    title_value,
                     now,
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
@@ -256,7 +277,7 @@ def save_article(article: Dict[str, Any]) -> None:
                 ''',
                 (
                     normalized['id'],
-                    normalized.get('title', 'Новая статья'),
+                    title_value,
                     now,
                     now,
                     serialize_history(normalized['history']),
@@ -266,6 +287,7 @@ def save_article(article: Dict[str, Any]) -> None:
         CONN.execute('DELETE FROM blocks WHERE article_id = ?', (normalized['id'],))
         CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (normalized['id'],))
         insert_blocks_recursive(normalized['id'], normalized['blocks'], now)
+    upsert_article_search_index(normalized['id'], title_value)
 
 
 def ensure_sample_article():
@@ -704,6 +726,7 @@ def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict
         CONN.execute('UPDATE articles SET title = ?, updated_at = ? WHERE id = ?', (title, now, article_id))
     article['title'] = title
     article['updatedAt'] = now
+    upsert_article_search_index(article_id, title)
     return article
 
 
@@ -849,6 +872,39 @@ def build_fts_query(term: str) -> str:
     return ' OR '.join(parts)
 
 
+def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    fts_query = build_fts_query(query)
+    if not fts_query:
+        return []
+    rows = CONN.execute(
+        '''
+        SELECT
+            articles.id AS articleId,
+            articles.title AS title,
+            snippet(articles_fts, '', '', '...', -1, 48) AS snippet
+        FROM articles_fts
+        JOIN articles ON articles.id = articles_fts.article_id
+        WHERE articles_fts MATCH ? AND articles.deleted_at IS NULL
+        ORDER BY bm25(articles_fts) ASC
+        LIMIT ?
+        ''',
+        (fts_query, limit),
+    ).fetchall()
+    results: List[Dict[str, Any]] = []
+    for row in rows:
+        title = row['title'] or ''
+        snippet = row['snippet'] or title
+        results.append(
+            {
+                'type': 'article',
+                'articleId': row['articleId'],
+                'articleTitle': title,
+                'snippet': snippet,
+            }
+        )
+    return results
+
+
 def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
     fts_query = build_fts_query(query)
     if not fts_query:
@@ -876,6 +932,7 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
         snippet = row['snippet'] or strip_html(block_text)[:160]
         results.append(
             {
+                'type': 'block',
                 'articleId': row['articleId'],
                 'articleTitle': row['articleTitle'],
                 'blockId': row['blockId'],
@@ -885,3 +942,47 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
         )
     return results
 
+
+def search_everything(query: str, block_limit: int = 20, article_limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Combined search for articles (by title) and blocks (by content) to support a single search box.
+    """
+    articles = search_articles(query, limit=article_limit)
+    blocks = search_blocks(query, limit=block_limit)
+    return articles + blocks
+
+
+def rebuild_search_indexes() -> None:
+    """
+    Rebuild FTS indexes for articles and blocks from stored data.
+    Useful after schema migrations or cold start when virtual tables were recreated.
+    """
+    with CONN:
+        CONN.execute('DELETE FROM blocks_fts')
+        CONN.execute('DELETE FROM articles_fts')
+    block_rows = CONN.execute(
+        'SELECT block_rowid, article_id, text, normalized_text FROM blocks'
+    ).fetchall()
+    with CONN:
+        for row in block_rows:
+            plain_text = strip_html(row['text'] or '')
+            lemma = build_lemma(plain_text)
+            normalized = row['normalized_text'] or build_normalized_tokens(plain_text)
+            CONN.execute(
+                '''
+                INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text)
+                VALUES (?, ?, ?, ?, ?)
+                ''',
+                (row['block_rowid'], row['article_id'], row['text'], lemma, normalized),
+            )
+    article_rows = CONN.execute('SELECT id, title FROM articles').fetchall()
+    with CONN:
+        for row in article_rows:
+            plain_title, lemma, normalized = _article_search_fields(row['title'] or '')
+            CONN.execute(
+                '''
+                INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (row['id'], plain_title, lemma, normalized),
+            )

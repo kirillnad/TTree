@@ -80,9 +80,9 @@ async function saveTitleEditingMode() {
     state.isEditingTitle = false;
     renderArticle();
     updateSearchTitlesCache(updatedArticle);
-    showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
+    showToast('Title saved');
   } catch (error) {
-    showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
+    showToast(error.message || 'Failed to save title');
   } finally {
     setSavingTitle(false);
     if (refs.articleTitleInput) refs.articleTitleInput.disabled = false;
@@ -130,15 +130,15 @@ export async function handleDeleteArticle(event) {
   let confirmed = false;
   try {
     confirmed = await showConfirm({
-      title: isPermanent ? "Удалить безвозвратно?" : "Удалить в корзину?",
+      title: isPermanent ? "РЈРґР°Р»РёС‚СЊ Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ?" : "РЈРґР°Р»РёС‚СЊ РІ РєРѕСЂР·РёРЅСѓ?",
       message: isPermanent
-        ? "Страница будет удалена без возможности восстановления."
-        : "Страница будет перемещена в корзину.",
-      confirmText: isPermanent ? "Удалить" : "В корзину",
-      cancelText: "Отмена",
+        ? "РЎС‚СЂР°РЅРёС†Р° Р±СѓРґРµС‚ СѓРґР°Р»РµРЅР° Р±РµР· РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ."
+        : "РЎС‚СЂР°РЅРёС†Р° Р±СѓРґРµС‚ РїРµСЂРµРјРµС‰РµРЅР° РІ РєРѕСЂР·РёРЅСѓ.",
+      confirmText: isPermanent ? "РЈРґР°Р»РёС‚СЊ" : "Р’ РєРѕСЂР·РёРЅСѓ",
+      cancelText: "РћС‚РјРµРЅР°",
     });
   } catch (error) {
-    confirmed = window.confirm(isPermanent ? "Удалить безвозвратно?" : "Удалить в корзину?");
+    confirmed = window.confirm(isPermanent ? "РЈРґР°Р»РёС‚СЊ Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ?" : "РЈРґР°Р»РёС‚СЊ РІ РєРѕСЂР·РёРЅСѓ?");
   }
   if (!confirmed) return;
   try {
@@ -153,7 +153,7 @@ export async function handleDeleteArticle(event) {
     state.articleId = null;
     state.currentBlockId = null;
     navigate(routing.list);
-    showToast(isPermanent ? "Статья удалена безвозвратно" : "Статья перемещена в корзину");
+    showToast(isPermanent ? "РЎС‚Р°С‚СЊСЏ СѓРґР°Р»РµРЅР° Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ" : "РЎС‚Р°С‚СЊСЏ РїРµСЂРµРјРµС‰РµРЅР° РІ РєРѕСЂР·РёРЅСѓ");
   } catch (error) {
     showToast(error.message);
   }

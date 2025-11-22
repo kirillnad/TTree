@@ -345,6 +345,23 @@ html {
   background: #f5f7fb;
 }
 
+.search-result-item__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+.search-result-item__badge {
+  display: inline-block;
+  background: #111c2c;
+  color: #f8fafc;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
 .search-result-item__title {
   font-weight: 600;
   color: #111827;

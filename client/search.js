@@ -34,16 +34,25 @@ export function renderSearchResults() {
   }
   refs.searchResults.innerHTML = '';
   state.searchResults.forEach((result) => {
+    const isArticle = result.type === 'article';
     const item = document.createElement('div');
     item.className = 'search-result-item';
-    const lines = htmlToLines(result.blockText || '');
-    const previewLines = lines.slice(0, 2);
-    const previewContent = previewLines.length
-      ? previewLines.map((line) => highlightSnippet(line)).join('<br />')
-      : highlightSnippet(result.snippet || '');
+    const titleContent = highlightSnippet(result.articleTitle || ' ');
+    const typeLabel = isArticle ? 'Статья' : 'Блок';
+    let snippetContent = '';
+    if (!isArticle) {
+      const lines = htmlToLines(result.blockText || '');
+      const previewLines = lines.slice(0, 2);
+      snippetContent = previewLines.length
+        ? previewLines.map((line) => highlightSnippet(line)).join('<br />')
+        : highlightSnippet(result.snippet || '');
+    }
     item.innerHTML = `
-      <div class="search-result-item__title">${escapeHtml(result.articleTitle || ' ')}</div>
-      <div class="search-result-item__snippet">${previewContent}</div>
+      <div class="search-result-item__header">
+        <span class="search-result-item__badge">${typeLabel}</span>
+        <span class="search-result-item__title">${titleContent}</span>
+      </div>
+      ${snippetContent ? `<div class="search-result-item__snippet">${snippetContent}</div>` : ''}
     `;
     item.addEventListener('mousedown', (event) => {
       event.preventDefault();
@@ -133,7 +142,8 @@ function handleSearchResultClick(result) {
   state.searchQuery = '';
   state.searchResults = [];
   state.searchError = '';
-  state.scrollTargetBlockId = result.blockId;
-  state.currentBlockId = result.blockId;
+  const isArticle = result.type === 'article';
+  state.scrollTargetBlockId = isArticle ? null : result.blockId;
+  state.currentBlockId = isArticle ? null : result.blockId;
   navigate(routing.article(result.articleId));
 }

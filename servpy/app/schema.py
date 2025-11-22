@@ -75,3 +75,17 @@ def init_schema():
         )
         ''',
     )
+
+    execute('DROP TABLE IF EXISTS articles_fts')
+    execute(
+        '''
+        CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts
+        USING fts5(
+            article_id UNINDEXED,
+            title,
+            lemma,
+            normalized_text,
+            tokenize = 'unicode61 remove_diacritics 0'
+        )
+        ''',
+    )
