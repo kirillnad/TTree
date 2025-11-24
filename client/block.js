@@ -3,7 +3,7 @@ import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from '.
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
-import { showPrompt } from './modal.js';
+import { showPrompt, showImagePreview } from './modal.js';
 import { fetchArticlesIndex } from './api.js';
 import { routing } from './routing.js';
 
@@ -588,6 +588,13 @@ export function attachRichContentHandlers(element, blockId) {
     logDebug('drop: files detected', allFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
     imageFiles.forEach((file) => insertImageFromFile(element, file));
     otherFiles.forEach((file) => insertAttachmentFromFile(element, file));
+  });
+
+  element.addEventListener('click', (event) => {
+    const img = event.target?.closest('img');
+    if (!img) return;
+    event.preventDefault();
+    showImagePreview(img.src, img.alt || '');
   });
 
   element.addEventListener('dragover', (event) => {

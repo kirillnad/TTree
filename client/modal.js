@@ -266,3 +266,51 @@ export function showPrompt(options = {}) {
     });
   });
 }
+
+export function showImagePreview(src, alt = '') {
+  const root = ensureRoot();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay image-modal';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'image-modal__card';
+  wrapper.setAttribute('role', 'dialog');
+  wrapper.setAttribute('aria-modal', 'true');
+  wrapper.tabIndex = -1;
+
+  const img = document.createElement('img');
+  img.className = 'image-modal__img';
+  img.src = src;
+  if (alt) img.alt = alt;
+
+  wrapper.appendChild(img);
+  overlay.appendChild(wrapper);
+
+  let cleanup;
+  const resolveClose = () => {
+    if (cleanup) cleanup();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveClose();
+    }
+  };
+
+  cleanup = () => {
+    document.removeEventListener('keydown', onKeyDown);
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+  };
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) resolveClose();
+  });
+  document.addEventListener('keydown', onKeyDown);
+
+  root.appendChild(overlay);
+  requestAnimationFrame(() => {
+    wrapper.focus({ preventScroll: true });
+  });
+}
