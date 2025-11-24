@@ -746,7 +746,7 @@ button:hover {
 
 .block.block--no-title {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   column-gap: 0.5rem;
   padding-top: 0.3rem;
@@ -757,7 +757,7 @@ button:hover {
   margin: 0;
   display: flex !important;
   align-items: center;
-  grid-column: 2;
+  grid-column: 1;
 }
 
 .block-header.block-header--no-title {
@@ -769,7 +769,7 @@ button:hover {
 }
 
 .block.block--no-title .block-text {
-  grid-column: 1;
+  grid-column: 2;
   align-self: center;
   margin-top: 0;
 }

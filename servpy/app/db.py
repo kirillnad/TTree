@@ -1,28 +1,102 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
+from typing import Any, Iterable
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine, Result
+from sqlalchemy.engine import RowMapping
 
 DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / 'servpy.sqlite'
+DATABASE_URL = f'sqlite:///{DB_PATH}'
 
-CONN = sqlite3.connect(DB_PATH, check_same_thread=False, isolation_level=None)
-CONN.row_factory = sqlite3.Row
-CONN.execute('PRAGMA foreign_keys = ON')
-CONN.execute('PRAGMA journal_mode = WAL')
+engine: Engine = create_engine(
+    DATABASE_URL,
+    future=True,
+    echo=False,
+    connect_args={'check_same_thread': False},
+)
+
+
+@event.listens_for(engine, 'connect')
+def _set_sqlite_pragmas(dbapi_connection, connection_record):  # type: ignore[override]
+    cursor = dbapi_connection.cursor()
+    cursor.execute('PRAGMA foreign_keys = ON')
+    cursor.execute('PRAGMA journal_mode = WAL')
+    cursor.close()
+
+
+class Database:
+    """
+    Thin helper over SQLAlchemy engine to preserve the old CONN.execute API.
+    Supports context manager for a shared transaction inside `with CONN:`.
+    """
+
+    def __init__(self, engine: Engine):
+        self.engine = engine
+        self._conn = None
+        self._tx = None
+
+    class QueryResult:
+        def __init__(self, rows: list[RowMapping]):
+            self._rows = rows
+
+        def fetchall(self):
+            return self._rows
+
+        def fetchone(self):
+            return self._rows[0] if self._rows else None
+
+    def __enter__(self):
+        self._tx = self.engine.begin()
+        self._conn = self._tx.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            if self._tx is not None:
+                return self._tx.__exit__(exc_type, exc, tb)
+        finally:
+            self._conn = None
+            self._tx = None
+        return False
+
+    def _run(self, conn, sql: str, params: Any | None = None) -> Result | QueryResult:
+        result: Result = conn.exec_driver_sql(sql, params or ())
+        if result.returns_rows:
+            rows = result.mappings().all()
+            result.close()
+            return self.QueryResult(rows)
+        return result
+
+    def execute(self, sql: str, params: Any | None = None) -> Result | QueryResult:
+        if self._conn is not None:
+            return self._run(self._conn, sql, params)
+        with self.engine.begin() as conn:
+            return self._run(conn, sql, params)
+
+    def executemany(self, sql: str, seq: Iterable[Any]) -> Result | QueryResult:
+        if self._conn is not None:
+            return self._run(self._conn, sql, seq)
+        with self.engine.begin() as conn:
+            return self._run(conn, sql, seq)
+
+    def cursor(self):
+        return self.engine.raw_connection().cursor()
+
+
+CONN = Database(engine)
 
 
 def cursor():
     return CONN.cursor()
 
 
-def execute(sql: str, params: tuple | None = None):
-    with CONN:
-        cur = CONN.execute(sql, params or ())
-    return cur
+def execute(sql: str, params: Any | None = None):
+    return CONN.execute(sql, params)
 
 
 def executemany(sql: str, seq):
-    with CONN:
-        CONN.executemany(sql, seq)
+    return CONN.executemany(sql, seq)

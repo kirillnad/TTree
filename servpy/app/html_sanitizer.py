@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from html import escape
 from html.parser import HTMLParser
+import re
 from typing import List
 
 ALLOWED_TAGS = {
@@ -61,7 +62,6 @@ class _Sanitizer(HTMLParser):
         attr_text = self._format_attrs(tag, attrs)
         if tag in VOID_TAGS:
             self.result.append(f'<{tag}{attr_text} />')
-            self.tag_stack.append(None)
             return
         self.result.append(f'<{tag}{attr_text}>')
         self.tag_stack.append(tag)
@@ -110,5 +110,36 @@ def sanitize_html(html: str | None) -> str:
     parser = _Sanitizer()
     parser.feed(html)
     parser.close()
-    return ''.join(parser.result)
+    sanitized = ''.join(parser.result)
+    return _strip_empty_edges(sanitized)
 
+
+def _strip_empty_edges(html: str) -> str:
+    """
+    Remove leading/trailing empty paragraphs or <br> that appear after editing,
+    so saved blocks do not get artificial padding that looks like a title.
+    """
+    empty_p = re.compile(r'^<p>(?:\s|&nbsp;|<br\s*/?>)*</p>', re.IGNORECASE)
+    empty_br = re.compile(r'^<br\s*/?>', re.IGNORECASE)
+    trailing_empty_p = re.compile(r'<p>(?:\s|&nbsp;|<br\s*/?>)*</p>\s*$', re.IGNORECASE)
+    trailing_empty_br = re.compile(r'<br\s*/?>\s*$', re.IGNORECASE)
+
+    # Strip leading empties
+    while True:
+        new_html = empty_p.sub('', html)
+        new_html = empty_br.sub('', new_html)
+        new_html = new_html.lstrip()
+        if new_html == html:
+            break
+        html = new_html
+
+    # Strip trailing empties
+    while True:
+        new_html = trailing_empty_p.sub('', html)
+        new_html = trailing_empty_br.sub('', new_html)
+        new_html = new_html.rstrip()
+        if new_html == html:
+            break
+        html = new_html
+
+    return html
