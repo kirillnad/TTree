@@ -694,6 +694,7 @@ button:hover {
 .block.editing {
   border-color: #c084fc;
   background: transparent;
+  position: relative;
 }
 
 .block.editing > .block-header {
@@ -732,11 +733,13 @@ button:hover {
 }
 
 .block.editing > .block-text {
-  margin: 0;
+  margin-bottom: 2rem;
   padding: 0.35rem 0.5rem;
   background: rgba(99, 102, 241, 0.05);
   border-radius: 8px;
   box-sizing: border-box;
+  padding-left: 44px; /* space for left action */
+  padding-right: 44px; /* space for right action */
 }
 
 .block.editing > .block-text.block-body--no-title {
@@ -791,6 +794,54 @@ button:hover {
   padding-top: 0.3rem;
 }
 
+.block-edit-actions {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.block-edit-actions .icon-button {
+  min-width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-weight: 700;
+  border-radius: 14px;
+  pointer-events: all;
+}
+.block-edit-actions .ghost.icon-button {
+  background: transparent;
+}
+.block-edit-actions .primary.icon-button {
+  background: #5b67f2;
+  border-color: #5b67f2;
+}
+@media (max-width: 640px) {
+  .block-edit-actions {
+    left: 6px;
+    right: 6px;
+    bottom: 4px;
+  }
+  .block-edit-actions .icon-button {
+    height: 26px;
+    min-width: 26px;
+    border-radius: 13px;
+  }
+}
+@media (max-width: 640px) {
+  .block-edit-actions {
+    margin-top: 0.25rem;
+  }
+  .block-edit-actions .icon-button {
+    height: 30px;
+  }
+}
 .block-text img {
   max-width: 100%;
   max-height: 15rem;

@@ -18,7 +18,7 @@ import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
 import { showPrompt } from './modal.js';
-import { startEditing } from './actions.js';
+import { startEditing, saveEditing, cancelEditing } from './actions.js';
 
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
@@ -300,6 +300,34 @@ export function renderArticle() {
       blockEl.appendChild(body);
 
       attachRichContentHandlers(body, block.id);
+
+      if (isEditingThisBlock) {
+        const actions = document.createElement('div');
+        actions.className = 'block-edit-actions';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'ghost icon-button';
+        cancelBtn.title = 'Отменить изменения';
+        cancelBtn.innerHTML = '✕';
+        cancelBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          cancelEditing();
+        });
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'primary icon-button';
+        saveBtn.title = 'Сохранить';
+        saveBtn.innerHTML = '✔';
+        saveBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await saveEditing();
+        });
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        blockEl.appendChild(actions);
+      }
 
       blockEl.addEventListener('click', () => {
         if (state.mode === 'view') setCurrentBlock(block.id);
