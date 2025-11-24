@@ -69,6 +69,69 @@ export function cancelEditing() {
   renderArticle();
 }
 
+export async function splitEditingBlockAtCaret() {
+  if (state.mode !== 'edit' || !state.editingBlockId) return;
+  const blockId = state.editingBlockId;
+  const blockEl = document.querySelector(`.block[data-block-id="${blockId}"] .block-text[contenteditable="true"]`);
+  if (!blockEl) return;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !blockEl.contains(sel.anchorNode)) return;
+  const range = sel.getRangeAt(0).cloneRange();
+  const marker = document.createElement('span');
+  const markerId = `split-marker-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  marker.setAttribute('data-split-marker', markerId);
+  marker.textContent = '';
+  range.insertNode(marker);
+  const fullHtml = blockEl.innerHTML;
+  marker.parentNode.removeChild(marker);
+  const markerHtml = `<span data-split-marker="${markerId}"></span>`;
+  const parts = fullHtml.split(markerHtml);
+  if (parts.length !== 2) return;
+  const [beforeHtmlRaw, afterHtmlRaw] = parts;
+  const { cleanupEditableHtml } = await import('./block.js');
+  const beforeClean = cleanupEditableHtml(beforeHtmlRaw || '');
+  const afterClean = cleanupEditableHtml(afterHtmlRaw || '');
+  if (!afterClean || afterClean === beforeClean) return;
+
+  try {
+    const previousBlock = findBlock(blockId)?.block;
+    const previousSnapshot = previousBlock ? cloneBlockSnapshot(previousBlock) : null;
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ text: beforeClean }),
+    });
+    const siblingRes = await apiRequest(
+      `/api/articles/${state.articleId}/blocks/${blockId}/siblings`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ direction: 'after' }),
+      },
+    );
+    const newBlockId = siblingRes?.block?.id;
+    if (!newBlockId) {
+      showToast('Не удалось создать новый блок');
+      return;
+    }
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${newBlockId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ text: afterClean }),
+    });
+    state.pendingEditBlockId = newBlockId;
+    state.scrollTargetBlockId = newBlockId;
+    await loadArticle(state.articleId, { desiredBlockId: newBlockId, editBlockId: newBlockId });
+    renderArticle();
+    if (previousSnapshot) {
+      pushUndoEntry({
+        type: 'text',
+        blockId,
+        block: previousSnapshot,
+      });
+    }
+  } catch (error) {
+    showToast(error.message || 'Не удалось разбить блок');
+  }
+}
+
 export async function createSibling(direction) {
   if (!state.currentBlockId) return;
   const anchorBlockId = state.currentBlockId;

@@ -2,7 +2,15 @@ import { state, isHintVisible } from './state.js';
 import { refs } from './refs.js';
 import { handleUndoAction, handleRedoAction, clearPendingTextPreview } from './undo.js';
 import { moveCurrentBlock, indentCurrentBlock, outdentCurrentBlock } from './undo.js';
-import { createSibling, deleteCurrentBlock, startEditing, saveEditing, cancelEditing, handleGlobalPaste } from './actions.js';
+import {
+  createSibling,
+  deleteCurrentBlock,
+  startEditing,
+  saveEditing,
+  cancelEditing,
+  handleGlobalPaste,
+  splitEditingBlockAtCaret,
+} from './actions.js';
 import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
@@ -131,10 +139,7 @@ function handleViewKey(event) {
 function handleEditKey(event) {
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
-    (async () => {
-      await saveEditing();
-      await createSibling('after');
-    })();
+    splitEditingBlockAtCaret();
     return;
   }
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowUp') {
