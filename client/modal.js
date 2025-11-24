@@ -267,6 +267,128 @@ export function showPrompt(options = {}) {
   });
 }
 
+export function showLinkPrompt(options = {}) {
+  const root = ensureRoot();
+  let textInput = null;
+  let urlInput = null;
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    ...options,
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      if (options.message) {
+        const msg = document.createElement('p');
+        msg.className = 'modal-body__text';
+        msg.textContent = options.message;
+        fragment.appendChild(msg);
+      }
+
+      const textLabel = document.createElement('label');
+      textLabel.className = 'modal-label';
+      textLabel.textContent = options.textLabel || 'Текст';
+      const text = document.createElement('input');
+      text.type = 'text';
+      text.className = 'modal-input';
+      text.placeholder = options.textPlaceholder || 'Текст ссылки';
+      text.value = options.defaultText || '';
+      text.autocomplete = 'off';
+      textLabel.appendChild(text);
+
+      const urlLabel = document.createElement('label');
+      urlLabel.className = 'modal-label';
+      urlLabel.textContent = options.urlLabel || 'Ссылка';
+      const url = document.createElement('input');
+      url.type = 'text';
+      url.className = 'modal-input';
+      url.placeholder = options.urlPlaceholder || 'https://example.com';
+      url.value = options.defaultUrl || '';
+      url.autocomplete = 'off';
+      urlLabel.appendChild(url);
+
+      textInput = text;
+      urlInput = url;
+
+      fragment.appendChild(textLabel);
+      fragment.appendChild(urlLabel);
+      return fragment;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (payload) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(payload);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+      return;
+    }
+    if (event.code === 'Enter' && !confirmBtn.disabled) {
+      event.preventDefault();
+      resolveResult({
+        text: (textInput?.value || '').trim(),
+        url: (urlInput?.value || '').trim(),
+      });
+    }
+  };
+
+  const updateConfirmState = () => {
+    const hasUrl = Boolean((urlInput?.value || '').trim());
+    confirmBtn.disabled = !hasUrl;
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('danger-btn');
+    confirmBtn.textContent = options.confirmText || 'OK';
+    cancelBtn.textContent = options.cancelText || 'Cancel';
+
+    confirmBtn.addEventListener('click', () => {
+      resolveResult({
+        text: (textInput?.value || '').trim(),
+        url: (urlInput?.value || '').trim(),
+      });
+    });
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    const attachInputHandlers = (input) => {
+      if (!input) return;
+      input.addEventListener('input', updateConfirmState);
+    };
+    attachInputHandlers(textInput);
+    attachInputHandlers(urlInput);
+    updateConfirmState();
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      if (urlInput) {
+        urlInput.focus({ preventScroll: true });
+        if (urlInput.value) {
+          urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length);
+        }
+      } else {
+        card.focus({ preventScroll: true });
+      }
+    });
+  });
+}
+
 export function showImagePreview(src, alt = '') {
   const root = ensureRoot();
   const overlay = document.createElement('div');

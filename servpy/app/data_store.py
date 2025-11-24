@@ -603,7 +603,7 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
         ]
         if rowids:
             placeholders = ','.join('?' for _ in rowids)
-            CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', rowids)
+            CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', tuple(rowids))
         CONN.execute('DELETE FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id))
         CONN.execute(
             f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',

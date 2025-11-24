@@ -18,6 +18,7 @@ import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
 import { showPrompt } from './modal.js';
+import { startEditing } from './actions.js';
 
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
@@ -244,6 +245,13 @@ export function renderArticle() {
       body.addEventListener('click', (event) => {
         event.stopPropagation();
         if (state.mode === 'view') setCurrentBlock(block.id);
+      });
+
+      body.addEventListener('dblclick', (event) => {
+        event.stopPropagation();
+        if (state.mode !== 'view') return;
+        setCurrentBlock(block.id);
+        startEditing();
       });
 
       let header = null;

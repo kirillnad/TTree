@@ -731,7 +731,7 @@ button:hover {
   max-height: 65vh;
 }
 
-.block.editing .block-text {
+.block.editing > .block-text {
   margin: 0;
   padding: 0.35rem 0.5rem;
   background: rgba(99, 102, 241, 0.05);
@@ -739,7 +739,7 @@ button:hover {
   box-sizing: border-box;
 }
 
-.block.editing .block-text.block-body--no-title {
+.block.editing > .block-text.block-body--no-title {
   padding-top: 0;
   margin-top: 0;
 }
@@ -834,34 +834,60 @@ button:hover {
 .rich-context-menu {
   position: fixed;
   z-index: 2000;
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: 0.35rem;
-  padding: 0.4rem 0.5rem;
-  background: white;
-  border: 1px solid #e5e7eb;
+  padding: 0.45rem 0.5rem;
+  max-width: min(540px, 96vw);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(15, 30, 40, 0.18);
+  box-shadow: 0 12px 28px rgba(15, 30, 40, 0.16);
 }
 .rich-context-menu.hidden {
   display: none;
 }
+.rich-context-menu__col {
+  min-width: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.rich-context-menu__label {
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  padding-left: 0.1rem;
+}
+.rich-context-menu__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+}
 .rich-context-menu button {
-  border: 1px solid transparent;
+  width: 100%;
+  border: 1px solid #e2e8f0;
   background: #f8fafc;
   border-radius: 8px;
-  padding: 0.25rem 0.45rem;
-  font-size: 0.9rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.8rem;
+  color: #0f172a;
   cursor: pointer;
+  line-height: 1.1;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
 }
 .rich-context-menu button:hover {
   border-color: #cbd5f5;
   background: #eef2ff;
+  transform: translateY(-1px);
 }
+
 .rich-context-menu .divider {
-  width: 1px;
-  height: 20px;
-  background: #e5e7eb;
+  display: none;
 }
 .article-link {
   color: #2563eb;
@@ -920,6 +946,13 @@ button:hover {
 .modal-body__text {
   margin: 0;
   color: inherit;
+}
+.modal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: #0f172a;
 }
 .modal-input {
   width: 100%;

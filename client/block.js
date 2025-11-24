@@ -1,9 +1,9 @@
-import { state } from './state.js';
+﻿import { state } from './state.js';
 import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from './api.js';
 import { showToast } from './toast.js';
 import { renderArticle } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
-import { showPrompt, showImagePreview } from './modal.js';
+import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js';
 import { fetchArticlesIndex } from './api.js';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
@@ -120,7 +120,7 @@ export function extractBlockSections(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
 
-  // Убираем возможные обертки .block-header, чтобы корректно выделять заголовок/тело
+  // РЈР±РёСЂР°РµРј РІРѕР·РјРѕР¶РЅС‹Рµ РѕР±РµСЂС‚РєРё .block-header, С‡С‚РѕР±С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РІС‹РґРµР»СЏС‚СЊ Р·Р°РіРѕР»РѕРІРѕРє/С‚РµР»Рѕ
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
     if (!parent) return;
@@ -158,7 +158,7 @@ export function buildEditableBlockHtml(html = '') {
 export function buildStoredBlockHtml(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
-  // Убираем вложенные block-header, оставляя только контент
+  // РЈР±РёСЂР°РµРј РІР»РѕР¶РµРЅРЅС‹Рµ block-header, РѕСЃС‚Р°РІР»СЏСЏ С‚РѕР»СЊРєРѕ РєРѕРЅС‚РµРЅС‚
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
     if (!parent) return;
@@ -180,7 +180,7 @@ export function cleanupEditableHtml(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
 
-  // разворачиваем .block-header, убираем классы
+  // СЂР°Р·РІРѕСЂР°С‡РёРІР°РµРј .block-header, СѓР±РёСЂР°РµРј РєР»Р°СЃСЃС‹
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
     if (!parent) return;
@@ -192,7 +192,7 @@ export function cleanupEditableHtml(html = '') {
     Array.from(root.childNodes).forEach((node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         if (node.tagName === 'DIV') {
-          // заменяем div на p, сохраняя содержимое
+          // Р·Р°РјРµРЅСЏРµРј div РЅР° p, СЃРѕС…СЂР°РЅСЏСЏ СЃРѕРґРµСЂР¶РёРјРѕРµ
           const p = document.createElement('p');
           p.innerHTML = node.innerHTML;
           node.parentNode.replaceChild(p, node);
@@ -206,25 +206,32 @@ export function cleanupEditableHtml(html = '') {
 
   convertDivsToParagraphs(template.content);
 
-  // Оборачиваем верхнеуровневые текстовые узлы в абзацы
+  // РћР±РѕСЂР°С‡РёРІР°РµРј РІРµСЂС…РЅРµСѓСЂРѕРІРЅРµРІС‹Рµ С‚РµРєСЃС‚РѕРІС‹Рµ СѓР·Р»С‹ РІ Р°Р±Р·Р°С†С‹
   const wrapTextNodes = (root) => {
     const nodes = Array.from(root.childNodes || []);
     nodes.forEach((node) => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const text = (node.textContent || '').trim();
-        if (!text) {
+        const raw = node.textContent || '';
+        const collapsed = raw.replace(/\u00a0/g, ' ');
+        const trimmed = collapsed.trim();
+        if (!trimmed) {
+          // Keep a spacer between inline siblings, otherwise drop
+          if (node.previousSibling && node.nextSibling) {
+            node.textContent = ' ';
+            return;
+          }
           root.removeChild(node);
           return;
         }
         const p = document.createElement('p');
-        p.textContent = text;
+        p.textContent = collapsed;
         root.replaceChild(p, node);
       }
     });
   };
   wrapTextNodes(template.content);
 
-  // приводим к чистым <p>, гарантируем пустые строки как <p><br/></p>
+  // РїСЂРёРІРѕРґРёРј Рє С‡РёСЃС‚С‹Рј <p>, РіР°СЂР°РЅС‚РёСЂСѓРµРј РїСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё РєР°Рє <p><br/></p>
   template.content.querySelectorAll('p').forEach((p) => {
     const inner = (p.innerHTML || '').replace(/&nbsp;/g, '').trim();
     if (!inner || inner === '<br>' || inner === '<br/>') {
@@ -238,8 +245,11 @@ export function cleanupEditableHtml(html = '') {
   for (let i = nodes.length - 1; i >= 0; i -= 1) {
     const node = nodes[i];
     if (node.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim()) {
-      if (node.parentNode) node.parentNode.removeChild(node);
-      continue;
+      // preserve inner spacers between siblings, but drop stray edges
+      if (!(node.previousSibling && node.nextSibling)) {
+        if (node.parentNode) node.parentNode.removeChild(node);
+        continue;
+      }
     }
     if (node.tagName === 'P') {
       const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').replace(/<br\s*\/?>/gi, '').trim();
@@ -251,14 +261,16 @@ export function cleanupEditableHtml(html = '') {
     break;
   }
 
-  // если нет ни одного абзаца — добавляем пустой
+  // РµСЃР»Рё РЅРµС‚ РЅРё РѕРґРЅРѕРіРѕ Р°Р±Р·Р°С†Р° вЂ” РґРѕР±Р°РІР»СЏРµРј РїСѓСЃС‚РѕР№
   if (!template.content.querySelector('p')) {
     const p = document.createElement('p');
     p.appendChild(document.createElement('br'));
     template.content.appendChild(p);
   }
 
-  return linkifyHtml(template.innerHTML);
+  const cleaned = linkifyHtml(template.innerHTML);
+  // Ensure adjacent links remain visually separated after cleanup
+  return cleaned.replace(/<\/a>\s*<a/gi, '</a> <a');
 }
 
 export async function toggleCollapse(blockId) {
@@ -499,16 +511,16 @@ async function insertImageFromFile(element, file) {
 
 async function insertAttachmentFromFile(element, file) {
   if (!state.articleId) {
-    showToast('Не выбрана статья для загрузки файла');
+    showToast('РќРµ РІС‹Р±СЂР°РЅР° СЃС‚Р°С‚СЊСЏ РґР»СЏ Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»Р°');
     return;
   }
   logDebug('attachment: start upload', { name: file?.name, type: file?.type, size: file?.size, articleId: state.articleId });
   const tempId = `att-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  insertHtmlAtCaret(element, `<span class="attachment-upload" data-temp-id="${tempId}">Загрузка ${escapeHtml(file?.name || '')}…</span>`);
+  insertHtmlAtCaret(element, `<span class="attachment-upload" data-temp-id="${tempId}">Р—Р°РіСЂСѓР·РєР° ${escapeHtml(file?.name || '')}вЂ¦</span>`);
   const placeholder = element.querySelector(`.attachment-upload[data-temp-id="${tempId}"]`);
   try {
     const meta = await uploadAttachmentFileWithProgress(state.articleId, file, (percent) => {
-      if (placeholder) placeholder.textContent = `Загрузка ${file?.name || ''}… ${percent}%`;
+      if (placeholder) placeholder.textContent = `Р—Р°РіСЂСѓР·РєР° ${file?.name || ''}вЂ¦ ${percent}%`;
     });
     logDebug('attachment: uploaded', meta);
     const safeUrl = escapeHtml(meta?.url || meta?.storedPath || '');
@@ -525,7 +537,7 @@ async function insertAttachmentFromFile(element, file) {
   } catch (error) {
     logDebug('attachment: upload failed', error);
     if (placeholder) {
-      placeholder.textContent = `Ошибка загрузки: ${error.message}`;
+      placeholder.textContent = `РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё: ${error.message}`;
       placeholder.classList.add('attachment-upload--error');
     }
     showToast(error.message);
@@ -608,12 +620,12 @@ export function attachRichContentHandlers(element, blockId) {
         const list = state.articlesIndex.length ? state.articlesIndex : await fetchArticlesIndex();
         const suggestions = list
           .filter((item) => item.id !== 'inbox')
-          .map((item) => ({ id: item.id, title: item.title || 'Без названия' }));
+          .map((item) => ({ id: item.id, title: item.title || 'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ' }));
         const result = await showPrompt({
-          title: 'Перенести в статью',
-          message: 'Введите ID или выберите статью',
-          confirmText: 'Перенести',
-          cancelText: 'Отмена',
+          title: 'РџРµСЂРµРЅРµСЃС‚Рё РІ СЃС‚Р°С‚СЊСЋ',
+          message: 'Р’РІРµРґРёС‚Рµ ID РёР»Рё РІС‹Р±РµСЂРёС‚Рµ СЃС‚Р°С‚СЊСЋ',
+          confirmText: 'РџРµСЂРµРЅРµСЃС‚Рё',
+          cancelText: 'РћС‚РјРµРЅР°',
           suggestions,
           returnMeta: true,
           hideConfirm: false,
@@ -624,7 +636,7 @@ export function attachRichContentHandlers(element, blockId) {
         await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move-to/${trimmed}`, { method: 'POST' });
         navigate(routing.article('inbox'));
       } catch (error) {
-        showToast(error.message || 'Не удалось перенести блок');
+        showToast(error.message || 'РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРЅРµСЃС‚Рё Р±Р»РѕРє');
       }
     });
   }
@@ -654,7 +666,7 @@ export function attachRichContentHandlers(element, blockId) {
 
   element.addEventListener('wheel', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    // Прокручиваем только внутри блока, не цепляя контейнер статьи
+    // РџСЂРѕРєСЂСѓС‡РёРІР°РµРј С‚РѕР»СЊРєРѕ РІРЅСѓС‚СЂРё Р±Р»РѕРєР°, РЅРµ С†РµРїР»СЏСЏ РєРѕРЅС‚РµР№РЅРµСЂ СЃС‚Р°С‚СЊРё
     const maxScroll = element.scrollHeight - element.clientHeight;
     if (maxScroll <= 0) {
       event.preventDefault();
@@ -671,33 +683,48 @@ export function attachRichContentHandlers(element, blockId) {
 let richContextMenu = null;
 let richContextRange = null;
 let richContextTarget = null;
+let richLastActiveEditable = null;
 
 function ensureContextMenu() {
   if (richContextMenu) return richContextMenu;
   const menu = document.createElement('div');
   menu.className = 'rich-context-menu hidden';
   menu.innerHTML = `
-    <button data-action="bold"><strong>B</strong></button>
-    <button data-action="italic"><em>I</em></button>
-    <button data-action="underline"><u>U</u></button>
-    <span class="divider"></span>
-    <button data-action="ul">• Список</button>
-    <button data-action="ol">1. Список</button>
-    <button data-action="quote">Цитата</button>
-    <button data-action="code">Код</button>
-    <span class="divider"></span>
-    <button data-action="link">Ссылка</button>
-    <button data-action="unlink">Убрать ссылку</button>
-    <button data-action="remove-format">Очистить</button>
-    <span class="divider"></span>
-    <button data-action="insert-article-link">Вставить ссылку на статью</button>
+    <div class="rich-context-menu__col">
+      <div class="rich-context-menu__label" aria-label="\u0422\u0435\u043a\u0441\u0442">\u0422\u0435\u043a\u0441\u0442</div>
+      <div class="rich-context-menu__grid">
+        <button data-action="bold" aria-label="\u041f\u043e\u043b\u0443\u0436\u0438\u0440\u043d\u044b\u0439" title="\u041f\u043e\u043b\u0443\u0436\u0438\u0440\u043d\u044b\u0439"><strong>\u0416</strong></button>
+        <button data-action="italic" aria-label="\u041a\u0443\u0440\u0441\u0438\u0432" title="\u041a\u0443\u0440\u0441\u0438\u0432"><em>/</em></button>
+        <button data-action="underline" aria-label="\u041f\u043e\u0434\u0447\u0435\u0440\u043a\u043d\u0443\u0442\u044c" title="\u041f\u043e\u0434\u0447\u0435\u0440\u043a\u043d\u0443\u0442\u044c"><u>\u0427</u></button>
+        <button data-action="remove-format" aria-label="\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0444\u043e\u0440\u043c\u0430\u0442" title="\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0444\u043e\u0440\u043c\u0430\u0442">✕</button>
+      </div>
+    </div>
+    <div class="rich-context-menu__col">
+      <div class="rich-context-menu__label" aria-label="\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430">\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430</div>
+      <div class="rich-context-menu__grid">
+        <button data-action="ul" aria-label="\u041c\u0430\u0440\u043a\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a" title="\u041c\u0430\u0440\u043a\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a">\u2022</button>
+        <button data-action="ol" aria-label="\u041d\u0443\u043c\u0435\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a" title="\u041d\u0443\u043c\u0435\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a">1.</button>
+        <button data-action="quote" aria-label="\u0426\u0438\u0442\u0430\u0442\u0430" title="\u0426\u0438\u0442\u0430\u0442\u0430">\u0426\u0438\u0442\u0430\u0442\u0430</button>
+        <button data-action="code" aria-label="\u041a\u043e\u0434" title="\u041a\u043e\u0434">&lt;/&gt;</button>
+      </div>
+    </div>
+    <div class="rich-context-menu__col">
+      <div class="rich-context-menu__label" aria-label="\u0421\u0441\u044b\u043b\u043a\u0438">\u0421\u0441\u044b\u043b\u043a\u0438</div>
+      <div class="rich-context-menu__grid">
+        <button data-action="link" aria-label="\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443" title="\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443">\u0421\u0441\u044b\u043b\u043a\u0430</button>
+        <button data-action="unlink" aria-label="\u0423\u0431\u0440\u0430\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443" title="\u0423\u0431\u0440\u0430\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443">\u0423\u0431\u0440\u0430\u0442\u044c</button>
+        <button data-action="insert-article-link" aria-label="\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0441\u0442\u0430\u0442\u044c\u044e" title="\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0441\u0442\u0430\u0442\u044c\u044e">\u0421\u0442\u0430\u0442\u044c\u044f</button>
+      </div>
+    </div>
   `;
   document.body.appendChild(menu);
 
   const hideContextMenu = () => {
     menu.classList.add('hidden');
+    menu.style.visibility = '';
     richContextRange = null;
     richContextTarget = null;
+    richLastActiveEditable = null;
   };
 
   const restoreSelection = () => {
@@ -708,10 +735,43 @@ function ensureContextMenu() {
     }
   };
 
-  const applyAction = (action) => {
+  const applyAction = async (action) => {
     restoreSelection();
+
+    const resolveTarget = () => {
+      if (richContextTarget && document.contains(richContextTarget)) return richContextTarget;
+      const selNow = window.getSelection();
+      const anchorNode = selNow?.anchorNode;
+      const fromSelection = anchorNode?.parentElement?.closest('.block-text[contenteditable]');
+      if (fromSelection) return fromSelection;
+      if (richContextRange) {
+        const container = richContextRange.commonAncestorContainer;
+        if (container?.parentElement) {
+          const fromRange = container.parentElement.closest('.block-text[contenteditable]');
+          if (fromRange) return fromRange;
+        }
+      }
+      if (richLastActiveEditable && document.contains(richLastActiveEditable)) return richLastActiveEditable;
+      if (state.editingBlockId) {
+        const byId = document.querySelector(
+          `.block[data-block-id="${state.editingBlockId}"] .block-text[contenteditable="true"]`,
+        );
+        if (byId) return byId;
+      }
+      const active = document.activeElement;
+      if (active && active.closest) {
+        const fromActive = active.closest('.block-text[contenteditable]');
+        if (fromActive) return fromActive;
+      }
+      return null;
+    };
+
     const applyInsertArticleLink = async () => {
-      if (!richContextTarget) return;
+      const targetEl = resolveTarget();
+      if (!targetEl) {
+        showToast('Не удалось найти место вставки ссылки');
+        return;
+      }
       const list = state.articlesIndex.length ? state.articlesIndex : await fetchArticlesIndex();
       const suggestions = list.map((item) => ({
         id: item.id,
@@ -721,8 +781,8 @@ function ensureContextMenu() {
       let selectedId = '';
       try {
         const result = await showPrompt({
-          title: 'Вставить ссылку на статью',
-          message: 'Введите название или ID статьи. Будет вставлен заголовок как ссылка.',
+          title: 'Ссылка на статью',
+          message: 'Введите ID статьи. Подсказки помогут найти нужную.',
           confirmText: 'Вставить',
           cancelText: 'Отмена',
           suggestions,
@@ -736,9 +796,8 @@ function ensureContextMenu() {
           input = result || '';
         }
       } catch (_) {
-        input = window.prompt('Введите название или ID статьи') || '';
+        input = window.prompt('Введите ID статьи') || '';
       }
-      const target = richContextTarget;
       const term = (input || '').trim().toLowerCase();
       if (!term && !selectedId) return;
       const match = list.find((item) => {
@@ -754,19 +813,30 @@ function ensureContextMenu() {
         showToast('Статья не найдена');
         return;
       }
-      if (!target || !document.contains(target)) {
-        showToast('Не удалось вставить ссылку');
+      if (!targetEl || !document.contains(targetEl)) {
+        showToast('Не удалось найти место вставки ссылки');
         return;
       }
       restoreSelection();
-      target.focus();
+      targetEl.focus();
       const linkHtml = `<a href="${routing.article(match.id)}" class="article-link" data-article-id="${match.id}">${escapeHtml(match.title || 'Без названия')}</a>`;
-      insertHtmlAtCaret(target, linkHtml);
-      const htmlNow = (target.innerHTML || '').trim();
+      insertHtmlAtCaret(targetEl, linkHtml);
+      const htmlNow = (targetEl.innerHTML || '').trim();
       if (!htmlNow || htmlNow === '<br>' || htmlNow === '<br/>' || htmlNow === '<br />') {
-        target.innerHTML = linkHtml;
+        targetEl.innerHTML = linkHtml;
       }
-      target.classList.remove('block-body--empty');
+      targetEl.classList.remove('block-body--empty');
+    };
+
+    const clearAllFormatting = () => {
+      restoreSelection();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      document.execCommand('removeFormat');
+      for (let i = 0; i < 4; i += 1) {
+        document.execCommand('outdent');
+      }
+      document.execCommand('formatBlock', false, 'p');
     };
 
     switch (action) {
@@ -793,25 +863,110 @@ function ensureContextMenu() {
         break;
       case 'link': {
         const sel = window.getSelection();
-        const focusNode = sel.anchorNode;
+        const selectedText = sel ? sel.toString() : '';
+        const focusNode = sel?.anchorNode;
         const anchor = focusNode ? focusNode.parentElement?.closest('a') : null;
         const currentHref = anchor?.getAttribute('href') || '';
-        const url = window.prompt('Ссылка', currentHref);
-        if (!url) break;
-        const safeUrl = url.match(/^[a-z]+:/i) ? url : `https://${url}`;
-        document.execCommand('createLink', false, safeUrl);
-        const newAnchor = sel.anchorNode?.parentElement?.closest('a');
-        if (newAnchor) {
-          newAnchor.setAttribute('target', '_blank');
-          newAnchor.setAttribute('rel', 'noopener noreferrer');
+        const promptResult = await showLinkPrompt({
+          title: 'Ссылка',
+          textLabel: 'Текст',
+          urlLabel: 'Ссылка',
+          defaultText: selectedText || anchor?.textContent || '',
+          defaultUrl: currentHref,
+          confirmText: 'Вставить',
+          cancelText: 'Отмена',
+        });
+        logDebug('link action: prompt result', {
+          hasResult: Boolean(promptResult),
+          url: promptResult?.url,
+          text: promptResult?.text,
+        });
+        if (!promptResult || !promptResult.url) break;
+        const safeUrl = promptResult.url.match(/^[a-z]+:/i) ? promptResult.url : `https://${promptResult.url}`;
+        const label = promptResult.text?.trim() || safeUrl;
+        restoreSelection();
+        const target = resolveTarget();
+        logDebug('link action: target', {
+          targetExists: Boolean(target),
+          inDom: Boolean(target && document.contains(target)),
+          className: target?.className,
+        });
+        if (!target || !document.contains(target)) break;
+        const selection = window.getSelection();
+        let range = null;
+        if (richContextRange && target.contains(richContextRange.commonAncestorContainer)) {
+          range = richContextRange.cloneRange();
+        } else if (selection && selection.rangeCount > 0 && target.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+          range = selection.getRangeAt(0).cloneRange();
+        }
+        if (!range) {
+          range = document.createRange();
+          range.selectNodeContents(target);
+          range.collapse(false);
+        }
+        logDebug('link action: range chosen', {
+          usedSelectionRange: Boolean(selection && selection.rangeCount > 0 && target.contains(selection.getRangeAt(0).commonAncestorContainer)),
+          usedStoredRange: Boolean(richContextRange && target.contains(richContextRange.commonAncestorContainer)),
+          selectionRangeCollapsed: Boolean(selection && selection.rangeCount > 0 && selection.getRangeAt(0).collapsed),
+          rangeStartNode: range?.startContainer?.nodeName,
+          rangeOffset: range?.startOffset,
+          labelLength: (label || '').length,
+          url: safeUrl,
+        });
+
+        const linkNode = document.createElement('a');
+        linkNode.href = safeUrl;
+        linkNode.target = '_blank';
+        linkNode.rel = 'noopener noreferrer';
+        linkNode.textContent = label;
+
+        range.deleteContents();
+        range.insertNode(linkNode);
+        range.setStartAfter(linkNode);
+        range.setEndAfter(linkNode);
+        logDebug('link action: inserted link', {
+          outerHTML: linkNode.outerHTML,
+          parentClass: linkNode.parentElement?.className,
+          targetInner: target.innerHTML.slice(0, 120),
+        });
+
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        target.focus({ preventScroll: true });
+        target.classList.remove('block-body--empty');
+        break;
+      }
+      case 'unlink': {
+        const target = resolveTarget();
+        logDebug('unlink action: target', {
+          targetExists: Boolean(target),
+          inDom: Boolean(target && document.contains(target)),
+          className: target?.className,
+        });
+        if (!target || !document.contains(target)) break;
+        const selection = window.getSelection();
+        let anchor = null;
+        if (selection && selection.rangeCount > 0) {
+          const node = selection.getRangeAt(0).commonAncestorContainer;
+          anchor = node?.parentElement?.closest('a') || node?.closest?.('a');
+        }
+        if (!anchor && richContextRange) {
+          const node = richContextRange.commonAncestorContainer;
+          anchor = node?.parentElement?.closest('a') || node?.closest?.('a');
+        }
+        if (!anchor) anchor = target.querySelector('a');
+        if (anchor) {
+          const textNode = document.createTextNode(anchor.textContent || '');
+          anchor.replaceWith(textNode);
+        } else {
+          document.execCommand('unlink');
         }
         break;
       }
-      case 'unlink':
-        document.execCommand('unlink');
-        break;
       case 'remove-format':
-        document.execCommand('removeFormat');
+        clearAllFormatting();
         break;
       case 'insert-article-link':
         applyInsertArticleLink().finally(() => {
@@ -846,6 +1001,8 @@ function ensureContextMenu() {
 
 function showContextMenu(event) {
   const menu = ensureContextMenu();
+  menu.classList.remove('hidden');
+  menu.style.visibility = 'hidden';
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
     richContextRange = sel.getRangeAt(0).cloneRange();
@@ -853,14 +1010,26 @@ function showContextMenu(event) {
     richContextRange = null;
   }
   const rect = menu.getBoundingClientRect();
-  const safeX = Math.min(event.clientX, window.innerWidth - rect.width - 10);
-  const safeY = Math.min(event.clientY, window.innerHeight - rect.height - 10);
+  const pointerOffset = 22;
+  const horizontalPadding = 12;
+  let targetX = event.clientX + 14;
+  let targetY = event.clientY + pointerOffset;
+
+  if (targetY + rect.height + horizontalPadding > window.innerHeight) {
+    targetY = Math.max(horizontalPadding, event.clientY - rect.height - pointerOffset);
+  }
+
+  const safeX = Math.min(Math.max(targetX, horizontalPadding), window.innerWidth - rect.width - horizontalPadding);
+  const safeY = Math.min(Math.max(targetY, horizontalPadding), window.innerHeight - rect.height - horizontalPadding);
   menu.style.left = `${safeX}px`;
   menu.style.top = `${safeY}px`;
-  menu.classList.remove('hidden');
+  menu.style.visibility = 'visible';
 }
 
 function attachContextMenu(element, blockId) {
+  element.addEventListener('focusin', () => {
+    richLastActiveEditable = element;
+  });
   element.addEventListener('contextmenu', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     event.preventDefault();
@@ -879,3 +1048,9 @@ export async function ensureBlockVisible(blockId) {
       await setCollapseState(ancestor.id, false);
     }
   }
+
+
+
+
+
+
