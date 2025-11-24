@@ -6,12 +6,14 @@ from datetime import datetime
 from pathlib import Path, PurePath
 from typing import Any
 from uuid import uuid4
+from io import BytesIO
 
 import aiofiles
 from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
+from PIL import Image
 
 from .data_store import (
     ArticleNotFound,
@@ -241,24 +243,50 @@ def post_restore_article(article_id: str):
     return article
 
 
+
 @app.post('/api/uploads')
 async def upload_file(file: UploadFile = File(...)):
     if not file.content_type or not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail='Доступны только изображения')
+        raise HTTPException(status_code=400, detail='Ошибка формата: нужен image/*')
     now = datetime.utcnow()
-    target_dir = UPLOADS_DIR / str(now.year) / f'{now.month:02}'
+    target_dir = UPLOADS_DIR / str(now.year) / f"{now.month:02}"
     target_dir.mkdir(parents=True, exist_ok=True)
-    filename = f'{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{Path(file.filename).suffix or ".bin"}'
+    filename = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}.webp"
     dest = target_dir / filename
+
+    buffer = BytesIO()
     size = 0
+    while chunk := await file.read(1024 * 256):
+        size += len(chunk)
+        if size > 20 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail='Размер файла превышает лимит')
+        buffer.write(chunk)
+    buffer.seek(0)
+
+    try:
+        img = Image.open(buffer)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail='Не удалось прочитать изображение') from exc
+
+    max_width = 1920
+    if img.width > max_width:
+        new_height = int(img.height * max_width / img.width)
+        img = img.resize((max_width, max(new_height, 1)), Image.Resampling.LANCZOS)
+
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGBA')
+    else:
+        img = img.convert('RGB')
+
+    out_buf = BytesIO()
+    img.save(out_buf, 'WEBP', quality=85, method=6)
+    out_bytes = out_buf.getvalue()
+
     async with aiofiles.open(dest, 'wb') as out_file:
-        while chunk := await file.read(1024 * 256):
-            size += len(chunk)
-            if size > 5 * 1024 * 1024:
-                dest.unlink(missing_ok=True)
-                raise HTTPException(status_code=400, detail='Файл слишком большой')
-            await out_file.write(chunk)
-    return {'url': f'/uploads/{dest.relative_to(UPLOADS_DIR).as_posix()}'}
+        await out_file.write(out_bytes)
+
+    return {'url': f"/uploads/{dest.relative_to(UPLOADS_DIR).as_posix()}"}
+
 
 
 @app.post('/api/articles/{article_id}/attachments')

@@ -3,3 +3,4 @@ uvicorn[standard]==0.24.0
 pymorphy2==0.9.1
 aiofiles==25.1.0
 python-multipart==0.0.6
+Pillow==10.4.0
