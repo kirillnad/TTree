@@ -19,6 +19,8 @@ export const refs = {
   sidebarToggle: document.getElementById('sidebarToggle'),
   sidebarArticleList: document.getElementById('sidebarArticleList'),
   sidebarNewArticleBtn: document.getElementById('sidebarNewArticleBtn'),
+  openInboxBtn: document.getElementById('openInboxBtn'),
+  quickNoteAddBtn: document.getElementById('quickNoteAddBtn'),
   articleFilterInput: document.getElementById('articleFilterInput'),
   trashTabBtn: document.getElementById('trashTabBtn'),
   articlesTabBtn: document.getElementById('articlesTabBtn'),

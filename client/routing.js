@@ -15,7 +15,7 @@ export function navigate(path) {
 }
 
 export function route(pathname) {
-  const match = pathname.match(/^\/article\/([0-9a-fA-F-]+)/);
+  const match = pathname.match(/^\/article\/([0-9a-zA-Z-]+)/);
   if (match) {
     loadArticleView(match[1]);
     return;

@@ -176,6 +176,24 @@ html {
   margin-top: 0.6rem;
 }
 
+.quick-notes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.quick-notes-row .round {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
 .sidebar-header__top {
   display: flex;
   align-items: center;
@@ -728,7 +746,7 @@ button:hover {
 
 .block.block--no-title {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 0.5rem;
   padding-top: 0.3rem;
@@ -739,7 +757,7 @@ button:hover {
   margin: 0;
   display: flex !important;
   align-items: center;
-  grid-column: 1;
+  grid-column: 2;
 }
 
 .block-header.block-header--no-title {
@@ -751,7 +769,7 @@ button:hover {
 }
 
 .block.block--no-title .block-text {
-  grid-column: 2;
+  grid-column: 1;
   align-self: center;
   margin-top: 0;
 }
@@ -983,6 +1001,14 @@ button:hover {
 .block-header + .block-text {
   margin-top: 0;
   width: 100%;
+}
+
+.block-header .move-block-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
 }
 
 .collapse-btn {

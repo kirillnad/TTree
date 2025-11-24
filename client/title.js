@@ -126,6 +126,10 @@ export async function handleDeleteArticle(event) {
   if (event) event.stopPropagation();
   closeArticleMenu();
   if (!state.articleId) return;
+  if (state.articleId === 'inbox') {
+    showToast('Статью Inbox нельзя удалить');
+    return;
+  }
   const isPermanent = Boolean(state.article?.deletedAt || state.isTrashView);
   let confirmed = false;
   try {

@@ -23,6 +23,7 @@ from .data_store import (
     delete_block,
     delete_article,
     ensure_sample_article,
+    ensure_inbox_article,
     indent_block,
     insert_block,
     move_block,
@@ -32,6 +33,7 @@ from .data_store import (
     restore_block,
     search_blocks,
     search_everything,
+    move_block_to_article,
     undo_block_text_change,
     update_article_meta,
     update_block,
@@ -61,6 +63,7 @@ ALLOWED_ATTACHMENT_TYPES = {
 }
 
 ensure_sample_article()
+ensure_inbox_article()
 rebuild_search_indexes()
 
 app = FastAPI()
@@ -340,6 +343,16 @@ def post_restore(article_id: str, payload: dict[str, Any]):
     index = payload.get('index')
     try:
         return restore_block(article_id, parent_id, index, block)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/move-to/{target_article_id}')
+def post_move_to(article_id: str, block_id: str, target_article_id: str):
+    try:
+        return move_block_to_article(article_id, block_id, target_article_id)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:

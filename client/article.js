@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi } from './api.js';
+import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi, apiRequest } from './api.js';
 import { clearPendingTextPreview, hydrateUndoRedoFromArticle } from './undo.js';
 import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode } from './sidebar.js';
 import {
@@ -64,6 +64,46 @@ export async function loadArticle(id, options = {}) {
   return article;
 }
 
+async function moveBlockFromInbox(blockId) {
+  try {
+    const list = state.articlesIndex.length ? state.articlesIndex : await fetchArticlesIndex();
+    const allowed = list.filter((item) => item.id !== 'inbox');
+    const suggestions = allowed.map((item) => ({ id: item.id, title: item.title || 'Без названия' }));
+    const result = await showPrompt({
+      title: 'Перенести в статью',
+      message: 'Введите ID или выберите статью',
+      confirmText: 'Перенести',
+      cancelText: 'Отмена',
+      suggestions,
+      returnMeta: true,
+      hideConfirm: false,
+    });
+    const inputValue = result?.selectedId || (typeof result === 'object' ? result?.value : result) || '';
+    const trimmed = (inputValue || '').trim();
+    if (!trimmed) return;
+
+    const trimmedLc = trimmed.toLowerCase();
+    const matched = allowed.find(
+      (item) =>
+        (item.id && item.id.toLowerCase() === trimmedLc) ||
+        ((item.title || '').toLowerCase() === trimmedLc),
+    );
+    const targetId = matched ? matched.id : trimmed;
+
+    if (!targetId || targetId === 'inbox') {
+      showToast('Статья не найдена');
+      return;
+    }
+
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move-to/${targetId}`, { method: 'POST' });
+    await loadArticle('inbox', { resetUndoStacks: true });
+    renderArticle();
+    showToast('Блок перенесён');
+  } catch (error) {
+    showToast(error.message || 'Не удалось перенести блок');
+  }
+}
+
 export async function loadArticleView(id) {
   await ensureArticlesIndexLoaded();
   setViewMode(true);
@@ -107,6 +147,7 @@ export function renderArticle() {
   const article = state.article;
   if (!article) return;
   renderSidebarArticleList();
+  const rootBlocks = article.id === 'inbox' ? [...(article.blocks || [])].reverse() : article.blocks;
 
   const titleText = article.title || 'Без названия';
   refs.articleTitle.textContent = titleText;
@@ -119,6 +160,9 @@ export function renderArticle() {
   }
   if (refs.editTitleBtn) {
     refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
+  }
+  if (refs.deleteArticleBtn) {
+    refs.deleteArticleBtn.classList.toggle('hidden', article.id === 'inbox');
   }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
@@ -228,6 +272,18 @@ export function renderArticle() {
           titleEl.innerHTML = sections.titleHtml;
           header.appendChild(titleEl);
         }
+        if (state.articleId === 'inbox') {
+          const moveBtn = document.createElement('button');
+          moveBtn.type = 'button';
+          moveBtn.className = 'ghost small move-block-btn';
+          moveBtn.innerHTML = '&#10140;';
+          moveBtn.title = 'Перенести блок в другую статью';
+          moveBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moveBlockFromInbox(block.id);
+          });
+          header.appendChild(moveBtn);
+        }
       }
 
       if (header) blockEl.appendChild(header);
@@ -257,7 +313,7 @@ export function renderArticle() {
     }
   };
 
-  renderBlocks(article.blocks, refs.blocksContainer).then(() => {
+  renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
     applyPendingPreviewMarkup();
     if (state.scrollTargetBlockId) {
       const targetId = state.scrollTargetBlockId;
@@ -319,6 +375,40 @@ export async function createArticle() {
   } finally {
     if (refs.createArticleBtn) refs.createArticleBtn.disabled = false;
     if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = false;
+  }
+}
+
+export async function openInboxArticle() {
+  navigate(routing.article('inbox'));
+  await loadArticleView('inbox');
+}
+
+export async function createInboxNote() {
+  try {
+    await loadArticle('inbox', { resetUndoStacks: true });
+    const blocks = state.article?.blocks || [];
+    const anchorId = blocks.length ? blocks[blocks.length - 1].id : null;
+    let newBlockId = null;
+    if (anchorId) {
+      const res = await apiRequest(`/api/articles/inbox/blocks/${anchorId}/siblings`, {
+        method: 'POST',
+        body: JSON.stringify({ direction: 'after' }),
+      });
+      newBlockId = res?.block?.id || null;
+    }
+    if (!newBlockId) {
+      showToast('Не удалось создать заметку');
+      return;
+    }
+    state.pendingEditBlockId = newBlockId;
+    state.scrollTargetBlockId = newBlockId;
+    state.mode = 'edit';
+    state.editingBlockId = newBlockId;
+    navigate(routing.article('inbox'));
+    await loadArticle('inbox', { desiredBlockId: newBlockId, editBlockId: newBlockId });
+    renderArticle();
+  } catch (error) {
+    showToast(error.message || 'Не удалось создать заметку');
   }
 }
 

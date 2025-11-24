@@ -138,7 +138,11 @@ export function renderSidebarArticleList() {
       if (fa !== fb) return fa ? -1 : 1;
       return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
     })
-    .filter((article) => (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)));
+    .filter(
+      (article) =>
+        (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
+        (!state.isTrashView ? article.id !== 'inbox' : true),
+    );
   if (!filtered.length) {
     const empty = document.createElement('li');
     empty.className = 'sidebar-article-empty';
@@ -187,7 +191,11 @@ export function renderMainArticleList(articles = null) {
       if (fa !== fb) return fa ? -1 : 1;
       return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
     })
-    .filter((article) => (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)))
+    .filter(
+      (article) =>
+        (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
+        (!state.isTrashView ? article.id !== 'inbox' : true),
+    )
     .forEach((article) => {
       const item = document.createElement('li');
       if (state.isTrashView) {

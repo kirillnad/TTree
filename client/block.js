@@ -6,6 +6,7 @@ import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
 import { showPrompt, showImagePreview } from './modal.js';
 import { fetchArticlesIndex } from './api.js';
 import { routing } from './routing.js';
+import { navigate } from './routing.js';
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -596,6 +597,37 @@ export function attachRichContentHandlers(element, blockId) {
     event.preventDefault();
     showImagePreview(img.src, img.alt || '');
   });
+
+  if (state.articleId === 'inbox') {
+    element.addEventListener('click', async (event) => {
+      const moveBtn = event.target?.closest('.move-block-btn');
+      if (!moveBtn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        const list = state.articlesIndex.length ? state.articlesIndex : await fetchArticlesIndex();
+        const suggestions = list
+          .filter((item) => item.id !== 'inbox')
+          .map((item) => ({ id: item.id, title: item.title || 'Без названия' }));
+        const result = await showPrompt({
+          title: 'Перенести в статью',
+          message: 'Введите ID или выберите статью',
+          confirmText: 'Перенести',
+          cancelText: 'Отмена',
+          suggestions,
+          returnMeta: true,
+          hideConfirm: false,
+        });
+        const targetId = result?.selectedId || (typeof result === 'object' ? result?.value : result) || '';
+        const trimmed = (targetId || '').trim();
+        if (!trimmed) return;
+        await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move-to/${trimmed}`, { method: 'POST' });
+        navigate(routing.article('inbox'));
+      } catch (error) {
+        showToast(error.message || 'Не удалось перенести блок');
+      }
+    });
+  }
 
   element.addEventListener('dragover', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;

@@ -8,7 +8,7 @@ import { handleSearchInput, hideSearchResults, renderSearchResults } from './sea
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import { toggleHintPopover, hideHintPopover, setTrashMode } from './sidebar.js';
 import { toggleSidebarCollapsed, handleArticleFilterInput } from './sidebar.js';
-import { createArticle } from './article.js';
+import { createArticle, openInboxArticle, createInboxNote } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 
@@ -182,6 +182,16 @@ export function attachEvents() {
   }
   if (refs.sidebarNewArticleBtn) {
     refs.sidebarNewArticleBtn.addEventListener('click', createArticle);
+  }
+  if (refs.openInboxBtn) {
+    refs.openInboxBtn.addEventListener('click', () => {
+      openInboxArticle();
+    });
+  }
+  if (refs.quickNoteAddBtn) {
+    refs.quickNoteAddBtn.addEventListener('click', () => {
+      createInboxNote();
+    });
   }
   refs.backToList.addEventListener('click', () => navigate(routing.list));
   if (refs.searchInput) {

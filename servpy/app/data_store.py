@@ -322,6 +322,23 @@ def ensure_sample_article():
     save_article(article)
 
 
+def ensure_inbox_article():
+    existing = CONN.execute('SELECT 1 FROM articles WHERE id = ?', ('inbox',)).fetchone()
+    if existing:
+        return
+    now = iso_now()
+    inbox_article = {
+        'id': 'inbox',
+        'title': 'Inbox',
+        'createdAt': now,
+        'updatedAt': now,
+        'blocks': [create_default_block()],
+        'history': [],
+        'redoHistory': [],
+    }
+    save_article(inbox_article)
+
+
 def create_article(title: Optional[str] = None) -> Dict[str, Any]:
     now = iso_now()
     article = {
@@ -712,6 +729,33 @@ def restore_block(article_id: str, parent_id: Optional[str], index: Optional[int
     with CONN:
         CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
     return {'block': inserted, 'parentId': parent_id or None, 'index': insertion}
+
+
+def move_block_to_article(src_article_id: str, block_id: str, target_article_id: str) -> Optional[Dict[str, Any]]:
+    if src_article_id == target_article_id:
+        raise InvalidOperation('Source and target article are the same')
+    src_article = get_article(src_article_id)
+    target_article = get_article(target_article_id)
+    if not src_article:
+        raise ArticleNotFound(f'Article {src_article_id} not found')
+    if not target_article:
+        raise ArticleNotFound(f'Article {target_article_id} not found')
+    located = find_block_recursive(src_article['blocks'], block_id)
+    if not located:
+        raise BlockNotFound(f'Block {block_id} not found')
+    # keep id, move entire subtree
+    # remove from source
+    removed = delete_block(src_article_id, block_id)
+    if not removed or not removed.get('block'):
+        raise BlockNotFound(f'Block {block_id} not found')
+    payload = removed['block']
+    # insert into target as last root child
+    siblings = _fetch_siblings(target_article_id, None)
+    insertion = len(siblings)
+    inserted = _insert_block_tree(target_article_id, payload, None, insertion, iso_now())
+    with CONN:
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (iso_now(), target_article_id))
+    return {'block': inserted, 'targetArticleId': target_article_id, 'index': insertion}
 
 
 def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
