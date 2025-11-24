@@ -10,6 +10,7 @@ import { toggleHintPopover, hideHintPopover, setTrashMode } from './sidebar.js';
 import { toggleSidebarCollapsed, handleArticleFilterInput } from './sidebar.js';
 import { createArticle } from './article.js';
 import { navigate, routing } from './routing.js';
+import { exportCurrentArticleAsHtml } from './exporter.js';
 
 function handleViewKey(event) {
   if (!state.article) return;
@@ -200,6 +201,13 @@ export function attachEvents() {
   }
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);
+  }
+  if (refs.exportArticleBtn) {
+    refs.exportArticleBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      exportCurrentArticleAsHtml();
+    });
   }
   if (refs.deleteArticleBtn) {
     refs.deleteArticleBtn.addEventListener('click', handleDeleteArticle);

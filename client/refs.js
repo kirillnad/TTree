@@ -26,5 +26,6 @@ export const refs = {
   articleMenuBtn: document.getElementById('articleMenuBtn'),
   articleMenu: document.getElementById('articleMenu'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
+  exportArticleBtn: document.getElementById('exportArticleBtn'),
   pasteProgress: document.getElementById('pasteProgress'),
 };

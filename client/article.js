@@ -168,7 +168,7 @@ export function renderArticle() {
       const hasTitle = Boolean(sections.titleHtml);
       const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
       const hasChildren = Boolean(block.children?.length);
-      const canCollapse = hasTitle || hasChildren || hasBodyContent;
+      const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle);
 
       const body = document.createElement('div');
