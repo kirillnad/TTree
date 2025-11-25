@@ -27,6 +27,7 @@ from .data_store import (
     indent_block,
     insert_block,
     move_block,
+    move_block_to_parent,
     outdent_block,
     redo_block_text_change,
     restore_article,
@@ -220,6 +221,20 @@ def post_indent(article_id: str, block_id: str):
 def post_outdent(article_id: str, block_id: str):
     try:
         return outdent_block(article_id, block_id)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post('/api/articles/{article_id}/blocks/{block_id}/relocate')
+def post_relocate(article_id: str, block_id: str, payload: dict[str, Any]):
+    target_parent_id = payload.get('parentId')
+    target_index = payload.get('index')
+    anchor_id = payload.get('anchorId')
+    placement = payload.get('placement')
+    try:
+        return move_block_to_parent(article_id, block_id, target_parent_id, target_index, anchor_id, placement)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:

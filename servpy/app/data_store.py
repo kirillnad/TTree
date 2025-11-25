@@ -731,6 +731,104 @@ def restore_block(article_id: str, parent_id: Optional[str], index: Optional[int
     return {'block': inserted, 'parentId': parent_id or None, 'index': insertion}
 
 
+def move_block_to_parent(
+    article_id: str,
+    block_id: str,
+    target_parent_id: Optional[str],
+    target_index: Optional[int],
+    anchor_id: Optional[str] = None,
+    placement: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    article = get_article(article_id)
+    if not article:
+        raise ArticleNotFound(f'Article {article_id} not found')
+    located = find_block_recursive(article['blocks'], block_id)
+    if not located:
+        raise BlockNotFound(f'Block {block_id} not found')
+
+    # запрет перемещения в себя/потомков
+    def collect_ids(block: Dict[str, Any], acc: set[str]) -> None:
+        acc.add(block['id'])
+        for child in block.get('children') or []:
+            collect_ids(child, acc)
+
+    forbidden: set[str] = set()
+    collect_ids(located['block'], forbidden)
+    if target_parent_id in forbidden:
+        raise InvalidOperation('Cannot move into self or descendant')
+
+    # проверим, что целевой родитель существует (если задан)
+    if target_parent_id:
+        target_parent = find_block_recursive(article['blocks'], target_parent_id)
+        if not target_parent:
+            raise BlockNotFound(f'Target parent {target_parent_id} not found')
+
+    origin_parent_id = located['parent']['id'] if located['parent'] else None
+
+    # строим порядок siblings по текущему дереву, а не по position
+    def build_order_map(blocks: list[Dict[str, Any]], parent_id: Optional[str], mapping: dict[Optional[str], list[str]]):
+        mapping.setdefault(parent_id, [])
+        for child in blocks or []:
+            mapping[parent_id].append(child['id'])
+            build_order_map(child.get('children') or [], child['id'], mapping)
+
+    orders: dict[Optional[str], list[str]] = {}
+    build_order_map(article.get('blocks') or [], None, orders)
+
+    origin_order = list(orders.get(origin_parent_id, []))
+    if block_id not in origin_order:
+        raise BlockNotFound(f'Block {block_id} not found in origin siblings')
+
+    target_order = list(orders.get(target_parent_id, []))
+
+    # если целевой родитель тот же, базовый порядок — origin без блока
+    if target_parent_id == origin_parent_id:
+        target_order = [bid for bid in origin_order if bid != block_id]
+    else:
+        # удаляем блок, если вдруг он уже фигурирует в целевом списке
+        target_order = [bid for bid in target_order if bid != block_id]
+
+    # приоритет: вставка по anchor_id + placement, fallback — по индексу
+    insertion_index = None
+    if anchor_id and anchor_id in target_order:
+        anchor_idx = target_order.index(anchor_id)
+        if placement == 'before':
+            insertion_index = anchor_idx
+        elif placement == 'after':
+            insertion_index = anchor_idx + 1
+        elif placement == 'inside':
+            insertion_index = anchor_idx + 1
+    if insertion_index is None:
+        desired_index = target_index if isinstance(target_index, int) and target_index >= 0 else len(target_order)
+        insertion_index = min(desired_index, len(target_order))
+    target_order.insert(insertion_index, block_id)
+
+    now = iso_now()
+    with CONN:
+        if target_parent_id != origin_parent_id:
+            # сжимаем порядок в исходном родителе
+            origin_compact = [bid for bid in origin_order if bid != block_id]
+            for pos, bid in enumerate(origin_compact):
+                CONN.execute(
+                    'UPDATE blocks SET position = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+                    (pos, now, bid, article_id),
+                )
+
+        # выставляем порядок в целевом родителе
+        for pos, bid in enumerate(target_order):
+            CONN.execute(
+                'UPDATE blocks SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+                (target_parent_id, pos, now, bid, article_id),
+            )
+        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+
+    return {
+        'block': {'id': block_id},
+        'parentId': target_parent_id or None,
+        'index': insertion_index,
+    }
+
+
 def move_block_to_article(src_article_id: str, block_id: str, target_article_id: str) -> Optional[Dict[str, Any]]:
     if src_article_id == target_article_id:
         raise InvalidOperation('Source and target article are the same')

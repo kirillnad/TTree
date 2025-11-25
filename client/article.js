@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
 import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi, apiRequest } from './api.js';
-import { clearPendingTextPreview, hydrateUndoRedoFromArticle } from './undo.js';
+import { clearPendingTextPreview, hydrateUndoRedoFromArticle, moveBlockToParent } from './undo.js';
 import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode } from './sidebar.js';
 import {
   findBlock,
@@ -103,6 +103,218 @@ async function moveBlockFromInbox(blockId) {
   } catch (error) {
     showToast(error.message || 'Не удалось перенести блок');
   }
+}
+
+// ----- Drag and drop for blocks -----
+const DRAG_THRESHOLD_PX = 6;
+const DROP_INDENT_PX = 20;
+let activeDrag = null;
+let dropLineEl = null;
+let dropInsideTarget = null;
+let dragPreviewEl = null;
+
+function collectBlockIds(block, acc = new Set()) {
+  if (!block) return acc;
+  acc.add(block.id);
+  (block.children || []).forEach((child) => collectBlockIds(child, acc));
+  return acc;
+}
+
+function ensureDropLine() {
+  if (dropLineEl) return dropLineEl;
+  const el = document.createElement('div');
+  el.className = 'block-drop-line hidden';
+  document.body.appendChild(el);
+  dropLineEl = el;
+  return el;
+}
+
+function clearDragUi() {
+  if (dropLineEl) dropLineEl.classList.add('hidden');
+  if (dropInsideTarget) {
+    dropInsideTarget.classList.remove('drop-inside-target');
+    dropInsideTarget = null;
+  }
+  if (dragPreviewEl) {
+    dragPreviewEl.remove();
+    dragPreviewEl = null;
+  }
+  document.body.classList.remove('block-dnd-active');
+}
+
+function updateDragPreviewPosition(event) {
+  if (!dragPreviewEl) return;
+  dragPreviewEl.style.left = `${event.clientX + 12}px`;
+  dragPreviewEl.style.top = `${event.clientY + 12}px`;
+}
+
+function createDragPreview(blockId) {
+  const preview = document.createElement('div');
+  preview.className = 'block-drag-preview';
+  const blockEl = refs.blocksContainer?.querySelector(`.block[data-block-id="${blockId}"]`);
+  const titleText = blockEl?.querySelector('.block-title')?.textContent?.trim();
+  const bodyText = blockEl?.querySelector('.block-text')?.textContent?.trim();
+  preview.textContent = titleText || bodyText || 'Блок';
+  document.body.appendChild(preview);
+  dragPreviewEl = preview;
+}
+
+function updateDropIndicator(target) {
+  const line = ensureDropLine();
+  if (!target) {
+    line.classList.add('hidden');
+    if (dropInsideTarget) {
+      dropInsideTarget.classList.remove('drop-inside-target');
+      dropInsideTarget = null;
+    }
+    return;
+  }
+
+  if (target.placement === 'inside') {
+    line.classList.add('hidden');
+    if (dropInsideTarget && dropInsideTarget.dataset.blockId !== target.targetId) {
+      dropInsideTarget.classList.remove('drop-inside-target');
+    }
+    dropInsideTarget = refs.blocksContainer?.querySelector(`.block[data-block-id="${target.targetId}"]`) || null;
+    if (dropInsideTarget) {
+      dropInsideTarget.classList.add('drop-inside-target');
+    }
+    return;
+  }
+
+  if (dropInsideTarget) {
+    dropInsideTarget.classList.remove('drop-inside-target');
+    dropInsideTarget = null;
+  }
+
+  line.classList.remove('hidden');
+  const top = target.placement === 'before' ? target.rect.top : target.rect.top + target.rect.height;
+  const indentPx = Math.min(target.depth * DROP_INDENT_PX, target.rect.width - 32);
+  const left = target.rect.left + indentPx;
+  const width = Math.max(target.rect.width - indentPx, 48);
+  line.style.top = `${top}px`;
+  line.style.left = `${left}px`;
+  line.style.width = `${width}px`;
+}
+
+function computeDropTarget(clientX, clientY) {
+  if (!refs.blocksContainer || !activeDrag) return null;
+  const blocks = Array.from(refs.blocksContainer.querySelectorAll('.block'));
+  const candidates = blocks.filter((el) => {
+    const id = el.dataset.blockId;
+    return id && !activeDrag.forbidden.has(id);
+  });
+  if (!candidates.length) return null;
+
+  let best = null;
+  let bestDistance = Infinity;
+  candidates.forEach((el) => {
+    const rect = el.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    const dist = Math.abs(clientY - centerY);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      best = el;
+    }
+  });
+  if (!best) return null;
+
+  const rect = best.getBoundingClientRect();
+  const ratio = rect.height > 0 ? (clientY - rect.top) / rect.height : 0.5;
+  const placement = ratio < 0.28 ? 'before' : ratio > 0.72 ? 'after' : 'inside';
+  const targetId = best.dataset.blockId;
+  const located = findBlock(targetId);
+  if (!located) return null;
+
+  const depth = (located.ancestors || []).length;
+  const parentId = placement === 'inside' ? targetId : located.parent?.id || null;
+  if (activeDrag.forbidden.has(parentId || '')) return null;
+
+  return {
+    targetId,
+    placement,
+    parentId,
+    index: placement === 'after' ? located.index + 1 : located.index,
+    depth: placement === 'inside' ? depth + 1 : depth,
+    rect,
+  };
+}
+
+function autoScrollDuringDrag(event) {
+  if (!refs.blocksContainer) return;
+  const rect = refs.blocksContainer.getBoundingClientRect();
+  const threshold = 60;
+  if (event.clientY < rect.top + threshold) {
+    refs.blocksContainer.scrollTop -= 12;
+  } else if (event.clientY > rect.bottom - threshold) {
+    refs.blocksContainer.scrollTop += 12;
+  }
+}
+
+function handlePointerMove(event) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  const dx = event.clientX - activeDrag.startX;
+  const dy = event.clientY - activeDrag.startY;
+  if (!activeDrag.dragging) {
+    if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    activeDrag.dragging = true;
+    document.body.classList.add('block-dnd-active');
+    createDragPreview(activeDrag.blockId);
+  }
+  event.preventDefault();
+  updateDragPreviewPosition(event);
+  const dropTarget = computeDropTarget(event.clientX, event.clientY);
+  activeDrag.lastDrop = dropTarget;
+  updateDropIndicator(dropTarget);
+  autoScrollDuringDrag(event);
+}
+
+async function handlePointerUp(event) {
+  if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  window.removeEventListener('pointermove', handlePointerMove);
+  window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerUp);
+
+  const shouldMove = activeDrag.dragging && activeDrag.lastDrop;
+  const dropTarget = activeDrag.lastDrop;
+  const blockId = activeDrag.blockId;
+
+  activeDrag = null;
+  clearDragUi();
+
+  if (!shouldMove || !dropTarget) return;
+
+  await moveBlockToParent(blockId, dropTarget.parentId || null, dropTarget.index, {
+    anchorId: dropTarget.targetId,
+    placement: dropTarget.placement,
+  });
+}
+
+function attachBlockDragHandle(handle, blockId) {
+  handle.addEventListener('pointerdown', (event) => {
+    if (state.mode !== 'view') return;
+    if (state.articleId === 'inbox') return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const located = findBlock(blockId);
+    if (!located) return;
+
+    activeDrag = {
+      blockId,
+      pointerId: event.pointerId,
+      originParentId: located.parent?.id || null,
+      originIndex: located.index ?? 0,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      forbidden: collectBlockIds(located.block),
+      lastDrop: null,
+    };
+
+    handle.setPointerCapture(event.pointerId);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+  });
 }
 
 export async function loadArticleView(id) {
@@ -262,24 +474,35 @@ export function renderArticle() {
         if (!hasTitle) {
           header.classList.add('block-header--no-title');
         }
+        const headerLeft = document.createElement('div');
+        headerLeft.className = 'block-header__left';
         if (canCollapse) {
           const collapseBtn = document.createElement('button');
           collapseBtn.className = 'collapse-btn';
-          collapseBtn.textContent = block.collapsed ? '+' : '−';
+          collapseBtn.textContent = block.collapsed ? '+' : '-';
           collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
           collapseBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             toggleCollapse(block.id);
           });
-          header.appendChild(collapseBtn);
+          headerLeft.appendChild(collapseBtn);
         }
 
         if (hasTitle) {
           const titleEl = document.createElement('div');
           titleEl.className = 'block-title';
           titleEl.innerHTML = sections.titleHtml;
-          header.appendChild(titleEl);
+          titleEl.style.flex = '1';
+          titleEl.style.minWidth = '0';
+          headerLeft.appendChild(titleEl);
+        } else {
+          const spacer = document.createElement('div');
+          spacer.className = 'block-title-spacer';
+          spacer.style.flex = '1';
+          spacer.style.minWidth = '0';
+          headerLeft.appendChild(spacer);
         }
+
         if (state.articleId === 'inbox') {
           const moveBtn = document.createElement('button');
           moveBtn.type = 'button';
@@ -290,7 +513,20 @@ export function renderArticle() {
             event.stopPropagation();
             moveBlockFromInbox(block.id);
           });
-          header.appendChild(moveBtn);
+          headerLeft.appendChild(moveBtn);
+        }
+
+        header.appendChild(headerLeft);
+
+        if (state.articleId !== 'inbox') {
+          const dragHandle = document.createElement('button');
+          dragHandle.type = 'button';
+          dragHandle.className = 'drag-handle';
+          dragHandle.title = 'Перетащить блок';
+          dragHandle.setAttribute('aria-label', 'Перетащить блок');
+          dragHandle.innerHTML = '&#8942;';
+          attachBlockDragHandle(dragHandle, block.id);
+          header.appendChild(dragHandle);
         }
       }
 

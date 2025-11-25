@@ -225,6 +225,16 @@ function invertStructureAction(action) {
       direction: action.direction === 'up' ? 'down' : 'up',
     };
   }
+  if (action.kind === 'reorder') {
+    return {
+      kind: 'reorder',
+      blockId: action.blockId,
+      fromParentId: action.toParentId ?? null,
+      fromIndex: action.toIndex ?? null,
+      toParentId: action.fromParentId ?? null,
+      toIndex: action.fromIndex ?? null,
+    };
+  }
   if (action.kind === 'indent') {
     return { kind: 'outdent', blockId: action.blockId };
   }
@@ -253,6 +263,11 @@ async function executeStructureAction(action, options = {}) {
   logDebug('executeStructureAction start', action);
   if (action.kind === 'move') {
     success = await moveBlock(action.blockId, action.direction, { skipRecord });
+  } else if (action.kind === 'reorder') {
+    const result = await moveBlockToParent(action.blockId, action.toParentId ?? null, action.toIndex ?? null, {
+      skipRecord: true,
+    });
+    success = result.success;
   } else if (action.kind === 'indent') {
     success = await indentBlock(action.blockId, { skipRecord });
   } else if (action.kind === 'outdent') {
@@ -493,6 +508,76 @@ export async function moveBlock(blockId, direction, options = {}) {
 
 export function moveCurrentBlock(direction) {
   return moveBlock(state.currentBlockId, direction);
+}
+
+export async function moveBlockToParent(blockId, targetParentId = null, targetIndex = null, options = {}) {
+  if (!blockId) return { success: false };
+  const { skipRecord = false, anchorId = null, placement = null } = options;
+  const located = findBlock(blockId);
+  if (!located) {
+    showToast('Блок не найден');
+    return { success: false };
+  }
+  const originParentId = located.parent?.id || null;
+  const originIndex = located.index ?? 0;
+
+  const targetParent = targetParentId ? findBlock(targetParentId)?.block : null;
+  const targetChildrenCount = targetParent
+    ? targetParent.children?.length || 0
+    : (state.article?.blocks || []).length;
+
+  const desiredIndex =
+    typeof targetIndex === 'number' && targetIndex >= 0 ? Math.min(targetIndex, targetChildrenCount) : targetChildrenCount;
+
+  if (originParentId === targetParentId && originIndex === desiredIndex) {
+    return {
+      success: true,
+      noOp: true,
+      from: { parentId: originParentId, index: originIndex },
+      to: { parentId: targetParentId, index: desiredIndex },
+    };
+  }
+
+  let insertionIndex = desiredIndex;
+  if (targetParentId === originParentId && originIndex < insertionIndex) {
+    insertionIndex = Math.max(insertionIndex - 1, 0);
+  }
+
+  try {
+    const moveResult = await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/relocate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        parentId: targetParentId || null,
+        index: insertionIndex,
+        anchorId: anchorId || null,
+        placement: placement || null,
+      }),
+    });
+    await loadArticle(state.articleId, { desiredBlockId: blockId });
+    renderArticle();
+    if (!skipRecord) {
+      pushUndoEntry({
+        type: 'structure',
+        action: {
+          kind: 'reorder',
+          blockId,
+          fromParentId: originParentId,
+          fromIndex: originIndex,
+          toParentId: moveResult?.parentId ?? targetParentId ?? null,
+          toIndex: moveResult?.index ?? insertionIndex,
+        },
+      });
+    }
+    await focusBlock(blockId);
+    return {
+      success: true,
+      from: { parentId: originParentId, index: originIndex },
+      to: { parentId: moveResult?.parentId ?? targetParentId ?? null, index: moveResult?.index ?? insertionIndex },
+    };
+  } catch (error) {
+    showToast(error.message);
+    return { success: false };
+  }
 }
 
 export async function indentBlock(blockId, options = {}) {
