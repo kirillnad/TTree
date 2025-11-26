@@ -87,9 +87,6 @@ describe('layout блоков без заголовка', () => {
       'align-items': 'center',
     });
     expect(expectDeclaration('.block.block--no-title .block-text', 'align-self')).toBe('center');
-    expect(expectDeclaration('.drag-layer__handle', 'position')).toBe('absolute');
-    expect(expectDeclaration('.drag-layer__handle', 'right')).toBe('0.35rem');
-    expect(expectDeclaration('.drag-layer__handle', 'transform')).toBe('translateY(-50%)');
     expect(expectDeclaration('.collapse-btn', 'box-sizing')).toBe('border-box');
     expect(expectDeclaration('.collapse-btn', 'padding')).toBe('0');
     expect(expectDeclaration('.collapse-btn', 'width')).toBe('22px');

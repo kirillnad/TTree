@@ -352,8 +352,13 @@ function refreshDragHandlePositions() {
   const scrollTop = container.scrollTop;
   dragHandleEntries.forEach(({ handle, blockEl }) => {
     const rect = blockEl.getBoundingClientRect();
-    const top = rect.top - containerRect.top + scrollTop + rect.height / 2;
+    const header = blockEl.querySelector('.block-header');
+    const headerRect = header?.getBoundingClientRect();
+    const top = headerRect
+      ? headerRect.top - containerRect.top + scrollTop + headerRect.height / 2
+      : rect.top - containerRect.top + scrollTop + rect.height / 2;
     handle.style.top = `${top}px`;
+    handle.style.right = '8px';
   });
 }
 
@@ -733,4 +738,3 @@ export async function createInboxNote() {
     showToast(error.message || 'Не удалось создать заметку');
   }
 }
-

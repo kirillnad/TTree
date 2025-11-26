@@ -661,6 +661,7 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  position: relative;
 }
 
 .block {
@@ -792,8 +793,9 @@ button:hover {
 
 .block.block--no-title .block-children {
   grid-area: children;
-  margin-left: 0;
-  padding-left: 1rem;
+  margin-left: -1.25rem;
+  width: calc(100% + 1.25rem);
+  padding-left: 1.25rem;
 }
 
 .block.editing.block--no-title {
@@ -1072,11 +1074,14 @@ button:hover {
 }
 
 .block-children {
-  margin-left: 1.25rem;
+  position: relative;
+  margin-left: -1.25rem;
+  width: calc(100% + 1.25rem);
+  padding-left: 1.25rem;
   border-left: 2px dashed #e0e7ff;
-  padding-left: 1rem;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   /* gap: 0.35rem; */
   /* margin-top: 0.35rem; */
 }
@@ -1145,6 +1150,18 @@ button:hover {
 }
 .block-drop-line.hidden {
   display: none;
+}
+.drag-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.drag-layer__handle {
+  position: absolute;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  pointer-events: auto;
 }
 .block-drag-preview {
   position: fixed;

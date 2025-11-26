@@ -8,75 +8,39 @@
   },
   "handles": [
     {
-      "blockId": "fdfc39ab-2844-441f-91d9-e790b887f0f3",
-      "text": "Дочерний элемент",
-      "absolute": {
-        "left": 1270.40625,
-        "right": 1304.40625,
-        "top": 136.140625,
-        "bottom": 164.140625,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 880.40625,
-        "right": 914.40625,
-        "top": 28.78125,
-        "bottom": 56.78125
-      }
-    },
-    {
-      "blockId": "5bf4fbdb-029c-4534-aa82-57b57eac4f4f",
-      "text": "Глубоко вложенный блок",
-      "absolute": {
-        "left": 1270.40625,
-        "right": 1304.40625,
-        "top": 194.3125,
-        "bottom": 222.3125,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 880.40625,
-        "right": 914.40625,
-        "top": 86.953125,
-        "bottom": 114.953125
-      }
-    },
-    {
-      "blockId": "f2aee41e-1740-45fd-aaee-a1adbf6d26aa",
-      "text": "Развивающая ветка",
-      "absolute": {
-        "left": 1270.40625,
-        "right": 1304.40625,
-        "top": 182.3125,
-        "bottom": 210.3125,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 880.40625,
-        "right": 914.40625,
-        "top": 74.953125,
-        "bottom": 102.953125
-      }
-    },
-    {
       "blockId": "5cb0dcbf-769b-4f27-a1ec-fa68b32c6bab",
-      "text": "Примерный узел",
+      "text": "1",
       "absolute": {
-        "left": 1270.40625,
-        "right": 1304.40625,
-        "top": 154.921875,
-        "bottom": 182.921875,
+        "left": 1268,
+        "right": 1302,
+        "top": 113.84375,
+        "bottom": 141.84375,
         "width": 34,
         "height": 28
       },
       "relativeToContainer": {
-        "left": 880.40625,
-        "right": 914.40625,
-        "top": 47.5625,
-        "bottom": 75.5625
+        "left": 878,
+        "right": 912,
+        "top": 6.484375,
+        "bottom": 34.484375
+      }
+    },
+    {
+      "blockId": "08e0b81c-83fa-4587-a02e-d369eb86a31b",
+      "text": "456",
+      "absolute": {
+        "left": 1268,
+        "right": 1302,
+        "top": 166,
+        "bottom": 194,
+        "width": 34,
+        "height": 28
+      },
+      "relativeToContainer": {
+        "left": 878,
+        "right": 912,
+        "top": 58.640625,
+        "bottom": 86.640625
       }
     }
   ]
