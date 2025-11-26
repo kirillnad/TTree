@@ -23,7 +23,7 @@ export function htmlToPlainText(html = '') {
 }
 
 export function htmlToLines(html = '') {
-  const normalized = (html || '').replace(/<br\s*\/?/gi, '\n').replace(/<\/(?:div|p|li|h[1-6])>/gi, '\n');
+  const normalized = (html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:div|p|li|h[1-6])>/gi, '\n');
   const template = document.createElement('template');
   template.innerHTML = normalized;
   return (template.content.textContent || '').split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter((line) => line.length);
