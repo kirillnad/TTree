@@ -108,6 +108,8 @@ async function moveBlockFromInbox(blockId) {
 // ----- Drag and drop for blocks -----
 const DRAG_THRESHOLD_PX = 6;
 const DROP_INDENT_PX = 20;
+const DROP_BEFORE_THRESHOLD = 0.35;
+const DROP_AFTER_THRESHOLD = 0.65;
 let activeDrag = null;
 let dropLineEl = null;
 let dropInsideTarget = null;
@@ -224,7 +226,7 @@ function computeDropTarget(clientX, clientY) {
 
   const rect = best.getBoundingClientRect();
   const ratio = rect.height > 0 ? (clientY - rect.top) / rect.height : 0.5;
-  const placement = ratio < 0.28 ? 'before' : ratio > 0.72 ? 'after' : 'inside';
+  const placement = ratio < DROP_BEFORE_THRESHOLD ? 'before' : ratio > DROP_AFTER_THRESHOLD ? 'after' : 'inside';
   const targetId = best.dataset.blockId;
   const located = findBlock(targetId);
   if (!located) return null;
