@@ -1,0 +1,745 @@
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+/home/aadminn/Ttree/TTree/scripts/start_servpy.sh: line 35: /home/aadminn/miniconda3/envs/pg16/bin/python3: No such file or directory
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+/home/aadminn/Ttree/TTree/scripts/start_servpy.sh: line 35: /home/aadminn/miniconda3/envs/pg16/bin/python3: No such file or directory
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+/home/aadminn/Ttree/TTree/scripts/start_servpy.sh: line 35: /home/aadminn/miniconda3/envs/pg16/bin/python3: No such file or directory
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+/home/aadminn/Ttree/TTree/scripts/start_servpy.sh: line 35: /home/aadminn/miniconda3/envs/pg16/bin/python3: No such file or directory
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+/home/aadminn/Ttree/TTree/scripts/start_servpy.sh: line 35: /home/aadminn/miniconda3/envs/pg16/bin/python3: No such file or directory
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+psycopg.OperationalError: connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 18, in <module>
+    from .data_store import (
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 22, in <module>
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 184, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 177, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 130, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 109, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+psycopg.OperationalError: connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 18, in <module>
+    from .data_store import (
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 22, in <module>
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 184, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 177, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 130, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 109, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+psycopg.OperationalError: connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 18, in <module>
+    from .data_store import (
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 22, in <module>
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 184, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 177, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 130, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 109, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+psycopg.OperationalError: connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 18, in <module>
+    from .data_store import (
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 22, in <module>
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 184, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 177, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 130, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 109, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+psycopg.OperationalError: connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 18, in <module>
+    from .data_store import (
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 22, in <module>
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 184, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 177, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 130, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 109, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 180, in _do_get
+    self._dec_overflow()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 901, in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 738, in connect
+    raise ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection is bad: No such file or directory
+	Is the server running locally and accepting connections on that socket?
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [120037]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [120037]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [2051]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2051]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [1446]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     45.128.129.106:13571 - "GET / HTTP/1.1" 200 OK
+INFO:     45.128.129.106:13571 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     45.128.129.106:21647 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:21647 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:13571 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:42809 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:13571 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:39715 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:26717 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:52231 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:21647 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:52231 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:26717 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:39715 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:42809 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:13571 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:21647 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:26717 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:52231 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:39715 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:42809 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     45.128.129.106:26717 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     45.128.129.106:42809 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     45.128.129.106:39715 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     45.128.129.106:30355 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     45.128.129.106:30355 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     45.128.129.106:65437 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+INFO:     45.128.129.106:61073 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/72bde286-95b4-4c01-a9b5-d915722343eb HTTP/1.1" 200 OK
+INFO:     45.128.129.106:45887 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15707 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15707 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15707 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15707 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/ffc743e4-2b73-4041-a47d-03ef5f56ac6e HTTP/1.1" 200 OK
+INFO:     45.128.129.106:16223 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15713 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+INFO:     45.128.129.106:15713 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
