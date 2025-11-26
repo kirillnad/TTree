@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
-import os
-import sqlite3
+import re
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
 from functools import wraps
-from .db import CONN
+from typing import Any, Dict, List, Optional, Tuple
+
+from sqlalchemy.engine import RowMapping
+
+from .db import CONN, IS_POSTGRES, IS_SQLITE
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import (
@@ -74,6 +76,53 @@ def with_article(func):
     return wrapper
 
 
+BLOCK_INSERT_SQL = '''
+    INSERT INTO blocks
+      (id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+'''
+TOKEN_SANITIZE_RE = re.compile(r'[^0-9a-zа-яё]+', re.IGNORECASE)
+
+
+def _insert_block_row(params: Tuple[Any, ...]) -> int:
+    if IS_POSTGRES:
+        row = CONN.execute(BLOCK_INSERT_SQL + ' RETURNING block_rowid', params).fetchone()
+        return int(row['block_rowid']) if row else 0
+    CONN.execute(BLOCK_INSERT_SQL, params)
+    return int(CONN.execute('SELECT last_insert_rowid() as block_rowid').fetchone()['block_rowid'])
+
+
+def upsert_block_search_index(
+    block_rowid: int,
+    article_id: str,
+    text: str,
+    lemma: str,
+    normalized_text: str,
+) -> None:
+    if IS_SQLITE:
+        CONN.execute(
+            '''
+            INSERT OR REPLACE INTO blocks_fts
+              (block_rowid, article_id, text, lemma, normalized_text)
+            VALUES (?, ?, ?, ?, ?)
+            ''',
+            (block_rowid, article_id, text, lemma, normalized_text),
+        )
+        return
+    CONN.execute(
+        '''
+        INSERT INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (block_rowid) DO UPDATE
+        SET article_id = EXCLUDED.article_id,
+            text = EXCLUDED.text,
+            lemma = EXCLUDED.lemma,
+            normalized_text = EXCLUDED.normalized_text
+        ''',
+        (block_rowid, article_id, text, lemma, normalized_text),
+    )
+
+
 def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
     rows = CONN.execute(
         '''
@@ -103,7 +152,7 @@ def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
     return roots
 
 
-def build_article_from_row(row: sqlite3.Row) -> Optional[Dict[str, Any]]:
+def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
     if not row:
         return None
     return {
@@ -182,12 +231,7 @@ def insert_blocks_recursive(
         plain_text = strip_html(block.get('text', ''))
         lemma = build_lemma(plain_text)
         normalized_text = build_normalized_tokens(plain_text)
-        CONN.execute(
-            '''
-            INSERT INTO blocks
-              (id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''',
+        block_rowid = _insert_block_row(
             (
                 block['id'],
                 article_id,
@@ -200,16 +244,12 @@ def insert_blocks_recursive(
                 timestamp,
             ),
         )
-        block_rowid = CONN.execute(
-            'SELECT last_insert_rowid() as block_rowid'
-        ).fetchone()['block_rowid']
-        CONN.execute(
-            '''
-            INSERT OR REPLACE INTO blocks_fts
-              (block_rowid, article_id, text, lemma, normalized_text)
-            VALUES (?, ?, ?, ?, ?)
-            ''',
-            (block_rowid, article_id, block.get('text', ''), lemma, normalized_text),
+        upsert_block_search_index(
+            block_rowid,
+            article_id,
+            block.get('text', ''),
+            lemma,
+            normalized_text,
         )
         if block.get('children'):
             insert_blocks_recursive(article_id, block['children'], timestamp, block['id'])
@@ -231,16 +271,34 @@ def _article_search_fields(title: str = '') -> Tuple[str, str, str]:
     return plain_title, lemma, normalized
 
 
-def upsert_article_search_index(article_id: str, title: str) -> None:
+def upsert_article_search_index(article_id: str, title: str, *, use_transaction: bool = True) -> None:
     plain_title, lemma, normalized = _article_search_fields(title)
-    with CONN:
-        CONN.execute(
-            '''
-            INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
-            VALUES (?, ?, ?, ?)
-            ''',
-            (article_id, plain_title, lemma, normalized),
-        )
+    def _execute():
+        if IS_SQLITE:
+            CONN.execute(
+                '''
+                INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (article_id, plain_title, lemma, normalized),
+            )
+        else:
+            CONN.execute(
+                '''
+                INSERT INTO articles_fts (article_id, title, lemma, normalized_text)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (article_id) DO UPDATE
+                SET title = EXCLUDED.title,
+                    lemma = EXCLUDED.lemma,
+                    normalized_text = EXCLUDED.normalized_text
+                ''',
+                (article_id, plain_title, lemma, normalized),
+            )
+    if use_transaction:
+        with CONN:
+            _execute()
+    else:
+        _execute()
 
 
 def save_article(article: Dict[str, Any]) -> None:
@@ -396,7 +454,7 @@ def _parent_clause(parent_id: Optional[str]) -> Tuple[str, Tuple]:
     return 'parent_id = ?', (parent_id,)
 
 
-def _fetch_siblings(article_id: str, parent_id: Optional[str]) -> List[sqlite3.Row]:
+def _fetch_siblings(article_id: str, parent_id: Optional[str]) -> List[RowMapping]:
     clause, params = _parent_clause(parent_id)
     return CONN.execute(
         f'''
@@ -440,23 +498,10 @@ def _insert_block_tree(article_id: str, block: Dict[str, Any], parent_id: Option
             ''',
             (article_id, *params, position),
         )
-        CONN.execute(
-            '''
-            INSERT INTO blocks
-              (id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''',
-            (block_id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, timestamp),
+        block_rowid = _insert_block_row(
+            (block_id, article_id, parent_id, position, text, normalized_text, collapsed, created_at, timestamp)
         )
-        block_rowid = CONN.execute('SELECT last_insert_rowid() as block_rowid').fetchone()['block_rowid']
-        CONN.execute(
-            '''
-            INSERT OR REPLACE INTO blocks_fts
-              (block_rowid, article_id, text, lemma, normalized_text)
-            VALUES (?, ?, ?, ?, ?)
-            ''',
-            (block_rowid, article_id, text, lemma, normalized_text),
-        )
+        upsert_block_search_index(block_rowid, article_id, text, lemma, normalized_text)
     for idx, child in enumerate(block.get('children') or []):
         _insert_block_tree(article_id, child, block_id, idx, timestamp)
     inserted = clone_block(block)
@@ -511,7 +556,7 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
                 normalized_text = build_normalized_tokens(plain_text)
 
                 CONN.execute('UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ?', (new_text, normalized_text, now, block_id))
-                CONN.execute('INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text) VALUES (?, ?, ?, ?, ?)', (block_rowid, article_id, new_text, lemma, normalized_text))
+                upsert_block_search_index(block_rowid, article_id, new_text, lemma, normalized_text)
                 CONN.execute('UPDATE articles SET updated_at = ?, history = ?, redo_history = ? WHERE id = ?', (now, serialize_history(article_history), '[]', article_id))
                 response['text'] = new_text
 
@@ -902,10 +947,7 @@ def undo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
             'UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ? AND article_id = ?',
             (new_text, normalized_text, now, block_id, article_id),
         )
-        CONN.execute(
-            'INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text) VALUES (?, ?, ?, ?, ?)',
-            (block_row['block_rowid'], article_id, new_text, lemma, normalized_text),
-        )
+        upsert_block_search_index(block_row['block_rowid'], article_id, new_text, lemma, normalized_text)
         CONN.execute(
             'UPDATE articles SET history = ?, redo_history = ?, updated_at = ? WHERE id = ?',
             (serialize_history(history), serialize_history(redo), now, article_id),
@@ -943,10 +985,7 @@ def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
             'UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ? AND article_id = ?',
             (new_text, normalized_text, now, block_id, article_id),
         )
-        CONN.execute(
-            'INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text) VALUES (?, ?, ?, ?, ?)',
-            (block_row['block_rowid'], article_id, new_text, lemma, normalized_text),
-        )
+        upsert_block_search_index(block_row['block_rowid'], article_id, new_text, lemma, normalized_text)
         CONN.execute(
             'UPDATE articles SET history = ?, redo_history = ?, updated_at = ? WHERE id = ?',
             (serialize_history(history), serialize_history(redo), now, article_id),
@@ -954,7 +993,7 @@ def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
     return {'blockId': block_id, 'block': {'id': block_id, 'text': new_text}}
 
 
-def _attachment_from_row(row: sqlite3.Row) -> Dict[str, Any]:
+def _attachment_from_row(row: RowMapping) -> Dict[str, Any]:
     return {
         'id': row['id'],
         'articleId': row['article_id'],
@@ -1003,9 +1042,14 @@ def list_attachments(article_id: str) -> List[Dict[str, Any]]:
     return [_attachment_from_row(row) for row in rows]
 
 
-def build_fts_query(term: str) -> str:
+def _tokenize_search_term(term: str) -> Tuple[List[str], List[str]]:
     lemma_tokens = build_lemma_tokens(term)
     normalized_tokens = [token for token in build_normalized_tokens(term).split() if token]
+    return lemma_tokens, normalized_tokens
+
+
+def build_sqlite_fts_query(term: str) -> str:
+    lemma_tokens, normalized_tokens = _tokenize_search_term(term)
     parts = []
     if lemma_tokens:
         parts.append(' OR '.join(f'lemma:{token}*' for token in lemma_tokens))
@@ -1014,24 +1058,60 @@ def build_fts_query(term: str) -> str:
     return ' OR '.join(parts)
 
 
+def build_postgres_ts_query(term: str) -> str:
+    lemma_tokens, normalized_tokens = _tokenize_search_term(term)
+    cleaned: List[str] = []
+    for token in lemma_tokens + normalized_tokens:
+        normalized = TOKEN_SANITIZE_RE.sub('', token.lower())
+        if normalized:
+            cleaned.append(normalized)
+    # Preserve order but deduplicate tokens to keep queries short.
+    unique_tokens: List[str] = []
+    for token in cleaned:
+        if token not in unique_tokens:
+            unique_tokens.append(token)
+    return ' | '.join(f"{token}:*" for token in unique_tokens)
+
+
 def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
-    fts_query = build_fts_query(query)
-    if not fts_query:
-        return []
-    rows = CONN.execute(
-        '''
-        SELECT
-            articles.id AS articleId,
-            articles.title AS title,
-            snippet(articles_fts, '', '', '...', -1, 48) AS snippet
-        FROM articles_fts
-        JOIN articles ON articles.id = articles_fts.article_id
-        WHERE articles_fts MATCH ? AND articles.deleted_at IS NULL
-        ORDER BY bm25(articles_fts) ASC
-        LIMIT ?
-        ''',
-        (fts_query, limit),
-    ).fetchall()
+    if IS_SQLITE:
+        fts_query = build_sqlite_fts_query(query)
+        if not fts_query:
+            return []
+        rows = CONN.execute(
+            '''
+            SELECT
+                articles.id AS articleId,
+                articles.title AS title,
+                snippet(articles_fts, '', '', '...', -1, 48) AS snippet
+            FROM articles_fts
+            JOIN articles ON articles.id = articles_fts.article_id
+            WHERE articles_fts MATCH ? AND articles.deleted_at IS NULL
+            ORDER BY bm25(articles_fts) ASC
+            LIMIT ?
+            ''',
+            (fts_query, limit),
+        ).fetchall()
+    else:
+        ts_query = build_postgres_ts_query(query)
+        if not ts_query:
+            return []
+        rows = CONN.execute(
+            '''
+            SELECT
+                articles.id AS articleId,
+                articles.title AS title,
+                ts_headline('simple', articles_fts.title, to_tsquery('simple', ?)) AS snippet,
+                ts_rank_cd(articles_fts.search_vector, to_tsquery('simple', ?)) AS rank
+            FROM articles_fts
+            JOIN articles ON articles.id = articles_fts.article_id
+            WHERE articles.deleted_at IS NULL
+              AND articles_fts.search_vector @@ to_tsquery('simple', ?)
+            ORDER BY rank DESC, articles.updated_at DESC
+            LIMIT ?
+            ''',
+            (ts_query, ts_query, ts_query, limit),
+        ).fetchall()
     results: List[Dict[str, Any]] = []
     for row in rows:
         title = row['title'] or ''
@@ -1048,26 +1128,50 @@ def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
 
 
 def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
-    fts_query = build_fts_query(query)
-    if not fts_query:
-        return []
-    rows = CONN.execute(
-        '''
-        SELECT
-            blocks.id AS blockId,
-            articles.id AS articleId,
-            articles.title AS articleTitle,
-            snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
-            blocks.text AS blockText
-        FROM blocks_fts
-        JOIN blocks ON blocks.rowid = blocks_fts.block_rowid
-        JOIN articles ON articles.id = blocks.article_id
-        WHERE blocks_fts MATCH ? AND articles.deleted_at IS NULL
-        ORDER BY bm25(blocks_fts) ASC
-        LIMIT ?
-        ''',
-        (fts_query, limit),
-    ).fetchall()
+    if IS_SQLITE:
+        fts_query = build_sqlite_fts_query(query)
+        if not fts_query:
+            return []
+        rows = CONN.execute(
+            '''
+            SELECT
+                blocks.id AS blockId,
+                articles.id AS articleId,
+                articles.title AS articleTitle,
+                snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
+                blocks.text AS blockText
+            FROM blocks_fts
+            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
+            JOIN articles ON articles.id = blocks.article_id
+            WHERE blocks_fts MATCH ? AND articles.deleted_at IS NULL
+            ORDER BY bm25(blocks_fts) ASC
+            LIMIT ?
+            ''',
+            (fts_query, limit),
+        ).fetchall()
+    else:
+        ts_query = build_postgres_ts_query(query)
+        if not ts_query:
+            return []
+        rows = CONN.execute(
+            '''
+            SELECT
+                blocks.id AS blockId,
+                articles.id AS articleId,
+                articles.title AS articleTitle,
+                ts_headline('simple', blocks_fts.text, to_tsquery('simple', ?)) AS snippet,
+                blocks.text AS blockText,
+                ts_rank_cd(blocks_fts.search_vector, to_tsquery('simple', ?)) AS rank
+            FROM blocks_fts
+            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
+            JOIN articles ON articles.id = blocks.article_id
+            WHERE articles.deleted_at IS NULL
+              AND blocks_fts.search_vector @@ to_tsquery('simple', ?)
+            ORDER BY rank DESC, blocks.updated_at DESC
+            LIMIT ?
+            ''',
+            (ts_query, ts_query, ts_query, limit),
+        ).fetchall()
     results = []
     for row in rows:
         block_text = row['blockText'] or ''
@@ -1110,21 +1214,14 @@ def rebuild_search_indexes() -> None:
             plain_text = strip_html(row['text'] or '')
             lemma = build_lemma(plain_text)
             normalized = row['normalized_text'] or build_normalized_tokens(plain_text)
-            CONN.execute(
-                '''
-                INSERT OR REPLACE INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text)
-                VALUES (?, ?, ?, ?, ?)
-                ''',
-                (row['block_rowid'], row['article_id'], row['text'], lemma, normalized),
+            upsert_block_search_index(
+                row['block_rowid'],
+                row['article_id'],
+                row['text'] or '',
+                lemma,
+                normalized,
             )
     article_rows = CONN.execute('SELECT id, title FROM articles').fetchall()
     with CONN:
         for row in article_rows:
-            plain_title, lemma, normalized = _article_search_fields(row['title'] or '')
-            CONN.execute(
-                '''
-                INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
-                VALUES (?, ?, ?, ?)
-                ''',
-                (row['id'], plain_title, lemma, normalized),
-            )
+            upsert_article_search_index(row['id'], row['title'] or '', use_transaction=False)

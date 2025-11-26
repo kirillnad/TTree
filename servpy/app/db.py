@@ -5,8 +5,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine, Result
-from sqlalchemy.engine import RowMapping
+from sqlalchemy.engine import Engine, Result, RowMapping
 
 
 def _resolve_database_url() -> str:
@@ -26,21 +25,30 @@ def _resolve_database_url() -> str:
 
 
 DATABASE_URL = _resolve_database_url()
+CONNECT_ARGS: dict[str, Any] = {}
+if DATABASE_URL.startswith('sqlite'):
+    CONNECT_ARGS['check_same_thread'] = False
 
 engine: Engine = create_engine(
     DATABASE_URL,
     future=True,
     echo=False,
-    connect_args={'check_same_thread': False},
+    connect_args=CONNECT_ARGS,
+    pool_pre_ping=True,
 )
 
+DIALECT_NAME = engine.dialect.name
+IS_SQLITE = DIALECT_NAME == 'sqlite'
+IS_POSTGRES = DIALECT_NAME == 'postgresql'
 
-@event.listens_for(engine, 'connect')
-def _set_sqlite_pragmas(dbapi_connection, connection_record):  # type: ignore[override]
-    cursor = dbapi_connection.cursor()
-    cursor.execute('PRAGMA foreign_keys = ON')
-    cursor.execute('PRAGMA journal_mode = WAL')
-    cursor.close()
+
+if IS_SQLITE:
+    @event.listens_for(engine, 'connect')
+    def _set_sqlite_pragmas(dbapi_connection, connection_record):  # type: ignore[override]
+        cursor = dbapi_connection.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('PRAGMA journal_mode = WAL')
+        cursor.close()
 
 
 class Database:
@@ -78,7 +86,16 @@ class Database:
             self._tx = None
         return False
 
+    def _prepare_statement(self, sql: str, params: Any | None):
+        if not IS_POSTGRES or params is None:
+            return sql, params
+        if isinstance(params, dict):
+            return sql, params
+        replacement = sql.replace('?', '%s')
+        return replacement, params
+
     def _run(self, conn, sql: str, params: Any | None = None) -> Result | QueryResult:
+        sql, params = self._prepare_statement(sql, params)
         result: Result = conn.exec_driver_sql(sql, params or ())
         if result.returns_rows:
             rows = result.mappings().all()

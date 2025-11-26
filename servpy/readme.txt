@@ -3,6 +3,11 @@
 Запустите ключевой сервис 
     uvicorn servpy.app.main:app --reload --host 0.0.0.0 --port 4500 (или другой порт, если Node всё ещё слушает).
 
+По умолчанию backend использует встроенный sqlite. Чтобы переключиться на PostgreSQL, задайте переменную окружения
+    SERVPY_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
+Перед первым запуском создайте пустую БД, после чего init_schema() автоматически создаст таблицы, индексы и tsvector-поля
+для полнотекстового поиска.
+
 В servpy/ появился полный FastAPI‑сервер с теми же маршрутами и поведением, что в Node:
 
 servpy/app/text_utils.py + pymorphy2 — лемматизация и нормализация текста (lemma + normalized_text) для каждого блока;
