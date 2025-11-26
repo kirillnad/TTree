@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "snap": "node scripts/snap.js"
   },
   "description": "",
   "license": "ISC",
   "devDependencies": {
     "css": "^3.0.0",
     "happy-dom": "^20.0.10",
+    "playwright": "^1.57.0",
     "vitest": "^4.0.14"
   }
 }

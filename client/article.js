@@ -112,6 +112,9 @@ let activeDrag = null;
 let dropLineEl = null;
 let dropInsideTarget = null;
 let dragPreviewEl = null;
+let dragLayerEl = null;
+const dragHandleEntries = new Map();
+let dragLayerListenersBound = false;
 
 function collectBlockIds(block, acc = new Set()) {
   if (!block) return acc;
@@ -317,6 +320,58 @@ function attachBlockDragHandle(handle, blockId) {
   });
 }
 
+function ensureDragLayer() {
+  if (dragLayerEl && dragLayerEl.isConnected) {
+    if (refs.blocksContainer && dragLayerEl.parentNode === refs.blocksContainer) {
+      refs.blocksContainer.appendChild(dragLayerEl);
+    }
+    return dragLayerEl;
+  }
+  dragLayerEl = document.createElement('div');
+  dragLayerEl.className = 'drag-layer';
+  if (refs.blocksContainer) {
+    refs.blocksContainer.appendChild(dragLayerEl);
+    if (!dragLayerListenersBound) {
+      refs.blocksContainer.addEventListener('scroll', refreshDragHandlePositions, { passive: true });
+      window.addEventListener('resize', refreshDragHandlePositions, { passive: true });
+      dragLayerListenersBound = true;
+    }
+  }
+  return dragLayerEl;
+}
+
+function clearDragLayer() {
+  dragHandleEntries.clear();
+  if (dragLayerEl) dragLayerEl.innerHTML = '';
+}
+
+function refreshDragHandlePositions() {
+  const container = refs.blocksContainer;
+  if (!container || !dragLayerEl) return;
+  const containerRect = container.getBoundingClientRect();
+  const scrollTop = container.scrollTop;
+  dragHandleEntries.forEach(({ handle, blockEl }) => {
+    const rect = blockEl.getBoundingClientRect();
+    const top = rect.top - containerRect.top + scrollTop + rect.height / 2;
+    handle.style.top = `${top}px`;
+  });
+}
+
+function addOverlayDragHandle(blockEl, blockId) {
+  const layer = ensureDragLayer();
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'drag-handle drag-layer__handle';
+  handle.title = 'Перетащить блок';
+  handle.setAttribute('aria-label', 'Перетащить блок');
+  handle.innerHTML = '&#8942;';
+  handle.dataset.blockId = blockId;
+  attachBlockDragHandle(handle, blockId);
+  dragHandleEntries.set(blockId, { handle, blockEl });
+  layer.appendChild(handle);
+  refreshDragHandlePositions();
+}
+
 export async function loadArticleView(id) {
   await ensureArticlesIndexLoaded();
   setViewMode(true);
@@ -379,6 +434,8 @@ export function renderArticle() {
   }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
+  clearDragLayer();
+  ensureDragLayer();
 
   const focusEditingBlock = () => {
     if (state.mode !== 'edit' || !state.editingBlockId) return;
@@ -517,17 +574,6 @@ export function renderArticle() {
         }
 
         header.appendChild(headerLeft);
-
-        if (state.articleId !== 'inbox') {
-          const dragHandle = document.createElement('button');
-          dragHandle.type = 'button';
-          dragHandle.className = 'drag-handle';
-          dragHandle.title = 'Перетащить блок';
-          dragHandle.setAttribute('aria-label', 'Перетащить блок');
-          dragHandle.innerHTML = '&#8942;';
-          attachBlockDragHandle(dragHandle, block.id);
-          header.appendChild(dragHandle);
-        }
       }
 
       if (header) blockEl.appendChild(header);
@@ -582,11 +628,15 @@ export function renderArticle() {
       }
 
       container.appendChild(blockEl);
+      if (state.articleId !== 'inbox' && !isEditingThisBlock) {
+        addOverlayDragHandle(blockEl, block.id);
+      }
     }
   };
 
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
     applyPendingPreviewMarkup();
+    refreshDragHandlePositions();
     if (state.scrollTargetBlockId) {
       const targetId = state.scrollTargetBlockId;
       requestAnimationFrame(() => {
@@ -683,6 +733,4 @@ export async function createInboxNote() {
     showToast(error.message || 'Не удалось создать заметку');
   }
 }
-
-
 

@@ -70,7 +70,6 @@ describe('layout блоков без заголовка', () => {
   it('держит header, текст и drag-handle в одной строке', () => {
     expect(expectDeclaration('.block.block--no-title .block-header__left', 'grid-area')).toBe('collapse');
     expect(expectDeclaration('.block.block--no-title .block-text', 'grid-area')).toBe('body');
-    expect(expectDeclaration('.block.block--no-title .drag-handle', 'grid-area')).toBe('drag');
     expect(expectDeclaration('.block.block--no-title .block-children', 'grid-area')).toBe('children');
     expect(expectDeclaration('.block.block--no-title .block-title-spacer', 'display')).toBe('none');
   });
@@ -88,7 +87,9 @@ describe('layout блоков без заголовка', () => {
       'align-items': 'center',
     });
     expect(expectDeclaration('.block.block--no-title .block-text', 'align-self')).toBe('center');
-    expect(expectDeclaration('.block.block--no-title .drag-handle', 'justify-self')).toBe('end');
+    expect(expectDeclaration('.drag-layer__handle', 'position')).toBe('absolute');
+    expect(expectDeclaration('.drag-layer__handle', 'right')).toBe('0.35rem');
+    expect(expectDeclaration('.drag-layer__handle', 'transform')).toBe('translateY(-50%)');
     expect(expectDeclaration('.collapse-btn', 'box-sizing')).toBe('border-box');
     expect(expectDeclaration('.collapse-btn', 'padding')).toBe('0');
     expect(expectDeclaration('.collapse-btn', 'width')).toBe('22px');
