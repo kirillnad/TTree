@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -7,10 +8,24 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine, Result
 from sqlalchemy.engine import RowMapping
 
-DATA_DIR = Path(__file__).resolve().parent.parent / 'data'
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / 'servpy.sqlite'
-DATABASE_URL = f'sqlite:///{DB_PATH}'
+
+def _resolve_database_url() -> str:
+    env_url = os.getenv('SERVPY_DATABASE_URL')
+    if env_url:
+        if env_url.startswith('sqlite:///'):
+            path_part = env_url.replace('sqlite:///', '', 1)
+            if path_part and path_part != ':memory:':
+                db_file = Path(path_part)
+                db_file.parent.mkdir(parents=True, exist_ok=True)
+        return env_url
+
+    data_dir = Path(__file__).resolve().parent.parent / 'data'
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db_path = data_dir / 'servpy.sqlite'
+    return f'sqlite:///{db_path}'
+
+
+DATABASE_URL = _resolve_database_url()
 
 engine: Engine = create_engine(
     DATABASE_URL,
