@@ -7,6 +7,7 @@ export const state = {
   undoStack: [],
   redoStack: [],
   pendingTextPreview: null,
+  editingInitialText: '',
   searchQuery: '',
   searchResults: [],
   searchError: '',

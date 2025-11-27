@@ -24,6 +24,7 @@ export async function startEditing() {
   if (!state.currentBlockId) return;
   state.mode = 'edit';
   state.editingBlockId = state.currentBlockId;
+  state.editingInitialText = findBlock(state.currentBlockId)?.block.text || '';
   renderArticle();
 }
 
@@ -47,6 +48,7 @@ export async function saveEditing() {
     );
     state.mode = 'view';
     state.editingBlockId = null;
+    state.editingInitialText = '';
     if (previousText !== newText) {
       pushUndoEntry({
         type: 'text',
@@ -54,7 +56,42 @@ export async function saveEditing() {
         historyEntryId: updatedBlock?.historyEntryId || null,
       });
     }
-    await loadArticle(state.articleId, { desiredBlockId: editedBlockId });
+    let nextBlockId = null;
+    try {
+      const siblingRes = await apiRequest(
+        `/api/articles/${state.articleId}/blocks/${editedBlockId}/siblings`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ direction: 'after' }),
+        },
+      );
+      nextBlockId = siblingRes?.block?.id || null;
+      if (nextBlockId) {
+        const snapshot = siblingRes?.block ? cloneBlockSnapshot(siblingRes.block) : null;
+        pushUndoEntry({
+          type: 'structure',
+          action: {
+            kind: 'create',
+            parentId: siblingRes.parentId || null,
+            index: siblingRes.index ?? null,
+            blockId: nextBlockId,
+            block: snapshot,
+            fallbackId: editedBlockId,
+          },
+        });
+      }
+    } catch (createError) {
+      // если не удалось создать следующий блок, просто продолжаем
+    }
+
+    state.pendingEditBlockId = nextBlockId;
+    state.scrollTargetBlockId = nextBlockId || editedBlockId;
+    state.mode = nextBlockId ? 'edit' : 'view';
+    state.editingBlockId = nextBlockId || null;
+    await loadArticle(state.articleId, {
+      desiredBlockId: nextBlockId || editedBlockId,
+      editBlockId: nextBlockId || undefined,
+    });
     renderArticle();
     showToast('Блок обновлён');
   } catch (error) {
@@ -64,9 +101,39 @@ export async function saveEditing() {
 
 export function cancelEditing() {
   if (state.mode !== 'edit') return;
-  state.mode = 'view';
-  state.editingBlockId = null;
-  renderArticle();
+  const blockId = state.editingBlockId;
+  const initialText = state.editingInitialText || '';
+  let shouldDelete = false;
+  const blockEl = document.querySelector(
+    `.block[data-block-id="${blockId}"] .block-text[contenteditable="true"]`,
+  );
+  const currentHtml = blockEl?.innerHTML || '';
+  const cleanupEditableHtmlPromise = import('./block.js').then((m) => m.cleanupEditableHtml);
+  cleanupEditableHtmlPromise
+    .then((cleanupEditableHtml) => {
+      const currentText = cleanupEditableHtml(currentHtml);
+      const isCurrentlyEmpty = !currentText || !currentText.trim();
+      const wasEmpty = !initialText || !initialText.trim();
+      shouldDelete = wasEmpty && isCurrentlyEmpty;
+    })
+    .catch(() => {
+      shouldDelete = false;
+    })
+    .finally(async () => {
+      state.mode = 'view';
+      state.editingBlockId = null;
+      state.editingInitialText = '';
+      if (shouldDelete) {
+        const fallbackId = findFallbackBlockId(blockId);
+        try {
+          await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, { method: 'DELETE' });
+          await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+        } catch (error) {
+          showToast(error.message || 'Не удалось удалить пустой блок');
+        }
+      }
+      renderArticle();
+    });
 }
 
 export async function splitEditingBlockAtCaret() {
