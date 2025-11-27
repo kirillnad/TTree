@@ -16,6 +16,7 @@ export const state = {
   pendingEditBlockId: null,
   isEditingTitle: false,
   isSidebarCollapsed: false,
+  isSidebarMobileOpen: false,
   articlesIndex: [],
   deletedArticlesIndex: [],
   articleFilterQuery: '',

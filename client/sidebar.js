@@ -352,3 +352,21 @@ export function setSidebarCollapsed(collapsed) {
 export function toggleSidebarCollapsed() {
   setSidebarCollapsed(!state.isSidebarCollapsed);
 }
+
+export function setSidebarMobileOpen(open) {
+  state.isSidebarMobileOpen = open;
+  if (refs.sidebar) refs.sidebar.classList.toggle('mobile-open', open);
+  if (refs.sidebarBackdrop) refs.sidebarBackdrop.classList.toggle('hidden', !open);
+  if (open) {
+    hideHintPopover();
+    hideSearchResults();
+  }
+}
+
+export function closeSidebarMobile() {
+  setSidebarMobileOpen(false);
+}
+
+export function toggleSidebarMobile() {
+  setSidebarMobileOpen(!state.isSidebarMobileOpen);
+}

@@ -1156,3 +1156,112 @@ INFO:     46.242.12.114:9655 - "GET /api/articles HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9655 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9655 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9655 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/collapse HTTP/1.1" 200 OK
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [66506]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:17411 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17442 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17443 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17444 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17445 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17442 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17411 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17445 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17443 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17442 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17442 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17438 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:17443 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6394 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6394 - "GET /style.css HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6384 - "GET /app.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6384 - "GET /routing.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6394 - "GET /changelog.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7834 - "GET /events.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7834 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6394 - "GET /state.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6384 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7834 - "GET /undo.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6394 - "GET /actions.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7841 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6384 - "GET /title.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7844 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7836 - "GET /search.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7834 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6394 - "GET /api.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7841 - "GET /utils.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7844 - "GET /markdown.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6384 - "GET /toast.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7836 - "GET /modal.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7836 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7844 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6384 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7836 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:7836 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7844 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6384 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7868 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7868 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7874 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7873 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7898 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7868 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7862 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7898 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7874 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7868 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7873 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7873 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7868 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7863 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7812 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7812 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7820 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7835 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7846 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7812 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7835 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7820 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7835 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7812 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7835 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7812 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /api/articles/test-article HTTP/1.1" 200 OK

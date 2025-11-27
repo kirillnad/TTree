@@ -30,4 +30,6 @@ export const refs = {
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
   pasteProgress: document.getElementById('pasteProgress'),
+  mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),
+  sidebarBackdrop: document.getElementById('sidebarBackdrop'),
 };
