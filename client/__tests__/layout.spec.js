@@ -51,7 +51,7 @@ function normalizeValue(value = '') {
 
 describe('layout блоков без заголовка', () => {
   it('оставляет сетку и отступы как в текущем макете', () => {
-    const declarations = selectorMap.get('.block.block--no-title');
+    const declarations = selectorMap.get('.block.block--no-title > .block-surface');
     expect(declarations).toBeTruthy();
     expect(declarations).toMatchObject({
       display: 'grid',
@@ -63,20 +63,23 @@ describe('layout блоков без заголовка', () => {
       'padding-bottom': '0.15rem',
     });
     expect(normalizeValue(declarations['grid-template-areas'])).toBe(
-      "'collapse body drag' 'children children children'",
+      "'collapse body drag' 'actions actions actions'",
     );
   });
 
   it('держит header, текст и drag-handle в одной строке', () => {
-    expect(expectDeclaration('.block.block--no-title .block-header__left', 'grid-area')).toBe('collapse');
-    expect(expectDeclaration('.block.block--no-title .block-text', 'grid-area')).toBe('body');
-    expect(expectDeclaration('.block.block--no-title .block-children', 'grid-area')).toBe('children');
-    expect(expectDeclaration('.block.block--no-title .block-title-spacer', 'display')).toBe('none');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'grid-area')).toBe(
+      'collapse',
+    );
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-text', 'grid-area')).toBe('body');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-title-spacer', 'display')).toBe('none');
   });
 
   it('фиксирует положение кнопок collapse и drag', () => {
-    expect(expectDeclaration('.block.block--no-title .block-header__left', 'display')).toBe('flex');
-    expect(expectDeclaration('.block.block--no-title .block-header__left', 'align-items')).toBe('flex-start');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'display')).toBe('flex');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'align-items')).toBe(
+      'flex-start',
+    );
     const dragDecls = selectorMap.get('.drag-handle');
     expect(dragDecls).toBeTruthy();
     expect(dragDecls).toMatchObject({
@@ -86,7 +89,7 @@ describe('layout блоков без заголовка', () => {
       'justify-content': 'center',
       'align-items': 'center',
     });
-    expect(expectDeclaration('.block.block--no-title .block-text', 'align-self')).toBe('center');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-text', 'align-self')).toBe('center');
     expect(expectDeclaration('.collapse-btn', 'box-sizing')).toBe('border-box');
     expect(expectDeclaration('.collapse-btn', 'padding')).toBe('0');
     expect(expectDeclaration('.collapse-btn', 'width')).toBe('22px');
@@ -98,7 +101,7 @@ describe('layout блоков без заголовка', () => {
   });
 
   it('обеспечивает общую правую границу для всех уровней', () => {
-    expect(expectDeclaration('.block.block--no-title .block-children', 'margin-left')).toBe('-1.25rem');
-    expect(expectDeclaration('.block.block--no-title .block-children', 'width')).toBe('calc(100% + 1.25rem)');
+    expect(expectDeclaration('.block-children', 'margin-left')).toBe('1.25rem');
+    expect(expectDeclaration('.block-children', 'width')).toBe('calc(100% - 1.25rem)');
   });
 });

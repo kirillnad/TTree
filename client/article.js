@@ -519,6 +519,8 @@ export function renderArticle() {
       blockEl.dataset.blockId = block.id;
       if (block.id === state.currentBlockId) blockEl.classList.add('selected');
       if (block.id === state.editingBlockId) blockEl.classList.add('editing');
+      const surface = document.createElement('div');
+      surface.className = 'block-surface';
 
       const sections = extractBlockSections(block.text || '');
       const hasTitle = Boolean(sections.titleHtml);
@@ -618,10 +620,10 @@ export function renderArticle() {
         header.appendChild(headerLeft);
       }
 
-      if (header) blockEl.appendChild(header);
+      if (header) surface.appendChild(header);
       // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
       // Это предотвращает "прыжки" при переключении в режим редактирования.
-      blockEl.appendChild(body);
+      surface.appendChild(body);
 
       attachRichContentHandlers(body, block.id);
 
@@ -650,10 +652,13 @@ export function renderArticle() {
         });
         actions.appendChild(cancelBtn);
         actions.appendChild(saveBtn);
-        blockEl.appendChild(actions);
+        surface.appendChild(actions);
       }
 
-      blockEl.addEventListener('click', () => {
+      blockEl.appendChild(surface);
+
+      blockEl.addEventListener('click', (event) => {
+        event.stopPropagation();
         if (state.mode === 'view') setCurrentBlock(block.id);
       });
 

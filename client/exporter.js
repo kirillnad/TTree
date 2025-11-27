@@ -110,7 +110,9 @@ function renderBlock(block) {
   const blockClasses = ['block'];
   if (!hasTitle) blockClasses.push('block--no-title');
 
-  return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${header}${body}${children}</div>`;
+  const surface = `<div class="block-surface">${header}${body}</div>`;
+
+  return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;
 }
 
 function buildExportBody(article) {
