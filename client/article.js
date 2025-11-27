@@ -298,14 +298,42 @@ function computeDropTarget(clientX, clientY) {
   const depth = (located.ancestors || []).length;
   const parentId = placement === 'inside' ? targetId : located.parent?.id || null;
   if (activeDrag.forbidden.has(parentId || '')) return null;
+  let effectiveTargetId = targetId;
+  let effectiveParentId = parentId;
+  let effectivePlacement = placement;
+  let effectiveRect = rect;
+  let effectiveDepth = placement === 'inside' ? depth + 1 : depth;
+  let effectiveIndex = effectivePlacement === 'after' ? located.index + 1 : located.index;
+
+  if (effectivePlacement !== 'inside' && located.parent) {
+    let climb = located;
+    let climbRect = rect;
+    const HORIZONTAL_THRESHOLD = rect.left + DROP_INDENT_PX;
+    while (climb.parent) {
+      const shouldClimbHorizontally = clientX <= HORIZONTAL_THRESHOLD;
+      const shouldClimbVertically = clientY <= climbRect.top || clientY >= climbRect.bottom;
+      if (!shouldClimbHorizontally && !shouldClimbVertically) break;
+      const parentInfo = findBlock(climb.parent.id);
+      if (!parentInfo) break;
+      const parentEl = refs.blocksContainer?.querySelector(`.block[data-block-id="${parentInfo.block.id}"]`);
+      const parentRect = parentEl?.getBoundingClientRect();
+      climb = parentInfo;
+      climbRect = parentRect || climbRect;
+      effectiveTargetId = climb.block.id;
+      effectiveRect = climbRect;
+      effectiveDepth = (climb.ancestors || []).length;
+      effectiveParentId = climb.parent?.id || null;
+      effectiveIndex = effectivePlacement === 'after' ? climb.index + 1 : climb.index;
+    }
+  }
 
   return {
-    targetId,
-    placement,
-    parentId,
-    index: placement === 'after' ? located.index + 1 : located.index,
-    depth: placement === 'inside' ? depth + 1 : depth,
-    rect,
+    targetId: effectiveTargetId,
+    placement: effectivePlacement,
+    parentId: effectiveParentId,
+    index: effectiveIndex,
+    depth: effectiveDepth,
+    rect: effectiveRect,
   };
 }
 
