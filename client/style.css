@@ -679,6 +679,7 @@ button:hover {
   transition: border 0.15s ease, background 0.15s ease;
   cursor: pointer;
   position: relative;
+  box-sizing: border-box;
   /* gap: 0.35rem; */
 }
 
@@ -717,6 +718,12 @@ button:hover {
   white-space: pre-wrap;
   line-height: 1.5;
   overscroll-behavior: contain;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  /* padding-left: 3rem; */
+  padding-right: 0.5rem;
+  box-sizing: border-box;
 }
 .block-text p {
   margin-top: 0;
@@ -741,6 +748,8 @@ button:hover {
 .block.editing > .block-text {
   margin: 0.2rem 0 0;
   padding: 0.45rem 0.65rem;
+  padding-left: 3rem;
+  padding-right: 3.5rem;
   background: rgba(99, 102, 241, 0.06);
   border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: 12px;
@@ -759,7 +768,7 @@ button:hover {
   grid-template-areas:
     'collapse body drag'
     'children children children';
-  align-items: center;
+  align-items: flex-start;
   column-gap: 0.5rem;
   padding-top: 0.15rem;
   padding-bottom: 0.15rem;
@@ -777,7 +786,7 @@ button:hover {
 
 .block.block--no-title .block-header__left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.35rem;
   grid-area: collapse;
 }
@@ -824,7 +833,7 @@ button:hover {
 }
 .block-edit-actions .icon-button {
   min-width: 32px;
-  /* height: 32px; */
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1099,7 +1108,7 @@ button:hover {
 
 .block-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   flex-wrap: nowrap;
   margin-bottom: 0.35rem;
@@ -1109,7 +1118,7 @@ button:hover {
 
 .block-header__left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
@@ -1141,6 +1150,7 @@ button:hover {
   color: #94a3b8;
   cursor: grab;
   touch-action: none;
+  align-self: flex-start;
 }
 .drag-handle:active {
   cursor: grabbing;
@@ -1216,7 +1226,7 @@ body.block-dnd-active {
   background: #e0e7ff;
   color: #3730a3;
   cursor: pointer;
-  align-self: center;
+  align-self: flex-start;
 }
 
 .toast {
@@ -1476,11 +1486,17 @@ main.content {
   .block-header {
     gap: 0.35rem;
   }
-  .block .collapse-btn,
+  .block .collapse-btn {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    margin-top: 0.4rem;
+    margin-left: 0.2rem;
+  }
   .block .drag-handle {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
   }
   .block-edit-actions {
     margin: 0.5rem 0 0.5rem;

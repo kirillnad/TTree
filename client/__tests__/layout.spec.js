@@ -57,7 +57,7 @@ describe('layout блоков без заголовка', () => {
       display: 'grid',
       'grid-template-columns': 'auto 1fr auto',
       'grid-template-rows': 'auto auto',
-      'align-items': 'center',
+      'align-items': 'flex-start',
       'column-gap': '0.5rem',
       'padding-top': '0.15rem',
       'padding-bottom': '0.15rem',
@@ -76,7 +76,7 @@ describe('layout блоков без заголовка', () => {
 
   it('фиксирует положение кнопок collapse и drag', () => {
     expect(expectDeclaration('.block.block--no-title .block-header__left', 'display')).toBe('flex');
-    expect(expectDeclaration('.block.block--no-title .block-header__left', 'align-items')).toBe('center');
+    expect(expectDeclaration('.block.block--no-title .block-header__left', 'align-items')).toBe('flex-start');
     const dragDecls = selectorMap.get('.drag-handle');
     expect(dragDecls).toBeTruthy();
     expect(dragDecls).toMatchObject({
@@ -91,7 +91,7 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.collapse-btn', 'padding')).toBe('0');
     expect(expectDeclaration('.collapse-btn', 'width')).toBe('22px');
     expect(expectDeclaration('.collapse-btn', 'height')).toBe('22px');
-    expect(expectDeclaration('.collapse-btn', 'align-self')).toBe('center');
+    expect(expectDeclaration('.collapse-btn', 'align-self')).toBe('flex-start');
     expect(expectDeclaration('.collapse-btn', 'display')).toBe('inline-flex');
     expect(expectDeclaration('.collapse-btn', 'justify-content')).toBe('center');
     expect(expectDeclaration('.collapse-btn', 'align-items')).toBe('center');
