@@ -1352,20 +1352,20 @@ body.block-dnd-active {
     display: none;
   }
   .content {
-    padding: 1rem;
+    padding: 0.5rem 0.75rem;
     width: 100%;
     overflow-x: hidden;
   }
   .panel {
     box-shadow: none;
-    padding: 0.5rem;
+    padding: 0.35rem 0.5rem;
   }
   .blocks {
     padding: 0;
     gap: 0.35rem;
   }
   .block {
-    padding: 0.35rem 0.5rem;
+    padding: 0.25rem 0.4rem;
   }
   .block-header {
     gap: 0.35rem;

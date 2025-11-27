@@ -1418,3 +1418,78 @@ INFO:     46.242.12.114:7826 - "GET /api/changelog HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6366 - "GET /api/articles HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6384 - "GET /favicon.ico HTTP/1.1" 200 OK
 INFO:     46.242.12.114:7826 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15652 - "GET /article/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15652 - "GET /app.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15652 - "GET /routing.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /events.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15655 - "GET /changelog.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15652 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15655 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15652 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15653 - "GET /undo.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15654 - "GET /search.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15656 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15655 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15657 - "GET /title.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15652 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /api.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15654 - "GET /utils.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15655 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15657 - "GET /modal.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /toast.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /markdown.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:15653 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15657 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15655 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15657 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/5f2cf485-60ac-420c-ad01-2f84d0e48d1b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/5f2cf485-60ac-420c-ad01-2f84d0e48d1b/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "PATCH /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:15667 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6350 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21/relocate HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6350 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21/relocate HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6389 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21/relocate HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6389 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6389 - "POST /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5/blocks/11e02f9d-3430-4ea6-80b6-5cccda0c4c21/relocate HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6389 - "GET /api/articles/4d493bf5-6492-4027-ac9a-ae04127db2e5 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7872 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:7870 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6309 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [66506]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [9147]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
