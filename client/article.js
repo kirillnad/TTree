@@ -220,7 +220,7 @@ function addOverlayDragHandle(blockEl, blockId) {
   handle.className = 'drag-handle drag-layer__handle';
   handle.title = 'Перетащить блок';
   handle.setAttribute('aria-label', 'Перетащить блок');
-  handle.innerHTML = '&#8942;';
+  handle.innerHTML = '&#9776;';
   handle.dataset.blockId = blockId;
   attachBlockDragHandle(handle, blockId);
   dragHandleEntries.set(blockId, { handle, blockEl });
