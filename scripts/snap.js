@@ -25,9 +25,9 @@ async function capture() {
   const metrics = await page.evaluate(() => {
     const container = document.querySelector('#blocksContainer');
     const containerRect = container?.getBoundingClientRect();
-    const handles = Array.from(document.querySelectorAll('.drag-layer__handle')).map((el) => {
+    const handles = Array.from(document.querySelectorAll('.drag-handle')).map((el) => {
       const rect = el.getBoundingClientRect();
-      const blockId = el.dataset.blockId || null;
+      const blockId = el.dataset.blockId || el.closest('.block')?.dataset?.blockId || null;
       const block = blockId ? document.querySelector(`.block[data-block-id="${blockId}"]`) : el.closest('.block');
       const text = block?.querySelector('.block-text')?.textContent?.trim() || '';
       return {

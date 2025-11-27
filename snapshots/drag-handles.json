@@ -8,39 +8,75 @@
   },
   "handles": [
     {
-      "blockId": "5cb0dcbf-769b-4f27-a1ec-fa68b32c6bab",
-      "text": "1",
+      "blockId": "08e0b81c-83fa-4587-a02e-d369eb86a31b",
+      "text": "Привет",
       "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 113.84375,
-        "bottom": 141.84375,
+        "left": 1269.40625,
+        "right": 1303.40625,
+        "top": 110.75,
+        "bottom": 138.75,
         "width": 34,
         "height": 28
       },
       "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 6.484375,
-        "bottom": 34.484375
+        "left": 879.40625,
+        "right": 913.40625,
+        "top": 3.390625,
+        "bottom": 31.390625
       }
     },
     {
-      "blockId": "08e0b81c-83fa-4587-a02e-d369eb86a31b",
+      "blockId": "26e56b0e-c802-479a-acf3-7cb567c7f34c",
       "text": "456",
       "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 166,
-        "bottom": 194,
+        "left": 1268.40625,
+        "right": 1302.40625,
+        "top": 142.140625,
+        "bottom": 170.140625,
         "width": 34,
         "height": 28
       },
       "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 58.640625,
-        "bottom": 86.640625
+        "left": 878.40625,
+        "right": 912.40625,
+        "top": 34.78125,
+        "bottom": 62.78125
+      }
+    },
+    {
+      "blockId": "5cb0dcbf-769b-4f27-a1ec-fa68b32c6bab",
+      "text": "1",
+      "absolute": {
+        "left": 425.78125,
+        "right": 459.78125,
+        "top": 202.921875,
+        "bottom": 230.921875,
+        "width": 34,
+        "height": 28
+      },
+      "relativeToContainer": {
+        "left": 35.78125,
+        "right": 69.78125,
+        "top": 95.5625,
+        "bottom": 123.5625
+      }
+    },
+    {
+      "blockId": "77e2a566-f5da-43d9-8e25-c3de59b62914",
+      "text": "123",
+      "absolute": {
+        "left": 1269.40625,
+        "right": 1303.40625,
+        "top": 254.875,
+        "bottom": 282.875,
+        "width": 34,
+        "height": 28
+      },
+      "relativeToContainer": {
+        "left": 879.40625,
+        "right": 913.40625,
+        "top": 147.515625,
+        "bottom": 175.515625
       }
     }
   ]

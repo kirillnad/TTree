@@ -96,4 +96,9 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.collapse-btn', 'justify-content')).toBe('center');
     expect(expectDeclaration('.collapse-btn', 'align-items')).toBe('center');
   });
+
+  it('обеспечивает общую правую границу для всех уровней', () => {
+    expect(expectDeclaration('.block.block--no-title .block-children', 'margin-left')).toBe('-1.25rem');
+    expect(expectDeclaration('.block.block--no-title .block-children', 'width')).toBe('calc(100% + 1.25rem)');
+  });
 });

@@ -669,7 +669,8 @@ button:hover {
   flex-direction: column;
   align-items: stretch;
   border: 1px solid transparent;
-  padding: 0.45rem 0.6rem;
+  padding: 0.45rem 0.6rem 0.45rem 0.6rem;
+  padding-right: 0;
   border-radius: 10px;
   transition: border 0.15s ease, background 0.15s ease;
   cursor: pointer;
@@ -1150,18 +1151,6 @@ button:hover {
 }
 .block-drop-line.hidden {
   display: none;
-}
-.drag-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-.drag-layer__handle {
-  position: absolute;
-  right: 0.35rem;
-  transform: translateY(-50%);
-  pointer-events: auto;
 }
 .block-drag-preview {
   position: fixed;

@@ -114,9 +114,6 @@ let activeDrag = null;
 let dropLineEl = null;
 let dropInsideTarget = null;
 let dragPreviewEl = null;
-let dragLayerEl = null;
-const dragHandleEntries = new Map();
-let dragLayerListenersBound = false;
 
 function collectBlockIds(block, acc = new Set()) {
   if (!block) return acc;
@@ -322,63 +319,6 @@ function attachBlockDragHandle(handle, blockId) {
   });
 }
 
-function ensureDragLayer() {
-  if (dragLayerEl && dragLayerEl.isConnected) {
-    if (refs.blocksContainer && dragLayerEl.parentNode === refs.blocksContainer) {
-      refs.blocksContainer.appendChild(dragLayerEl);
-    }
-    return dragLayerEl;
-  }
-  dragLayerEl = document.createElement('div');
-  dragLayerEl.className = 'drag-layer';
-  if (refs.blocksContainer) {
-    refs.blocksContainer.appendChild(dragLayerEl);
-    if (!dragLayerListenersBound) {
-      refs.blocksContainer.addEventListener('scroll', refreshDragHandlePositions, { passive: true });
-      window.addEventListener('resize', refreshDragHandlePositions, { passive: true });
-      dragLayerListenersBound = true;
-    }
-  }
-  return dragLayerEl;
-}
-
-function clearDragLayer() {
-  dragHandleEntries.clear();
-  if (dragLayerEl) dragLayerEl.innerHTML = '';
-}
-
-function refreshDragHandlePositions() {
-  const container = refs.blocksContainer;
-  if (!container || !dragLayerEl) return;
-  const containerRect = container.getBoundingClientRect();
-  const scrollTop = container.scrollTop;
-  dragHandleEntries.forEach(({ handle, blockEl }) => {
-    const rect = blockEl.getBoundingClientRect();
-    const header = blockEl.querySelector('.block-header');
-    const headerRect = header?.getBoundingClientRect();
-    const top = headerRect
-      ? headerRect.top - containerRect.top + scrollTop + headerRect.height / 2
-      : rect.top - containerRect.top + scrollTop + rect.height / 2;
-    handle.style.top = `${top}px`;
-    handle.style.right = '8px';
-  });
-}
-
-function addOverlayDragHandle(blockEl, blockId) {
-  const layer = ensureDragLayer();
-  const handle = document.createElement('button');
-  handle.type = 'button';
-  handle.className = 'drag-handle drag-layer__handle';
-  handle.title = 'Перетащить блок';
-  handle.setAttribute('aria-label', 'Перетащить блок');
-  handle.innerHTML = '&#8942;';
-  handle.dataset.blockId = blockId;
-  attachBlockDragHandle(handle, blockId);
-  dragHandleEntries.set(blockId, { handle, blockEl });
-  layer.appendChild(handle);
-  refreshDragHandlePositions();
-}
-
 export async function loadArticleView(id) {
   await ensureArticlesIndexLoaded();
   setViewMode(true);
@@ -441,8 +381,6 @@ export function renderArticle() {
   }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
-  clearDragLayer();
-  ensureDragLayer();
 
   const focusEditingBlock = () => {
     if (state.mode !== 'edit' || !state.editingBlockId) return;
@@ -564,7 +502,7 @@ export function renderArticle() {
           spacer.className = 'block-title-spacer';
           spacer.style.flex = '1';
           spacer.style.minWidth = '0';
-          headerLeft.appendChild(spacer);
+        headerLeft.appendChild(spacer);
         }
 
         if (state.articleId === 'inbox') {
@@ -581,6 +519,17 @@ export function renderArticle() {
         }
 
         header.appendChild(headerLeft);
+        if (state.articleId !== 'inbox') {
+          const dragHandleBtn = document.createElement('button');
+          dragHandleBtn.type = 'button';
+          dragHandleBtn.className = 'drag-handle';
+          dragHandleBtn.setAttribute('aria-label', 'Перетащить блок');
+          dragHandleBtn.title = 'Перетащить блок';
+          dragHandleBtn.innerHTML = '&#8942;';
+          dragHandleBtn.dataset.blockId = block.id;
+          attachBlockDragHandle(dragHandleBtn, block.id);
+          header.appendChild(dragHandleBtn);
+        }
       }
 
       if (header) blockEl.appendChild(header);
@@ -627,23 +576,26 @@ export function renderArticle() {
         body.classList.toggle('collapsed', shouldHideBody);
       }
 
+      let childrenContainer = null;
       if (block.children?.length > 0 && !block.collapsed) {
-        const childrenContainer = document.createElement('div');
+        childrenContainer = document.createElement('div');
         childrenContainer.className = 'block-children';
         renderBlocks(block.children, childrenContainer);
-        blockEl.appendChild(childrenContainer);
       }
 
       container.appendChild(blockEl);
-      if (state.articleId !== 'inbox' && !isEditingThisBlock) {
-        addOverlayDragHandle(blockEl, block.id);
+      if (childrenContainer) {
+        if (isEditingThisBlock) {
+          container.appendChild(childrenContainer);
+        } else {
+          blockEl.appendChild(childrenContainer);
+        }
       }
     }
   };
 
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
     applyPendingPreviewMarkup();
-    refreshDragHandlePositions();
     if (state.scrollTargetBlockId) {
       const targetId = state.scrollTargetBlockId;
       requestAnimationFrame(() => {
