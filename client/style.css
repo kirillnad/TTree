@@ -1152,6 +1152,18 @@ button:hover {
 .block-drop-line.hidden {
   display: none;
 }
+.drag-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.drag-layer__handle {
+  position: absolute;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
 .block-drag-preview {
   position: fixed;
   z-index: 1600;

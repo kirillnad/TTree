@@ -114,6 +114,9 @@ let activeDrag = null;
 let dropLineEl = null;
 let dropInsideTarget = null;
 let dragPreviewEl = null;
+let dragLayerEl = null;
+const dragHandleEntries = new Map();
+let dragLayerListenersBound = false;
 
 function collectBlockIds(block, acc = new Set()) {
   if (!block) return acc;
@@ -159,6 +162,70 @@ function createDragPreview(blockId) {
   preview.textContent = titleText || bodyText || 'Блок';
   document.body.appendChild(preview);
   dragPreviewEl = preview;
+}
+
+function ensureDragLayer() {
+  if (dragLayerEl && dragLayerEl.isConnected) {
+    if (refs.blocksContainer && dragLayerEl.parentNode !== refs.blocksContainer) {
+      refs.blocksContainer.appendChild(dragLayerEl);
+    }
+    return dragLayerEl;
+  }
+  dragLayerEl = document.createElement('div');
+  dragLayerEl.className = 'drag-layer';
+  if (refs.blocksContainer) {
+    refs.blocksContainer.appendChild(dragLayerEl);
+    if (!dragLayerListenersBound) {
+      refs.blocksContainer.addEventListener('scroll', refreshDragHandlePositions, { passive: true });
+      window.addEventListener('resize', refreshDragHandlePositions, { passive: true });
+      dragLayerListenersBound = true;
+    }
+  }
+  return dragLayerEl;
+}
+
+function clearDragLayer() {
+  dragHandleEntries.clear();
+  if (dragLayerEl) dragLayerEl.innerHTML = '';
+}
+
+function refreshDragHandlePositions() {
+  const container = refs.blocksContainer;
+  if (!container || !dragLayerEl) return;
+  const containerRect = container.getBoundingClientRect();
+  const scrollTop = container.scrollTop;
+  dragHandleEntries.forEach(({ handle, blockEl }) => {
+    const rect = blockEl.getBoundingClientRect();
+    const headerLeft = blockEl.querySelector('.block-header__left');
+    const header = blockEl.querySelector('.block-header');
+    const collapseBtn = blockEl.querySelector('.collapse-btn');
+    const headerLeftRect = headerLeft?.getBoundingClientRect();
+    const headerRect = header?.getBoundingClientRect();
+    const collapseRect = collapseBtn?.getBoundingClientRect();
+    const reference =
+      (headerLeftRect && headerLeftRect.height > 0 ? headerLeftRect : null) ||
+      (headerRect && headerRect.height > 0 ? headerRect : null) ||
+      (collapseRect && collapseRect.height > 0 ? collapseRect : null) ||
+      rect;
+    const top = reference.top - containerRect.top + scrollTop + reference.height / 2;
+    handle.style.top = `${top}px`;
+    handle.style.right = '8px';
+  });
+}
+
+function addOverlayDragHandle(blockEl, blockId) {
+  const layer = ensureDragLayer();
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'drag-handle drag-layer__handle';
+  handle.title = 'Перетащить блок';
+  handle.setAttribute('aria-label', 'Перетащить блок');
+  handle.innerHTML = '&#8942;';
+  handle.dataset.blockId = blockId;
+  attachBlockDragHandle(handle, blockId);
+  dragHandleEntries.set(blockId, { handle, blockEl });
+  layer.appendChild(handle);
+  refreshDragHandlePositions();
 }
 
 function updateDropIndicator(target) {
@@ -381,6 +448,8 @@ export function renderArticle() {
   }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
+  clearDragLayer();
+  ensureDragLayer();
 
   const focusEditingBlock = () => {
     if (state.mode !== 'edit' || !state.editingBlockId) return;
@@ -519,17 +588,6 @@ export function renderArticle() {
         }
 
         header.appendChild(headerLeft);
-        if (state.articleId !== 'inbox') {
-          const dragHandleBtn = document.createElement('button');
-          dragHandleBtn.type = 'button';
-          dragHandleBtn.className = 'drag-handle';
-          dragHandleBtn.setAttribute('aria-label', 'Перетащить блок');
-          dragHandleBtn.title = 'Перетащить блок';
-          dragHandleBtn.innerHTML = '&#8942;';
-          dragHandleBtn.dataset.blockId = block.id;
-          attachBlockDragHandle(dragHandleBtn, block.id);
-          header.appendChild(dragHandleBtn);
-        }
       }
 
       if (header) blockEl.appendChild(header);
@@ -590,6 +648,9 @@ export function renderArticle() {
         } else {
           blockEl.appendChild(childrenContainer);
         }
+      }
+      if (state.articleId !== 'inbox' && !isEditingThisBlock) {
+        addOverlayDragHandle(blockEl, block.id);
       }
     }
   };
