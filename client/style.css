@@ -29,6 +29,7 @@ body {
   height: 100vh;
 }
 
+/* Sidebar styles locked: do not change without explicit request */
 /* Scrollbars (hidden, but scroll via wheel/trackpad still works) */
 * {
   scrollbar-width: none;
