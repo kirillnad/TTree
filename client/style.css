@@ -922,9 +922,9 @@ button:hover {
     bottom: 4px;
   }
   .block-edit-actions .icon-button {
-    height: 26px;
-    min-width: 26px;
-    border-radius: 13px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 16px;
   }
 }
 @media (max-width: 640px) {
@@ -1573,7 +1573,7 @@ main.content {
     margin-top: 0.3rem;
   }
   .block-edit-actions {
-    margin: 0.5rem 0 0.5rem;
+    margin: 0.35rem 0 0.6rem;
   }
   .article-header .title-row {
     gap: 0.4rem;

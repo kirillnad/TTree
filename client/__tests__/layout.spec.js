@@ -103,4 +103,28 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.block .block-content', 'padding')).toBe('0.3rem');
     expect(expectDeclaration('.drag-handle', 'min-height')).toBe('22px');
   });
+
+  it('фиксирует положение и размеры кнопок редактирования', () => {
+    const actions = selectorMap.get('.block-edit-actions');
+    expect(actions).toBeTruthy();
+    expect(actions).toMatchObject({
+      display: 'flex',
+      'justify-content': 'space-between',
+      'align-items': 'center',
+      gap: '0.75rem',
+      margin: '0.35rem 0 0.6rem',
+      padding: '0 0.2rem',
+      width: '100%',
+    });
+    expect(expectDeclaration('.block.editing > .block-surface .block-edit-actions', 'grid-column')).toBe('1 / -1');
+    const iconButton = selectorMap.get('.block-edit-actions .icon-button');
+    expect(iconButton).toBeTruthy();
+    expect(iconButton).toMatchObject({
+      'min-width': '32px',
+      height: '32px',
+      display: 'inline-flex',
+      padding: '0',
+      'border-radius': '16px',
+    });
+  });
 });
