@@ -90,13 +90,14 @@ function renderBlock(block) {
   const collapsed = Boolean(block.collapsed);
 
   const collapseBtn = isCollapsible
-    ? `<button class="collapse-btn" type="button" data-block-id="${block.id}" aria-expanded="${collapsed ? 'false' : 'true'}">${collapsed ? COLLAPSED_ICON : EXPANDED_ICON}</button>`
+    ? `<button class="collapse-btn" type="button" data-block-id="${block.id}" aria-expanded="${
+        collapsed ? 'false' : 'true'
+      }">${collapsed ? COLLAPSED_ICON : EXPANDED_ICON}</button>`
     : '';
   const titlePart = hasTitle ? `<div class="block-title">${titleHtml}</div>` : '';
-  const header =
-    collapseBtn || titlePart
-      ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${collapseBtn}${titlePart}</div>`
-      : '';
+  const header = titlePart
+    ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
+    : '';
 
   const bodyClasses = ['block-text', 'block-body'];
   if (!hasTitle) bodyClasses.push('block-body--no-title');
@@ -104,13 +105,15 @@ function renderBlock(block) {
   if (collapsed && hasTitle) bodyClasses.push('collapsed');
 
   const body = `<div class="${bodyClasses.join(' ')}" data-block-body>${rawBody || ''}</div>`;
+  const content = `<div class="block-content">${header}${body}</div>`;
   const childrenHtml = (block.children || []).map(renderBlock).join('');
   const children = `<div class="block-children${collapsed ? ' collapsed' : ''}" data-children>${childrenHtml}</div>`;
 
   const blockClasses = ['block'];
   if (!hasTitle) blockClasses.push('block--no-title');
 
-  const surface = `<div class="block-surface">${header}${body}</div>`;
+  const dragHandle = `<button class="drag-handle" type="button" aria-hidden="true" tabindex="-1">&#9776;</button>`;
+  const surface = `<div class="block-surface">${collapseBtn}${content}${dragHandle}</div>`;
 
   return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;
 }

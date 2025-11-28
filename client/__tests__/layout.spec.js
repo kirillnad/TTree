@@ -56,23 +56,17 @@ describe('layout блоков без заголовка', () => {
     expect(declarations).toMatchObject({
       display: 'grid',
       'grid-template-columns': 'auto 1fr auto',
-      'grid-template-rows': 'auto auto',
+      'grid-template-areas': "'collapse content drag'",
       'align-items': 'flex-start',
       'column-gap': '0.5rem',
-      'padding-top': '0.15rem',
-      'padding-bottom': '0.15rem',
     });
-    expect(normalizeValue(declarations['grid-template-areas'])).toBe(
-      "'collapse body drag' 'actions actions actions'",
-    );
+    expect(normalizeValue(declarations['grid-template-areas'])).toBe("'collapse content drag'");
   });
 
   it('держит header, текст и drag-handle в одной строке', () => {
-    expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'grid-area')).toBe(
-      'collapse',
-    );
-    expect(expectDeclaration('.block.block--no-title > .block-surface .block-text', 'grid-area')).toBe('body');
-    expect(expectDeclaration('.block.block--no-title > .block-surface .block-title-spacer', 'display')).toBe('none');
+    expect(expectDeclaration('.block.block--no-title > .block-surface > .collapse-btn', 'grid-area')).toBe('collapse');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-content', 'grid-area')).toBe('content');
+    expect(expectDeclaration('.block.block--no-title > .block-surface > .drag-handle', 'grid-area')).toBe('drag');
   });
 
   it('фиксирует положение кнопок collapse и drag', () => {
@@ -83,8 +77,8 @@ describe('layout блоков без заголовка', () => {
     const dragDecls = selectorMap.get('.drag-handle');
     expect(dragDecls).toBeTruthy();
     expect(dragDecls).toMatchObject({
-      width: '28px',
-      'min-width': '28px',
+      width: '22px',
+      'min-width': '22px',
       display: 'inline-flex',
       'justify-content': 'center',
       'align-items': 'center',
@@ -103,5 +97,10 @@ describe('layout блоков без заголовка', () => {
   it('обеспечивает общую правую границу для всех уровней', () => {
     expect(expectDeclaration('.block-children', 'margin-left')).toBe('1.25rem');
     expect(expectDeclaration('.block-children', 'width')).toBe('calc(100% - 1.25rem)');
+  });
+
+  it('фиксирует внутренние отступы и размер drag', () => {
+    expect(expectDeclaration('.block .block-content', 'padding')).toBe('0.3rem');
+    expect(expectDeclaration('.drag-handle', 'min-height')).toBe('22px');
   });
 });

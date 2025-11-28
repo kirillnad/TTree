@@ -521,6 +521,8 @@ export function renderArticle() {
       if (block.id === state.editingBlockId) blockEl.classList.add('editing');
       const surface = document.createElement('div');
       surface.className = 'block-surface';
+      const content = document.createElement('div');
+      content.className = 'block-content';
 
       const sections = extractBlockSections(block.text || '');
       const hasTitle = Boolean(sections.titleHtml);
@@ -528,6 +530,18 @@ export function renderArticle() {
       const hasChildren = Boolean(block.children?.length);
       const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle);
+
+      if (canCollapse) {
+        const collapseBtn = document.createElement('button');
+        collapseBtn.className = 'collapse-btn';
+        collapseBtn.textContent = block.collapsed ? '+' : '-';
+        collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
+        collapseBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleCollapse(block.id);
+        });
+        surface.appendChild(collapseBtn);
+      }
 
       const body = document.createElement('div');
       body.className = 'block-text block-body';
@@ -577,17 +591,6 @@ export function renderArticle() {
         }
         const headerLeft = document.createElement('div');
         headerLeft.className = 'block-header__left';
-        if (canCollapse) {
-          const collapseBtn = document.createElement('button');
-          collapseBtn.className = 'collapse-btn';
-          collapseBtn.textContent = block.collapsed ? '+' : '-';
-          collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
-          collapseBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleCollapse(block.id);
-          });
-          headerLeft.appendChild(collapseBtn);
-        }
 
         if (hasTitle) {
           const titleEl = document.createElement('div');
@@ -620,10 +623,23 @@ export function renderArticle() {
         header.appendChild(headerLeft);
       }
 
-      if (header) surface.appendChild(header);
+      if (header) content.appendChild(header);
       // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
       // Это предотвращает "прыжки" при переключении в режим редактирования.
-      surface.appendChild(body);
+      content.appendChild(body);
+
+      surface.appendChild(content);
+
+      if (state.articleId !== 'inbox' && state.mode === 'view') {
+        const dragHandle = document.createElement('button');
+        dragHandle.type = 'button';
+        dragHandle.className = 'drag-handle';
+        dragHandle.title = 'Перетащить блок';
+        dragHandle.setAttribute('aria-label', 'Перетащить блок');
+        dragHandle.innerHTML = '&#9776;';
+        surface.appendChild(dragHandle);
+        attachBlockDragHandle(dragHandle, block.id);
+      }
 
       attachRichContentHandlers(body, block.id);
 
@@ -652,7 +668,7 @@ export function renderArticle() {
         });
         actions.appendChild(cancelBtn);
         actions.appendChild(saveBtn);
-        surface.appendChild(actions);
+        content.appendChild(actions);
       }
 
       blockEl.appendChild(surface);
@@ -682,9 +698,7 @@ export function renderArticle() {
           blockEl.appendChild(childrenContainer);
         }
       }
-      if (state.articleId !== 'inbox' && !isEditingThisBlock) {
-        addOverlayDragHandle(blockEl, block.id);
-      }
+      // Overlay drag handles removed: inline handle is now primary.
     }
   };
 
@@ -695,7 +709,8 @@ export function renderArticle() {
       requestAnimationFrame(() => {
         const target = document.querySelector(`.block[data-block-id="${targetId}"]`);
         if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const scrollNode = target.querySelector('.block-content') || target;
+          scrollNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           const editable = target.querySelector('.block-text[contenteditable="true"]');
           if (editable && state.mode === 'edit' && state.editingBlockId === targetId) {
             editable.focus({ preventScroll: true });

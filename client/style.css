@@ -29,23 +29,19 @@ body {
   height: 100vh;
 }
 
-/* Scrollbars */
+/* Scrollbars (hidden, but scroll via wheel/trackpad still works) */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 #1f2937;
+  scrollbar-width: none;
 }
 *::-webkit-scrollbar {
-  width: 8px;
+  width: 0;
+  height: 0;
 }
 *::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 8px;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: transparent;
 }
 
 html {
@@ -687,18 +683,34 @@ button:hover {
 
 .block .block-surface {
   grid-area: surface;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  border: 1px solid transparent;
-  padding: 0.45rem 0.6rem 0.45rem 0.6rem;
-  padding-right: 0;
-  border-radius: 10px;
-  transition: border 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'collapse content drag';
+  align-items: flex-start;
+  column-gap: 0.5rem;
+  padding: 0.15rem 0;
+  border-radius: 0;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   position: relative;
   box-sizing: border-box;
   /* gap: 0.35rem; */
+}
+
+.block .block-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0.3rem;
+  grid-area: content;
+  transition: background-color 0.15s ease;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.block.editing .block-content {
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
 .block:focus > .block-surface {
@@ -706,35 +718,40 @@ button:hover {
   /* outline-offset: 2px; */
 }
 
-.block:not(.editing) > .block-surface:hover {
-  border-color: #818cf8;
+.block.selected > .block-surface {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-  background: #eef2ff;
 }
 
-.block.selected > .block-surface {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+.block.selected.block--no-title > .block-surface {
+  box-shadow: none;
+}
+
+.block.selected[data-collapsed='true'] > .block-surface {
+  box-shadow: none;
+}
+
+.block.selected > .block-surface .block-content {
   background: #eef2ff;
 }
 
 .block.editing > .block-surface {
-  border-color: #c084fc;
   background: transparent;
+  box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.35);
   position: relative;
 }
 
 .block.editing > .block-surface > .block-header {
-  background: #fdf4ff;
-  border-radius: 8px;
-  padding: 0.25rem 0.3rem;
-  margin: -0.25rem -0.3rem 0.35rem;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .block-text {
   flex: 1;
   min-height: 1.5rem;
-  margin-top: 0.05rem;
+  margin-top: 0;
+  padding: 0;
   white-space: pre-wrap;
   line-height: 1.5;
   overscroll-behavior: contain;
@@ -742,8 +759,9 @@ button:hover {
   overflow-wrap: anywhere;
   max-width: 100%;
   /* padding-left: 3rem; */
-  padding-right: 0.5rem;
+  /* padding-right: 0.5rem; */
   box-sizing: border-box;
+  transition: background-color 0.15s ease;
 }
 .block-text p {
   margin-top: 0;
@@ -766,35 +784,19 @@ button:hover {
 }
 
 .block.editing > .block-surface > .block-text {
-  margin: 0.2rem 0 0;
-  padding: 0.45rem 0.65rem;
-  padding-left: 3rem;
-  padding-right: 3.5rem;
-  background: rgba(99, 102, 241, 0.06);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 12px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
   box-sizing: border-box;
 }
 
 .block.editing > .block-surface > .block-text.block-body--no-title {
-  padding-top: 0.45rem;
-  margin-top: 0.2rem;
+  padding-top: 0;
+  margin-top: 0;
 }
 
-.block.block--no-title > .block-surface {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    'collapse body drag'
-    'actions actions actions';
-  align-items: flex-start;
-  column-gap: 0.5rem;
-  padding-top: 0.15rem;
-  padding-bottom: 0.15rem;
-}
-
-.block.block--no-title > .block-surface > .block-header {
+.block.block--no-title > .block-surface .block-content > .block-header {
   display: contents;
   margin: 0;
   padding: 0;
@@ -804,29 +806,75 @@ button:hover {
   display: contents;
 }
 
-.block.block--no-title > .block-surface .block-header__left {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.35rem;
-  grid-area: collapse;
+.block.editing .block-content {
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.block.editing .block-content > .block-header {
+  display: block;
+  margin: 0 0 0.2rem 0;
+  padding: 0;
 }
 
 .block.block--no-title > .block-surface .block-title-spacer {
   display: none;
 }
 
+.block.block--no-title > .block-surface .block-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.block.block--no-title > .block-surface .block-content {
+  grid-area: content;
+}
+
+.block .block-surface > .collapse-btn {
+  grid-area: collapse;
+  justify-self: start;
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+
+.block .block-surface > .drag-handle {
+  grid-area: drag;
+  justify-self: end;
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+
+.block.block--no-title > .block-surface {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'collapse content drag';
+  align-items: flex-start;
+  column-gap: 0.5rem;
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+}
+
+.block.block--no-title > .block-surface > .collapse-btn {
+  grid-area: collapse;
+}
+
+.block.block--no-title > .block-surface > .drag-handle {
+  grid-area: drag;
+}
+
 .block.block--no-title > .block-surface .block-text {
-  grid-area: body;
   align-self: center;
   margin-top: 0;
 }
 
+.block.block--no-title > .block-surface .collapse-btn,
 .block.block--no-title > .block-surface .drag-handle {
-  grid-area: drag;
-  justify-self: end;
+  align-self: flex-start;
+  margin-top: 0.3rem;
 }
 
-.block.editing.block--no-title > .block-surface {
+.block.editing.block--no-title > .block-surface .block-content {
   padding-left: 0.4rem;
   padding-top: 0.25rem;
 }
@@ -1098,6 +1146,7 @@ button:hover {
   font-weight: 600;
   color: #111827;
   margin-bottom: 0.35rem;
+  transition: background-color 0.15s ease;
 }
 
 .block-title__placeholder {
@@ -1155,19 +1204,23 @@ button:hover {
 }
 
 .drag-handle {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  box-sizing: border-box;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  /* border-radius: 8px;
+  border: 1px solid transparent; */
   background: transparent;
   color: #94a3b8;
   cursor: grab;
   touch-action: none;
   align-self: flex-start;
+  margin: 0.3rem 0 0 0;
 }
 .drag-handle:active {
   cursor: grabbing;
@@ -1240,8 +1293,9 @@ body.block-dnd-active {
   justify-content: center;
   font-size: 0.8rem;
   line-height: 1;
-  background: #e0e7ff;
-  color: #3730a3;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #475569;
   cursor: pointer;
   align-self: flex-start;
 }
@@ -1398,7 +1452,7 @@ main.content {
   gap: 0.35rem;
 }
 .block .block-surface {
-  padding: 0.25rem 0.4rem;
+  /* padding: 0.25rem 0.4rem; */
 }
 .block-header {
   gap: 0.35rem;
@@ -1445,7 +1499,7 @@ main.content {
     gap: 0.35rem;
   }
   .block .block-surface {
-    padding: 0.45rem 0.6rem;
+    /* padding: 0.45rem 0.6rem; */
   }
   .block-header {
     gap: 0.5rem;
@@ -1498,7 +1552,7 @@ main.content {
     gap: 0.35rem;
   }
   .block .block-surface {
-    padding: 0.25rem 0.4rem;
+    /* padding: 0.25rem 0.4rem; */
   }
   .block-header {
     gap: 0.35rem;
@@ -1507,13 +1561,16 @@ main.content {
     width: 22px;
     height: 22px;
     min-width: 22px;
-    margin-top: 0.4rem;
-    margin-left: 0.2rem;
+    min-height: 22px;
+    margin-top: 0.3rem;
+    margin-left: 0rem;
   }
   .block .drag-handle {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    margin-top: 0.3rem;
   }
   .block-edit-actions {
     margin: 0.5rem 0 0.5rem;
