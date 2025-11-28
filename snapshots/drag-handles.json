@@ -1,101 +1,10 @@
 {
   "url": "http://localhost:4500/article/test-article",
   "container": {
-    "left": 390,
-    "right": 1310,
-    "width": 920,
-    "height": 759.046875
+    "left": 381,
+    "right": 1299,
+    "width": 918,
+    "height": 757.046875
   },
-  "handles": [
-    {
-      "blockId": "26e56b0e-c802-479a-acf3-7cb567c7f34c",
-      "text": "456",
-      "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 136.140625,
-        "bottom": 164.140625,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 28.78125,
-        "bottom": 56.78125
-      }
-    },
-    {
-      "blockId": "77e2a566-f5da-43d9-8e25-c3de59b62914",
-      "text": "123",
-      "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 166.921875,
-        "bottom": 194.921875,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 59.5625,
-        "bottom": 87.5625
-      }
-    },
-    {
-      "blockId": "5cb0dcbf-769b-4f27-a1ec-fa68b32c6bab",
-      "text": "1",
-      "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 202.796875,
-        "bottom": 230.796875,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 95.4375,
-        "bottom": 123.4375
-      }
-    },
-    {
-      "blockId": "05361164-bc36-45d7-b81d-85cd0dc75d81",
-      "text": "",
-      "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 238.671875,
-        "bottom": 266.671875,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 131.3125,
-        "bottom": 159.3125
-      }
-    },
-    {
-      "blockId": "08e0b81c-83fa-4587-a02e-d369eb86a31b",
-      "text": "Привет",
-      "absolute": {
-        "left": 1268,
-        "right": 1302,
-        "top": 108.75,
-        "bottom": 136.75,
-        "width": 34,
-        "height": 28
-      },
-      "relativeToContainer": {
-        "left": 878,
-        "right": 912,
-        "top": 1.390625,
-        "bottom": 29.390625
-      }
-    }
-  ]
+  "handles": []
 }

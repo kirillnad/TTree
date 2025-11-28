@@ -57,7 +57,6 @@ export function setViewMode(showArticle) {
   refs.articleView.classList.toggle('hidden', !showArticle);
   refs.articleListView.classList.toggle('hidden', showArticle);
   if (!showArticle) hideHintPopover();
-  if (refs.backToList) refs.backToList.classList.toggle('hidden', !showArticle);
   if (showArticle && state.isTrashView) {
     state.isTrashView = false;
     updateTabButtons();

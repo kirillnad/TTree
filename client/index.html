@@ -48,7 +48,7 @@
         <div class="sidebar-content">
           <div class="quick-notes-row">
             <button id="openInboxBtn" class="ghost small" type="button" title="Открыть быстрые заметки">Быстрые заметки</button>
-            <button id="quickNoteAddBtn" class="primary small round" type="button" title="Добавить быструю заметку">+</button>
+            <button id="quickNoteAddBtn" class="ghost small" type="button" title="Добавить быструю заметку">Новая</button>
           </div>
           <div class="search-panel sidebar-section">
             <input
@@ -59,16 +59,14 @@
             />
             <div id="searchResults" class="search-results hidden"></div>
           </div>
-          <div class="sidebar-articles sidebar-section">
-            <div class="sidebar-articles__header">
-              <span>Статьи</span>
-              <button id="sidebarNewArticleBtn" class="ghost small" title="Создать статью">＋</button>
+            <div class="sidebar-articles sidebar-section">
+              <div class="sidebar-articles__header">
+                <button id="backToList" class="ghost small" type="button" title="Открыть список всех статей">Все статьи</button>
+                <button id="sidebarNewArticleBtn" class="ghost small" title="Создать статью">Создать</button>
+              </div>
+              <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
             </div>
-            <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
-          </div>
           <div class="sidebar-actions">
-            <button id="backToList" class="ghost full-width hidden">К списку статей</button>
-            <button id="createArticleBtn" class="primary full-width">Создать статью</button>
           </div>
           <div class="sidebar-footer">
             <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>

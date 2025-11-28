@@ -198,7 +198,7 @@ export function attachEvents() {
       createInboxNote();
     });
   }
-  refs.backToList.addEventListener('click', () => navigate(routing.list));
+  if (refs.backToList) refs.backToList.addEventListener('click', () => navigate(routing.list));
   if (refs.searchInput) {
     refs.searchInput.addEventListener('input', handleSearchInput);
     refs.searchInput.addEventListener('focus', () => {
