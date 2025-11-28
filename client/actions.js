@@ -38,6 +38,23 @@ export async function saveEditing() {
   const editableHtml = textElement?.innerHTML || '';
   const { cleanupEditableHtml } = await import('./block.js');
   const newText = cleanupEditableHtml(editableHtml);
+
+  const trimmedNew = (newText || '').trim();
+  if (!trimmedNew) {
+    try {
+      const fallbackId = findFallbackBlockId(editedBlockId);
+      await apiRequest(`/api/articles/${state.articleId}/blocks/${editedBlockId}`, { method: 'DELETE' });
+      state.mode = 'view';
+      state.editingBlockId = null;
+      state.editingInitialText = '';
+      await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+      renderArticle();
+      showToast('Пустой блок удалён');
+    } catch (error) {
+      showToast(error.message || 'Не удалось удалить пустой блок');
+    }
+    return;
+  }
   try {
     const updatedBlock = await apiRequest(
       `/api/articles/${state.articleId}/blocks/${state.editingBlockId}`,
@@ -102,38 +119,28 @@ export async function saveEditing() {
 export function cancelEditing() {
   if (state.mode !== 'edit') return;
   const blockId = state.editingBlockId;
-  const initialText = state.editingInitialText || '';
-  let shouldDelete = false;
   const blockEl = document.querySelector(
     `.block[data-block-id="${blockId}"] .block-text[contenteditable="true"]`,
   );
-  const currentHtml = blockEl?.innerHTML || '';
-  const cleanupEditableHtmlPromise = import('./block.js').then((m) => m.cleanupEditableHtml);
-  cleanupEditableHtmlPromise
-    .then((cleanupEditableHtml) => {
-      const currentText = cleanupEditableHtml(currentHtml);
-      const isCurrentlyEmpty = !currentText || !currentText.trim();
-      const wasEmpty = !initialText || !initialText.trim();
-      shouldDelete = wasEmpty && isCurrentlyEmpty;
-    })
-    .catch(() => {
-      shouldDelete = false;
-    })
-    .finally(async () => {
-      state.mode = 'view';
-      state.editingBlockId = null;
-      state.editingInitialText = '';
-      if (shouldDelete) {
-        const fallbackId = findFallbackBlockId(blockId);
-        try {
-          await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, { method: 'DELETE' });
-          await loadArticle(state.articleId, { desiredBlockId: fallbackId });
-        } catch (error) {
-          showToast(error.message || 'Не удалось удалить пустой блок');
-        }
+  const currentText = (blockEl?.textContent || '').replace(/\u00a0/g, ' ').trim();
+  const shouldDelete = !currentText;
+
+  state.mode = 'view';
+  state.editingBlockId = null;
+  state.editingInitialText = '';
+
+  (async () => {
+    if (shouldDelete) {
+      const fallbackId = findFallbackBlockId(blockId);
+      try {
+        await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, { method: 'DELETE' });
+        await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+      } catch (error) {
+        showToast(error.message || 'Не удалось удалить пустой блок');
       }
-      renderArticle();
-    });
+    }
+    renderArticle();
+  })();
 }
 
 export async function splitEditingBlockAtCaret() {
