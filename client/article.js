@@ -110,6 +110,8 @@ const DRAG_THRESHOLD_PX = 6;
 const DROP_INDENT_PX = 20;
 const DROP_BEFORE_THRESHOLD = 0.35;
 const DROP_AFTER_THRESHOLD = 0.65;
+const DRAG_INTERACTIVE_SELECTOR =
+  'button, a, input, textarea, select, [contenteditable="true"], .block-edit-actions, .move-block-btn, .collapse-btn';
 let activeDrag = null;
 let dropLineEl = null;
 let dropInsideTarget = null;
@@ -117,6 +119,100 @@ let dragPreviewEl = null;
 let dragLayerEl = null;
 const dragHandleEntries = new Map();
 let dragLayerListenersBound = false;
+
+function isDragModeOperational() {
+  return Boolean(state.isDragModeEnabled && state.mode === 'view' && state.articleId !== 'inbox');
+}
+
+function isInteractiveDragTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(DRAG_INTERACTIVE_SELECTOR));
+}
+
+function cancelActiveDragSession() {
+  if (!activeDrag) return;
+  window.removeEventListener('pointermove', handlePointerMove);
+  window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerUp);
+  try {
+    activeDrag.sourceEl?.releasePointerCapture?.(activeDrag.pointerId);
+  } catch (_error) {
+    // ignore release errors
+  }
+  activeDrag = null;
+  clearDragUi();
+}
+
+function beginDragSession(event, blockId, sourceEl, { bypassInteractiveCheck = false } = {}) {
+  if (!state.article) return;
+  if (!state.isDragModeEnabled) return;
+  if (!isDragModeOperational()) return;
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (!bypassInteractiveCheck && isInteractiveDragTarget(event.target)) {
+    return;
+  }
+  const located = findBlock(blockId);
+  if (!located) return;
+
+  activeDrag = {
+    blockId,
+    pointerId: event.pointerId,
+    originParentId: located.parent?.id || null,
+    originIndex: located.index ?? 0,
+    startX: event.clientX,
+    startY: event.clientY,
+    dragging: false,
+    forbidden: collectBlockIds(located.block),
+    lastDrop: null,
+    sourceEl,
+  };
+
+  try {
+    sourceEl?.setPointerCapture?.(event.pointerId);
+  } catch (_error) {
+    /* noop */
+  }
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', handlePointerUp);
+  window.addEventListener('pointercancel', handlePointerUp);
+}
+
+function registerBlockDragSource(element, blockId, { allowInteractive = false } = {}) {
+  if (!element) return;
+  element.addEventListener('pointerdown', (event) => {
+    if (!allowInteractive && isInteractiveDragTarget(event.target)) {
+      return;
+    }
+    beginDragSession(event, blockId, element, { bypassInteractiveCheck: allowInteractive });
+  });
+}
+
+function updateDragModeUi() {
+  const hasArticle = Boolean(state.article);
+  const toggleBtn = refs.dragModeToggleBtn;
+  if (toggleBtn) {
+    toggleBtn.disabled = !hasArticle;
+    toggleBtn.classList.toggle('active', Boolean(state.isDragModeEnabled));
+    toggleBtn.setAttribute('aria-pressed', state.isDragModeEnabled ? 'true' : 'false');
+    let title = state.isDragModeEnabled ? 'Перетащите блок за его поверхность' : 'Включить режим перетаскивания блоков';
+    if (!hasArticle) {
+      title = 'Откройте статью, чтобы управлять перетаскиванием';
+    } else if (state.articleId === 'inbox') {
+      title = 'Перетаскивание недоступно в быстрых заметках';
+    } else if (state.mode !== 'view') {
+      title = 'Перетащить блок можно только в режиме просмотра';
+    }
+    toggleBtn.title = title;
+  }
+  const isReady = isDragModeOperational();
+  const hosts = [refs.articleView, refs.blocksContainer];
+  hosts.forEach((node) => {
+    if (!node) return;
+    node.classList.toggle('drag-mode-enabled', isReady);
+  });
+  document.body.classList.toggle('drag-mode-enabled', isReady);
+}
 
 function collectBlockIds(block, acc = new Set()) {
   if (!block) return acc;
@@ -222,7 +318,7 @@ function addOverlayDragHandle(blockEl, blockId) {
   handle.setAttribute('aria-label', 'Перетащить блок');
   handle.innerHTML = '&#9776;';
   handle.dataset.blockId = blockId;
-  attachBlockDragHandle(handle, blockId);
+  registerBlockDragSource(handle, blockId, { allowInteractive: true });
   dragHandleEntries.set(blockId, { handle, blockEl });
   layer.appendChild(handle);
   refreshDragHandlePositions();
@@ -350,6 +446,10 @@ function autoScrollDuringDrag(event) {
 
 function handlePointerMove(event) {
   if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
+  if (!isDragModeOperational()) {
+    cancelActiveDragSession();
+    return;
+  }
   const dx = event.clientX - activeDrag.startX;
   const dy = event.clientY - activeDrag.startY;
   if (!activeDrag.dragging) {
@@ -368,49 +468,18 @@ function handlePointerMove(event) {
 
 async function handlePointerUp(event) {
   if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
-  window.removeEventListener('pointermove', handlePointerMove);
-  window.removeEventListener('pointerup', handlePointerUp);
-  window.removeEventListener('pointercancel', handlePointerUp);
+  const dragSession = activeDrag;
+  cancelActiveDragSession();
 
-  const shouldMove = activeDrag.dragging && activeDrag.lastDrop;
-  const dropTarget = activeDrag.lastDrop;
-  const blockId = activeDrag.blockId;
-
-  activeDrag = null;
-  clearDragUi();
+  const shouldMove = dragSession.dragging && dragSession.lastDrop;
+  const dropTarget = dragSession.lastDrop;
+  const blockId = dragSession.blockId;
 
   if (!shouldMove || !dropTarget) return;
 
   await moveBlockToParent(blockId, dropTarget.parentId || null, dropTarget.index, {
     anchorId: dropTarget.targetId,
     placement: dropTarget.placement,
-  });
-}
-
-function attachBlockDragHandle(handle, blockId) {
-  handle.addEventListener('pointerdown', (event) => {
-    if (state.mode !== 'view') return;
-    if (state.articleId === 'inbox') return;
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    const located = findBlock(blockId);
-    if (!located) return;
-
-    activeDrag = {
-      blockId,
-      pointerId: event.pointerId,
-      originParentId: located.parent?.id || null,
-      originIndex: located.index ?? 0,
-      startX: event.clientX,
-      startY: event.clientY,
-      dragging: false,
-      forbidden: collectBlockIds(located.block),
-      lastDrop: null,
-    };
-
-    handle.setPointerCapture(event.pointerId);
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerUp);
   });
 }
 
@@ -439,6 +508,7 @@ export async function loadListView() {
   state.pendingEditBlockId = null;
   clearPendingTextPreview({ restoreDom: false });
   setViewMode(false);
+  updateDragModeUi();
   try {
     if (state.isTrashView) {
       const deleted = await ensureDeletedArticlesIndexLoaded();
@@ -476,6 +546,7 @@ export function renderArticle() {
   }
   refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
   refs.blocksContainer.innerHTML = '';
+  updateDragModeUi();
   clearDragLayer();
   ensureDragLayer();
 
@@ -629,6 +700,7 @@ export function renderArticle() {
       content.appendChild(body);
 
       surface.appendChild(content);
+      registerBlockDragSource(surface, block.id);
 
       if (state.articleId !== 'inbox' && state.mode === 'view') {
         const dragHandle = document.createElement('button');
@@ -638,7 +710,7 @@ export function renderArticle() {
         dragHandle.setAttribute('aria-label', 'Перетащить блок');
         dragHandle.innerHTML = '&#9776;';
         surface.appendChild(dragHandle);
-        attachBlockDragHandle(dragHandle, block.id);
+        registerBlockDragSource(dragHandle, block.id, { allowInteractive: true });
       }
 
       attachRichContentHandlers(body, block.id);
@@ -734,6 +806,30 @@ export function renderArticle() {
   });
 }
 
+export function toggleDragMode() {
+  if (!state.article) {
+    showToast('Откройте статью, чтобы переключить перетаскивание');
+    return;
+  }
+  state.isDragModeEnabled = !state.isDragModeEnabled;
+  if (!state.isDragModeEnabled) {
+    cancelActiveDragSession();
+    updateDragModeUi();
+    showToast('Перетаскивание выключено');
+    return;
+  }
+  updateDragModeUi();
+  if (state.articleId === 'inbox') {
+    showToast('Режим включён, но в быстрых заметках перемещение недоступно');
+    return;
+  }
+  if (state.mode !== 'view') {
+    showToast('Режим включён, завершите редактирование, чтобы перетаскивать блоки');
+    return;
+  }
+  showToast('Перетаскивание включено — перетащите блок за его поверхность');
+}
+
 export async function createArticle() {
   if (refs.createArticleBtn) refs.createArticleBtn.disabled = true;
   if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = true;
@@ -801,3 +897,5 @@ export async function createInboxNote() {
     showToast(error.message || 'Не удалось создать заметку');
   }
 }
+
+updateDragModeUi();

@@ -32,4 +32,5 @@ export const refs = {
   pasteProgress: document.getElementById('pasteProgress'),
   mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),
+  dragModeToggleBtn: document.getElementById('dragModeToggleBtn'),
 };

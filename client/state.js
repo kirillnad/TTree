@@ -25,6 +25,7 @@ export const state = {
   isMarkdownInserting: false,
   isTrashView: false,
   favoriteArticles: [],
+  isDragModeEnabled: false,
 };
 
 export let isSavingTitle = false;

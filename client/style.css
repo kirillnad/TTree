@@ -582,6 +582,16 @@ main.content {
   padding-right: 0.35rem;
   overscroll-behavior: contain;
 }
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-surface,
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-content,
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-text {
+  cursor: grab;
+}
+.block-dnd-active #blocksContainer .block:not(.editing) .block-surface,
+.block-dnd-active #blocksContainer .block:not(.editing) .block-content,
+.block-dnd-active #blocksContainer .block:not(.editing) .block-text {
+  cursor: grabbing;
+}
 
 .title-block {
   display: flex;
@@ -621,6 +631,25 @@ main.content {
   gap: 0.4rem;
   margin-left: auto;
   position: relative;
+}
+.drag-mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #cdd5df;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.drag-mode-toggle-btn.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #ffffff;
+}
+.drag-mode-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .article-menu {
   position: absolute;
