@@ -1,7 +1,7 @@
 :root {
   font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
   color: #111111;
-  background: #f3f3f3;
+  background: transparent !important;
 }
 
 *,
@@ -15,7 +15,7 @@
   height: 100vh;
   display: flex;
   overflow: hidden;
-  background: #f3f3f3;
+  background: transparent !important;
 }
 
 .mobile-only {
@@ -24,7 +24,7 @@
 
 body {
   margin: 0;
-  background: #f3f3f3;
+  background: transparent !important;
   overflow: hidden;
   height: 100vh;
 }
@@ -47,6 +47,7 @@ body {
 
 html {
   height: 100%;
+  background: transparent;
 }
 
 
@@ -489,20 +490,19 @@ html {
 
 main.content {
   flex: 1;
-  padding: 1rem 2rem;
+  padding: 0 1rem 1rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f3f3f3;
+  background: transparent !important;
 }
 
 .panel {
-  background: #fafafa;
-  border-radius: 16px;
+  background: transparent;
+  border-radius: 0;
   padding: 1.1rem 1.25rem;
-  box-shadow: none;
-  border: 1px solid #e1e1e1;
+  border: none;
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
@@ -526,6 +526,36 @@ main.content {
 .article-header {
   justify-content: space-between;
   align-items: center;
+}
+
+/* Article view overrides: compact sticky header like VS Code topbar */
+#articleView.panel {
+  padding: 0;
+  margin-top: 0;
+  border-radius: 0;
+}
+
+#articleView .panel-header.article-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  /* background: #ededed; */
+  border-bottom: 1px solid #dcdcdc;
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0;
+}
+
+#articleView .title-row h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #222;
+}
+
+#articleView .title-block .meta {
+  color: #6a6a6a;
+  font-size: 0.85rem;
+  margin: 0;
 }
 
 .list-header {
@@ -811,9 +841,7 @@ button:hover {
   /* outline-offset: 2px; */
 }
 
-.block.selected > .block-surface {
-  box-shadow: 0 0 0 1px #3794ff;
-}
+
 
 .block.selected.block--no-title > .block-surface {
   box-shadow: none;
@@ -1535,7 +1563,6 @@ main.content {
   /* padding: 0.5rem 0.75rem; */
 }
 .panel {
-  box-shadow: none;
   padding: 0.35rem 0.5rem;
   max-width: 100%;
   margin: 0;
@@ -1580,10 +1607,9 @@ main.content {
     display: none;
   }
   main.content {
-    padding: 1rem 2rem;
+    padding: 0 1.25rem 1.25rem;
   }
   .panel {
-    box-shadow: 0 20px 50px rgba(15, 30, 40, 0.08);
     padding: 1.1rem 1.25rem;
     max-width: 960px;
     margin: 0 auto;
@@ -1638,7 +1664,6 @@ main.content {
     overflow-x: hidden;
   }
   .panel {
-    box-shadow: none;
     padding: 0.35rem 0.5rem;
   }
   .blocks {

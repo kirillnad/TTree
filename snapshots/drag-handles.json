@@ -1,10 +1,10 @@
 {
   "url": "http://localhost:4500/article/test-article",
   "container": {
-    "left": 381,
-    "right": 1299,
-    "width": 918,
-    "height": 757.046875
+    "left": 360,
+    "right": 1320,
+    "width": 960,
+    "height": 804.65625
   },
   "handles": []
 }
