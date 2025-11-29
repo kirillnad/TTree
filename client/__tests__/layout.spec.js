@@ -69,21 +69,21 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.block.block--no-title > .block-surface > .block-add-btn', 'grid-area')).toBe('drag');
   });
 
-  it('фиксирует положение кнопок collapse и drag', () => {
+  it('фиксирует положение кнопок collapse и добавления', () => {
     expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'display')).toBe('flex');
     expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'align-items')).toBe(
       'flex-start',
     );
-    const dragDecls = selectorMap.get('.block-add-btn');
-    expect(dragDecls).toBeTruthy();
-    expect(dragDecls).toMatchObject({
+    const addDecls = selectorMap.get('.block-add-btn');
+    expect(addDecls).toBeTruthy();
+    expect(addDecls).toMatchObject({
       width: '22px',
       'min-width': '22px',
       display: 'inline-flex',
       'justify-content': 'center',
       'align-items': 'center',
     });
-    expect(expectDeclaration('.block.block--no-title > .block-surface .block-text', 'align-self')).toBe('center');
+    expect(expectDeclaration('.block.block--no-title > .block-surface .block-text', 'align-self')).toBe('flex-start');
     expect(expectDeclaration('.collapse-btn', 'box-sizing')).toBe('border-box');
     expect(expectDeclaration('.collapse-btn', 'padding')).toBe('0');
     expect(expectDeclaration('.collapse-btn', 'width')).toBe('22px');
