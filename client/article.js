@@ -18,7 +18,7 @@ import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
 import { showPrompt } from './modal.js';
-import { startEditing, saveEditing, cancelEditing } from './actions.js';
+import { startEditing, saveEditing, cancelEditing, createSibling } from './actions.js';
 
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
@@ -313,10 +313,10 @@ function addOverlayDragHandle(blockEl, blockId) {
   const layer = ensureDragLayer();
   const handle = document.createElement('button');
   handle.type = 'button';
-  handle.className = 'drag-handle drag-layer__handle';
-  handle.title = 'Перетащить блок';
-  handle.setAttribute('aria-label', 'Перетащить блок');
-  handle.innerHTML = '&#9776;';
+  handle.className = 'block-add-btn drag-layer__handle';
+  handle.title = 'Добавить блок ниже';
+  handle.setAttribute('aria-label', 'Добавить блок ниже');
+  handle.textContent = '+';
   handle.dataset.blockId = blockId;
   registerBlockDragSource(handle, blockId, { allowInteractive: true });
   dragHandleEntries.set(blockId, { handle, blockEl });
@@ -602,15 +602,28 @@ export function renderArticle() {
       const canCollapse = hasTitle || hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle);
 
-      if (canCollapse) {
+      const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
+
+      if (canCollapse || isEditingThisBlock) {
         const collapseBtn = document.createElement('button');
         collapseBtn.className = 'collapse-btn';
-        collapseBtn.textContent = block.collapsed ? '+' : '-';
-        collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
-        collapseBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          toggleCollapse(block.id);
-        });
+        if (isEditingThisBlock) {
+          collapseBtn.classList.add('block-edit-cancel-btn');
+          collapseBtn.title = 'Отменить изменения';
+          collapseBtn.textContent = '✕';
+          collapseBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            cancelEditing();
+          });
+        } else {
+          collapseBtn.setAttribute('aria-expanded', block.collapsed ? 'false' : 'true');
+          collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
+          collapseBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleCollapse(block.id);
+          });
+        }
         surface.appendChild(collapseBtn);
       }
 
@@ -653,7 +666,6 @@ export function renderArticle() {
       });
 
       let header = null;
-      const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
       if (!isEditingThisBlock) {
         header = document.createElement('div');
         header.className = 'block-header';
@@ -702,46 +714,38 @@ export function renderArticle() {
       surface.appendChild(content);
       registerBlockDragSource(surface, block.id);
 
-      if (state.articleId !== 'inbox' && state.mode === 'view') {
-        const dragHandle = document.createElement('button');
-        dragHandle.type = 'button';
-        dragHandle.className = 'drag-handle';
-        dragHandle.title = 'Перетащить блок';
-        dragHandle.setAttribute('aria-label', 'Перетащить блок');
-        dragHandle.innerHTML = '&#9776;';
-        surface.appendChild(dragHandle);
-        registerBlockDragSource(dragHandle, block.id, { allowInteractive: true });
+      if (state.articleId !== 'inbox') {
+        if (state.mode === 'view' && block.id === state.currentBlockId) {
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'block-add-btn';
+          addBtn.title = 'Добавить блок ниже';
+          addBtn.setAttribute('aria-label', 'Добавить блок ниже');
+          addBtn.textContent = '+';
+          surface.appendChild(addBtn);
+          addBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setCurrentBlock(block.id);
+            createSibling('after');
+          });
+        } else if (isEditingThisBlock) {
+          const saveBtn = document.createElement('button');
+          saveBtn.type = 'button';
+          saveBtn.className = 'block-add-btn block-edit-save-btn';
+          saveBtn.title = 'Сохранить изменения';
+          saveBtn.setAttribute('aria-label', 'Сохранить изменения');
+          saveBtn.textContent = '✔';
+          surface.appendChild(saveBtn);
+          saveBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            await saveEditing();
+          });
+        }
       }
 
       attachRichContentHandlers(body, block.id);
-
-      if (isEditingThisBlock) {
-        const actions = document.createElement('div');
-        actions.className = 'block-edit-actions';
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'ghost icon-button';
-        cancelBtn.title = 'Отменить изменения';
-        cancelBtn.innerHTML = '✕';
-        cancelBtn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          cancelEditing();
-        });
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.className = 'primary icon-button';
-        saveBtn.title = 'Сохранить';
-        saveBtn.innerHTML = '✔';
-        saveBtn.addEventListener('click', async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          await saveEditing();
-        });
-        actions.appendChild(cancelBtn);
-        actions.appendChild(saveBtn);
-        content.appendChild(actions);
-      }
 
       blockEl.appendChild(surface);
 

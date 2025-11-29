@@ -4,8 +4,8 @@ import { escapeHtml, htmlToPlainText } from './utils.js';
 import { showToast } from './toast.js';
 
 const DESCRIPTION_LIMIT = 160;
-const COLLAPSED_ICON = '+';
-const EXPANDED_ICON = '−';
+const COLLAPSED_ICON = '▸';
+const EXPANDED_ICON = '▾';
 const WEBP_QUALITY = 0.82;
 
 export async function exportCurrentArticleAsHtml() {
@@ -92,7 +92,7 @@ function renderBlock(block) {
   const collapseBtn = isCollapsible
     ? `<button class="collapse-btn" type="button" data-block-id="${block.id}" aria-expanded="${
         collapsed ? 'false' : 'true'
-      }">${collapsed ? COLLAPSED_ICON : EXPANDED_ICON}</button>`
+      }"></button>`
     : '';
   const titlePart = hasTitle ? `<div class="block-title">${titleHtml}</div>` : '';
   const header = titlePart
@@ -112,7 +112,7 @@ function renderBlock(block) {
   const blockClasses = ['block'];
   if (!hasTitle) blockClasses.push('block--no-title');
 
-  const dragHandle = `<button class="drag-handle" type="button" aria-hidden="true" tabindex="-1">&#9776;</button>`;
+  const dragHandle = `<button class="block-add-btn" type="button" aria-hidden="true" tabindex="-1">+</button>`;
   const surface = `<div class="block-surface">${collapseBtn}${content}${dragHandle}</div>`;
 
   return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;

@@ -989,7 +989,7 @@ button:hover {
   margin-top: 0.3rem;
 }
 
-.block .block-surface > .drag-handle {
+.block .block-surface > .block-add-btn {
   grid-area: drag;
   justify-self: end;
   align-self: flex-start;
@@ -1010,7 +1010,7 @@ button:hover {
   grid-area: collapse;
 }
 
-.block.block--no-title > .block-surface > .drag-handle {
+.block.block--no-title > .block-surface > .block-add-btn {
   grid-area: drag;
 }
 
@@ -1020,7 +1020,7 @@ button:hover {
 }
 
 .block.block--no-title > .block-surface .collapse-btn,
-.block.block--no-title > .block-surface .drag-handle {
+.block.block--no-title > .block-surface .block-add-btn {
   align-self: flex-start;
   margin-top: 0.3rem;
 }
@@ -1030,62 +1030,6 @@ button:hover {
   padding-top: 0.25rem;
 }
 
-.block-edit-actions {
-  position: static;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0.35rem 0 0.6rem;
-  padding: 0 0.2rem;
-  width: 100%;
-}
-.block.editing > .block-surface .block-edit-actions {
-  grid-column: 1 / -1;
-}
-.block.block--no-title > .block-surface .block-edit-actions {
-  grid-area: actions;
-}
-.block-edit-actions .icon-button {
-  min-width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  font-weight: 700;
-  border-radius: 16px;
-}
-.block-edit-actions .ghost.icon-button {
-  background: transparent;
-  border: 1px solid rgba(100, 116, 139, 0.4);
-  color: #475569;
-}
-.block-edit-actions .primary.icon-button {
-  background: #5b67f2;
-  border-color: #5b67f2;
-  color: #fff;
-}
-@media (max-width: 640px) {
-  .block-edit-actions {
-    left: 6px;
-    right: 6px;
-    bottom: 4px;
-  }
-  .block-edit-actions .icon-button {
-    height: 32px;
-    min-width: 32px;
-    border-radius: 16px;
-  }
-}
-@media (max-width: 640px) {
-  .block-edit-actions {
-    margin-top: 0.25rem;
-  }
-  .block-edit-actions .icon-button {
-    /* height: 30px; */
-  }
-}
 .block-text img {
   max-width: 100%;
   max-height: 15rem;
@@ -1354,7 +1298,7 @@ button:hover {
   min-width: 32px;
 }
 
-.drag-handle {
+.block-add-btn {
   width: 22px;
   height: 22px;
   min-width: 22px;
@@ -1368,15 +1312,11 @@ button:hover {
   border: 1px solid transparent; */
   background: transparent;
   color: #7a7a7a;
-  cursor: grab;
-  touch-action: none;
+  cursor: pointer;
   align-self: flex-start;
   margin: 0.3rem 0 0 0;
 }
-.drag-handle:active {
-  cursor: grabbing;
-}
-.block > .block-surface:hover .drag-handle {
+.block > .block-surface:hover .block-add-btn {
   color: #333333;
   /* border-color: #e2e8f0; */
 }
@@ -1442,13 +1382,42 @@ body.block-dnd-active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0;
   line-height: 1;
   background: transparent;
   border: 1px solid #cfcfcf;
   color: #777777;
   cursor: pointer;
   align-self: flex-start;
+}
+
+.collapse-btn {
+  position: relative;
+}
+
+.collapse-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 5px 0 5px 7px;
+  border-color: transparent transparent transparent #4b5563;
+}
+
+.collapse-btn[aria-expanded='true']::before {
+  border-width: 7px 5px 0 5px;
+  border-color: #4b5563 transparent transparent transparent;
+}
+
+.collapse-btn.block-edit-cancel-btn::before {
+  display: none;
+}
+
+.collapse-btn.block-edit-cancel-btn {
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .toast {
@@ -1713,7 +1682,7 @@ main.content {
     margin-top: 0.3rem;
     margin-left: 0rem;
   }
-  .block .drag-handle {
+  .block .block-add-btn {
     width: 22px;
     height: 22px;
     min-width: 22px;

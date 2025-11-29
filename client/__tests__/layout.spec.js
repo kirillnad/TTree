@@ -63,10 +63,10 @@ describe('layout блоков без заголовка', () => {
     expect(normalizeValue(declarations['grid-template-areas'])).toBe("'collapse content drag'");
   });
 
-  it('держит header, текст и drag-handle в одной строке', () => {
+  it('держит header, текст и кнопку добавления в одной строке', () => {
     expect(expectDeclaration('.block.block--no-title > .block-surface > .collapse-btn', 'grid-area')).toBe('collapse');
     expect(expectDeclaration('.block.block--no-title > .block-surface .block-content', 'grid-area')).toBe('content');
-    expect(expectDeclaration('.block.block--no-title > .block-surface > .drag-handle', 'grid-area')).toBe('drag');
+    expect(expectDeclaration('.block.block--no-title > .block-surface > .block-add-btn', 'grid-area')).toBe('drag');
   });
 
   it('фиксирует положение кнопок collapse и drag', () => {
@@ -74,7 +74,7 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.block.block--no-title > .block-surface .block-header__left', 'align-items')).toBe(
       'flex-start',
     );
-    const dragDecls = selectorMap.get('.drag-handle');
+    const dragDecls = selectorMap.get('.block-add-btn');
     expect(dragDecls).toBeTruthy();
     expect(dragDecls).toMatchObject({
       width: '22px',
@@ -99,32 +99,27 @@ describe('layout блоков без заголовка', () => {
     expect(expectDeclaration('.block-children', 'width')).toBe('calc(100% - 1.25rem)');
   });
 
-  it('фиксирует внутренние отступы и размер drag', () => {
+  it('фиксирует внутренние отступы и размер кнопки добавления', () => {
     expect(expectDeclaration('.block .block-content', 'padding')).toBe('0.3rem');
-    expect(expectDeclaration('.drag-handle', 'min-height')).toBe('22px');
+    expect(expectDeclaration('.block-add-btn', 'min-height')).toBe('22px');
   });
 
-  it('фиксирует положение и размеры кнопок редактирования', () => {
-    const actions = selectorMap.get('.block-edit-actions');
-    expect(actions).toBeTruthy();
-    expect(actions).toMatchObject({
-      display: 'flex',
-      'justify-content': 'space-between',
-      'align-items': 'center',
-      gap: '0.75rem',
-      margin: '0.35rem 0 0.6rem',
-      padding: '0 0.2rem',
-      width: '100%',
+  it('использует те же размеры для collapse и кнопки добавления', () => {
+    const collapse = selectorMap.get('.collapse-btn');
+    expect(collapse).toBeTruthy();
+    expect(collapse).toMatchObject({
+      width: '22px',
+      height: '22px',
+      'min-width': '22px',
+      'min-height': '22px',
     });
-    expect(expectDeclaration('.block.editing > .block-surface .block-edit-actions', 'grid-column')).toBe('1 / -1');
-    const iconButton = selectorMap.get('.block-edit-actions .icon-button');
-    expect(iconButton).toBeTruthy();
-    expect(iconButton).toMatchObject({
-      'min-width': '32px',
-      height: '32px',
-      display: 'inline-flex',
-      padding: '0',
-      'border-radius': '16px',
+    const addBtn = selectorMap.get('.block-add-btn');
+    expect(addBtn).toBeTruthy();
+    expect(addBtn).toMatchObject({
+      width: '22px',
+      height: '22px',
+      'min-width': '22px',
+      'min-height': '22px',
     });
   });
 });
