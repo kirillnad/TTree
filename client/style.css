@@ -1385,7 +1385,7 @@ body.block-dnd-active {
   font-size: 0;
   line-height: 1;
   background: transparent;
-  border: 1px solid #cfcfcf;
+  border: none;
   color: #777777;
   cursor: pointer;
   align-self: flex-start;
@@ -1401,17 +1401,37 @@ body.block-dnd-active {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  border-style: solid;
-  border-width: 5px 0 5px 7px;
-  border-color: transparent transparent transparent #4b5563;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #cbd5e1;
 }
 
-.collapse-btn[aria-expanded='true']::before {
-  border-width: 7px 5px 0 5px;
-  border-color: #4b5563 transparent transparent transparent;
+.collapse-btn[aria-expanded='false']::before {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: transparent;
+  border: 2px solid #cbd5e1;
+}
+
+.collapse-btn[aria-expanded='false']::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #cbd5e1;
 }
 
 .collapse-btn.block-edit-cancel-btn::before {
+  display: none;
+}
+
+.collapse-btn.block-edit-cancel-btn::after {
   display: none;
 }
 
