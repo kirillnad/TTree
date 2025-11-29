@@ -63,9 +63,6 @@ export async function saveEditing() {
         body: JSON.stringify({ text: newText }),
       },
     );
-    state.mode = 'view';
-    state.editingBlockId = null;
-    state.editingInitialText = '';
     if (previousText !== newText) {
       pushUndoEntry({
         type: 'text',
@@ -73,41 +70,13 @@ export async function saveEditing() {
         historyEntryId: updatedBlock?.historyEntryId || null,
       });
     }
-    let nextBlockId = null;
-    try {
-      const siblingRes = await apiRequest(
-        `/api/articles/${state.articleId}/blocks/${editedBlockId}/siblings`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ direction: 'after' }),
-        },
-      );
-      nextBlockId = siblingRes?.block?.id || null;
-      if (nextBlockId) {
-        const snapshot = siblingRes?.block ? cloneBlockSnapshot(siblingRes.block) : null;
-        pushUndoEntry({
-          type: 'structure',
-          action: {
-            kind: 'create',
-            parentId: siblingRes.parentId || null,
-            index: siblingRes.index ?? null,
-            blockId: nextBlockId,
-            block: snapshot,
-            fallbackId: editedBlockId,
-          },
-        });
-      }
-    } catch (createError) {
-      // если не удалось создать следующий блок, просто продолжаем
-    }
-
-    state.pendingEditBlockId = nextBlockId;
-    state.scrollTargetBlockId = nextBlockId || editedBlockId;
-    state.mode = nextBlockId ? 'edit' : 'view';
-    state.editingBlockId = nextBlockId || null;
+    state.mode = 'view';
+    state.editingBlockId = null;
+    state.editingInitialText = '';
+    state.pendingEditBlockId = null;
+    state.scrollTargetBlockId = editedBlockId;
     await loadArticle(state.articleId, {
-      desiredBlockId: nextBlockId || editedBlockId,
-      editBlockId: nextBlockId || undefined,
+      desiredBlockId: editedBlockId,
     });
     renderArticle();
     showToast('Блок обновлён');
