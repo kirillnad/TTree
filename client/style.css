@@ -589,6 +589,7 @@ main.content {
 .drag-mode-enabled #blocksContainer .block:not(.editing) .block-content,
 .drag-mode-enabled #blocksContainer .block:not(.editing) .block-text {
   cursor: grab;
+  touch-action: none;
 }
 .block-dnd-active #blocksContainer .block:not(.editing) .block-surface,
 .block-dnd-active #blocksContainer .block:not(.editing) .block-content,
