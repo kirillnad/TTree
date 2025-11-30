@@ -36,8 +36,8 @@
 
 servpy/app/text_utils.py + pymorphy2 — лемматизация и нормализация текста (lemma + normalized_text) для каждого блока;
 servpy/app/db.py + schema.py — чистый sqlite3, WAL, FTS5 с колонками lemma и normalized_text, миграция/реиндексация (скрипты migrate_json.py и reindex_fts.py);
-servpy/app/data_store.py — CRUD, история, indent/outdent/move, поиск (lemma:* OR normalized_text:*), ensure_sample_article, create_article и весь набор операций, которые раньше делал dataStore.js;
-servpy/app/main.py — FastAPI-приложение с CORS, загрузкой изображений (5МБ, MIME:image), сервингом /uploads и клиентского client/, API /api/..., /api/search, /changelog.txt и SPA-фолбеком;
+servpy/app/data_store.py — CRUD, история, indent/outdent/move, поиск (lemma:* OR normalized_text:*), ensure_sample_article, create_article и весь набор операций, которые раньше делал dataStore.js; жёсткое разделение данных по пользователям (author_id в articles, поиск только в статьях текущего пользователя);
+servpy/app/main.py — FastAPI-приложение с CORS, аутентификацией и сессиями, загрузкой изображений (5МБ, MIME:image), сервингом клиентского client/, защищённым доступом к /uploads (каждый пользователь видит только свои файлы), API /api/auth/*, /api/articles/..., /api/search, /api/changelog и SPA-фолбеком (роутинг на стороне клиента);
 servpy/requirements.txt + .gitignore (новые sqlite/Uploads) чтобы можно было установить uvicorn, fastapi, pymorphy2, aiofiles.
 
 Скрипты на Python/FTS позволяют импортировать server/data/articles.json (python -m servpy.app.migrate_json) и заново индексировать (python -m servpy.app.reindex_fts).
@@ -46,4 +46,4 @@ servpy/requirements.txt + .gitignore (новые sqlite/Uploads) чтобы мо
 
 Установите зависимости pip install -r servpy/requirements.txt.
 Запустите ключевой сервис uvicorn servpy.app.main:app --reload --host 0.0.0.0 --port 4500 (или другой порт, если Node всё ещё слушает).
-Проверьте CRUD, undo/redo, поиск и загрузки, а затем обновите changelog/CI.
+Проверьте аутентификацию (вход/регистрация), CRUD, undo/redo, поиск и загрузки, а затем обновите changelog/CI.

@@ -2,6 +2,7 @@ import { initRouting, route } from './routing.js';
 import { attachEvents } from './events.js';
 import { loadLastChangeFromChangelog } from './changelog.js';
 import { initAuth, bootstrapAuth } from './auth.js';
+import { initUsersPanel } from './users.js';
 
 /**
  * Инициализация приложения
@@ -9,6 +10,7 @@ import { initAuth, bootstrapAuth } from './auth.js';
 function startApp() {
   initRouting();
   attachEvents();
+  initUsersPanel();
   loadLastChangeFromChangelog();
   route(window.location.pathname);
 }

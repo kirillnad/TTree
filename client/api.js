@@ -91,6 +91,14 @@ export function restoreArticle(id) {
   return apiRequest(`/api/articles/${id}/restore`, { method: 'POST' });
 }
 
+export function fetchUsers() {
+  return apiRequest('/api/users');
+}
+
+export function deleteUser(userId) {
+  return apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
+}
+
 export function uploadImageFile(file) {
   const formData = new FormData();
   formData.append('file', file);

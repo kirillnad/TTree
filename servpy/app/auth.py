@@ -22,6 +22,7 @@ class User:
     id: str
     username: str
     display_name: str | None
+    is_superuser: bool = False
 
 
 def _iso_now() -> str:
@@ -65,34 +66,41 @@ def _create_sessions_table() -> None:
 
 def get_user_by_username(username: str) -> Optional[User]:
     row = CONN.execute(
-        'SELECT id, username, display_name FROM users WHERE username = ?',
+        'SELECT id, username, display_name, is_superuser FROM users WHERE username = ?',
         (username,),
     ).fetchone()
     if not row:
         return None
-    return User(id=row['id'], username=row['username'], display_name=row.get('display_name'))
+    is_super = bool(row.get('is_superuser')) if 'is_superuser' in row else False
+    return User(id=row['id'], username=row['username'], display_name=row.get('display_name'), is_superuser=is_super)
 
 
 def get_user_by_id(user_id: str) -> Optional[User]:
     row = CONN.execute(
-        'SELECT id, username, display_name FROM users WHERE id = ?',
+        'SELECT id, username, display_name, is_superuser FROM users WHERE id = ?',
         (user_id,),
     ).fetchone()
     if not row:
         return None
-    return User(id=row['id'], username=row['username'], display_name=row.get('display_name'))
+    is_super = bool(row.get('is_superuser')) if 'is_superuser' in row else False
+    return User(id=row['id'], username=row['username'], display_name=row.get('display_name'), is_superuser=is_super)
 
 
-def create_user(username: str, password: str, display_name: str | None = None) -> User:
+def create_user(
+    username: str,
+    password: str,
+    display_name: str | None = None,
+    is_superuser: bool = False,
+) -> User:
     now = _iso_now()
     pwd_hash = hash_password_for_store(password)
     user_id = os.urandom(16).hex()
     with CONN:
         CONN.execute(
-            'INSERT INTO users (id, username, password_hash, display_name, created_at) VALUES (?, ?, ?, ?, ?)',
-            (user_id, username, pwd_hash, display_name or username, now),
+            'INSERT INTO users (id, username, password_hash, display_name, created_at, is_superuser) VALUES (?, ?, ?, ?, ?, ?)',
+            (user_id, username, pwd_hash, display_name or username, now, bool(is_superuser)),
         )
-    return User(id=user_id, username=username, display_name=display_name or username)
+    return User(id=user_id, username=username, display_name=display_name or username, is_superuser=is_superuser)
 
 
 def create_session(user_id: str) -> str:
@@ -153,3 +161,22 @@ def set_session_cookie(response: Response, session_id: str) -> None:
 def clear_session_cookie(response: Response) -> None:
     response.delete_cookie(SESSION_COOKIE_NAME, path='/')
 
+
+def ensure_superuser(username: str, password: str, display_name: str | None = None) -> None:
+    """
+    Гарантирует наличие суперпользователя с заданным логином.
+    Если пользователь уже есть, повышает его до суперпользователя и обновляет пароль.
+    """
+    init_schema()
+    row = CONN.execute('SELECT id, is_superuser FROM users WHERE username = ?', (username,)).fetchone()
+    if row:
+        # Обновляем пароль и права.
+        pwd_hash = hash_password_for_store(password)
+        with CONN:
+            CONN.execute(
+                'UPDATE users SET password_hash = ?, is_superuser = ? WHERE id = ?',
+                (pwd_hash, True, row['id']),
+            )
+        return
+    # Создаём нового суперпользователя.
+    create_user(username, password, display_name or username, is_superuser=True)

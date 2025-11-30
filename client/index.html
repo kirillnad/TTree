@@ -104,6 +104,14 @@
               <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
             </div>
           <div class="sidebar-actions">
+            <button
+              id="usersBtn"
+              class="ghost small hidden"
+              type="button"
+              title="Управление пользователями"
+            >
+              Пользователи
+            </button>
           </div>
           <div class="sidebar-footer">
             <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>
@@ -184,6 +192,14 @@
           </div>
 
           <div id="blocksContainer" class="blocks"></div>
+        </section>
+
+        <section id="usersView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Пользователи</h2>
+            <button id="usersBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <ul id="usersList" class="users-list"></ul>
         </section>
       </main>
     </div>

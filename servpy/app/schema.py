@@ -9,7 +9,8 @@ def _init_sqlite_schema():
             username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             display_name TEXT,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            is_superuser INTEGER NOT NULL DEFAULT 0
         )
         ''',
         '''
@@ -66,6 +67,11 @@ def _init_sqlite_schema():
         execute(stmt)
 
     # Backwards-compatible additions for existing SQLite databases.
+    user_columns = execute("PRAGMA table_info(users)").fetchall()
+    user_col_names = {col['name'] for col in user_columns}
+    if 'is_superuser' not in user_col_names:
+        execute("ALTER TABLE users ADD COLUMN is_superuser INTEGER NOT NULL DEFAULT 0")
+
     article_columns = execute("PRAGMA table_info(articles)").fetchall()
     col_names = {col['name'] for col in article_columns}
     if 'deleted_at' not in col_names:
@@ -111,7 +117,8 @@ def _init_postgres_schema():
             username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             display_name TEXT,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            is_superuser BOOLEAN NOT NULL DEFAULT FALSE
         )
         ''',
         '''
@@ -199,7 +206,7 @@ def _init_postgres_schema():
     for stmt in statements:
         execute(stmt)
 
-    # Ensure author_id exists even if articles table pre-existed.
+    # Ensure author_id and is_superuser exist even if tables pre-existed.
     execute(
         """
         DO $$
@@ -210,6 +217,13 @@ def _init_postgres_schema():
                 WHERE table_name = 'articles' AND column_name = 'author_id'
             ) THEN
                 ALTER TABLE articles ADD COLUMN author_id TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'is_superuser'
+            ) THEN
+                ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT FALSE;
             END IF;
         END$$;
         """

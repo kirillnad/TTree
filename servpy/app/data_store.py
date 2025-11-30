@@ -422,6 +422,27 @@ def count_blocks(blocks: List[Dict[str, Any]]) -> int:
     return total
 
 
+def delete_user_with_data(user_id: str) -> None:
+    """
+    Удаляет пользователя, все его статьи и связанные данные (блоки, FTS-индексы, вложения в БД).
+    Файлы uploads для этого пользователя удаляются на уровне сервера (см. main.py).
+    """
+    with CONN:
+        article_rows = CONN.execute(
+            'SELECT id FROM articles WHERE author_id = ?',
+            (user_id,),
+        ).fetchall()
+        for row in article_rows:
+            delete_article(row['id'], force=True)
+        # Очистить сессии пользователя, если таблица существует.
+        try:
+            CONN.execute('DELETE FROM sessions WHERE user_id = ?', (user_id,))
+        except Exception:
+            # Таблицы sessions может не быть в старой схеме.
+            pass
+        CONN.execute('DELETE FROM users WHERE id = ?', (user_id,))
+
+
 def clone_block(block: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'id': block.get('id') or str(uuid.uuid4()),

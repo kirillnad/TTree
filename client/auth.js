@@ -42,6 +42,10 @@ function applyUserToUi(user) {
   if (refs.currentUserLabel) {
     refs.currentUserLabel.textContent = user?.displayName || user?.username || '';
   }
+  if (refs.usersBtn) {
+    const isSuperuser = !!(user && user.isSuperuser);
+    refs.usersBtn.classList.toggle('hidden', !isSuperuser);
+  }
 }
 
 function ensureAppStarted() {
@@ -138,4 +142,3 @@ export async function bootstrapAuth() {
   }
   showAuthOverlay();
 }
-

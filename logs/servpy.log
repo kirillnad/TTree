@@ -5058,3 +5058,1902 @@ INFO:     142.252.8.147:25725 - "GET /markdown.js HTTP/1.1" 200 OK
 INFO:     142.252.8.147:23339 - "GET /modal.js HTTP/1.1" 200 OK
 INFO:     142.252.8.147:23339 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
 INFO:     142.252.8.147:25725 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [72083]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'VragNeProydet!', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 179, in ensure_superuser
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM us...
+                                          ^
+[SQL: SELECT id, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE username = %s]
+[parameters: ('kirill',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'zZ141400', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 176, in ensure_superuser
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: UPDATE users SET password_hash = %s, is_superuser = 1 WHERE id = %s]
+[parameters: ('64817ef0e1a2b7e4b3eddd2f61c66b19$f5ed6701e7bc03fdb4307e6795a15927ac618d37bc7c7db942a2819471c2791e', '0a2b2bbaada6533050e6b2eaa8bc5831')]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'zZ141400', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 176, in ensure_superuser
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: UPDATE users SET password_hash = %s, is_superuser = 1 WHERE id = %s]
+[parameters: ('7cd4a58a4c592991d699381ab3405dba$e9fdc193c8e8932486fc1306f06274df512e99c8db14fcabd79a74c5dd2ae800', '0a2b2bbaada6533050e6b2eaa8bc5831')]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'zZ141400', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 176, in ensure_superuser
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: UPDATE users SET password_hash = %s, is_superuser = 1 WHERE id = %s]
+[parameters: ('fdcf15897a226de970ff65376182b209$55f3c49bd785189bc0b1f38a2d0414ebc4f33c87ffabfabb54016d5af91707b7', '0a2b2bbaada6533050e6b2eaa8bc5831')]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'zZ141400', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 176, in ensure_superuser
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: UPDATE users SET password_hash = %s, is_superuser = 1 WHERE id = %s]
+[parameters: ('2d28d754543d2278ea66be48dc55e007$67d54065468794f0ffd474f6aa90e3b74a54cf1c86425502b8bea371ba959b99', '0a2b2bbaada6533050e6b2eaa8bc5831')]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/usr/lib/python3/dist-packages/click/core.py", line 764, in __call__
+    return self.main(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 717, in main
+    rv = self.invoke(ctx)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 956, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/usr/lib/python3/dist-packages/click/core.py", line 555, in invoke
+    return callback(*args, **kwargs)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 416, in main
+    run(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/main.py", line 587, in run
+    server.run()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 61, in run
+    return asyncio.run(self.serve(sockets=sockets))
+  File "/usr/lib/python3.8/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/server.py", line 68, in serve
+    config.load()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/config.py", line 467, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/importer.py", line 21, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/usr/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
+  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 85, in <module>
+    ensure_superuser('kirill', 'zZ141400', 'kirill')
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 176, in ensure_superuser
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type integer
+LINE 1: ...DATE users SET password_hash = $1, is_superuser = 1 WHERE id...
+                                                             ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: UPDATE users SET password_hash = %s, is_superuser = 1 WHERE id = %s]
+[parameters: ('7e3e011d4beb9c7ab9cbd46920899e6e$d838671b87c6027dde6f6aa1dbbdeb8ac8fff9997ca0d5fea0a4585fb0279e9c', '0a2b2bbaada6533050e6b2eaa8bc5831')]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [74449]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:35453 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35453 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55955 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35453 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28499 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:27163 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43609 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33169 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35453 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:27163 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28499 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55955 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33169 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43609 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28499 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35453 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:27163 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33169 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55955 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28499 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43609 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:27163 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35453 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43609 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:35453 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50243 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     142.252.8.147:51927 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45527 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33561 - "GET /api/users HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 3:                COALESCE(is_superuser, 0) AS is_superuser
+                                              ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 102, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 190, in list_users
+    rows = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 3:                COALESCE(is_superuser, 0) AS is_superuser
+                                              ^
+[SQL: 
+        SELECT id, username, display_name, created_at,
+               COALESCE(is_superuser, 0) AS is_superuser
+        FROM users
+        ORDER BY username
+        ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [74449]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [74551]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:42885 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:42885 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34447 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:42885 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26825 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:64005 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:42885 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26825 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34447 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:64005 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34447 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:64005 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26825 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:42885 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34447 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:64005 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63293 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61971 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54773 - "DELETE /api/users/1637f8c93dddc40d70024e5ee43a0018 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, username, COALESCE(is_superuser, 0) AS is_superus...
+                                                    ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 102, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 214, in delete_user
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 110, in execute
+    return self._run(conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) COALESCE types boolean and integer cannot be matched
+LINE 1: SELECT id, username, COALESCE(is_superuser, 0) AS is_superus...
+                                                    ^
+[SQL: SELECT id, username, COALESCE(is_superuser, 0) AS is_superuser FROM users WHERE id = %s]
+[parameters: ('1637f8c93dddc40d70024e5ee43a0018',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     142.252.8.147:56929 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50739 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32791 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55637 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21173 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50739 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32791 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21173 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55637 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50739 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55637 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32791 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21173 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50739 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37453 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56929 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:36845 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13105 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23553 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:41911 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46511 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21301 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:41911 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13105 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46511 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21301 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23553 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13105 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46511 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:41911 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21301 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23553 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54741 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13105 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46511 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46511 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:13105 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39739 - "POST /api/auth/register HTTP/1.1" 400 Bad Request
+INFO:     142.252.8.147:39739 - "POST /api/auth/register HTTP/1.1" 400 Bad Request
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [74551]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [74705]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:35717 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35717 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65287 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35717 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50223 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63499 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62325 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25413 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35717 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63499 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50223 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65287 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62325 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25413 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35717 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63499 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50223 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62325 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65287 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25413 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35717 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50223 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62325 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62325 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:50223 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26043 - "POST /api/auth/register HTTP/1.1" 400 Bad Request
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [74705]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [74804]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:17493 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17493 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4651 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17493 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:10871 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55873 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56327 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46787 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17493 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:10871 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56327 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4651 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55873 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46787 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:55873 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56327 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17493 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4651 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:10871 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46787 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56327 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17493 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4651 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4651 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:17493 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:59625 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     142.252.8.147:2325 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:19871 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:29457 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31403 - "DELETE /api/users/1637f8c93dddc40d70024e5ee43a0018 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:14987 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     142.252.8.147:59761 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:24419 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32407 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:6125 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:57527 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31025 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:24419 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31025 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:6125 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:57527 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32407 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:57527 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:6125 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:24419 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31025 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32407 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:24419 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:6125 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43499 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:6125 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33775 - "POST /api/auth/register HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.DatatypeMismatch: column "is_superuser" is of type boolean but expression is of type smallint
+LINE 1: ...e, created_at, is_superuser) VALUES ($1, $2, $3, $4, $5, $6)
+                                                                    ^
+HINT:  You will need to rewrite or cast the expression.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 102, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 126, in register
+    user = create_user(username, password, display_name)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 99, in create_user
+    CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 108, in execute
+    return self._run(self._conn, sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 99, in _run
+    result: Result = conn.exec_driver_sql(sql, params or ())
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1779, in exec_driver_sql
+    ret = self._execute_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/cursor.py", line 737, in execute
+    raise ex.with_traceback(None)
+sqlalchemy.exc.ProgrammingError: (psycopg.errors.DatatypeMismatch) column "is_superuser" is of type boolean but expression is of type smallint
+LINE 1: ...e, created_at, is_superuser) VALUES ($1, $2, $3, $4, $5, $6)
+                                                                    ^
+HINT:  You will need to rewrite or cast the expression.
+[SQL: INSERT INTO users (id, username, password_hash, display_name, created_at, is_superuser) VALUES (%s, %s, %s, %s, %s, %s)]
+[parameters: ('6a06854956b7ab029b1122c6abddbb94', '1', 'ed6e3ccb84e51aa82505945e3a7f0aeb$205f1584a78bd571855ed5e6f6fbbc704c205363e80d5f21720bfde00624217b', '1', '2025-11-30T17:44:31.188366+00:00', 0)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [74804]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [75057]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:15629 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31825 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8955 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61275 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34803 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8955 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31825 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61275 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34803 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8955 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:31825 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34803 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8955 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61275 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61275 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:47787 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:63643 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:62435 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39227 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28309 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:51247 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48459 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28309 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39227 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:51247 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48459 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39227 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28309 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:51247 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:8309 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48459 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28309 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:28309 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:13873 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54841 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15629 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     142.252.8.147:2093 - "DELETE /api/users/d3d6e93aa2b0445d2c5a7dfb90087f26 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17079 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     142.252.8.147:64913 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65041 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65041 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:3291 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65041 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:44567 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43689 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:19687 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:11273 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:44567 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43689 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:3291 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65041 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:19687 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:11273 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43689 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:3291 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:11273 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:44567 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:19687 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65041 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:43689 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:3291 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:44567 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:44567 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:3291 - "GET /favicon.ico HTTP/1.1" 200 OK

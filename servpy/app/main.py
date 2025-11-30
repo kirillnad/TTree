@@ -20,6 +20,7 @@ from .auth import (
     clear_session_cookie,
     create_session,
     create_user,
+    ensure_superuser,
     get_current_user,
     get_user_by_username,
     set_session_cookie,
@@ -57,6 +58,7 @@ from .data_store import (
     rebuild_search_indexes,
     build_sqlite_fts_query,
     build_postgres_ts_query,
+    delete_user_with_data,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -79,6 +81,8 @@ ALLOWED_ATTACHMENT_TYPES = {
 ensure_sample_article()
 ensure_inbox_article()
 rebuild_search_indexes()
+# Гарантируем наличие суперпользователя kirill.
+ensure_superuser('kirill', 'zZ141400', 'kirill')
 
 app = FastAPI()
 app.add_middleware(
@@ -122,7 +126,12 @@ def register(payload: dict[str, Any], response: Response):
     user = create_user(username, password, display_name)
     sid = create_session(user.id)
     set_session_cookie(response, sid)
-    return {'id': user.id, 'username': user.username, 'displayName': user.display_name}
+    return {
+        'id': user.id,
+        'username': user.username,
+        'displayName': user.display_name,
+        'isSuperuser': bool(getattr(user, 'is_superuser', False)),
+    }
 
 
 @app.post('/api/auth/login')
@@ -142,7 +151,12 @@ def login(payload: dict[str, Any], response: Response):
         raise HTTPException(status_code=401, detail='Invalid credentials')
     sid = create_session(row.id)
     set_session_cookie(response, sid)
-    return {'id': row.id, 'username': row.username, 'displayName': row.display_name}
+    return {
+        'id': row.id,
+        'username': row.username,
+        'displayName': row.display_name,
+        'isSuperuser': bool(getattr(row, 'is_superuser', False)),
+    }
 
 
 @app.post('/api/auth/logout')
@@ -153,7 +167,12 @@ def logout(response: Response, current_user: User = Depends(get_current_user)):
 
 @app.get('/api/auth/me')
 def me(current_user: User = Depends(get_current_user)):
-    return {'id': current_user.id, 'username': current_user.username, 'displayName': current_user.display_name}
+    return {
+        'id': current_user.id,
+        'username': current_user.username,
+        'displayName': current_user.display_name,
+        'isSuperuser': bool(getattr(current_user, 'is_superuser', False)),
+    }
 
 
 @app.get('/api/articles')
@@ -162,6 +181,52 @@ def list_articles(current_user: User = Depends(get_current_user)):
         {'id': article['id'], 'title': article['title'], 'updatedAt': article['updatedAt']}
         for article in get_articles(current_user.id)
     ]
+
+
+@app.get('/api/users')
+def list_users(current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    rows = CONN.execute(
+        '''
+        SELECT id, username, display_name, created_at,
+               is_superuser
+        FROM users
+        ORDER BY username
+        ''',
+    ).fetchall()
+    return [
+        {
+            'id': row['id'],
+            'username': row['username'],
+            'displayName': row.get('display_name'),
+            'createdAt': row['created_at'],
+            'isSuperuser': bool(row.get('is_superuser', 0)),
+        }
+        for row in rows
+    ]
+
+
+@app.delete('/api/users/{user_id}')
+def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    row = CONN.execute(
+        'SELECT id, username, is_superuser FROM users WHERE id = ?',
+        (user_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail='User not found')
+    if bool(row.get('is_superuser', 0)):
+        raise HTTPException(status_code=400, detail='Cannot delete a superuser')
+    # Удаляем данные пользователя в БД.
+    delete_user_with_data(user_id)
+    # Чистим его uploads на диске.
+    user_root = UPLOADS_DIR / user_id
+    if user_root.exists():
+        import shutil
+        shutil.rmtree(user_root, ignore_errors=True)
+    return {'status': 'deleted'}
 
 
 @app.get('/api/articles/deleted')
