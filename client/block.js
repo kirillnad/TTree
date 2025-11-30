@@ -696,7 +696,6 @@ function ensureContextMenu() {
   menu.className = 'rich-context-menu hidden';
   menu.innerHTML = `
     <div class="rich-context-menu__col rich-context-menu__col--buffer">
-      <div class="rich-context-menu__label" aria-label="Буфер">Буфер</div>
       <div class="rich-context-menu__grid">
         <button class="rich-context-menu__icon-btn" data-action="copy" aria-label="Копировать" title="Копировать">⧉</button>
         <button class="rich-context-menu__icon-btn" data-action="cut" aria-label="Вырезать" title="Вырезать">✂</button>
@@ -705,29 +704,26 @@ function ensureContextMenu() {
       </div>
     </div>
     <div class="rich-context-menu__col">
-      <div class="rich-context-menu__label" aria-label="\u0422\u0435\u043a\u0441\u0442">\u0422\u0435\u043a\u0441\u0442</div>
       <div class="rich-context-menu__grid">
-        <button data-action="bold" aria-label="\u041f\u043e\u043b\u0443\u0436\u0438\u0440\u043d\u044b\u0439" title="\u041f\u043e\u043b\u0443\u0436\u0438\u0440\u043d\u044b\u0439"><strong>\u0416</strong></button>
-        <button data-action="italic" aria-label="\u041a\u0443\u0440\u0441\u0438\u0432" title="\u041a\u0443\u0440\u0441\u0438\u0432"><em>/</em></button>
-        <button data-action="underline" aria-label="\u041f\u043e\u0434\u0447\u0435\u0440\u043a\u043d\u0443\u0442\u044c" title="\u041f\u043e\u0434\u0447\u0435\u0440\u043a\u043d\u0443\u0442\u044c"><u>\u0427</u></button>
-        <button data-action="remove-format" aria-label="\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0444\u043e\u0440\u043c\u0430\u0442" title="\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0444\u043e\u0440\u043c\u0430\u0442">✕</button>
+        <button class="rich-context-menu__icon-btn" data-action="bold" aria-label="Полужирный" title="Полужирный"><strong>Ж</strong></button>
+        <button class="rich-context-menu__icon-btn" data-action="italic" aria-label="Курсив" title="Курсив"><em>/</em></button>
+        <button class="rich-context-menu__icon-btn" data-action="underline" aria-label="Подчеркнуть" title="Подчеркнуть"><u>Ч</u></button>
+        <button class="rich-context-menu__icon-btn" data-action="remove-format" aria-label="Очистить формат" title="Очистить формат">✕</button>
       </div>
     </div>
     <div class="rich-context-menu__col">
-      <div class="rich-context-menu__label" aria-label="\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430">\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430</div>
       <div class="rich-context-menu__grid">
-        <button data-action="ul" aria-label="\u041c\u0430\u0440\u043a\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a" title="\u041c\u0430\u0440\u043a\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a">\u2022</button>
-        <button data-action="ol" aria-label="\u041d\u0443\u043c\u0435\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a" title="\u041d\u0443\u043c\u0435\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u0441\u043f\u0438\u0441\u043e\u043a">1.</button>
-        <button data-action="quote" aria-label="\u0426\u0438\u0442\u0430\u0442\u0430" title="\u0426\u0438\u0442\u0430\u0442\u0430">\u0426\u0438\u0442\u0430\u0442\u0430</button>
-        <button data-action="code" aria-label="\u041a\u043e\u0434" title="\u041a\u043e\u0434">&lt;/&gt;</button>
+        <button class="rich-context-menu__icon-btn" data-action="ul" aria-label="Маркированный список" title="Маркированный список">•</button>
+        <button class="rich-context-menu__icon-btn" data-action="ol" aria-label="Нумерованный список" title="Нумерованный список">1.</button>
+        <button class="rich-context-menu__icon-btn" data-action="quote" aria-label="Цитата" title="Цитата">❝</button>
+        <button class="rich-context-menu__icon-btn" data-action="code" aria-label="Код" title="Код">&lt;/&gt;</button>
       </div>
     </div>
     <div class="rich-context-menu__col">
-      <div class="rich-context-menu__label" aria-label="\u0421\u0441\u044b\u043b\u043a\u0438">\u0421\u0441\u044b\u043b\u043a\u0438</div>
       <div class="rich-context-menu__grid">
-        <button data-action="link" aria-label="\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443" title="\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443">\u0421\u0441\u044b\u043b\u043a\u0430</button>
-        <button data-action="unlink" aria-label="\u0423\u0431\u0440\u0430\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443" title="\u0423\u0431\u0440\u0430\u0442\u044c \u0441\u0441\u044b\u043b\u043a\u0443">\u0423\u0431\u0440\u0430\u0442\u044c</button>
-        <button data-action="insert-article-link" aria-label="\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0441\u0442\u0430\u0442\u044c\u044e" title="\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0441\u0442\u0430\u0442\u044c\u044e">\u0421\u0442\u0430\u0442\u044c\u044f</button>
+        <button class="rich-context-menu__icon-btn" data-action="link" aria-label="Ссылка" title="Ссылка">🔗</button>
+        <button class="rich-context-menu__icon-btn" data-action="unlink" aria-label="Убрать ссылку" title="Убрать ссылку">⊘</button>
+        <button class="rich-context-menu__icon-btn" data-action="insert-article-link" aria-label="Ссылка на статью" title="Ссылка на статью">§</button>
       </div>
     </div>
   `;
