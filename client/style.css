@@ -1325,6 +1325,7 @@ button:hover {
 .block.editing > .block-surface .block-add-btn.block-edit-save-btn {
   align-self: flex-end;
   margin-top: auto;
+  margin-bottom: 0.3rem;
 }
 .block > .block-surface:hover .block-add-btn {
   color: #333333;
@@ -1431,6 +1432,8 @@ body.block-dnd-active {
 .block.editing > .block-surface .block-edit-cancel-btn {
   align-self: flex-end;
   margin-top: auto;
+  margin-bottom: 0.3rem;
+  margin-right: 0.3rem;
 }
 
 .collapse-btn {

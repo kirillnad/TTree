@@ -779,6 +779,15 @@ export function renderArticle() {
         if (state.mode === 'view') setCurrentBlock(block.id);
       });
 
+      surface.addEventListener('dblclick', (event) => {
+        if (state.mode !== 'view') return;
+        const interactive = event.target.closest('button, a, [contenteditable="true"]');
+        if (interactive && !interactive.matches('.block-text[contenteditable="true"]')) return;
+        event.stopPropagation();
+        setCurrentBlock(block.id);
+        startEditing();
+      });
+
       const shouldHideBody = block.collapsed && block.id !== state.editingBlockId && hasTitle;
       if (!body.classList.contains('block-body--empty')) {
         body.classList.toggle('collapsed', shouldHideBody);
