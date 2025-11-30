@@ -3388,3 +3388,1417 @@ INFO:     46.242.12.114:9602 - "GET /api/changelog HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9600 - "GET /favicon.ico HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6387 - "GET /api/articles HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6387 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9697 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9697 - "GET /api/articles/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "POST /api/articles/test-article/blocks/bef61e5e-0f76-4439-b173-8d4abc770a54/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /article/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /style.css HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9652 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6278 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6278 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9652 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /api/articles/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6357 - "PATCH /api/articles/82b748c6-80c4-41c7-b862-426456bf2876/blocks/697374c7-1171-4c65-acb8-5c3c4f75f93c HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6357 - "GET /api/articles/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6310 - "GET /api/articles/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9681 - "GET /api/search?q=%D0%91 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:6304 - "GET /api/search?q=%D0%91%D1%83 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:6328 - "GET /api/search?q=%D0%91%D1%83%D0%BA HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:6343 - "GET /api/search?q=%D0%91%D1%83%D0%BA%D0%B2 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:6370 - "GET /api/search?q=%D0%91%D1%83%D0%BA%D0%B2%D1%83 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9684 - "GET /api/search?q=%D0%91%D1%83%D0%BA%D0%B2 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9690 - "GET /api/search?q=%D0%91%D1%83%D0%BA HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9691 - "GET /api/search?q=%D0%91%D1%83 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9692 - "GET /api/search?q=%D0%91 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9624 - "GET /api/articles/47349848-b669-40b5-b124-b24b95e4b0b6 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9624 - "GET /api/articles/47349848-b669-40b5-b124-b24b95e4b0b6 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9624 - "PATCH /api/articles/47349848-b669-40b5-b124-b24b95e4b0b6/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9624 - "GET /api/articles/82b748c6-80c4-41c7-b862-426456bf2876 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9602 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9602 - "GET /api/search?q=%D0%A2 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:6301 - "GET /api/search?q=%D0%A2%D1%80 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:9680 - "GET /api/search?q=%D0%A2%D1%80%D0%B0 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:9683 - "GET /api/search?q=%D0%A2%D1%80%D0%B0%D0%BA HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:9694 - "GET /api/search?q=%D1%82 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1196, in search_everything
+    articles = search_articles(query, limit=article_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1122, in search_articles
+    'articleId': row['articleId'],
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'articleId'
+INFO:     46.242.12.114:9695 - "GET /api/search?q=%D1%82%D1%80 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:9696 - "GET /api/search?q=%D1%82%D1%80%D0%B0 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:9697 - "GET /api/search?q=%D1%82%D1%80%D0%B0%D0%BA HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 86, in spa_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 349, in get_search
+    return search_everything(query, block_limit=30, article_limit=15)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1197, in search_everything
+    blocks = search_blocks(query, limit=block_limit)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1177, in search_blocks
+    block_text = row['blockText'] or ''
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     46.242.12.114:6353 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6353 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18562 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18614 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18613 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18615 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18614 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9713 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18613 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18611 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18613 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18608 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6375 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9631 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9631 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6375 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9631 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9631 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18582 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18582 - "GET /events.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:18582 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:18640 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /style.css HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9639 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6353 - "GET /actions.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9639 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9639 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9639 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9705 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /api/articles/test-article HTTP/1.1" 200 OK

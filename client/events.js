@@ -268,6 +268,19 @@ export function attachEvents() {
       closeSidebarMobile();
     });
   }
+  document.addEventListener(
+    'click',
+    (event) => {
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      if (isDesktop || !state.isSidebarMobileOpen) return;
+      if (!refs.sidebar) return;
+      const target = event.target;
+      if (refs.sidebar.contains(target)) return;
+      if (refs.mobileSidebarBtn && refs.mobileSidebarBtn.contains(target)) return;
+      closeSidebarMobile();
+    },
+    true,
+  );
   if (refs.articleFilterInput) {
     refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
   }

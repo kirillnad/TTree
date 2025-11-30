@@ -547,6 +547,10 @@ async function insertAttachmentFromFile(element, file) {
 
 export function attachRichContentHandlers(element, blockId) {
   attachContextMenu(element, blockId);
+  const container = element.closest('.block-content');
+  if (container && container !== element) {
+    attachContextMenu(container, blockId, element);
+  }
   element.addEventListener('paste', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     const imageFiles = collectImageFiles(event.clipboardData?.items);
@@ -1144,14 +1148,15 @@ function showContextMenu(event) {
   menu.style.visibility = 'visible';
 }
 
-function attachContextMenu(element, blockId) {
+function attachContextMenu(element, blockId, targetOverride) {
+  const targetEl = targetOverride || element;
   element.addEventListener('focusin', () => {
-    richLastActiveEditable = element;
+    richLastActiveEditable = targetEl;
   });
   element.addEventListener('contextmenu', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     event.preventDefault();
-    richContextTarget = element;
+    richContextTarget = targetEl;
     showContextMenu(event);
   });
   let touchTimer = null;
@@ -1162,7 +1167,7 @@ function attachContextMenu(element, blockId) {
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
       touchTimer = window.setTimeout(() => {
-        richContextTarget = element;
+        richContextTarget = targetEl;
         showContextMenu({ clientX: touch.clientX, clientY: touch.clientY });
       }, 500);
     },
