@@ -890,7 +890,6 @@ button:hover {
 
 .block.editing > .block-surface {
   background: transparent;
-  box-shadow: 0 0 0 2px rgba(55, 148, 255, 0.35);
   position: relative;
 }
 
@@ -1117,6 +1116,10 @@ button:hover {
   cursor: pointer;
   line-height: 1.1;
   transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
+}
+.rich-context-menu__icon-btn {
+  font-size: 1rem;
+  font-weight: 600;
 }
 .rich-context-menu button:hover {
   border-color: #3794ff;
@@ -1754,4 +1757,11 @@ main.content {
   .mobile-only {
     display: inline-flex;
   }
+}
+
+ul {
+  padding: 0;
+  margin: 0;
+  padding-left: 1.5rem;
+
 }

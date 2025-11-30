@@ -684,12 +684,26 @@ let richContextMenu = null;
 let richContextRange = null;
 let richContextTarget = null;
 let richLastActiveEditable = null;
+let appClipboard = {
+  html: '',
+  text: '',
+  sourceBlockId: null,
+};
 
 function ensureContextMenu() {
   if (richContextMenu) return richContextMenu;
   const menu = document.createElement('div');
   menu.className = 'rich-context-menu hidden';
   menu.innerHTML = `
+    <div class="rich-context-menu__col rich-context-menu__col--buffer">
+      <div class="rich-context-menu__label" aria-label="Буфер">Буфер</div>
+      <div class="rich-context-menu__grid">
+        <button class="rich-context-menu__icon-btn" data-action="copy" aria-label="Копировать" title="Копировать">⧉</button>
+        <button class="rich-context-menu__icon-btn" data-action="cut" aria-label="Вырезать" title="Вырезать">✂</button>
+        <button class="rich-context-menu__icon-btn" data-action="paste" aria-label="Вставить" title="Вставить">▣</button>
+        <button class="rich-context-menu__icon-btn" data-action="select-all" aria-label="Выбрать всё" title="Выбрать всё">⛶</button>
+      </div>
+    </div>
     <div class="rich-context-menu__col">
       <div class="rich-context-menu__label" aria-label="\u0422\u0435\u043a\u0441\u0442">\u0422\u0435\u043a\u0441\u0442</div>
       <div class="rich-context-menu__grid">
@@ -839,7 +853,98 @@ function ensureContextMenu() {
       document.execCommand('formatBlock', false, 'p');
     };
 
+    const captureSelectionToClipboard = (kind) => {
+      const target = resolveTarget();
+      if (!target || !document.contains(target)) {
+        showToast('Не удалось найти текст для копирования');
+        return null;
+      }
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        return null;
+      }
+      const range = sel.getRangeAt(0).cloneRange();
+      if (!range || range.collapsed) {
+        return null;
+      }
+      const fragment = range.cloneContents();
+      const wrapper = document.createElement('div');
+      wrapper.appendChild(fragment);
+      const html = wrapper.innerHTML || '';
+      const text = wrapper.textContent || '';
+      const blockEl = target.closest('.block');
+      const blockId = blockEl?.dataset.blockId || null;
+      appClipboard = { html, text, sourceBlockId: blockId };
+      logDebug('clipboard.capture', { kind, hasHtml: Boolean(html), length: text.length, blockId });
+      return { range, target };
+    };
+
     switch (action) {
+      case 'cut': {
+        const captured = captureSelectionToClipboard('cut');
+        if (!captured) break;
+        document.execCommand('cut');
+        break;
+      }
+      case 'copy':
+        captureSelectionToClipboard('copy');
+        document.execCommand('copy');
+        break;
+      case 'select-all': {
+        const target = resolveTarget();
+        if (!target || !document.contains(target)) break;
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        richContextRange = range.cloneRange();
+        break;
+      }
+      case 'paste': {
+        const target = resolveTarget();
+        if (!target || !document.contains(target)) {
+          showToast('Не удалось найти место вставки');
+          break;
+        }
+        if (!appClipboard || (!appClipboard.html && !appClipboard.text)) {
+          showToast('Сначала скопируйте или вырежьте текст в редакторе');
+          break;
+        }
+        restoreSelection();
+        const selection = window.getSelection();
+        let range = null;
+        if (richContextRange && target.contains(richContextRange.commonAncestorContainer)) {
+          range = richContextRange.cloneRange();
+        } else if (selection && selection.rangeCount > 0) {
+          const candidate = selection.getRangeAt(0);
+          if (target.contains(candidate.commonAncestorContainer)) {
+            range = candidate.cloneRange();
+          }
+        }
+        if (!range) {
+          range = document.createRange();
+          range.selectNodeContents(target);
+          range.collapse(false);
+        }
+        const html = appClipboard.html || escapeHtml(appClipboard.text).replace(/\n/g, '<br />');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+        range.deleteContents();
+        range.insertNode(frag);
+        range.collapse(false);
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        target.focus({ preventScroll: true });
+        target.classList.remove('block-body--empty');
+        break;
+      }
       case 'bold':
         document.execCommand('bold');
         break;
@@ -1036,6 +1141,11 @@ function attachContextMenu(element, blockId) {
     richContextTarget = element;
     showContextMenu(event);
   });
+  element.addEventListener('click', (event) => {
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    richContextTarget = element;
+    showContextMenu(event);
+  });
 }
 
 export async function ensureBlockVisible(blockId) {
@@ -1048,9 +1158,3 @@ export async function ensureBlockVisible(blockId) {
       await setCollapseState(ancestor.id, false);
     }
   }
-
-
-
-
-
-
