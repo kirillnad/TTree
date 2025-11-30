@@ -340,7 +340,7 @@ export function setSidebarCollapsed(collapsed) {
   if (refs.sidebarToggle) {
     refs.sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     refs.sidebarToggle.title = collapsed ? 'Показать панель' : 'Свернуть панель';
-    refs.sidebarToggle.textContent = collapsed ? '>' : '<';
+    refs.sidebarToggle.textContent = collapsed ? '→' : 'x';
   }
   if (collapsed) {
     hideHintPopover();

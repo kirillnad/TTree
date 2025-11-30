@@ -247,6 +247,8 @@ html {
   justify-content: center;
   font-size: 0.82rem;
   line-height: 1;
+  z-index: 1300;
+  pointer-events: auto;
 }
 
 .sidebar.collapsed .sidebar-toggle {
@@ -345,6 +347,7 @@ html {
 .sidebar-article-list {
   list-style: none;
   padding: 0;
+  padding-top: 0.3rem;
   margin: 0;
   max-height: 44vh;
   overflow-y: auto;
@@ -837,7 +840,7 @@ button:hover {
   grid-template-columns: auto 1fr auto;
   grid-template-areas: 'collapse content drag';
   align-items: flex-start;
-  column-gap: 0.5rem;
+  /* column-gap: 0.5rem; */
   padding: 0.15rem 0;
   border-radius: 0;
   transition: background 0.15s ease, box-shadow 0.15s ease;
@@ -861,7 +864,7 @@ button:hover {
   box-sizing: border-box;
 }
 .block.editing .block-content {
-  background: #e8f3ff;
+  background: #ffffff;
   border: 1px solid #3794ff;
 }
 
@@ -880,7 +883,7 @@ button:hover {
   box-shadow: none;
 }
 
-.block.selected > .block-surface .block-content {
+.block.selected:not(.editing) > .block-surface .block-content {
   background: #e8f3ff;
   border-color: #3794ff;
 }
@@ -957,11 +960,6 @@ button:hover {
   display: contents;
 }
 
-.block.editing .block-content {
-  background: #e8f3ff;
-  border: 1px solid #3794ff;
-}
-
 .block.editing .block-content > .block-header {
   display: block;
   margin: 0 0 0.2rem 0;
@@ -1001,7 +999,7 @@ button:hover {
   grid-template-columns: auto 1fr auto;
   grid-template-areas: 'collapse content drag';
   align-items: flex-start;
-  column-gap: 0.5rem;
+  /* column-gap: 0.5rem; */
   padding-top: 0.1rem;
   padding-bottom: 0.1rem;
 }
@@ -1023,6 +1021,7 @@ button:hover {
 .block.block--no-title > .block-surface .block-add-btn {
   align-self: flex-start;
   margin-top: 0.3rem;
+  margin-left: 0.3rem;
 }
 
 .block.editing.block--no-title > .block-surface .block-content {
@@ -1256,15 +1255,16 @@ button:hover {
 .block-children {
   grid-area: children;
   position: relative;
-  margin-left: 1.25rem;
-  width: calc(100% - 1.25rem);
-  padding-left: 1.25rem;
-  border-left: 2px dashed #d8d8d8;
+  margin-left: 0.6rem;
+  width: calc(100% - 0.6rem);
+  /* padding-left: 1.25rem; */
+  border-left: 1px solid #d8d8d8;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   /* gap: 0.35rem; */
   /* margin-top: 0.35rem; */
+  padding-left: 1rem;
 }
 
 .block-header {
@@ -1314,7 +1314,14 @@ button:hover {
   color: #7a7a7a;
   cursor: pointer;
   align-self: flex-start;
-  margin: 0.3rem 0 0 0;
+  margin: 0.3rem 0 0 0.3rem;
+}
+.block-add-btn.block-edit-save-btn {
+  margin-top: 0.4rem;
+}
+.block.editing > .block-surface .block-add-btn.block-edit-save-btn {
+  align-self: flex-end;
+  margin-top: auto;
 }
 .block > .block-surface:hover .block-add-btn {
   color: #333333;
@@ -1390,6 +1397,38 @@ body.block-dnd-active {
   cursor: pointer;
   align-self: flex-start;
 }
+.collapse-btn--placeholder {
+  border: none;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+.collapse-btn--placeholder::before,
+.collapse-btn--placeholder::after {
+  display: none;
+}
+
+.block-edit-cancel-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  box-sizing: border-box;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #7a7a7a;
+  cursor: pointer;
+  grid-area: collapse;
+  justify-self: start;
+}
+.block.editing > .block-surface .block-edit-cancel-btn {
+  align-self: flex-end;
+  margin-top: auto;
+}
 
 .collapse-btn {
   position: relative;
@@ -1401,15 +1440,15 @@ body.block-dnd-active {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: #cbd5e1;
 }
 
 .collapse-btn[aria-expanded='false']::before {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 999px;
   background: transparent;
   border: 2px solid #cbd5e1;
@@ -1421,8 +1460,8 @@ body.block-dnd-active {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: #cbd5e1;
 }
@@ -1557,10 +1596,7 @@ body.block-dnd-active {
 .sidebar.mobile-open {
   transform: translateX(0);
 }
-.sidebar-toggle,
-.hint-control {
-  display: none;
-}
+
 .mobile-only {
   display: inline-flex;
 }
@@ -1674,7 +1710,7 @@ main.content {
   }
   .sidebar-toggle,
   .hint-control {
-    display: none;
+    display: inline-flex;
   }
   .content {
     padding: 0.5rem 0.75rem;

@@ -600,22 +600,19 @@ export function renderArticle() {
       const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
       const hasChildren = Boolean(block.children?.length);
       const canCollapse = hasTitle || hasChildren;
+      const hasNoTitleNoChildren = !hasTitle && !hasChildren;
       blockEl.classList.toggle('block--no-title', !hasTitle);
 
       const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
 
-      if (canCollapse || isEditingThisBlock) {
+      if (canCollapse || hasNoTitleNoChildren) {
         const collapseBtn = document.createElement('button');
         collapseBtn.className = 'collapse-btn';
-        if (isEditingThisBlock) {
-          collapseBtn.classList.add('block-edit-cancel-btn');
-          collapseBtn.title = 'Отменить изменения';
-          collapseBtn.textContent = '✕';
-          collapseBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            cancelEditing();
-          });
+        if (hasNoTitleNoChildren) {
+          collapseBtn.classList.add('collapse-btn--placeholder');
+          collapseBtn.setAttribute('aria-hidden', 'true');
+          collapseBtn.removeAttribute('aria-expanded');
+          collapseBtn.removeAttribute('title');
         } else {
           collapseBtn.setAttribute('aria-expanded', block.collapsed ? 'false' : 'true');
           collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
@@ -743,6 +740,20 @@ export function renderArticle() {
             await saveEditing();
           });
         }
+      }
+
+      if (isEditingThisBlock) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'block-edit-cancel-btn';
+        cancelBtn.title = 'Отменить изменения';
+        cancelBtn.textContent = '✕';
+        surface.appendChild(cancelBtn);
+        cancelBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          cancelEditing();
+        });
       }
 
       attachRichContentHandlers(body, block.id);

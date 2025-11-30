@@ -58,7 +58,7 @@ describe('layout блоков без заголовка', () => {
       'grid-template-columns': 'auto 1fr auto',
       'grid-template-areas': "'collapse content drag'",
       'align-items': 'flex-start',
-      'column-gap': '0.5rem',
+
     });
     expect(normalizeValue(declarations['grid-template-areas'])).toBe("'collapse content drag'");
   });
@@ -95,8 +95,8 @@ describe('layout блоков без заголовка', () => {
   });
 
   it('обеспечивает общую правую границу для всех уровней', () => {
-    expect(expectDeclaration('.block-children', 'margin-left')).toBe('1.25rem');
-    expect(expectDeclaration('.block-children', 'width')).toBe('calc(100% - 1.25rem)');
+    expect(expectDeclaration('.block-children', 'margin-left')).toBe('0.6rem');
+    expect(expectDeclaration('.block-children', 'width')).toBe('calc(100% - 0.6rem)');
   });
 
   it('фиксирует внутренние отступы и размер кнопки добавления', () => {

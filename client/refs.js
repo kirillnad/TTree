@@ -33,4 +33,5 @@ export const refs = {
   mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),
   dragModeToggleBtn: document.getElementById('dragModeToggleBtn'),
+  listSidebarBtn: document.getElementById('listSidebarBtn'),
 };

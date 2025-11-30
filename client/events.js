@@ -15,7 +15,14 @@ import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import { toggleHintPopover, hideHintPopover, setTrashMode } from './sidebar.js';
-import { toggleSidebarCollapsed, handleArticleFilterInput, toggleSidebarMobile, closeSidebarMobile } from './sidebar.js';
+import {
+  toggleSidebarCollapsed,
+  handleArticleFilterInput,
+  toggleSidebarMobile,
+  closeSidebarMobile,
+  setSidebarMobileOpen,
+  setSidebarCollapsed,
+} from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
@@ -241,6 +248,13 @@ export function attachEvents() {
     refs.mobileSidebarBtn.addEventListener('click', (event) => {
       event.preventDefault();
       toggleSidebarMobile();
+    });
+  }
+  if (refs.listSidebarBtn) {
+    refs.listSidebarBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      setSidebarCollapsed(false);
+      setSidebarMobileOpen(true);
     });
   }
   if (refs.dragModeToggleBtn) {
