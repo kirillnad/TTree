@@ -1,5 +1,6 @@
 export const state = {
   mode: 'view',
+  currentUser: null,
   articleId: null,
   article: null,
   currentBlockId: null,

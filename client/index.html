@@ -7,6 +7,43 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <div id="authOverlay" class="auth-overlay">
+      <div class="auth-card">
+        <h1 class="auth-title">Noteya</h1>
+        <p class="auth-subtitle">Войдите, чтобы открыть свои заметки</p>
+        <div class="auth-tabs">
+          <button id="authLoginTab" class="auth-tab active" type="button">Вход</button>
+          <button id="authRegisterTab" class="auth-tab" type="button">Регистрация</button>
+        </div>
+        <form id="authLoginForm" class="auth-form">
+          <label class="auth-field">
+            <span>Логин</span>
+            <input id="authLoginUsername" type="text" autocomplete="username" />
+          </label>
+          <label class="auth-field">
+            <span>Пароль</span>
+            <input id="authLoginPassword" type="password" autocomplete="current-password" />
+          </label>
+          <button type="submit" class="primary auth-submit">Войти</button>
+        </form>
+        <form id="authRegisterForm" class="auth-form hidden">
+          <label class="auth-field">
+            <span>Логин</span>
+            <input id="authRegisterUsername" type="text" autocomplete="username" />
+          </label>
+          <label class="auth-field">
+            <span>Отображаемое имя</span>
+            <input id="authRegisterDisplayName" type="text" autocomplete="name" />
+          </label>
+          <label class="auth-field">
+            <span>Пароль</span>
+            <input id="authRegisterPassword" type="password" autocomplete="new-password" />
+          </label>
+          <button type="submit" class="primary auth-submit">Создать аккаунт</button>
+        </form>
+        <p id="authError" class="auth-error hidden" aria-live="polite"></p>
+      </div>
+    </div>
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
         <button
@@ -71,6 +108,10 @@
           <div class="sidebar-footer">
             <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>
             <span id="lastChangeValue"></span>
+            <div class="sidebar-user">
+              <span id="currentUserLabel" class="sidebar-user__name"></span>
+              <button id="logoutBtn" class="ghost small sidebar-user__logout" type="button">Выйти</button>
+            </div>
           </div>
         </div>
       </aside>

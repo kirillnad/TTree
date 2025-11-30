@@ -4852,3 +4852,209 @@ INFO:     46.242.12.114:6379 - "POST /api/articles/test-article/blocks/c423f512-
 INFO:     46.242.12.114:6379 - "GET /api/articles/test-article HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6379 - "POST /api/articles/test-article/blocks/c423f512-cb7c-4b96-be1c-10360fc8b1fa/relocate HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6379 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /api/articles/47349848-b669-40b5-b124-b24b95e4b0b6 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9655 - "GET /api/articles/e2fbe166-6dbe-4723-882f-ffcafd3a645a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9655 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9638 - "GET /api/articles/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /article/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37877 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37877 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:47719 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:7367 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37877 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:47719 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:7367 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17183 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4619 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37877 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:7367 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4619 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:17183 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:37877 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:47719 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48863 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4619 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:4619 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     142.252.8.147:37877 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45887 - "POST /api/auth/register HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:36328 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1208]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [71892]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:12237 - "GET /article/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 404 Not Found
+INFO:     142.252.8.147:12237 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:33761 - "GET /article/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 404 Not Found
+INFO:     142.252.8.147:33761 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [71892]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [72083]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:54721 - "GET /article/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:60895 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54721 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54721 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:60895 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46211 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26001 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:60895 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54721 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56301 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61361 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46211 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26001 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54721 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:60895 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61361 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:54721 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:26001 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56301 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:60895 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:46211 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61361 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61361 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:46211 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:14931 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35205 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:11241 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35205 - "GET /api/articles/094d44f9-9648-4314-ad43-6a0aab042a43 HTTP/1.1" 404 Not Found
+INFO:     142.252.8.147:60685 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:47323 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET / HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25233 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34601 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32231 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25233 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34601 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32231 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:57761 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34601 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32231 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25233 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45455 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:57761 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32231 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:32231 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:43303 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     142.252.8.147:15687 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:50203 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:12281 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:35617 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:29341 - "PATCH /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3/blocks/5b46cbcc-06cd-4c91-857a-ec3faec182bc HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21595 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21595 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:21595 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:14209 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /article/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45079 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:40535 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56301 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:40535 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45079 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56301 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:22769 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:40535 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:56301 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:22769 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:40535 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:45079 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:48943 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:44051 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:34347 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:5431 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25141 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61061 - "GET /article/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61061 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49611 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61061 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49491 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13857 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:9401 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61061 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13857 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49611 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49491 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:9401 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:20611 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49611 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49491 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13857 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:61061 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49611 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:49491 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:20611 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:9401 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13857 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:13857 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:9401 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     142.252.8.147:16445 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     142.252.8.147:51695 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39683 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     142.252.8.147:39683 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 404 Not Found
+INFO:     142.252.8.147:56903 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65029 - "GET /article/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65029 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65029 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:7601 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65029 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:7601 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:27283 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:36059 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:65029 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:36059 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:36059 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:25725 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     142.252.8.147:23339 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     142.252.8.147:25725 - "GET /favicon.ico HTTP/1.1" 200 OK

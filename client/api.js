@@ -1,6 +1,7 @@
 export async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    credentials: 'include',
     ...options,
   });
   if (!response.ok) {
@@ -11,6 +12,54 @@ export async function apiRequest(path, options = {}) {
     return null;
   }
   return response.json();
+}
+
+export async function fetchCurrentUser() {
+  const response = await fetch('/api/auth/me', {
+    method: 'GET',
+    credentials: 'include',
+  });
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.detail || 'Auth check failed');
+  }
+  return response.json();
+}
+
+export async function login(username, password) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || 'Не удалось войти');
+  }
+  return data;
+}
+
+export async function registerUser(username, password, displayName) {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, displayName }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || 'Не удалось создать пользователя');
+  }
+  return data;
+}
+
+export async function logout() {
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
+  });
 }
 
 export function fetchArticlesIndex() {
@@ -47,6 +96,7 @@ export function uploadImageFile(file) {
   formData.append('file', file);
   return fetch('/api/uploads', {
     method: 'POST',
+    credentials: 'include',
     body: formData,
   }).then((res) => {
     if (!res.ok) throw new Error('Upload failed');
@@ -59,6 +109,7 @@ export function uploadAttachmentFile(articleId, file) {
   formData.append('file', file);
   return fetch(`/api/articles/${articleId}/attachments`, {
     method: 'POST',
+    credentials: 'include',
     body: formData,
   }).then(async (res) => {
     if (!res.ok) {
@@ -74,6 +125,7 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/articles/${articleId}/attachments`);
+    xhr.withCredentials = true;
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         const percent = Math.round((event.loaded / event.total) * 100);

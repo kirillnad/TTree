@@ -4,6 +4,15 @@ from .db import IS_POSTGRES, IS_SQLITE, execute
 def _init_sqlite_schema():
     statements = [
         '''
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name TEXT,
+            created_at TEXT NOT NULL
+        )
+        ''',
+        '''
         CREATE TABLE IF NOT EXISTS articles (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -11,7 +20,8 @@ def _init_sqlite_schema():
             updated_at TEXT NOT NULL,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
-            deleted_at TEXT
+            deleted_at TEXT,
+            author_id TEXT
         )
         ''',
         '''
@@ -55,10 +65,13 @@ def _init_sqlite_schema():
     for stmt in statements:
         execute(stmt)
 
-    execute("PRAGMA table_info(articles)")
-    has_deleted = any(col['name'] == 'deleted_at' for col in execute("PRAGMA table_info(articles)").fetchall())
-    if not has_deleted:
+    # Backwards-compatible additions for existing SQLite databases.
+    article_columns = execute("PRAGMA table_info(articles)").fetchall()
+    col_names = {col['name'] for col in article_columns}
+    if 'deleted_at' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN deleted_at TEXT")
+    if 'author_id' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN author_id TEXT")
 
     execute('DROP TABLE IF EXISTS blocks_fts')
     execute(
@@ -93,6 +106,15 @@ def _init_sqlite_schema():
 def _init_postgres_schema():
     statements = [
         '''
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name TEXT,
+            created_at TEXT NOT NULL
+        )
+        ''',
+        '''
         CREATE TABLE IF NOT EXISTS articles (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -100,7 +122,8 @@ def _init_postgres_schema():
             updated_at TEXT NOT NULL,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
-            deleted_at TEXT
+            deleted_at TEXT,
+            author_id TEXT
         )
         ''',
         '''
@@ -175,6 +198,22 @@ def _init_postgres_schema():
 
     for stmt in statements:
         execute(stmt)
+
+    # Ensure author_id exists even if articles table pre-existed.
+    execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'author_id'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN author_id TEXT;
+            END IF;
+        END$$;
+        """
+    )
 
 
 def init_schema():

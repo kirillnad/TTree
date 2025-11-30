@@ -9,12 +9,23 @@ from uuid import uuid4
 from io import BytesIO
 
 import aiofiles
-from fastapi import FastAPI, File, HTTPException, UploadFile, Request
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
+from .auth import (
+    User,
+    clear_session_cookie,
+    create_session,
+    create_user,
+    get_current_user,
+    get_user_by_username,
+    set_session_cookie,
+    verify_password,
+)
+from .db import CONN, IS_SQLITE, IS_POSTGRES
 from .data_store import (
     ArticleNotFound,
     BlockNotFound,
@@ -44,6 +55,8 @@ from .data_store import (
     get_article,
     create_attachment,
     rebuild_search_indexes,
+    build_sqlite_fts_query,
+    build_postgres_ts_query,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -75,36 +88,84 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-app.mount('/uploads', StaticFiles(directory=str(UPLOADS_DIR)), name='uploads')
 
-@app.middleware("http")
-async def spa_middleware(request: Request, call_next):
+@app.middleware('http')
+async def spa_fallback_middleware(request: Request, call_next):
     """
-    Middleware для поддержки Single Page Application (SPA).
-    Если запрос не является API, файлом или загрузкой, возвращает index.html.
+    SPA-фолбек: для любых не-API и не-upload маршрутов без расширения
+    возвращаем index.html, чтобы клиентский роутинг работал (например, /article/123).
     """
     response = await call_next(request)
-    if response.status_code == 404:
-        path = PurePath(request.url.path)
-        if path.suffix:
-            return response
-        if request.url.path.startswith("/api"):
-            return response
-        return FileResponse(f"{CLIENT_DIR}/index.html")
-    return response
+    if response.status_code != 404:
+        return response
+    path = PurePath(request.url.path)
+    if request.url.path.startswith('/api') or request.url.path.startswith('/uploads'):
+        return response
+    if path.suffix:
+        return response
+    index_path = CLIENT_DIR / 'index.html'
+    if not index_path.is_file():
+        return response
+    return FileResponse(index_path)
 
+
+@app.post('/api/auth/register')
+def register(payload: dict[str, Any], response: Response):
+    username = (payload.get('username') or '').strip()
+    password = payload.get('password') or ''
+    display_name = (payload.get('displayName') or '').strip() or None
+    if not username or not password:
+        raise HTTPException(status_code=400, detail='Username and password are required')
+    existing = get_user_by_username(username)
+    if existing:
+        raise HTTPException(status_code=400, detail='Username already taken')
+    user = create_user(username, password, display_name)
+    sid = create_session(user.id)
+    set_session_cookie(response, sid)
+    return {'id': user.id, 'username': user.username, 'displayName': user.display_name}
+
+
+@app.post('/api/auth/login')
+def login(payload: dict[str, Any], response: Response):
+    username = (payload.get('username') or '').strip()
+    password = payload.get('password') or ''
+    if not username or not password:
+        raise HTTPException(status_code=400, detail='Username and password are required')
+    row = get_user_by_username(username)
+    if not row:
+        raise HTTPException(status_code=401, detail='Invalid credentials')
+    stored = CONN.execute(
+        'SELECT password_hash FROM users WHERE id = ?',
+        (row.id,),
+    ).fetchone()
+    if not stored or not verify_password(password, stored['password_hash']):
+        raise HTTPException(status_code=401, detail='Invalid credentials')
+    sid = create_session(row.id)
+    set_session_cookie(response, sid)
+    return {'id': row.id, 'username': row.username, 'displayName': row.display_name}
+
+
+@app.post('/api/auth/logout')
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    clear_session_cookie(response)
+    return {'status': 'ok'}
+
+
+@app.get('/api/auth/me')
+def me(current_user: User = Depends(get_current_user)):
+    return {'id': current_user.id, 'username': current_user.username, 'displayName': current_user.display_name}
 
 
 @app.get('/api/articles')
-def list_articles():
+def list_articles(current_user: User = Depends(get_current_user)):
     return [
         {'id': article['id'], 'title': article['title'], 'updatedAt': article['updatedAt']}
-        for article in get_articles()
+        for article in get_articles(current_user.id)
     ]
 
 
 @app.get('/api/articles/deleted')
-def list_deleted_articles():
+def list_deleted_articles(current_user: User = Depends(get_current_user)):
     return [
         {
             'id': article['id'],
@@ -112,26 +173,29 @@ def list_deleted_articles():
             'updatedAt': article['updatedAt'],
             'deletedAt': article['deletedAt'],
         }
-        for article in get_deleted_articles()
+        for article in get_deleted_articles(current_user.id)
     ]
 
 
 @app.post('/api/articles')
-def post_article(payload: dict[str, Any]):
-    article = create_article(payload.get('title'))
+def post_article(payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    article = create_article(payload.get('title'), current_user.id)
     return article
 
 
 @app.get('/api/articles/{article_id}')
-def read_article(article_id: str):
-    article = get_article(article_id)
+def read_article(article_id: str, current_user: User = Depends(get_current_user)):
+    article = get_article(article_id, current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
 
 
 @app.delete('/api/articles/{article_id}')
-def remove_article(article_id: str, force: bool = False):
+def remove_article(article_id: str, force: bool = False, current_user: User = Depends(get_current_user)):
+    article = get_article(article_id, current_user.id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
     deleted = delete_article(article_id, force=force)
     if not deleted:
         raise HTTPException(status_code=404, detail='Article not found')
@@ -139,7 +203,10 @@ def remove_article(article_id: str, force: bool = False):
 
 
 @app.patch('/api/articles/{article_id}')
-def patch_article(article_id: str, payload: dict[str, Any]):
+def patch_article(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    article = get_article(article_id, current_user.id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
     try:
         article = update_article_meta(article_id, payload)
         if not article:
@@ -151,8 +218,10 @@ def patch_article(article_id: str, payload: dict[str, Any]):
 
 
 @app.patch('/api/articles/{article_id}/blocks/{block_id}')
-def patch_block(article_id: str, block_id: str, payload: dict[str, Any]):
+def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     try:
+        if not get_article(article_id, current_user.id):
+            raise ArticleNotFound('Article not found')
         block = update_block(article_id, block_id, payload)
         return block
     except (ArticleNotFound, BlockNotFound) as e:
@@ -160,7 +229,9 @@ def patch_block(article_id: str, block_id: str, payload: dict[str, Any]):
 
 
 @app.patch('/api/articles/{article_id}/collapse')
-def patch_collapse(article_id: str, payload: dict[str, Any]):
+def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     block_id = payload.get('blockId')
     collapsed = payload.get('collapsed')
     if block_id is None or not isinstance(collapsed, bool):
@@ -173,7 +244,9 @@ def patch_collapse(article_id: str, payload: dict[str, Any]):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
-def post_sibling(article_id: str, block_id: str, payload: dict[str, Any]):
+def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     direction = payload.get('direction', 'after') if payload else 'after'
     try:
         result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
@@ -183,7 +256,9 @@ def post_sibling(article_id: str, block_id: str, payload: dict[str, Any]):
 
 
 @app.delete('/api/articles/{article_id}/blocks/{block_id}')
-def remove_block(article_id: str, block_id: str):
+def remove_block(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = delete_block(article_id, block_id)
     except ValueError as exc:
@@ -194,11 +269,13 @@ def remove_block(article_id: str, block_id: str):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/move')
-def post_move(article_id: str, block_id: str, payload: dict[str, Any]):
+def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     direction = payload.get('direction')
     if direction not in {'up', 'down'}:
         raise HTTPException(status_code=400, detail='Unknown move direction')
     try:
+        if not get_article(article_id, current_user.id):
+            raise ArticleNotFound('Article not found')
         result = move_block(article_id, block_id, direction)
         return result
     except (ArticleNotFound, BlockNotFound) as e:
@@ -208,7 +285,9 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any]):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/indent')
-def post_indent(article_id: str, block_id: str):
+def post_indent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     try:
         return indent_block(article_id, block_id)
     except (ArticleNotFound, BlockNotFound) as e:
@@ -218,7 +297,9 @@ def post_indent(article_id: str, block_id: str):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/outdent')
-def post_outdent(article_id: str, block_id: str):
+def post_outdent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     try:
         return outdent_block(article_id, block_id)
     except (ArticleNotFound, BlockNotFound) as e:
@@ -228,7 +309,9 @@ def post_outdent(article_id: str, block_id: str):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/relocate')
-def post_relocate(article_id: str, block_id: str, payload: dict[str, Any]):
+def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     target_parent_id = payload.get('parentId')
     target_index = payload.get('index')
     anchor_id = payload.get('anchorId')
@@ -242,20 +325,24 @@ def post_relocate(article_id: str, block_id: str, payload: dict[str, Any]):
 
 
 @app.post('/api/articles/{article_id}/blocks/undo-text')
-def post_undo(article_id: str, payload: dict[str, Any]):
+def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
     return _handle_undo_redo(undo_block_text_change, article_id, entry_id)
 
 
 @app.post('/api/articles/{article_id}/blocks/redo-text')
-def post_redo(article_id: str, payload: dict[str, Any]):
+def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
     return _handle_undo_redo(redo_block_text_change, article_id, entry_id)
 
 
 @app.post('/api/articles/{article_id}/restore')
-def post_restore_article(article_id: str):
-    article = restore_article(article_id)
+def post_restore_article(article_id: str, current_user: User = Depends(get_current_user)):
+    article = restore_article(article_id, author_id=current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found or not deleted')
     return article
@@ -263,11 +350,12 @@ def post_restore_article(article_id: str):
 
 
 @app.post('/api/uploads')
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     if not file.content_type or not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail='Ошибка формата: нужен image/*')
     now = datetime.utcnow()
-    target_dir = UPLOADS_DIR / str(now.year) / f"{now.month:02}"
+    user_root = UPLOADS_DIR / current_user.id / 'images'
+    target_dir = user_root / str(now.year) / f"{now.month:02}"
     target_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}.webp"
     dest = target_dir / filename
@@ -303,13 +391,14 @@ async def upload_file(file: UploadFile = File(...)):
     async with aiofiles.open(dest, 'wb') as out_file:
         await out_file.write(out_bytes)
 
-    return {'url': f"/uploads/{dest.relative_to(UPLOADS_DIR).as_posix()}"}
+    rel = dest.relative_to(UPLOADS_DIR).as_posix()
+    return {'url': f"/uploads/{rel}"}
 
 
 
 @app.post('/api/articles/{article_id}/attachments')
-async def upload_attachment(article_id: str, file: UploadFile = File(...)):
-    article = get_article(article_id)
+async def upload_attachment(article_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    article = get_article(article_id, current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     content_type = file.content_type or ''
@@ -318,7 +407,7 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...)):
     if not content_type or content_type not in ALLOWED_ATTACHMENT_TYPES:
         raise HTTPException(status_code=400, detail='Недопустимый тип файла')
 
-    target_dir = UPLOADS_DIR / article_id
+    target_dir = UPLOADS_DIR / current_user.id / 'attachments' / article_id
     target_dir.mkdir(parents=True, exist_ok=True)
     filename = f'{uuid4().hex}{Path(file.filename).suffix or ""}'
     dest = target_dir / filename
@@ -336,21 +425,89 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...)):
         dest.unlink(missing_ok=True)
         raise
 
-    stored_path = f'/uploads/{article_id}/{filename}'
+    stored_path = f'/uploads/{current_user.id}/attachments/{article_id}/{filename}'
     attachment = create_attachment(article_id, stored_path, file.filename or filename, content_type or '', size)
     return attachment
 
 
 @app.get('/api/search')
-def get_search(q: str = ''):
+def get_search(q: str = '', current_user: User = Depends(get_current_user)):
     query = q.strip()
     if not query:
         return []
-    return search_everything(query, block_limit=30, article_limit=15)
+    # Для SQLite выполняем запросы напрямую к FTS-таблицам, чтобы
+    # корректно учитывать автора и поведение при очистке индексов.
+    if IS_SQLITE:
+        fts_query = build_sqlite_fts_query(query)
+        if not fts_query:
+            return []
+        # Поиск по заголовкам статей
+        article_rows = CONN.execute(
+            '''
+            SELECT
+                articles.id AS articleId,
+                articles.title AS title,
+                snippet(articles_fts, '', '', '...', -1, 48) AS snippet
+            FROM articles_fts
+            JOIN articles ON articles.id = articles_fts.article_id
+            WHERE articles_fts MATCH ?
+              AND articles.deleted_at IS NULL
+              AND articles.author_id = ?
+            ORDER BY bm25(articles_fts) ASC
+            LIMIT 15
+            ''',
+            (fts_query, current_user.id),
+        ).fetchall()
+        article_results = [
+            {
+                'type': 'article',
+                'articleId': row['articleId'],
+                'articleTitle': row['title'] or '',
+                'snippet': row['snippet'] or (row['title'] or ''),
+            }
+            for row in article_rows
+        ]
+        # Поиск по содержимому блоков
+        block_rows = CONN.execute(
+            '''
+            SELECT
+                blocks.id AS blockId,
+                articles.id AS articleId,
+                articles.title AS articleTitle,
+                snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
+                blocks.text AS blockText
+            FROM blocks_fts
+            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
+            JOIN articles ON articles.id = blocks.article_id
+            WHERE blocks_fts MATCH ?
+              AND articles.deleted_at IS NULL
+              AND articles.author_id = ?
+            ORDER BY bm25(blocks_fts) ASC
+            LIMIT 30
+            ''',
+            (fts_query, current_user.id),
+        ).fetchall()
+        block_results = [
+            {
+                'type': 'block',
+                'articleId': row['articleId'],
+                'articleTitle': row['articleTitle'],
+                'blockId': row['blockId'],
+                'snippet': row['snippet'] or row['blockText'] or '',
+                'blockText': row['blockText'] or '',
+            }
+            for row in block_rows
+        ]
+        return article_results + block_results
+
+    # Для PostgreSQL используем специализированный поиск из слоя данных.
+    return search_everything(query, block_limit=30, article_limit=15, author_id=current_user.id)
 
 
 @app.post('/api/articles/{article_id}/blocks/restore')
-def post_restore(article_id: str, payload: dict[str, Any]):
+def post_restore(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    if not get_article(article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
     block = payload.get('block')
     if not block:
         raise HTTPException(status_code=400, detail='Missing block payload')
@@ -365,8 +522,12 @@ def post_restore(article_id: str, payload: dict[str, Any]):
 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/move-to/{target_article_id}')
-def post_move_to(article_id: str, block_id: str, target_article_id: str):
+def post_move_to(article_id: str, block_id: str, target_article_id: str, current_user: User = Depends(get_current_user)):
     try:
+        src = get_article(article_id, current_user.id)
+        dst = get_article(target_article_id, current_user.id)
+        if not src or not dst:
+            raise ArticleNotFound('Article not found')
         return move_block_to_article(article_id, block_id, target_article_id)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -409,5 +570,15 @@ def favicon():
     return Response(content=svg, media_type='image/svg+xml')
 
 
-# Mount client SPA after API routes so /api/* keeps working
+@app.get('/uploads/{user_id}/{rest_of_path:path}')
+async def get_upload(user_id: str, rest_of_path: str, current_user: User = Depends(get_current_user)):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=404, detail='Not found')
+    full_path = UPLOADS_DIR / user_id / rest_of_path
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail='Not found')
+    return FileResponse(full_path)
+
+
+# Mount client SPA after API routes so /api/* keeps working.
 app.mount("/", StaticFiles(directory=CLIENT_DIR, html=True), name="client")

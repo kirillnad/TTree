@@ -1,15 +1,23 @@
 import { initRouting, route } from './routing.js';
 import { attachEvents } from './events.js';
 import { loadLastChangeFromChangelog } from './changelog.js';
+import { initAuth, bootstrapAuth } from './auth.js';
 
 /**
  * Инициализация приложения
  */
-function init() {
+function startApp() {
   initRouting();
   attachEvents();
   loadLastChangeFromChangelog();
   route(window.location.pathname);
 }
 
-init();
+async function init() {
+  initAuth(startApp);
+  await bootstrapAuth();
+}
+
+init().catch(() => {
+  // Если что-то пошло не так при инициализации, просто покажем форму логина.
+});

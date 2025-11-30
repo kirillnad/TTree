@@ -161,31 +161,38 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'createdAt': row['created_at'],
         'updatedAt': row['updated_at'],
         'deletedAt': row['deleted_at'],
+        'authorId': row.get('author_id'),
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
         'blocks': rows_to_tree(row['id']),
     }
 
 
-def get_articles() -> List[Dict[str, Any]]:
+def get_articles(author_id: str) -> List[Dict[str, Any]]:
     rows = CONN.execute(
-        'SELECT * FROM articles WHERE deleted_at IS NULL ORDER BY updated_at DESC'
+        'SELECT * FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY updated_at DESC',
+        (author_id,),
     ).fetchall()
     return [build_article_from_row(row) for row in rows if row]
 
 
-def get_deleted_articles() -> List[Dict[str, Any]]:
+def get_deleted_articles(author_id: str) -> List[Dict[str, Any]]:
     rows = CONN.execute(
-        'SELECT * FROM articles WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+        'SELECT * FROM articles WHERE deleted_at IS NOT NULL AND author_id = ? ORDER BY deleted_at DESC',
+        (author_id,),
     ).fetchall()
     return [build_article_from_row(row) for row in rows if row]
 
 
-def get_article(article_id: str, include_deleted: bool = False) -> Optional[Dict[str, Any]]:
-    row = CONN.execute(
-        'SELECT * FROM articles WHERE id = ?' + ('' if include_deleted else ' AND deleted_at IS NULL'),
-        (article_id,),
-    ).fetchone()
+def get_article(article_id: str, author_id: Optional[str] = None, include_deleted: bool = False) -> Optional[Dict[str, Any]]:
+    sql = 'SELECT * FROM articles WHERE id = ?'
+    params: List[Any] = [article_id]
+    if author_id is not None:
+        sql += ' AND author_id = ?'
+        params.append(author_id)
+    if not include_deleted:
+        sql += ' AND deleted_at IS NULL'
+    row = CONN.execute(sql, tuple(params)).fetchone()
     return build_article_from_row(row)
 
 
@@ -207,11 +214,14 @@ def delete_article(article_id: str, force: bool = False) -> bool:
                 (now, now, article_id),
             )
     return True
-def restore_article(article_id: str) -> Optional[Dict[str, Any]]:
+def restore_article(article_id: str, author_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     with CONN:
-        row = CONN.execute(
-            'SELECT * FROM articles WHERE id = ? AND deleted_at IS NOT NULL', (article_id,)
-        ).fetchone()
+        sql = 'SELECT * FROM articles WHERE id = ? AND deleted_at IS NOT NULL'
+        params: List[Any] = [article_id]
+        if author_id is not None:
+            sql += ' AND author_id = ?'
+            params.append(author_id)
+        row = CONN.execute(sql, tuple(params)).fetchone()
         if not row:
             return None
         now = iso_now()
@@ -219,7 +229,7 @@ def restore_article(article_id: str) -> Optional[Dict[str, Any]]:
             'UPDATE articles SET deleted_at = NULL, updated_at = ? WHERE id = ?',
             (now, article_id),
         )
-    return get_article(article_id, include_deleted=True)
+    return get_article(article_id, author_id=author_id, include_deleted=True)
 
 def insert_blocks_recursive(
     article_id: str,
@@ -308,6 +318,7 @@ def save_article(article: Dict[str, Any]) -> None:
     now = normalized.get('updatedAt', iso_now())
     normalized['updatedAt'] = now
     title_value = normalized.get('title') or 'Новая статья'
+    author_id = normalized.get('authorId')
     with CONN:
         exists = CONN.execute(
             'SELECT created_at FROM articles WHERE id = ?', (normalized['id'],)
@@ -330,8 +341,8 @@ def save_article(article: Dict[str, Any]) -> None:
         else:
             CONN.execute(
                 '''
-                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, author_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     normalized['id'],
@@ -340,6 +351,7 @@ def save_article(article: Dict[str, Any]) -> None:
                     now,
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
+                    author_id,
                 ),
             )
         CONN.execute('DELETE FROM blocks WHERE article_id = ?', (normalized['id'],))
@@ -368,36 +380,16 @@ def ensure_sample_article():
             },
         ],
     }
-    article = {
-        'id': sample_id,
-        'title': 'Пример статьи',
-        'createdAt': iso_now(),
-        'updatedAt': iso_now(),
-        'blocks': [intro_block],
-        'history': [],
-        'redoHistory': [],
-    }
-    save_article(article)
+    # Примерная статья теперь создаётся только в пользовательском контексте.
+    return
 
 
 def ensure_inbox_article():
-    existing = CONN.execute('SELECT 1 FROM articles WHERE id = ?', ('inbox',)).fetchone()
-    if existing:
-        return
-    now = iso_now()
-    inbox_article = {
-        'id': 'inbox',
-        'title': 'Inbox',
-        'createdAt': now,
-        'updatedAt': now,
-        'blocks': [create_default_block()],
-        'history': [],
-        'redoHistory': [],
-    }
-    save_article(inbox_article)
+    # Глобальный inbox отключён в многопользовательском режиме.
+    return
 
 
-def create_article(title: Optional[str] = None) -> Dict[str, Any]:
+def create_article(title: Optional[str] = None, author_id: Optional[str] = None) -> Dict[str, Any]:
     now = iso_now()
     article = {
         'id': str(uuid.uuid4()),
@@ -407,6 +399,7 @@ def create_article(title: Optional[str] = None) -> Dict[str, Any]:
         'blocks': [create_default_block()],
         'history': [],
         'redoHistory': [],
+        'authorId': author_id,
     }
     save_article(article)
     return article
@@ -1073,13 +1066,12 @@ def build_postgres_ts_query(term: str) -> str:
     return ' | '.join(f"{token}:*" for token in unique_tokens)
 
 
-def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+def search_articles(query: str, limit: int = 10, author_id: Optional[str] = None) -> List[Dict[str, Any]]:
     if IS_SQLITE:
         fts_query = build_sqlite_fts_query(query)
         if not fts_query:
             return []
-        rows = CONN.execute(
-            '''
+        sql = '''
             SELECT
                 articles.id AS articleId,
                 articles.title AS title,
@@ -1087,17 +1079,19 @@ def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
             FROM articles_fts
             JOIN articles ON articles.id = articles_fts.article_id
             WHERE articles_fts MATCH ? AND articles.deleted_at IS NULL
-            ORDER BY bm25(articles_fts) ASC
-            LIMIT ?
-            ''',
-            (fts_query, limit),
-        ).fetchall()
+        '''
+        params: List[Any] = [fts_query]
+        if author_id is not None:
+            sql += ' AND articles.author_id = ?'
+            params.append(author_id)
+        sql += ' ORDER BY bm25(articles_fts) ASC LIMIT ?'
+        params.append(limit)
+        rows = CONN.execute(sql, tuple(params)).fetchall()
     else:
         ts_query = build_postgres_ts_query(query)
         if not ts_query:
             return []
-        rows = CONN.execute(
-            '''
+        base_sql = '''
             SELECT
                 articles.id AS articleId,
                 articles.title AS title,
@@ -1107,11 +1101,14 @@ def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
             JOIN articles ON articles.id = articles_fts.article_id
             WHERE articles.deleted_at IS NULL
               AND articles_fts.search_vector @@ to_tsquery('simple', ?)
-            ORDER BY rank DESC, articles.updated_at DESC
-            LIMIT ?
-            ''',
-            (ts_query, ts_query, ts_query, limit),
-        ).fetchall()
+        '''
+        params: List[Any] = [ts_query, ts_query, ts_query]
+        if author_id is not None:
+            base_sql += ' AND articles.author_id = %s'
+            params.append(author_id)
+        base_sql += ' ORDER BY rank DESC, articles.updated_at DESC LIMIT %s'
+        params.append(limit)
+        rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results: List[Dict[str, Any]] = []
     for row in rows:
         title = row['title'] or ''
@@ -1127,13 +1124,12 @@ def search_articles(query: str, limit: int = 10) -> List[Dict[str, Any]]:
     return results
 
 
-def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
+def search_blocks(query: str, limit: int = 20, author_id: Optional[str] = None) -> List[Dict[str, Any]]:
     if IS_SQLITE:
         fts_query = build_sqlite_fts_query(query)
         if not fts_query:
             return []
-        rows = CONN.execute(
-            '''
+        sql = '''
             SELECT
                 blocks.id AS blockId,
                 articles.id AS articleId,
@@ -1144,17 +1140,19 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
             JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
             JOIN articles ON articles.id = blocks.article_id
             WHERE blocks_fts MATCH ? AND articles.deleted_at IS NULL
-            ORDER BY bm25(blocks_fts) ASC
-            LIMIT ?
-            ''',
-            (fts_query, limit),
-        ).fetchall()
+        '''
+        params: List[Any] = [fts_query]
+        if author_id is not None:
+            sql += ' AND articles.author_id = ?'
+            params.append(author_id)
+        sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+        params.append(limit)
+        rows = CONN.execute(sql, tuple(params)).fetchall()
     else:
         ts_query = build_postgres_ts_query(query)
         if not ts_query:
             return []
-        rows = CONN.execute(
-            '''
+        base_sql = '''
             SELECT
                 blocks.id AS blockId,
                 articles.id AS articleId,
@@ -1167,11 +1165,14 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
             JOIN articles ON articles.id = blocks.article_id
             WHERE articles.deleted_at IS NULL
               AND blocks_fts.search_vector @@ to_tsquery('simple', ?)
-            ORDER BY rank DESC, blocks.updated_at DESC
-            LIMIT ?
-            ''',
-            (ts_query, ts_query, ts_query, limit),
-        ).fetchall()
+        '''
+        params: List[Any] = [ts_query, ts_query, ts_query]
+        if author_id is not None:
+            base_sql += ' AND articles.author_id = %s'
+            params.append(author_id)
+        base_sql += ' ORDER BY rank DESC, blocks.updated_at DESC LIMIT %s'
+        params.append(limit)
+        rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results = []
     for row in rows:
         block_text = row['blockText'] or ''
@@ -1189,12 +1190,14 @@ def search_blocks(query: str, limit: int = 20) -> List[Dict[str, Any]]:
     return results
 
 
-def search_everything(query: str, block_limit: int = 20, article_limit: int = 10) -> List[Dict[str, Any]]:
+def search_everything(query: str, block_limit: int = 20, article_limit: int = 10, author_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Combined search for articles (by title) and blocks (by content) to support a single search box.
     """
-    articles = search_articles(query, limit=article_limit)
-    blocks = search_blocks(query, limit=block_limit)
+    # Фильтрация по автору делается на уровне SQL join с таблицей articles;
+    # поэтому здесь достаточно передать запрос и лимиты, а author_id использовать в SQL.
+    articles = search_articles(query, limit=article_limit, author_id=author_id)
+    blocks = search_blocks(query, limit=block_limit, author_id=author_id)
     return articles + blocks
 
 

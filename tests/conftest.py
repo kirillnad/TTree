@@ -40,8 +40,11 @@ def app_env(monkeypatch, tmp_path_factory):
 
     db, data_store, main = _load_app()
     # main imports seed sample data; wipe to keep tests isolated
-    for table in ('attachments', 'blocks_fts', 'articles_fts', 'blocks', 'articles'):
-        db.execute(f'DELETE FROM {table}')
+    for table in ('attachments', 'blocks_fts', 'articles_fts', 'blocks', 'articles', 'users'):
+        try:
+            db.execute(f'DELETE FROM {table}')
+        except Exception:
+            pass
 
     return {'db': db, 'data_store': data_store, 'app': main.app}
 
@@ -51,4 +54,7 @@ def client(app_env):
     client = TestClient(app_env['app'])
     client.app_db = app_env['db']
     client.data_store = app_env['data_store']
+    # Register and authenticate default test user so API is usable in tests.
+    resp = client.post('/api/auth/register', json={'username': 'test', 'password': 'test'})
+    assert resp.status_code == 200
     return client
