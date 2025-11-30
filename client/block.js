@@ -1095,6 +1095,14 @@ function ensureContextMenu() {
     if (menu.classList.contains('hidden')) return;
     if (!menu.contains(event.target)) hideContextMenu();
   });
+  document.addEventListener(
+    'touchstart',
+    (event) => {
+      if (menu.classList.contains('hidden')) return;
+      if (!menu.contains(event.target)) hideContextMenu();
+    },
+    { passive: true },
+  );
   document.addEventListener('keydown', (event) => {
     if (event.code === 'Escape') hideContextMenu();
   });
@@ -1141,11 +1149,28 @@ function attachContextMenu(element, blockId) {
     richContextTarget = element;
     showContextMenu(event);
   });
-  element.addEventListener('click', (event) => {
-    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    richContextTarget = element;
-    showContextMenu(event);
-  });
+  let touchTimer = null;
+  element.addEventListener(
+    'touchstart',
+    (event) => {
+      if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      touchTimer = window.setTimeout(() => {
+        richContextTarget = element;
+        showContextMenu({ clientX: touch.clientX, clientY: touch.clientY });
+      }, 500);
+    },
+    { passive: true },
+  );
+  const clearTouchTimer = () => {
+    if (touchTimer !== null) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+  };
+  element.addEventListener('touchend', clearTouchTimer, { passive: true });
+  element.addEventListener('touchcancel', clearTouchTimer, { passive: true });
 }
 
 export async function ensureBlockVisible(blockId) {

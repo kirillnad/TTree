@@ -709,6 +709,20 @@ export function renderArticle() {
       content.appendChild(body);
 
       surface.appendChild(content);
+
+      if (isEditingThisBlock) {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isTouchDevice) {
+          content.addEventListener('click', (event) => {
+            const editable = content.querySelector('.block-text[contenteditable="true"]');
+            if (!editable) return;
+            if (editable.contains(event.target)) return;
+            event.stopPropagation();
+            editable.focus();
+            placeCaretAtEnd(editable);
+          });
+        }
+      }
       registerBlockDragSource(surface, block.id);
 
       if (state.articleId !== 'inbox') {
