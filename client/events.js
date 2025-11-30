@@ -247,7 +247,8 @@ export function attachEvents() {
   if (refs.mobileSidebarBtn) {
     refs.mobileSidebarBtn.addEventListener('click', (event) => {
       event.preventDefault();
-      toggleSidebarMobile();
+      setSidebarCollapsed(false);
+      setSidebarMobileOpen(true);
     });
   }
   if (refs.listSidebarBtn) {
