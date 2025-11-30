@@ -3266,3 +3266,50 @@ INFO:     46.242.12.114:9658 - "GET /api/changelog HTTP/1.1" 200 OK
 INFO:     46.242.12.114:6358 - "GET /favicon.ico HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9659 - "GET /api/articles HTTP/1.1" 200 OK
 INFO:     46.242.12.114:9659 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9616 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9619 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9617 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9619 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9617 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9619 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9619 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9619 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9634 - "PATCH /api/articles/test-article/blocks/67262a99-674b-4749-8fe8-e933b80a48a0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9634 - "POST /api/articles/test-article/blocks/67262a99-674b-4749-8fe8-e933b80a48a0/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9634 - "PATCH /api/articles/test-article/blocks/c423f512-cb7c-4b96-be1c-10360fc8b1fa HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9634 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "PATCH /api/articles/test-article/blocks/c423f512-cb7c-4b96-be1c-10360fc8b1fa HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9642 - "GET /article/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9642 - "GET /style.css HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9642 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9647 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9667 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9664 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9667 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9647 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9664 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9664 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9669 - "PATCH /api/articles/test-article/blocks/67262a99-674b-4749-8fe8-e933b80a48a0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9669 - "POST /api/articles/test-article/blocks/67262a99-674b-4749-8fe8-e933b80a48a0/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9669 - "PATCH /api/articles/test-article/blocks/df597640-1fc6-4d1d-a0ae-7df2b4d16cdc HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9669 - "GET /api/articles/test-article HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9665 - "PATCH /api/articles/test-article/blocks/df597640-1fc6-4d1d-a0ae-7df2b4d16cdc HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9665 - "GET /api/articles/test-article HTTP/1.1" 200 OK

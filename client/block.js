@@ -7,6 +7,7 @@ import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js';
 import { fetchArticlesIndex } from './api.js';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
+import { splitEditingBlockAtCaret } from './actions.js';
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -726,6 +727,11 @@ function ensureContextMenu() {
         <button class="rich-context-menu__icon-btn" data-action="insert-article-link" aria-label="Ссылка на статью" title="Ссылка на статью">§</button>
       </div>
     </div>
+    <div class="rich-context-menu__col">
+      <div class="rich-context-menu__grid">
+        <button class="rich-context-menu__icon-btn" data-action="split-at-caret" aria-label="Разделить блок по курсору" title="Разделить блок по курсору">|↵</button>
+      </div>
+    </div>
   `;
   document.body.appendChild(menu);
 
@@ -1074,6 +1080,9 @@ function ensureContextMenu() {
           hideContextMenu();
         });
         return;
+      case 'split-at-caret':
+        await splitEditingBlockAtCaret();
+        break;
       default:
         break;
     }
