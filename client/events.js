@@ -190,19 +190,35 @@ export function attachEvents() {
   document.addEventListener('paste', handleGlobalPaste);
 
   if (refs.createArticleBtn) {
-    refs.createArticleBtn.addEventListener('click', createArticle);
+    refs.createArticleBtn.addEventListener('click', () => {
+      createArticle();
+      if (state.isSidebarMobileOpen) {
+        setSidebarMobileOpen(false);
+      }
+    });
   }
   if (refs.sidebarNewArticleBtn) {
-    refs.sidebarNewArticleBtn.addEventListener('click', createArticle);
+    refs.sidebarNewArticleBtn.addEventListener('click', () => {
+      createArticle();
+      if (state.isSidebarMobileOpen) {
+        setSidebarMobileOpen(false);
+      }
+    });
   }
   if (refs.openInboxBtn) {
     refs.openInboxBtn.addEventListener('click', () => {
       openInboxArticle();
+      if (state.isSidebarMobileOpen) {
+        setSidebarMobileOpen(false);
+      }
     });
   }
   if (refs.quickNoteAddBtn) {
     refs.quickNoteAddBtn.addEventListener('click', () => {
       createInboxNote();
+      if (state.isSidebarMobileOpen) {
+        setSidebarMobileOpen(false);
+      }
     });
   }
   if (refs.backToList) refs.backToList.addEventListener('click', () => navigate(routing.list));

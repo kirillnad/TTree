@@ -157,7 +157,13 @@ export function renderSidebarArticleList() {
     if (!state.isTrashView && article.id === state.articleId) button.classList.add('active');
     const isFav = favs.has(article.id);
     button.innerHTML = `<span>${escapeHtml(article.title || 'Без названия')}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
-    button.addEventListener('click', () => navigate(routing.article(article.id)));
+    button.addEventListener('click', () => {
+      navigate(routing.article(article.id));
+      // Автоматически закрываем сайдбар на мобильном.
+      if (state.isSidebarMobileOpen) {
+        setSidebarMobileOpen(false);
+      }
+    });
     const star = button.querySelector('.star-btn');
     if (star) {
       star.addEventListener('click', (event) => {
