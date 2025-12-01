@@ -166,3 +166,20 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
     xhr.send(formData);
   });
 }
+
+export function importArticleFromHtml(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return fetch('/api/import/html', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(async (res) => {
+    const details = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message = details?.detail || `Import failed (status ${res.status})`;
+      throw new Error(message);
+    }
+    return details;
+  });
+}

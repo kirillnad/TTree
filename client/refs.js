@@ -48,6 +48,7 @@ export const refs = {
   articleEncryptionRemoveBtn: document.getElementById('articleEncryptionRemoveBtn'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
+  importArticleBtn: document.getElementById('importArticleBtn'),
   pasteProgress: document.getElementById('pasteProgress'),
   mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),

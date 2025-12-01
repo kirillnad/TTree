@@ -19,6 +19,7 @@ export async function exportCurrentArticleAsHtml() {
     const { bodyHtml, plainText, wordCount } = buildExportBody(state.article);
     const { html: inlinedHtml, failures } = await inlineAssets(bodyHtml);
     const description = buildDescription(plainText);
+    const exportPayload = buildExportPayload(state.article);
     const html = buildDocument({
       cssText,
       contentHtml: inlinedHtml,
@@ -27,6 +28,7 @@ export async function exportCurrentArticleAsHtml() {
       article: state.article,
       wordCount,
       lang: document.documentElement.lang || 'ru',
+      exportPayload,
     });
     triggerDownload(html, makeFileName(state.article.title || 'article'));
     if (failures.length) {
@@ -86,14 +88,22 @@ function renderBlock(block) {
   const rawBody = hasTitle ? bodyHtml : block.text || '';
   const hasBody = Boolean(rawBody && rawBody.trim());
   const hasChildren = Boolean(block.children?.length);
-  const isCollapsible = hasTitle || hasChildren;
+  const canCollapse = hasTitle || hasChildren;
+  const hasNoTitleNoChildren = !hasTitle && !hasChildren;
   const collapsed = Boolean(block.collapsed);
 
-  const collapseBtn = isCollapsible
-    ? `<button class="collapse-btn" type="button" data-block-id="${block.id}" aria-expanded="${
+  let collapseBtn = '';
+  if (canCollapse || hasNoTitleNoChildren) {
+    if (hasNoTitleNoChildren) {
+      // Плейсхолдер, как в основном интерфейсе: только для выравнивания.
+      collapseBtn =
+        '<button class="collapse-btn collapse-btn--placeholder" type="button" aria-hidden="true"></button>';
+    } else {
+      collapseBtn = `<button class="collapse-btn" type="button" data-block-id="${block.id}" aria-expanded="${
         collapsed ? 'false' : 'true'
-      }"></button>`
-    : '';
+      }"></button>`;
+    }
+  }
   const titlePart = hasTitle ? `<div class="block-title">${titleHtml}</div>` : '';
   const header = titlePart
     ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
@@ -112,8 +122,8 @@ function renderBlock(block) {
   const blockClasses = ['block'];
   if (!hasTitle) blockClasses.push('block--no-title');
 
-  const dragHandle = `<button class="block-add-btn" type="button" aria-hidden="true" tabindex="-1">+</button>`;
-  const surface = `<div class="block-surface">${collapseBtn}${content}${dragHandle}</div>`;
+  // В экспортируемом HTML не нужен интерактивный drag / add-баттон.
+  const surface = `<div class="block-surface">${collapseBtn}${content}</div>`;
 
   return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;
 }
@@ -150,6 +160,41 @@ function buildExportBody(article) {
   `;
 
   return { bodyHtml, plainText, wordCount };
+}
+
+function buildExportPayload(article) {
+  if (!article) {
+    return {
+      version: 1,
+      source: 'memus',
+      article: null,
+      blocks: [],
+    };
+  }
+
+  const serializeBlocks = (blocks = []) =>
+    (blocks || []).map((block) => ({
+      id: block.id,
+      text: block.text || '',
+      collapsed: Boolean(block.collapsed),
+      children: serializeBlocks(block.children || []),
+    }));
+
+  return {
+    version: 1,
+    source: 'memus',
+    article: {
+      id: article.id,
+      title: article.title || '',
+      createdAt: article.createdAt || null,
+      updatedAt: article.updatedAt || null,
+      deletedAt: article.deletedAt || null,
+      isInbox: article.id === 'inbox',
+      encrypted: Boolean(article.encrypted),
+      encryptionHint: article.encryptionHint || null,
+    },
+    blocks: serializeBlocks(article.blocks || []),
+  };
 }
 
 async function inlineAssets(html) {
@@ -254,7 +299,7 @@ async function inlineAssets(html) {
   return { html: template.innerHTML, failures };
 }
 
-function buildDocument({ cssText, contentHtml, title, description, article, wordCount, lang }) {
+function buildDocument({ cssText, contentHtml, title, description, article, wordCount, lang, exportPayload }) {
   const updatedAt = article.updatedAt || '';
   const createdAt = article.createdAt || updatedAt || '';
   const jsonLd = {
@@ -309,6 +354,7 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description || title)}" />
+  <meta name="x-memus-export" content="memus;v=1" />
   <meta name="robots" content="index,follow" />
   <meta property="og:type" content="article" />
   <meta property="og:title" content="${escapeHtml(title)}" />
@@ -323,6 +369,9 @@ ${JSON.stringify(jsonLd, null, 2)}
   </script>
 </head>
 <body class="export-page">
+<script type="application/json" id="memus-export">
+${JSON.stringify(exportPayload || null, null, 2)}
+</script>
 ${contentHtml}
 <script>
 (() => {

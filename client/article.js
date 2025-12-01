@@ -1045,35 +1045,35 @@ export function renderArticle() {
       }
       registerBlockDragSource(surface, block.id);
 
-      if (state.articleId !== 'inbox') {
-        if (state.mode === 'view' && block.id === state.currentBlockId) {
-          const addBtn = document.createElement('button');
-          addBtn.type = 'button';
-          addBtn.className = 'block-add-btn';
-          addBtn.title = 'Добавить блок ниже';
-          addBtn.setAttribute('aria-label', 'Добавить блок ниже');
-          addBtn.textContent = '+';
-          surface.appendChild(addBtn);
-          addBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setCurrentBlock(block.id);
-            createSibling('after');
-          });
-        } else if (isEditingThisBlock) {
-          const saveBtn = document.createElement('button');
-          saveBtn.type = 'button';
-          saveBtn.className = 'block-add-btn block-edit-save-btn';
-          saveBtn.title = 'Сохранить изменения';
-          saveBtn.setAttribute('aria-label', 'Сохранить изменения');
-          saveBtn.textContent = '✔';
-          surface.appendChild(saveBtn);
-          saveBtn.addEventListener('click', async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            await saveEditing();
-          });
-        }
+      if (state.mode === 'view' && block.id === state.currentBlockId && state.articleId !== 'inbox') {
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'block-add-btn';
+        addBtn.title = 'Добавить блок ниже';
+        addBtn.setAttribute('aria-label', 'Добавить блок ниже');
+        addBtn.textContent = '+';
+        surface.appendChild(addBtn);
+        addBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setCurrentBlock(block.id);
+          createSibling('after');
+        });
+      }
+
+      if (isEditingThisBlock) {
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'block-add-btn block-edit-save-btn';
+        saveBtn.title = 'Сохранить изменения';
+        saveBtn.setAttribute('aria-label', 'Сохранить изменения');
+        saveBtn.textContent = '✔';
+        surface.appendChild(saveBtn);
+        saveBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await saveEditing();
+        });
       }
 
       if (isEditingThisBlock) {

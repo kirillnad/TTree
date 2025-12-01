@@ -26,6 +26,8 @@ import {
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
+import { importArticleFromHtml } from './api.js';
+import { showToast } from './toast.js';
 
 function handleViewKey(event) {
   if (!state.article) return;
@@ -257,6 +259,37 @@ export function attachEvents() {
       event.stopPropagation();
       closeArticleMenu();
       exportCurrentArticleAsHtml();
+    });
+  }
+  if (refs.importArticleBtn) {
+    refs.importArticleBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      try {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.html,text/html';
+        input.multiple = false;
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            showToast('Импортируем HTML...');
+            const article = await importArticleFromHtml(file);
+            if (article && article.id) {
+              navigate(routing.article(article.id));
+              showToast('Статья импортирована');
+            } else {
+              showToast('Импорт завершился без результата');
+            }
+          } catch (error) {
+            showToast(error.message || 'Не удалось импортировать HTML');
+          }
+        });
+        input.click();
+      } catch (error) {
+        showToast(error.message || 'Не удалось запустить импорт');
+      }
     });
   }
   if (refs.deleteArticleBtn) {

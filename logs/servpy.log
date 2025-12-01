@@ -9565,3 +9565,2500 @@ INFO:     46.242.12.114:6403 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
 INFO:     46.242.12.114:6382 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
 INFO:     46.242.12.114:6382 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
 INFO:     46.242.12.114:6403 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     52.73.56.26:63281 - "GET / HTTP/1.1" 200 OK
+INFO:     52.73.56.26:32450 - "HEAD /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     205.169.39.50:5770 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     188.166.170.116:36638 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /article/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6338 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6390 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/609602b6-f844-4e60-961c-d06d44b44aaf HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/439c7bdd-0276-4b10-9fb7-52f6d6fdbaa8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "DELETE /api/articles/439c7bdd-0276-4b10-9fb7-52f6d6fdbaa8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/ffc47177-43cf-4519-a225-5f3dd42fa44e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "DELETE /api/articles/ffc47177-43cf-4519-a225-5f3dd42fa44e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     188.166.170.116:38714 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6287 - "DELETE /api/articles/0f1087c0-7cbf-42ca-8d65-53ad46cabbe3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6287 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /api/articles/db15c9c1-473f-493a-a5fe-d7e248445682 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6312 - "DELETE /api/articles/db15c9c1-473f-493a-a5fe-d7e248445682 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6312 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6342 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     188.166.170.116:51286 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:41962 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:47484 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.49:23634 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.49:23646 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     66.132.153.49:46832 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.49:23010 - "GET /login HTTP/1.1" 200 OK
+INFO:     149.50.96.133:51424 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:47538 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     185.44.10.118:22043 - "GET / HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22043 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22044 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22046 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22044 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22043 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22047 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22049 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22050 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22043 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22044 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22047 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22049 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22050 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22043 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:47263 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22046 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22044 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22047 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22050 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22043 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22054 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22049 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22044 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22046 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:47263 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22054 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22047 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22050 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22055 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22057 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22061 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22059 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22061 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:47263 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     185.44.10.118:22061 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22057 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:47263 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22061 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22057 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22059 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22055 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22054 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22046 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22061 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22057 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22046 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     185.44.10.118:22061 - "GET /modal.js HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     5.255.231.245:45406 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     5.255.231.125:60296 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.101.1.225:51192 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.101.1.225:51198 - "POST /graphql HTTP/1.1" 405 Method Not Allowed
+WARNING:  Invalid HTTP request received.
+INFO:     46.101.1.225:51206 - "POST /api HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:51214 - "POST /api/graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:51224 - "POST /graphql/api HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:51230 - "POST /api/gql HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:51238 - "GET /swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:51250 - "GET /swagger/index.html HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:51254 - "GET /swagger/swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:51262 - "GET /webjars/swagger-ui/index.html HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:51264 - "GET /swagger.json HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:51276 - "GET /swagger/v1/swagger.json HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46220 - "GET /v2/api-docs HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46230 - "GET /v3/api-docs HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46238 - "GET /api-docs/swagger.json HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46242 - "GET /api/swagger.json HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46246 - "GET /%40vite/env HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46262 - "GET /actuator/env HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46270 - "GET /server HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46276 - "GET /.vscode/sftp.json HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46284 - "GET /about HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46292 - "GET /debug/default/view?panel=config HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46304 - "GET /v2/_catalog HTTP/1.1" 200 OK
+INFO:     134.209.25.199:58978 - "GET / HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46306 - "GET /ecp/Current/exporttool/microsoft.exchange.ediscovery.exporttool.application HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46312 - "GET /server-status HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46320 - "GET /login.action HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:58990 - "POST /graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:46322 - "GET /_all_dbs HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46332 - "GET /.DS_Store HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46348 - "GET /.env HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46362 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     134.209.25.199:58994 - "POST /api HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:46372 - "GET /s/931313e2533323e28333e22393/_/%3B/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46382 - "GET /config.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:58998 - "POST /api/graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     46.101.1.225:46388 - "GET /telescope/requests HTTP/1.1" 200 OK
+INFO:     46.101.1.225:46400 - "GET /info.php HTTP/1.1" 404 Not Found
+INFO:     46.101.1.225:46410 - "GET /?rest_route=/wp/v2/users/ HTTP/1.1" 200 OK
+INFO:     134.209.25.199:59000 - "POST /graphql/api HTTP/1.1" 405 Method Not Allowed
+INFO:     134.209.25.199:59012 - "POST /api/gql HTTP/1.1" 405 Method Not Allowed
+INFO:     134.209.25.199:59014 - "GET /swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:59022 - "GET /swagger/index.html HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:59038 - "GET /swagger/swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:59052 - "GET /webjars/swagger-ui/index.html HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     134.209.25.199:59054 - "GET /swagger.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:59060 - "GET /swagger/v1/swagger.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53138 - "GET /v2/api-docs HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53140 - "GET /v3/api-docs HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53146 - "GET /api-docs/swagger.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53160 - "GET /api/swagger.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53176 - "GET /%40vite/env HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53184 - "GET /actuator/env HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53200 - "GET /server HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53206 - "GET /.vscode/sftp.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53218 - "GET /about HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53222 - "GET /debug/default/view?panel=config HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53236 - "GET /v2/_catalog HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53242 - "GET /ecp/Current/exporttool/microsoft.exchange.ediscovery.exporttool.application HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53256 - "GET /server-status HTTP/1.1" 200 OK
+INFO:     134.209.25.199:53268 - "GET /login.action HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:53280 - "GET /_all_dbs HTTP/1.1" 200 OK
+INFO:     134.209.25.199:56552 - "GET /.DS_Store HTTP/1.1" 200 OK
+INFO:     134.209.25.199:56566 - "GET /.env HTTP/1.1" 200 OK
+INFO:     134.209.25.199:56582 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     134.209.25.199:56598 - "GET /s/931313e2533323e28333e22393/_/%3B/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:56614 - "GET /config.json HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:56616 - "GET /telescope/requests HTTP/1.1" 200 OK
+INFO:     134.209.25.199:56626 - "GET /info.php HTTP/1.1" 404 Not Found
+INFO:     134.209.25.199:56628 - "GET /?rest_route=/wp/v2/users/ HTTP/1.1" 200 OK
+INFO:     206.81.24.74:59842 - "GET / HTTP/1.1" 200 OK
+INFO:     206.81.24.74:60192 - "GET / HTTP/1.1" 200 OK
+INFO:     206.81.24.74:59844 - "POST /graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:60202 - "POST /graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:59860 - "POST /api HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:60218 - "POST /api HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:59872 - "POST /api/graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:60224 - "POST /api/graphql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:59874 - "POST /graphql/api HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:60238 - "POST /graphql/api HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:59878 - "POST /api/gql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:60252 - "POST /api/gql HTTP/1.1" 405 Method Not Allowed
+INFO:     206.81.24.74:59880 - "GET /swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42488 - "GET /swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52398 - "GET /swagger/index.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42504 - "GET /swagger/index.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52412 - "GET /swagger/swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42512 - "GET /swagger/swagger-ui.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52416 - "GET /webjars/swagger-ui/index.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42526 - "GET /webjars/swagger-ui/index.html HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52420 - "GET /swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42538 - "GET /swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52422 - "GET /swagger/v1/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42544 - "GET /swagger/v1/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52434 - "GET /v2/api-docs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42560 - "GET /v2/api-docs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52448 - "GET /v3/api-docs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42574 - "GET /v3/api-docs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52452 - "GET /api-docs/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42586 - "GET /api-docs/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52460 - "GET /api/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42602 - "GET /api/swagger.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52466 - "GET /%40vite/env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42616 - "GET /%40vite/env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52472 - "GET /actuator/env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42626 - "GET /actuator/env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52474 - "GET /server HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42628 - "GET /server HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52484 - "GET /.vscode/sftp.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42634 - "GET /.vscode/sftp.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:52488 - "GET /about HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52492 - "GET /debug/default/view?panel=config HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42638 - "GET /about HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52500 - "GET /v2/_catalog HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42650 - "GET /debug/default/view?panel=config HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52502 - "GET /ecp/Current/exporttool/microsoft.exchange.ediscovery.exporttool.application HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:42658 - "GET /v2/_catalog HTTP/1.1" 200 OK
+INFO:     206.81.24.74:52518 - "GET /server-status HTTP/1.1" 200 OK
+INFO:     206.81.24.74:42666 - "GET /ecp/Current/exporttool/microsoft.exchange.ediscovery.exporttool.application HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:44284 - "GET /login.action HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:49094 - "GET /server-status HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44286 - "GET /_all_dbs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49102 - "GET /login.action HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:44292 - "GET /.DS_Store HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49118 - "GET /_all_dbs HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44308 - "GET /.env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49128 - "GET /.DS_Store HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44318 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49132 - "GET /.env HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44322 - "GET /s/931313e2533323e28333e22393/_/%3B/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:49136 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44336 - "GET /config.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:49146 - "GET /s/931313e2533323e28333e22393/_/%3B/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:44340 - "GET /telescope/requests HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49148 - "GET /config.json HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:44346 - "GET /info.php HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:49156 - "GET /telescope/requests HTTP/1.1" 200 OK
+INFO:     206.81.24.74:44350 - "GET /?rest_route=/wp/v2/users/ HTTP/1.1" 200 OK
+INFO:     206.81.24.74:49172 - "GET /info.php HTTP/1.1" 404 Not Found
+INFO:     206.81.24.74:49180 - "GET /?rest_route=/wp/v2/users/ HTTP/1.1" 200 OK
+INFO:     188.166.170.116:52494 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     104.253.247.170:30194 - "GET / HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30196 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30196 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10196 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10222 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10210 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30196 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10230 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10210 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10196 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10222 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10222 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10210 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30196 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10230 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30194 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10230 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10210 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:30196 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     104.253.247.170:10210 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     104.253.247.170:30196 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     193.200.105.176:45099 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     161.123.175.24:35323 - "GET /app.js HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     119.13.213.42:40961 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     161.123.191.220:46477 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     180.149.26.224:39911 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     162.43.238.103:39823 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     209.95.169.186:37081 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     119.12.196.5:39959 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     94.139.58.228:41725 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     152.39.223.196:39925 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     86.106.176.123:34669 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     206.204.4.225:38925 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     162.43.232.33:38519 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     94.176.87.80:40837 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     85.217.220.74:42549 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     119.12.187.26:45105 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     206.204.27.115:43177 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     188.240.49.85:36567 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     45.142.95.120:43493 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     94.176.62.237:38169 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     192.144.55.170:36885 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     45.33.155.31:39083 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     180.149.24.128:46579 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     161.123.186.206:45657 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     172.245.71.103:46723 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     119.12.204.8:43051 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     192.64.113.146:46024 - "HEAD / HTTP/1.1" 200 OK
+INFO:     192.64.113.146:46032 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:49252 - "GET / HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET / HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:57939 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:29207 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:13392 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:57939 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:29207 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:29459 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:13392 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:57939 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:29459 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:24734 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:57939 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:29459 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:48565 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:13392 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     205.169.39.6:13392 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+WARNING:  Invalid HTTP request received.
+INFO:     185.16.39.16:59672 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:39164 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     54.146.88.214:43950 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:53724 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     64.15.129.100:56646 - "GET / HTTP/1.1" 200 OK
+INFO:     192.175.111.232:23821 - "GET / HTTP/1.1" 200 OK
+INFO:     64.15.129.116:20374 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     192.175.111.248:35059 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     64.15.129.118:6070 - "GET / HTTP/1.1" 200 OK
+INFO:     192.175.111.246:59993 - "GET / HTTP/1.1" 200 OK
+INFO:     64.15.129.118:32910 - "GET / HTTP/1.1" 200 OK
+INFO:     64.15.129.101:21646 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     192.175.111.252:53069 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     192.175.111.238:51568 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:55826 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:35726 - "GET / HTTP/1.1" 200 OK
+INFO:     91.231.89.34:59157 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     91.231.89.102:53675 - "GET / HTTP/1.1" 200 OK
+INFO:     91.231.89.35:51079 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:37854 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     91.196.152.75:41939 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.124:42828 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.124:42894 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     66.132.153.124:27514 - "GET / HTTP/1.1" 200 OK
+INFO:     91.196.152.54:60015 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     188.166.170.116:47864 - "GET / HTTP/1.1" 200 OK
+INFO:     104.23.221.22:14066 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     104.23.217.80:12332 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     91.231.89.35:60411 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:37860 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     162.142.125.124:49062 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     162.142.125.124:49118 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.15.88:13716 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.15.88:23854 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.15.88:23854 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:23854 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:13716 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2575 - "GET /routing.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:23854 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2587 - "GET /changelog.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:13716 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2575 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2587 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:37685 - "GET /toast.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:2587 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:13716 - "GET /block.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:2575 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:23854 - "GET /search.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:37685 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2587 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:37689 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:23854 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2587 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:2575 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.15.88:37689 - "GET /utils.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:23854 - "GET /markdown.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.15.88:2575 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     162.142.125.124:23388 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.15.88:37730 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     46.242.15.88:29426 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     46.242.15.88:29426 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     188.166.170.116:60232 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.15.88:38828 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.15.88:21150 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.15.88:21150 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.15.88:24357 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.15.88:24357 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.15.88:24357 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.15.88:24357 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET / HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11486 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11486 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11489 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11487 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11488 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11486 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11488 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11487 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11489 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11490 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11486 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11488 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11489 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11486 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11490 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11487 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11489 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11485 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     128.71.186.135:11491 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11492 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11492 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11493 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11494 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11494 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11495 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11496 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11496 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     128.71.186.135:11497 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11497 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11498 - "POST /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670/siblings HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11498 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     199.45.155.67:32934 - "GET / HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11499 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/470badeb-6c57-4628-a1be-c848506faca8 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11499 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     199.45.155.67:44128 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11500 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11500 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11500 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11501 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     199.45.155.67:40166 - "GET / HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11502 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11502 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     188.166.170.116:53216 - "GET / HTTP/1.1" 200 OK
+INFO:     128.71.186.135:11502 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13208 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13209 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13210 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13211 - "PATCH /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/collapse HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13212 - "GET /api/search?q=%D0%98 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13213 - "GET /api/search?q=%D0%98%D1%81 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13214 - "GET /api/search?q=%D0%98%D1%81%D0%BF HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13215 - "GET /api/search?q=%D0%98%D1%81%D0%BF%D1%80 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13216 - "GET /api/search?q=%D0%98%D1%81%D0%BF%D1%80%D0%B0 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13217 - "GET /api/search?q=%D0%98%D1%81%D0%BF%D1%80%D0%B0%D0%B2 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13218 - "GET /api/search?q=%D0%98%D1%81%D0%BF%D1%80%D0%B0 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13219 - "GET /api/search?q=%D0%98%D1%81%D0%BF%D1%80 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13220 - "GET /api/search?q=%D0%98%D1%81%D0%BF HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13221 - "GET /api/search?q=%D0%98%D1%81 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13222 - "GET /api/search?q=%D0%98 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 103, in spa_fallback_middleware
+    """
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 571, in get_search
+    ''',
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1317, in search_everything
+    if author_id is not None:
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 1295, in search_blocks
+    sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 57, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl_mapping
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 63, in sqlalchemy.cyextension.resultproxy.BaseRow._get_by_key_impl
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/result.py", line 203, in _key_not_found
+    self._key_fallback(key, None)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/cursor.py", line 824, in _key_fallback
+    raise exc.NoSuchColumnError(
+sqlalchemy.exc.NoSuchColumnError: Could not locate column in row for column 'blockText'
+INFO:     128.71.186.135:13225 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13223 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     128.71.186.135:13224 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     128.71.186.135:13226 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     128.71.186.135:13227 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13228 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13230 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13231 - "POST /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/1436d479-ef8a-49db-b3c8-9568081b3670/siblings HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13231 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13232 - "DELETE /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9/blocks/9f1f3131-32d0-41ce-939c-5cc187975048 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:13232 - "GET /api/articles/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     188.166.170.116:53846 - "GET / HTTP/1.1" 200 OK
+INFO:     193.142.147.209:25848 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+INFO:     5.255.231.79:32770 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     5.255.231.12:54020 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     213.180.203.200:50432 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     95.108.213.105:50476 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     213.180.203.103:53328 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     5.255.231.21:34230 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     5.255.231.5:47228 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     95.108.213.191:40710 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     87.250.224.25:38186 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     5.255.231.110:61072 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     5.255.231.152:39182 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     213.180.203.161:63726 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     95.108.213.213:56792 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     5.255.231.158:38592 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     87.250.224.14:57310 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     213.180.203.170:59028 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     5.255.231.43:39926 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     95.108.213.236:43314 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     87.250.224.15:34342 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     87.250.224.19:51254 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     95.108.213.93:43454 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     213.180.203.123:56996 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     87.250.224.80:47730 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     95.108.213.208:45202 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     213.180.203.172:36094 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     87.250.224.214:64936 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     162.158.182.164:13203 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     162.158.182.165:12416 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     43.159.141.150:56204 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:33760 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     35.169.200.35:14889 - "GET / HTTP/1.1" 200 OK
+INFO:     35.169.200.35:16663 - "HEAD /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     188.166.170.116:50104 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     185.16.39.16:47504 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:33540 - "GET / HTTP/1.1" 200 OK
+INFO:     43.157.43.147:40296 - "GET / HTTP/1.1" 200 OK
+INFO:     193.142.147.209:35618 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:56126 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /article/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6343 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6343 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6343 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6465 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6343 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6465 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6465 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6465 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6465 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /api/articles/inbox HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [122471]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [130517]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6496 - "GET /article/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6497 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6497 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6498 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6500 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6500 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6498 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6497 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6500 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6497 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6498 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6500 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6497 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6502 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6502 - "POST /api/articles/inbox/blocks/525852d0-34cd-4468-9f0e-004eb4847a37/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6502 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6507 - "PATCH /api/articles/inbox/blocks/6f6e9a63-53b0-4857-9a1b-87fbdd9954f4 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6507 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6394 - "PATCH /api/articles/inbox/blocks/6f6e9a63-53b0-4857-9a1b-87fbdd9954f4 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6394 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6330 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6284 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     188.166.170.116:35430 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.70.248.191:13251 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6311 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/1daa479f-13f4-4bfe-837b-1253758ca0ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6311 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /article/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6447 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6447 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6452 - "PATCH /api/articles/inbox/blocks/525852d0-34cd-4468-9f0e-004eb4847a37 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6452 - "GET /api/articles/inbox HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /style.css HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     188.166.170.116:49458 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.64.192.5:11995 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     212.193.191.159:34899 - "GET / HTTP/1.1" 200 OK
+INFO:     194.85.180.13:34505 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     167.94.138.181:64768 - "GET / HTTP/1.1" 200 OK
+INFO:     167.94.138.181:43936 - "GET / HTTP/1.1" 200 OK
+INFO:     167.94.138.181:36150 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     188.166.170.116:51044 - "GET / HTTP/1.1" 200 OK
+INFO:     128.71.186.135:14954 - "GET /article/9ffb6853-daa9-4500-ac82-0e85ee1721f9 HTTP/1.1" 200 OK
+INFO:     128.71.186.135:14954 - "GET /auth.js HTTP/1.1" 304 Not Modified
+INFO:     128.71.186.135:14956 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     128.71.186.135:14955 - "GET /events.js HTTP/1.1" 304 Not Modified
+INFO:     128.71.186.135:14955 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     128.71.186.135:14954 - "GET /title.js HTTP/1.1" 304 Not Modified
+INFO:     128.71.186.135:14954 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     128.71.186.135:14957 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     188.166.170.116:41874 - "GET / HTTP/1.1" 200 OK
+INFO:     5.255.231.154:38680 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:59834 - "GET / HTTP/1.1" 200 OK
+INFO:     195.123.244.84:49484 - "HEAD / HTTP/1.1" 200 OK
+INFO:     195.123.244.84:47342 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [130517]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [132537]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     172.71.26.45:11637 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6356 - "GET /article/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6356 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6499 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "PATCH /api/articles/94d967e9-6121-4241-8be4-167085bddceb/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "POST /api/articles/94d967e9-6121-4241-8be4-167085bddceb/blocks/52988d2f-21e4-4212-8d48-01f8b033a66f/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     172.71.178.75:14055 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6496 - "DELETE /api/articles/94d967e9-6121-4241-8be4-167085bddceb/blocks/19d73a09-d1f4-4074-81c3-1546d45508b1 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6438 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6438 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6438 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/1daa479f-13f4-4bfe-837b-1253758ca0ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6438 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6438 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6278 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/1daa479f-13f4-4bfe-837b-1253758ca0ba/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/d3d30aba-bd73-4e97-ad93-b3888d3e864b/indent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+psycopg.ProgrammingError: can't change 'autocommit' now: connection in transaction status INTRANS
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 323, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 285, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 275, in app
+    solved_result = await solve_dependencies(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/dependencies/utils.py", line 600, in solve_dependencies
+    solved = await run_in_threadpool(call, **sub_values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 144, in get_current_user
+    user = get_user_by_session(session_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 137, in get_user_by_session
+    return get_user_by_id(row['user_id'])
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 79, in get_user_by_id
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 112, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+sqlalchemy.exc.ProgrammingError: (psycopg.ProgrammingError) can't change 'autocommit' now: connection in transaction status INTRANS
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     46.242.12.114:6306 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/d3d30aba-bd73-4e97-ad93-b3888d3e864b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/d3d30aba-bd73-4e97-ad93-b3888d3e864b/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4/indent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4/outdent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4/indent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4/outdent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6306 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/3ba7a795-192a-4080-960a-742c02c354e4/indent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     188.166.170.116:44242 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6329 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6293 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9709 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9708 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9708 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9709 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9708 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+psycopg.ProgrammingError: can't change 'autocommit' now: connection in transaction status INTRANS
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 323, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 285, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 275, in app
+    solved_result = await solve_dependencies(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/dependencies/utils.py", line 600, in solve_dependencies
+    solved = await run_in_threadpool(call, **sub_values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 144, in get_current_user
+    user = get_user_by_session(session_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 137, in get_user_by_session
+    return get_user_by_id(row['user_id'])
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 79, in get_user_by_id
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 112, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+sqlalchemy.exc.ProgrammingError: (psycopg.ProgrammingError) can't change 'autocommit' now: connection in transaction status INTRANS
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9709 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9709 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9709 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+psycopg.ProgrammingError: can't change 'autocommit' now: connection in transaction status INTRANS
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 323, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 285, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 275, in app
+    solved_result = await solve_dependencies(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/dependencies/utils.py", line 600, in solve_dependencies
+    solved = await run_in_threadpool(call, **sub_values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 144, in get_current_user
+    user = get_user_by_session(session_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 137, in get_user_by_session
+    return get_user_by_id(row['user_id'])
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 79, in get_user_by_id
+    row = CONN.execute(
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 112, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+sqlalchemy.exc.ProgrammingError: (psycopg.ProgrammingError) can't change 'autocommit' now: connection in transaction status INTRANS
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6286 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6388 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     34.13.188.22:59056 - "GET / HTTP/1.1" 200 OK
+INFO:     34.13.188.22:59062 - "GET / HTTP/1.1" 200 OK
+INFO:     34.13.188.22:59076 - "HEAD /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     34.13.188.22:59082 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     34.13.188.22:59092 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     93.174.93.12:60000 - "GET / HTTP/1.0" 200 OK
+INFO:     46.242.12.114:6393 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "PATCH /api/articles/0fe28e01-3660-4015-8651-75897f527ff3/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "PATCH /api/articles/0fe28e01-3660-4015-8651-75897f527ff3/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6368 - "PATCH /api/articles/0fe28e01-3660-4015-8651-75897f527ff3/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6368 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "PATCH /api/articles/0fe28e01-3660-4015-8651-75897f527ff3/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6323 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "PATCH /api/articles/0fe28e01-3660-4015-8651-75897f527ff3/blocks/66b56843-6b25-46cd-975c-e535abdc2a9d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6319 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/1daa479f-13f4-4bfe-837b-1253758ca0ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:13205 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:13205 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:13205 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:13205 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "PATCH /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/blocks/1daa479f-13f4-4bfe-837b-1253758ca0ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6495 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6495 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6495 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     182.42.110.255:42089 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.170.116:55964 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6408 - "GET /article/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6447 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6447 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6447 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/blocks/64e8336c-b46c-46d4-8b84-3a6e50ee2d2c HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "PATCH /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd/collapse HTTP/1.1" 200 OK
+INFO:     45.135.193.9:35350 - "GET /json/ HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /article/76353cc0-664b-40bf-b722-1586f296c6dd HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6360 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6360 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6435 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6435 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6360 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6360 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6435 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6435 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6425 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "DELETE /api/articles/76353cc0-664b-40bf-b722-1586f296c6dd HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6342 - "GET /api/articles/94d967e9-6121-4241-8be4-167085bddceb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /api/articles/inbox-0a2b2bbaada6533050e6b2eaa8bc5831 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "DELETE /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "GET /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604594506-1a785aa3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "DELETE /api/articles/0fe28e01-3660-4015-8651-75897f527ff3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6320 - "GET /api/articles/609602b6-f844-4e60-961c-d06d44b44aaf HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6416 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6416 - "GET /api/articles/b8addfed-c4c7-4649-9080-05377d3d8b73 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /article/b8addfed-c4c7-4649-9080-05377d3d8b73 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6446 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6446 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6446 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6446 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6446 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /api/articles/b8addfed-c4c7-4649-9080-05377d3d8b73 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "DELETE /api/articles/b8addfed-c4c7-4649-9080-05377d3d8b73 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /api/articles/609602b6-f844-4e60-961c-d06d44b44aaf HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6313 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6313 - "GET /api/articles/73b288bc-23cd-46ac-a07c-589af40f5044 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/73b288bc-23cd-46ac-a07c-589af40f5044/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /api/articles/73b288bc-23cd-46ac-a07c-589af40f5044 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "DELETE /api/articles/73b288bc-23cd-46ac-a07c-589af40f5044 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /api/articles/deleted HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "POST /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d/restore HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6510 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     34.21.94.255:50903 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6491 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET / HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45600 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45606 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45604 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45600 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45606 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45608 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45604 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45606 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45600 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45596 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45604 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     95.161.239.183:45598 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [132537]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [134230]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6508 - "GET /article/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6408 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6404 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     34.187.205.144:59007 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "POST /api/import/html HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.

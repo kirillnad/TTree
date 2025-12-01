@@ -7,6 +7,9 @@ from pathlib import Path, PurePath
 from typing import Any
 from uuid import uuid4
 from io import BytesIO
+import base64
+import binascii
+import json
 
 import aiofiles
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Request, Response
@@ -37,6 +40,7 @@ from .data_store import (
     delete_article,
     ensure_sample_article,
     ensure_inbox_article,
+    get_or_create_user_inbox,
     indent_block,
     insert_block,
     move_block,
@@ -56,6 +60,7 @@ from .data_store import (
     get_deleted_articles,
     get_article,
     create_attachment,
+    save_article,
     rebuild_search_indexes,
     build_sqlite_fts_query,
     build_postgres_ts_query,
@@ -92,6 +97,245 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+
+def _decode_data_url(data_url: str) -> tuple[bytes, str]:
+  """
+  Разбирает data: URL и возвращает (bytes, mime_type).
+  Ожидаем формат data:<mime>;base64,<payload>.
+  """
+  if not data_url.startswith('data:'):
+      raise ValueError('Not a data: URL')
+  try:
+      header, b64data = data_url.split(',', 1)
+  except ValueError as exc:
+      raise ValueError('Invalid data: URL') from exc
+  mime_type = 'application/octet-stream'
+  meta = header[5:]  # после "data:"
+  if ';' in meta:
+      mime_type = meta.split(';', 1)[0] or mime_type
+  elif meta:
+      mime_type = meta
+  try:
+      raw = base64.b64decode(b64data, validate=True)
+  except (ValueError, binascii.Error) as exc:
+      raise ValueError('Invalid base64 payload in data: URL') from exc
+  return raw, mime_type
+
+
+def _import_image_from_data_url(data_url: str, current_user: User) -> str:
+    """
+    Сохраняет картинку из data: URL в uploads так же, как upload_file,
+    но без перекодирования через Pillow. Возвращает относительный URL /uploads/...
+    """
+    raw, mime_type = _decode_data_url(data_url)
+    now = datetime.utcnow()
+    user_root = UPLOADS_DIR / current_user.id / 'images'
+    target_dir = user_root / str(now.year) / f"{now.month:02}"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    ext = mimetypes.guess_extension(mime_type) or ''
+    filename = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{ext}"
+    dest = target_dir / filename
+    dest.write_bytes(raw)
+    rel = dest.relative_to(UPLOADS_DIR).as_posix()
+    return f"/uploads/{rel}"
+
+
+def _import_attachment_from_data_url(data_url: str, current_user: User, article_id: str, display_name: str | None = None) -> str:
+    """
+    Сохраняет вложение из data: URL в uploads/attachments и создаёт запись в БД.
+    Возвращает относительный URL /uploads/...
+    """
+    raw, mime_type = _decode_data_url(data_url)
+    target_dir = UPLOADS_DIR / current_user.id / 'attachments' / article_id
+    target_dir.mkdir(parents=True, exist_ok=True)
+    base_name = (display_name or 'attachment').strip() or 'attachment'
+    safe_base = ''.join(ch if ch.isalnum() or ch in '._- ' else '_' for ch in base_name)[:80] or 'attachment'
+    ext = mimetypes.guess_extension(mime_type) or ''
+    filename = f"{safe_base}{ext}"
+    # избегаем коллизий
+    counter = 1
+    dest = target_dir / filename
+    while dest.exists():
+        filename = f"{safe_base}-{counter}{ext}"
+        dest = target_dir / filename
+        counter += 1
+    dest.write_bytes(raw)
+    stored_path = f'/uploads/{current_user.id}/attachments/{article_id}/{filename}'
+    create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+    return stored_path
+
+
+def _parse_memus_export_payload(html_text: str) -> dict[str, Any]:
+    """
+    Извлекает JSON-снапшот из <script id=\"memus-export\">...</script>.
+    """
+    start_marker = 'id="memus-export"'
+    alt_marker = "id='memus-export'"
+    idx = html_text.find(start_marker)
+    if idx == -1:
+        idx = html_text.find(alt_marker)
+    if idx == -1:
+        raise ValueError('Не найден блок memus-export')
+    # Находим начало содержимого тега <script ...>
+    script_open = html_text.rfind('<script', 0, idx)
+    if script_open == -1:
+        raise ValueError('Некорректная разметка memus-export (нет <script>)')
+    script_close = html_text.find('</script>', idx)
+    if script_close == -1:
+        raise ValueError('Некорректная разметка memus-export (нет </script>)')
+    content_start = html_text.find('>', script_open) + 1
+    raw_json = html_text[content_start:script_close].strip()
+    if not raw_json:
+        raise ValueError('Пустой блок memus-export')
+    try:
+        payload = json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError('Не удалось разобрать JSON memus-export') from exc
+    if not isinstance(payload, dict):
+        raise ValueError('Некорректный формат memus-export')
+    if payload.get('source') != 'memus' or int(payload.get('version', 0)) != 1:
+        raise ValueError('Этот HTML не похож на экспорт Memus поддерживаемой версии')
+    return payload
+
+
+def _extract_block_body_html(full_html: str, block_id: str) -> str | None:
+    """
+    Находит HTML содержимого блока (заголовок + тело) по его data-block-id
+    в документе экспорта. Используется как best-effort парсер на основе поиска по строке.
+    """
+    marker = f'data-block-id="{block_id}"'
+    idx = full_html.find(marker)
+    if idx == -1:
+        return None
+    # Ищем ближайший div.block-body после блока
+    body_marker = '<div class="block-text block-body'
+    body_idx = full_html.find(body_marker, idx)
+    if body_idx == -1:
+        # более общий случай
+        body_marker = 'class="block-text block-body'
+        body_idx = full_html.find(body_marker, idx)
+        if body_idx == -1:
+            return None
+    start_tag_end = full_html.find('>', body_idx)
+    if start_tag_end == -1:
+        return None
+    # Находим соответствующий закрывающий </div> для этого блока body с учётом вложенных div.
+    pos = start_tag_end + 1
+    depth = 1
+    while depth > 0 and pos < len(full_html):
+        next_open = full_html.find('<div', pos)
+        next_close = full_html.find('</div>', pos)
+        if next_close == -1:
+            break
+        if next_open != -1 and next_open < next_close:
+            depth += 1
+            pos = next_open + 4
+        else:
+            depth -= 1
+            pos = next_close + len('</div>')
+    if depth != 0:
+        return None
+    body_inner = full_html[start_tag_end + 1 : pos - len('</div>')]
+
+    # Пытаемся дополнительно захватить заголовок блока (div.block-title), если он есть.
+    title_inner = ''
+    title_marker = '<div class="block-title">'
+    if body_idx != -1:
+        title_idx = full_html.find(title_marker, idx, body_idx)
+        if title_idx != -1:
+            title_start_tag_end = full_html.find('>', title_idx)
+            if title_start_tag_end != -1:
+                t_pos = title_start_tag_end + 1
+                t_depth = 1
+                while t_depth > 0 and t_pos < len(full_html):
+                    t_next_open = full_html.find('<div', t_pos)
+                    t_next_close = full_html.find('</div>', t_pos)
+                    if t_next_close == -1:
+                        break
+                    if t_next_open != -1 and t_next_open < t_next_close:
+                        t_depth += 1
+                        t_pos = t_next_open + 4
+                    else:
+                        t_depth -= 1
+                        t_pos = t_next_close + len('</div>')
+                if t_depth == 0:
+                    title_inner = full_html[title_start_tag_end + 1 : t_pos - len('</div>')]
+
+    return f'{title_inner}{body_inner}'
+
+
+def _process_block_html_for_import(
+    html_text: str,
+    block_id: str,
+    current_user: User,
+    article_id: str,
+) -> str:
+    """
+    Возвращает HTML блока с обновлёнными src/href для data: URL,
+    сохраняя остальное содержимое как есть.
+    """
+    body_html = _extract_block_body_html(html_text, block_id) or ''
+    # Обрабатываем data: URL "в лоб": заменяем их по мере нахождения.
+    result = body_html
+    search_pos = 0
+    while True:
+        # Ищем src="data:..." или href="data:..."
+        src_idx = result.find('src="data:', search_pos)
+        href_idx = result.find('href="data:', search_pos)
+        if src_idx == -1 and href_idx == -1:
+            break
+        if src_idx != -1 and (href_idx == -1 or src_idx < href_idx):
+            attr = 'src'
+            idx = src_idx
+        else:
+            attr = 'href'
+            idx = href_idx
+        url_start = result.find('"', idx) + 1
+        url_end = result.find('"', url_start)
+        if url_start == 0 or url_end == -1:
+            break
+        data_url = result[url_start:url_end]
+        try:
+            if attr == 'src':
+                new_url = _import_image_from_data_url(data_url, current_user)
+            else:
+                # Для href пытаемся угадать имя по ближайшему тексту не будем — оставим generic.
+                new_url = _import_attachment_from_data_url(data_url, current_user, article_id)
+        except Exception:
+            new_url = ''
+        if new_url:
+            result = result[:url_start] + new_url + result[url_end:]
+            search_pos = url_start + len(new_url)
+        else:
+            search_pos = url_end + 1
+    return result
+
+
+def _resolve_article_id_for_user(article_id: str, current_user: User) -> str:
+    """
+    Преобразует «публичный» идентификатор статьи из URL в фактический ID в БД.
+    Для inbox клиент всегда использует article_id == "inbox", а в базе хранится
+    отдельная статья на пользователя с ID вида "inbox-<user_id>".
+    """
+    if article_id == 'inbox':
+        inbox_article = get_or_create_user_inbox(current_user.id)
+        return inbox_article['id']
+    return article_id
+
+
+def _present_article(article: dict[str, Any] | None, requested_id: str) -> dict[str, Any]:
+    """
+    Нормализует JSON статьи перед отдачей клиенту.
+    Для inbox скрываем внутренний ID и всегда возвращаем id == "inbox",
+    чтобы вся клиентская логика могла опираться на это стабильное значение.
+    """
+    if not article:
+        return {}
+    if requested_id == 'inbox':
+        article = dict(article)
+        article['id'] = 'inbox'
+    return article
 
 
 @app.middleware('http')
@@ -256,6 +500,11 @@ def post_article(payload: dict[str, Any], current_user: User = Depends(get_curre
 
 @app.get('/api/articles/{article_id}')
 def read_article(article_id: str, current_user: User = Depends(get_current_user)):
+    if article_id == 'inbox':
+        article = get_or_create_user_inbox(current_user.id)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+        return _present_article(article, article_id)
     article = get_article(article_id, current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
@@ -275,25 +524,27 @@ def remove_article(article_id: str, force: bool = False, current_user: User = De
 
 @app.patch('/api/articles/{article_id}')
 def patch_article(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    article = get_article(article_id, current_user.id)
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    article = get_article(real_article_id, current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     try:
-        article = update_article_meta(article_id, payload)
+        article = update_article_meta(real_article_id, payload)
         if not article:
             # Если функция вернула None, значит, не было изменений
-            return get_article(article_id)
-        return article
+            article = get_article(real_article_id, current_user.id)
+        return _present_article(article, article_id)
     except ArticleNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.patch('/api/articles/{article_id}/blocks/{block_id}')
 def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
     try:
-        if not get_article(article_id, current_user.id):
+        if not get_article(real_article_id, current_user.id):
             raise ArticleNotFound('Article not found')
-        block = update_block(article_id, block_id, payload)
+        block = update_block(real_article_id, block_id, payload)
         return block
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -301,14 +552,15 @@ def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current
 
 @app.patch('/api/articles/{article_id}/collapse')
 def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     block_id = payload.get('blockId')
     collapsed = payload.get('collapsed')
     if block_id is None or not isinstance(collapsed, bool):
         raise HTTPException(status_code=400, detail='Missing blockId or collapsed flag')
     try:
-        block = update_block_collapse(article_id, block_id, collapsed)
+        block = update_block_collapse(real_article_id, block_id, collapsed)
         return block
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -316,11 +568,12 @@ def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User 
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
 def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     direction = payload.get('direction', 'after') if payload else 'after'
     try:
-        result = insert_block(article_id, block_id, direction, payload.get('payload') if payload else None)
+        result = insert_block(real_article_id, block_id, direction, payload.get('payload') if payload else None)
         return result
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -328,10 +581,11 @@ def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], curren
 
 @app.delete('/api/articles/{article_id}/blocks/{block_id}')
 def remove_block(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
-        result = delete_block(article_id, block_id)
+        result = delete_block(real_article_id, block_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result:
@@ -341,13 +595,14 @@ def remove_block(article_id: str, block_id: str, current_user: User = Depends(ge
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/move')
 def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
     direction = payload.get('direction')
     if direction not in {'up', 'down'}:
         raise HTTPException(status_code=400, detail='Unknown move direction')
     try:
-        if not get_article(article_id, current_user.id):
+        if not get_article(real_article_id, current_user.id):
             raise ArticleNotFound('Article not found')
-        result = move_block(article_id, block_id, direction)
+        result = move_block(real_article_id, block_id, direction)
         return result
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -357,10 +612,11 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_u
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/indent')
 def post_indent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
-        return indent_block(article_id, block_id)
+        return indent_block(real_article_id, block_id)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:
@@ -369,10 +625,11 @@ def post_indent(article_id: str, block_id: str, current_user: User = Depends(get
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/outdent')
 def post_outdent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
-        return outdent_block(article_id, block_id)
+        return outdent_block(real_article_id, block_id)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:
@@ -381,14 +638,15 @@ def post_outdent(article_id: str, block_id: str, current_user: User = Depends(ge
 
 @app.post('/api/articles/{article_id}/blocks/{block_id}/relocate')
 def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     target_parent_id = payload.get('parentId')
     target_index = payload.get('index')
     anchor_id = payload.get('anchorId')
     placement = payload.get('placement')
     try:
-        return move_block_to_parent(article_id, block_id, target_parent_id, target_index, anchor_id, placement)
+        return move_block_to_parent(real_article_id, block_id, target_parent_id, target_index, anchor_id, placement)
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:
@@ -397,26 +655,29 @@ def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], curre
 
 @app.post('/api/articles/{article_id}/blocks/undo-text')
 def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
-    return _handle_undo_redo(undo_block_text_change, article_id, entry_id)
+    return _handle_undo_redo(undo_block_text_change, real_article_id, entry_id)
 
 
 @app.post('/api/articles/{article_id}/blocks/redo-text')
 def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    if not get_article(article_id, current_user.id):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
-    return _handle_undo_redo(redo_block_text_change, article_id, entry_id)
+    return _handle_undo_redo(redo_block_text_change, real_article_id, entry_id)
 
 
 @app.post('/api/articles/{article_id}/restore')
 def post_restore_article(article_id: str, current_user: User = Depends(get_current_user)):
-    article = restore_article(article_id, author_id=current_user.id)
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    article = restore_article(real_article_id, author_id=current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found or not deleted')
-    return article
+    return _present_article(article, article_id)
 
 
 
@@ -469,7 +730,8 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 
 @app.post('/api/articles/{article_id}/attachments')
 async def upload_attachment(article_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    article = get_article(article_id, current_user.id)
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    article = get_article(real_article_id, current_user.id)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     content_type = file.content_type or ''
@@ -478,7 +740,7 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
     if not content_type or content_type not in ALLOWED_ATTACHMENT_TYPES:
         raise HTTPException(status_code=400, detail='Недопустимый тип файла')
 
-    target_dir = UPLOADS_DIR / current_user.id / 'attachments' / article_id
+    target_dir = UPLOADS_DIR / current_user.id / 'attachments' / real_article_id
     target_dir.mkdir(parents=True, exist_ok=True)
     filename = f'{uuid4().hex}{Path(file.filename).suffix or ""}'
     dest = target_dir / filename
@@ -496,9 +758,79 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
         dest.unlink(missing_ok=True)
         raise
 
-    stored_path = f'/uploads/{current_user.id}/attachments/{article_id}/{filename}'
-    attachment = create_attachment(article_id, stored_path, file.filename or filename, content_type or '', size)
+    stored_path = f'/uploads/{current_user.id}/attachments/{real_article_id}/{filename}'
+    attachment = create_attachment(real_article_id, stored_path, file.filename or filename, content_type or '', size)
     return attachment
+
+
+@app.post('/api/import/html')
+async def import_article_from_html(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """
+    Импортирует статью из HTML-файла, созданного опцией «Сохранить в HTML».
+    Поддерживаются только файлы текущего формата Memus (memus;v=1).
+    """
+    if not file.filename.lower().endswith('.html'):
+        raise HTTPException(status_code=400, detail='Ожидается файл HTML, сохранённый из Memus')
+    raw = await file.read()
+    try:
+        text = raw.decode('utf-8')
+    except UnicodeDecodeError:
+        text = raw.decode('utf-8', errors='ignore')
+
+    try:
+        payload = _parse_memus_export_payload(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    article_meta = payload.get('article') or {}
+    blocks_meta = payload.get('blocks') or []
+
+    title = (article_meta.get('title') or file.filename or 'Импортированная статья').strip() or 'Импортированная статья'
+    now = datetime.utcnow().isoformat()
+    new_article_id = str(uuid4())
+
+    def build_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for meta in blocks or []:
+            original_id = str(meta.get('id') or '')
+            new_id = str(uuid4())
+            try:
+                text_html = _process_block_html_for_import(text, original_id, current_user, new_article_id)
+            except Exception:
+                text_html = meta.get('text') or ''
+            if not text_html:
+                text_html = meta.get('text') or ''
+            children_meta = meta.get('children') or []
+            children = build_blocks(children_meta)
+            result.append(
+                {
+                    'id': new_id,
+                    'text': text_html,
+                    'collapsed': bool(meta.get('collapsed')),
+                    'children': children,
+                }
+            )
+        return result
+
+    blocks_tree = build_blocks(blocks_meta)
+
+    article = {
+        'id': new_article_id,
+        'title': title,
+        'createdAt': article_meta.get('createdAt') or now,
+        'updatedAt': article_meta.get('updatedAt') or now,
+        'deletedAt': None,
+        'blocks': blocks_tree,
+        'history': [],
+        'redoHistory': [],
+        'authorId': current_user.id,
+    }
+
+    save_article(article)
+    created = get_article(new_article_id, current_user.id)
+    if not created:
+        raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
+    return created
 
 
 @app.get('/api/search')

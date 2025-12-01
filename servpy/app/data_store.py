@@ -404,6 +404,36 @@ def ensure_inbox_article():
     return
 
 
+def get_or_create_user_inbox(author_id: str) -> Dict[str, Any]:
+    """
+    Возвращает статью-инбокс для указанного пользователя, создавая её при необходимости.
+    Для каждого пользователя используется свой собственный инбокс с предсказуемым ID.
+    """
+    inbox_id = f'inbox-{author_id}'
+    existing = get_article(inbox_id, author_id=author_id, include_deleted=True)
+    if existing:
+        # Если инбокс был в корзине — восстанавливаем.
+        if existing.get('deletedAt'):
+            existing['deletedAt'] = None
+            existing['updatedAt'] = iso_now()
+            save_article(existing)
+        return existing
+
+    now = iso_now()
+    article = {
+        'id': inbox_id,
+        'title': 'Быстрые заметки',
+        'createdAt': now,
+        'updatedAt': now,
+        'blocks': [create_default_block()],
+        'history': [],
+        'redoHistory': [],
+        'authorId': author_id,
+    }
+    save_article(article)
+    return article
+
+
 def create_article(title: Optional[str] = None, author_id: Optional[str] = None) -> Dict[str, Any]:
     now = iso_now()
     article = {
