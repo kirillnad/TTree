@@ -44,6 +44,8 @@ export const refs = {
   lastChangeValue: document.getElementById('lastChangeValue'),
   articleMenuBtn: document.getElementById('articleMenuBtn'),
   articleMenu: document.getElementById('articleMenu'),
+  articleEncryptionBtn: document.getElementById('articleEncryptionBtn'),
+  articleEncryptionRemoveBtn: document.getElementById('articleEncryptionRemoveBtn'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
   pasteProgress: document.getElementById('pasteProgress'),

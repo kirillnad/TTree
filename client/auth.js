@@ -124,8 +124,6 @@ export function initAuth(callback) {
     });
   }
 
-  // По умолчанию показываем форму входа.
-  setAuthMode('login');
 }
 
 export async function bootstrapAuth() {
@@ -140,5 +138,7 @@ export async function bootstrapAuth() {
   } catch (_) {
     // Игнорируем: просто покажем форму логина.
   }
+  // Сессии нет или проверить не удалось — включаем режим логина.
+  setAuthMode('login');
   showAuthOverlay();
 }

@@ -23,7 +23,7 @@ import {
   setSidebarMobileOpen,
   setSidebarCollapsed,
 } from './sidebar.js';
-import { createArticle, openInboxArticle, createInboxNote, toggleDragMode } from './article.js';
+import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 
@@ -223,6 +223,18 @@ export function attachEvents() {
   }
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);
+  }
+  if (refs.articleEncryptionBtn) {
+    refs.articleEncryptionBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleArticleEncryption();
+    });
+  }
+  if (refs.articleEncryptionRemoveBtn) {
+    refs.articleEncryptionRemoveBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      removeArticleEncryption();
+    });
   }
   if (refs.exportArticleBtn) {
     refs.exportArticleBtn.addEventListener('click', (event) => {

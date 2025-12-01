@@ -27,6 +27,7 @@ export const state = {
   isTrashView: false,
   favoriteArticles: [],
   isDragModeEnabled: false,
+  articleEncryptionKeys: {},
 };
 
 export let isSavingTitle = false;

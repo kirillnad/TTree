@@ -5,6 +5,7 @@ import { loadArticle } from './article.js';
 import { renderArticle } from './article.js';
 import { findBlock, setCurrentBlock, ensureBlockVisible } from './block.js';
 import { logDebug, textareaToTextContent, extractImagesFromHtml } from './utils.js';
+import { encryptBlockTree } from './encryption.js';
 
 function diffTextSegments(currentText = '', nextText = '') {
   const a = Array.from(currentText);
@@ -289,11 +290,17 @@ async function executeStructureAction(action, options = {}) {
       success = false;
     }
   } else if (action.kind === 'restore' || action.kind === 'create') {
-    const blockPayload = action.block || action.blockSnapshot;
-    if (!blockPayload) {
+    const baseBlockPayload = action.block || action.blockSnapshot;
+    if (!baseBlockPayload) {
       return { success: false };
     }
     try {
+      let blockPayload = baseBlockPayload;
+      if (state.article && state.article.encrypted && state.articleEncryptionKey) {
+        blockPayload = JSON.parse(JSON.stringify(baseBlockPayload));
+        // eslint-disable-next-line no-await-in-loop
+        await encryptBlockTree(blockPayload, state.articleEncryptionKey);
+      }
       payload = await apiRequest(`/api/articles/${state.articleId}/blocks/restore`, {
         method: 'POST',
         body: JSON.stringify({

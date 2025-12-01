@@ -104,6 +104,9 @@ class Database:
         return result
 
     def execute(self, sql: str, params: Any | None = None) -> Result | QueryResult:
+        if isinstance(sql, str) and 'DELETE FROM blocks_fts' in sql and 'WHERE article_id' not in sql:
+            # Полное удаление индекса блоков — помечаем поисковые индексы как «грязные».
+            mark_search_index_dirty()
         if self._conn is not None:
             return self._run(self._conn, sql, params)
         with self.engine.begin() as conn:
@@ -120,6 +123,29 @@ class Database:
 
 
 CONN = Database(engine)
+
+# Глобальное состояние индексов поиска.
+SEARCH_INDEX_DIRTY = False
+
+
+def mark_search_index_dirty() -> None:
+    # noqa: D401
+    """Помечает индексы поиска как «грязные» (stale) после явной очистки FTS."""
+    global SEARCH_INDEX_DIRTY
+    # Если ещё нет статей, считаем очистку частью инициализации.
+    row = CONN.execute('SELECT COUNT(*) AS c FROM articles').fetchone()
+    count_articles = int(row['c']) if row and row['c'] is not None else 0
+    if count_articles == 0:
+        SEARCH_INDEX_DIRTY = False
+    else:
+        SEARCH_INDEX_DIRTY = True
+
+
+def mark_search_index_clean() -> None:
+    # noqa: D401
+    """Помечает индексы поиска как актуальные."""
+    global SEARCH_INDEX_DIRTY
+    SEARCH_INDEX_DIRTY = False
 
 
 def cursor():

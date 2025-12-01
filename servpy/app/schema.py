@@ -22,7 +22,11 @@ def _init_sqlite_schema():
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
             deleted_at TEXT,
-            author_id TEXT
+            author_id TEXT,
+            is_encrypted INTEGER NOT NULL DEFAULT 0,
+            encryption_salt TEXT,
+            encryption_verifier TEXT,
+            encryption_hint TEXT
         )
         ''',
         '''
@@ -78,6 +82,14 @@ def _init_sqlite_schema():
         execute("ALTER TABLE articles ADD COLUMN deleted_at TEXT")
     if 'author_id' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN author_id TEXT")
+    if 'is_encrypted' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0")
+    if 'encryption_salt' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN encryption_salt TEXT")
+    if 'encryption_verifier' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN encryption_verifier TEXT")
+    if 'encryption_hint' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN encryption_hint TEXT")
 
     execute('DROP TABLE IF EXISTS blocks_fts')
     execute(
@@ -130,7 +142,11 @@ def _init_postgres_schema():
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
             deleted_at TEXT,
-            author_id TEXT
+            author_id TEXT,
+            is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+            encryption_salt TEXT,
+            encryption_verifier TEXT,
+            encryption_hint TEXT
         )
         ''',
         '''
@@ -206,7 +222,7 @@ def _init_postgres_schema():
     for stmt in statements:
         execute(stmt)
 
-    # Ensure author_id and is_superuser exist even if tables pre-existed.
+    # Ensure author_id, encryption flags and is_superuser exist even if tables pre-existed.
     execute(
         """
         DO $$
@@ -224,6 +240,34 @@ def _init_postgres_schema():
                 WHERE table_name = 'users' AND column_name = 'is_superuser'
             ) THEN
                 ALTER TABLE users ADD COLUMN is_superuser BOOLEAN NOT NULL DEFAULT FALSE;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'is_encrypted'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN is_encrypted BOOLEAN NOT NULL DEFAULT FALSE;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'encryption_salt'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN encryption_salt TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'encryption_verifier'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN encryption_verifier TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'encryption_hint'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN encryption_hint TEXT;
             END IF;
         END$$;
         """

@@ -559,6 +559,16 @@ main.content {
   color: #222;
 }
 
+.article-title--encrypted {
+  color: #0f766e;
+}
+
+.article-title--encrypted::before {
+  content: '🔒';
+  display: inline-block;
+  margin-right: 0.3rem;
+}
+
 #articleView .title-block .meta {
   color: #6a6a6a;
   font-size: 0.85rem;

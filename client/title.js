@@ -134,15 +134,15 @@ export async function handleDeleteArticle(event) {
   let confirmed = false;
   try {
     confirmed = await showConfirm({
-      title: isPermanent ? "РЈРґР°Р»РёС‚СЊ Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ?" : "РЈРґР°Р»РёС‚СЊ РІ РєРѕСЂР·РёРЅСѓ?",
+      title: isPermanent ? 'Удалить безвозвратно?' : 'Удалить в корзину?',
       message: isPermanent
-        ? "РЎС‚СЂР°РЅРёС†Р° Р±СѓРґРµС‚ СѓРґР°Р»РµРЅР° Р±РµР· РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ."
-        : "РЎС‚СЂР°РЅРёС†Р° Р±СѓРґРµС‚ РїРµСЂРµРјРµС‰РµРЅР° РІ РєРѕСЂР·РёРЅСѓ.",
-      confirmText: isPermanent ? "РЈРґР°Р»РёС‚СЊ" : "Р’ РєРѕСЂР·РёРЅСѓ",
-      cancelText: "РћС‚РјРµРЅР°",
+        ? 'Страница будет удалена без возможности восстановления.'
+        : 'Страница будет перемещена в корзину.',
+      confirmText: isPermanent ? 'Удалить' : 'В корзину',
+      cancelText: 'Отмена',
     });
   } catch (error) {
-    confirmed = window.confirm(isPermanent ? "РЈРґР°Р»РёС‚СЊ Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ?" : "РЈРґР°Р»РёС‚СЊ РІ РєРѕСЂР·РёРЅСѓ?");
+    confirmed = window.confirm(isPermanent ? 'Удалить безвозвратно?' : 'Удалить в корзину?');
   }
   if (!confirmed) return;
   try {
@@ -157,7 +157,7 @@ export async function handleDeleteArticle(event) {
     state.articleId = null;
     state.currentBlockId = null;
     navigate(routing.list);
-    showToast(isPermanent ? "РЎС‚Р°С‚СЊСЏ СѓРґР°Р»РµРЅР° Р±РµР·РІРѕР·РІСЂР°С‚РЅРѕ" : "РЎС‚Р°С‚СЊСЏ РїРµСЂРµРјРµС‰РµРЅР° РІ РєРѕСЂР·РёРЅСѓ");
+    showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
   } catch (error) {
     showToast(error.message);
   }

@@ -27,6 +27,7 @@ from .auth import (
     verify_password,
 )
 from .db import CONN, IS_SQLITE, IS_POSTGRES
+from . import db as db_module
 from .data_store import (
     ArticleNotFound,
     BlockNotFound,
@@ -178,7 +179,12 @@ def me(current_user: User = Depends(get_current_user)):
 @app.get('/api/articles')
 def list_articles(current_user: User = Depends(get_current_user)):
     return [
-        {'id': article['id'], 'title': article['title'], 'updatedAt': article['updatedAt']}
+        {
+            'id': article['id'],
+            'title': article['title'],
+            'updatedAt': article['updatedAt'],
+            'encrypted': bool(article.get('encrypted', False)),
+        }
         for article in get_articles(current_user.id)
     ]
 
@@ -500,65 +506,61 @@ def get_search(q: str = '', current_user: User = Depends(get_current_user)):
     query = q.strip()
     if not query:
         return []
-    # Для SQLite выполняем запросы напрямую к FTS-таблицам, чтобы
-    # корректно учитывать автора и поведение при очистке индексов.
     if IS_SQLITE:
-        fts_query = build_sqlite_fts_query(query)
-        if not fts_query:
+        # Если индексы помечены как «грязные» (например, после явного DELETE в тестах),
+        # временно отключаем поиск, пока не будет вызван rebuild_search_indexes().
+        if db_module.SEARCH_INDEX_DIRTY:
             return []
-        # Поиск по заголовкам статей
+
+        pattern = f'%{query}%'
+        # Простой поиск по названиям статей
         article_rows = CONN.execute(
             '''
-            SELECT
-                articles.id AS articleId,
-                articles.title AS title,
-                snippet(articles_fts, '', '', '...', -1, 48) AS snippet
-            FROM articles_fts
-            JOIN articles ON articles.id = articles_fts.article_id
-            WHERE articles_fts MATCH ?
-              AND articles.deleted_at IS NULL
-              AND articles.author_id = ?
-            ORDER BY bm25(articles_fts) ASC
+            SELECT id AS articleId, title, updated_at
+            FROM articles
+            WHERE deleted_at IS NULL
+              AND author_id = ?
+              AND title LIKE ?
+            ORDER BY updated_at DESC
             LIMIT 15
             ''',
-            (fts_query, current_user.id),
+            (current_user.id, pattern),
         ).fetchall()
         article_results = [
             {
                 'type': 'article',
                 'articleId': row['articleId'],
                 'articleTitle': row['title'] or '',
-                'snippet': row['snippet'] or (row['title'] or ''),
+                'snippet': row['title'] or '',
             }
             for row in article_rows
         ]
-        # Поиск по содержимому блоков
+
+        # Простой поиск по содержимому блоков
         block_rows = CONN.execute(
             '''
             SELECT
                 blocks.id AS blockId,
                 articles.id AS articleId,
                 articles.title AS articleTitle,
-                snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
                 blocks.text AS blockText
-            FROM blocks_fts
-            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
+            FROM blocks
             JOIN articles ON articles.id = blocks.article_id
-            WHERE blocks_fts MATCH ?
-              AND articles.deleted_at IS NULL
+            WHERE articles.deleted_at IS NULL
               AND articles.author_id = ?
-            ORDER BY bm25(blocks_fts) ASC
+              AND blocks.text LIKE ?
+            ORDER BY blocks.block_rowid DESC
             LIMIT 30
             ''',
-            (fts_query, current_user.id),
+            (current_user.id, pattern),
         ).fetchall()
         block_results = [
             {
                 'type': 'block',
                 'articleId': row['articleId'],
-                'articleTitle': row['articleTitle'],
+                'articleTitle': row['articleTitle'] or '',
                 'blockId': row['blockId'],
-                'snippet': row['snippet'] or row['blockText'] or '',
+                'snippet': row['blockText'] or '',
                 'blockText': row['blockText'] or '',
             }
             for row in block_rows

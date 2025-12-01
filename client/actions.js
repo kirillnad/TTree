@@ -8,6 +8,7 @@ import { pushUndoEntry, cloneBlockSnapshot } from './undo.js';
 import { findBlock, countBlocks, findFallbackBlockId } from './block.js';
 import { buildBlockPayloadFromParsed, parseMarkdownBlocksInput, looksLikeMarkdownBlocks } from './markdown.js';
 import { isEditableElement } from './utils.js';
+import { encryptTextForArticle, encryptBlockTree } from './encryption.js';
 
 function setPasteProgress(active, message = 'Вставляем Markdown...') {
   state.isMarkdownInserting = active;
@@ -18,6 +19,22 @@ function setPasteProgress(active, message = 'Вставляем Markdown...') {
     textNode.textContent = message;
   }
   node.classList.toggle('hidden', !active);
+}
+
+async function maybeEncryptTextForCurrentArticle(text) {
+  if (!state.article || !state.article.encrypted || !state.articleEncryptionKey) {
+    return text;
+  }
+  return encryptTextForArticle(state.articleEncryptionKey, text);
+}
+
+async function maybeEncryptBlockPayloadForCurrentArticle(blockPayload) {
+  if (!state.article || !state.article.encrypted || !state.articleEncryptionKey || !blockPayload) {
+    return blockPayload;
+  }
+  const clone = JSON.parse(JSON.stringify(blockPayload));
+  await encryptBlockTree(clone, state.articleEncryptionKey);
+  return clone;
 }
 
 export async function startEditing() {
@@ -56,11 +73,12 @@ export async function saveEditing() {
     return;
   }
   try {
+    const payloadText = await maybeEncryptTextForCurrentArticle(newText);
     const updatedBlock = await apiRequest(
       `/api/articles/${state.articleId}/blocks/${state.editingBlockId}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ text: newText }),
+        body: JSON.stringify({ text: payloadText }),
       },
     );
     if (previousText !== newText) {
@@ -139,9 +157,10 @@ export async function splitEditingBlockAtCaret() {
   try {
     const previousBlock = findBlock(blockId)?.block;
     const previousSnapshot = previousBlock ? cloneBlockSnapshot(previousBlock) : null;
+    const beforePayloadText = await maybeEncryptTextForCurrentArticle(beforeClean);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ text: beforeClean }),
+      body: JSON.stringify({ text: beforePayloadText }),
     });
     const siblingRes = await apiRequest(
       `/api/articles/${state.articleId}/blocks/${blockId}/siblings`,
@@ -155,9 +174,10 @@ export async function splitEditingBlockAtCaret() {
       showToast('Не удалось создать новый блок');
       return;
     }
+    const afterPayloadText = await maybeEncryptTextForCurrentArticle(afterClean);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${newBlockId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ text: afterClean }),
+      body: JSON.stringify({ text: afterPayloadText }),
     });
     state.pendingEditBlockId = newBlockId;
     state.scrollTargetBlockId = newBlockId;
@@ -267,9 +287,10 @@ export async function insertParsedMarkdownBlocks(parsedBlocks = []) {
         continue;
       }
       // eslint-disable-next-line no-await-in-loop
+      const encryptedPayload = await maybeEncryptBlockPayloadForCurrentArticle(payload);
       const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${anchorId}/siblings`, {
         method: 'POST',
-        body: JSON.stringify({ direction: 'after', payload }),
+        body: JSON.stringify({ direction: 'after', payload: encryptedPayload }),
       });
       if (result?.block?.id) {
         anchorId = result.block.id;

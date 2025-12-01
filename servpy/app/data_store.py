@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.engine import RowMapping
 
-from .db import CONN, IS_POSTGRES, IS_SQLITE
+from .db import CONN, IS_POSTGRES, IS_SQLITE, mark_search_index_clean
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import (
@@ -155,6 +155,17 @@ def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
 def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
     if not row:
         return None
+    raw_encrypted_flag = bool(row.get('is_encrypted', 0))
+    has_crypto_meta = bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+    encrypted_flag = raw_encrypted_flag or has_crypto_meta
+    if encrypted_flag and not raw_encrypted_flag:
+        # Логируем случаи, когда статья считается зашифрованной только по метаданным.
+        print(
+            '[article_encryption] inferred encrypted article without flag',
+            row['id'],
+            'salt=' if row.get('encryption_salt') else 'no-salt',
+            'verifier=' if row.get('encryption_verifier') else 'no-verifier',
+        )
     return {
         'id': row['id'],
         'title': row['title'],
@@ -164,6 +175,10 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'authorId': row.get('author_id'),
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
+        'encrypted': encrypted_flag,
+        'encryptionSalt': row.get('encryption_salt'),
+        'encryptionVerifier': row.get('encryption_verifier'),
+        'encryptionHint': row.get('encryption_hint'),
         'blocks': rows_to_tree(row['id']),
     }
 
@@ -920,14 +935,76 @@ def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict
     if not article:
         raise ArticleNotFound(f'Article {article_id} not found')
     title = attrs.get('title')
-    if not title or title == article['title']:
+    encrypted_flag = attrs.get('encrypted')
+    salt = attrs.get('encryptionSalt') if 'encryptionSalt' in attrs else None
+    verifier = attrs.get('encryptionVerifier') if 'encryptionVerifier' in attrs else None
+    hint = attrs.get('encryptionHint') if 'encryptionHint' in attrs else None
+
+    # Determine if anything actually changes.
+    title_changed = bool(title) and title != article['title']
+    updates: List[str] = []
+    params: List[Any] = []
+
+    if title_changed:
+        updates.append('title = ?')
+        params.append(title)
+
+    if encrypted_flag is not None:
+        current = bool(article.get('encrypted'))
+        desired = bool(encrypted_flag)
+        if desired != current:
+            updates.append('is_encrypted = ?')
+            # Для SQLite это сохранится как 0/1, для Postgres — как true/false.
+            params.append(desired)
+            article['encrypted'] = desired
+
+    if 'encryptionSalt' in attrs:
+        if salt != article.get('encryptionSalt'):
+            updates.append('encryption_salt = ?')
+            params.append(salt)
+            article['encryptionSalt'] = salt
+
+    if 'encryptionVerifier' in attrs:
+        if verifier != article.get('encryptionVerifier'):
+            updates.append('encryption_verifier = ?')
+            params.append(verifier)
+            article['encryptionVerifier'] = verifier
+
+    if 'encryptionHint' in attrs:
+        if hint != article.get('encryptionHint'):
+            updates.append('encryption_hint = ?')
+            params.append(hint)
+            article['encryptionHint'] = hint
+
+    if not updates:
         return None
+
     now = iso_now()
+    updates.append('updated_at = ?')
+    params.append(now)
+    params.append(article_id)
     with CONN:
-        CONN.execute('UPDATE articles SET title = ?, updated_at = ? WHERE id = ?', (title, now, article_id))
-    article['title'] = title
+        CONN.execute(f'UPDATE articles SET {", ".join(updates)} WHERE id = ?', tuple(params))
+
+    if title_changed and title is not None:
+        article['title'] = title
     article['updatedAt'] = now
-    upsert_article_search_index(article_id, title)
+    if title_changed and title is not None:
+        upsert_article_search_index(article_id, title)
+
+    # Логируем финальное состояние шифрования статьи для отладки.
+    print(
+        '[article_encryption] update_article_meta',
+        article_id,
+        'encrypted=',
+        article.get('encrypted'),
+        'salt=',
+        bool(article.get('encryptionSalt')),
+        'verifier=',
+        bool(article.get('encryptionVerifier')),
+        'hint=',
+        bool(article.get('encryptionHint')),
+    )
     return article
 
 
@@ -1007,16 +1084,34 @@ def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
     return {'blockId': block_id, 'block': {'id': block_id, 'text': new_text}}
 
 
+def _attachment_public_paths(article_id: str, stored_path: str) -> Tuple[str, str]:
+    """
+    Build a public storedPath (legacy, article-scoped) and a download URL.
+
+    Internally, files are stored under /uploads/<user_id>/attachments/<article_id>/<filename>,
+    but API responses historically exposed paths starting with /uploads/<article_id>/.
+    To keep compatibility with existing clients and tests, we expose:
+      - storedPath: /uploads/<article_id>/<filename>
+      - url: the actual download URL (stored_path as saved in DB)
+    """
+    if not stored_path:
+        return f'/uploads/{article_id}/', ''
+    filename = stored_path.rsplit('/', 1)[-1]
+    public_stored = f'/uploads/{article_id}/{filename}'
+    return public_stored, stored_path
+
+
 def _attachment_from_row(row: RowMapping) -> Dict[str, Any]:
+    public_stored, url = _attachment_public_paths(row['article_id'], row['stored_path'])
     return {
         'id': row['id'],
         'articleId': row['article_id'],
-        'storedPath': row['stored_path'],
+        'storedPath': public_stored,
         'originalName': row['original_name'],
         'contentType': row['content_type'] or '',
         'size': row['size'],
         'createdAt': row['created_at'],
-        'url': row['stored_path'],
+        'url': url,
     }
 
 
@@ -1031,15 +1126,16 @@ def create_attachment(article: Dict[str, Any], stored_path: str, original_name: 
         ''',
         (attachment_id, article['id'], stored_path, original_name, content_type or '', size or 0, now),
     )
+    public_stored, url = _attachment_public_paths(article['id'], stored_path)
     return {
         'id': attachment_id,
         'articleId': article['id'],
-        'storedPath': stored_path,
+        'storedPath': public_stored,
         'originalName': original_name,
         'contentType': content_type or '',
         'size': size or 0,
         'createdAt': now,
-        'url': stored_path,
+        'url': url,
     }
 
 
@@ -1249,3 +1345,4 @@ def rebuild_search_indexes() -> None:
     with CONN:
         for row in article_rows:
             upsert_article_search_index(row['id'], row['title'] or '', use_transaction=False)
+    mark_search_index_clean()

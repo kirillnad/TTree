@@ -14,6 +14,12 @@ function buildModal({ title, message, confirmText, cancelText, renderBody }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
 
+  const form = document.createElement('form');
+  form.className = 'modal-form';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+  });
+
   const card = document.createElement('div');
   card.className = 'modal-card';
   card.setAttribute('role', 'dialog');
@@ -58,14 +64,15 @@ function buildModal({ title, message, confirmText, cancelText, renderBody }) {
   card.appendChild(header);
   card.appendChild(body);
   card.appendChild(footer);
-  overlay.appendChild(card);
+  form.appendChild(card);
+  overlay.appendChild(form);
 
-  return { overlay, card, confirmBtn, cancelBtn };
+  return { overlay, card, confirmBtn, cancelBtn, form };
 }
 
 export function showConfirm(options = {}) {
   const root = ensureRoot();
-  const { overlay, card, confirmBtn, cancelBtn } = buildModal(options);
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal(options);
   let resolved = false;
   let resolvePromise = () => {};
 
@@ -95,6 +102,10 @@ export function showConfirm(options = {}) {
 
   return new Promise((resolver) => {
     resolvePromise = resolver;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      resolveResult(true);
+    });
     confirmBtn.addEventListener('click', () => resolveResult(true));
     cancelBtn.addEventListener('click', () => resolveResult(false));
     overlay.addEventListener('click', (event) => {
@@ -114,7 +125,7 @@ export function showPrompt(options = {}) {
   let inputRef = null;
   let suggestions = Array.isArray(options.suggestions) ? options.suggestions : [];
   let suggestionsBox = null;
-  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
     ...options,
     renderBody: () => {
       const fragment = document.createDocumentFragment();
@@ -125,7 +136,7 @@ export function showPrompt(options = {}) {
         fragment.appendChild(msg);
       }
       const input = document.createElement('input');
-      input.type = 'text';
+      input.type = options.inputType === 'password' ? 'password' : 'text';
       input.className = 'modal-input';
       input.placeholder = options.placeholder || '';
       input.value = options.defaultValue || '';
@@ -224,7 +235,7 @@ export function showPrompt(options = {}) {
     }
     cancelBtn.textContent = options.cancelText || 'Cancel';
 
-    confirmBtn.addEventListener('click', () => {
+    const submitHandler = () => {
       if (!inputRef) {
         resolveResult(null);
         return;
@@ -235,7 +246,12 @@ export function showPrompt(options = {}) {
         return;
       }
       resolveResult(nextValue);
+    };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitHandler();
     });
+    confirmBtn.addEventListener('click', submitHandler);
     cancelBtn.addEventListener('click', () => resolveResult(null));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) resolveResult(null);
@@ -271,7 +287,7 @@ export function showLinkPrompt(options = {}) {
   const root = ensureRoot();
   let textInput = null;
   let urlInput = null;
-  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
     ...options,
     renderBody: () => {
       const fragment = document.createDocumentFragment();
@@ -355,12 +371,19 @@ export function showLinkPrompt(options = {}) {
     confirmBtn.textContent = options.confirmText || 'OK';
     cancelBtn.textContent = options.cancelText || 'Cancel';
 
-    confirmBtn.addEventListener('click', () => {
+    const submitHandler = () => {
       resolveResult({
         text: (textInput?.value || '').trim(),
         url: (urlInput?.value || '').trim(),
       });
+    };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!confirmBtn.disabled) {
+        submitHandler();
+      }
     });
+    confirmBtn.addEventListener('click', submitHandler);
     cancelBtn.addEventListener('click', () => resolveResult(null));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) resolveResult(null);
@@ -382,6 +405,128 @@ export function showLinkPrompt(options = {}) {
         if (urlInput.value) {
           urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length);
         }
+      } else {
+        card.focus({ preventScroll: true });
+      }
+    });
+  });
+}
+
+export function showPasswordWithHintPrompt(options = {}) {
+  const root = ensureRoot();
+  let passwordInput = null;
+  let hintInput = null;
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
+    ...options,
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      if (options.message) {
+        const msg = document.createElement('p');
+        msg.className = 'modal-body__text';
+        msg.textContent = options.message;
+        fragment.appendChild(msg);
+      }
+
+      const passLabel = document.createElement('label');
+      passLabel.className = 'modal-label';
+      passLabel.textContent = 'Пароль';
+      const pwd = document.createElement('input');
+      pwd.type = 'password';
+      pwd.className = 'modal-input';
+      pwd.placeholder = 'Пароль для страницы';
+      pwd.autocomplete = 'off';
+      passLabel.appendChild(pwd);
+
+      const hintLabel = document.createElement('label');
+      hintLabel.className = 'modal-label';
+      hintLabel.textContent = 'Подсказка (необязательно)';
+      const hint = document.createElement('input');
+      hint.type = 'text';
+      hint.className = 'modal-input';
+      hint.placeholder = 'Напоминание о пароле';
+      hint.autocomplete = 'off';
+      hintLabel.appendChild(hint);
+
+      passwordInput = pwd;
+      hintInput = hint;
+
+      fragment.appendChild(passLabel);
+      fragment.appendChild(hintLabel);
+      return fragment;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (payload) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(payload);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+      return;
+    }
+    if (event.code === 'Enter' && !confirmBtn.disabled) {
+      event.preventDefault();
+      resolveResult({
+        password: (passwordInput?.value || '').trim(),
+        hint: (hintInput?.value || '').trim(),
+      });
+    }
+  };
+
+  const updateConfirmState = () => {
+    const hasPassword = Boolean((passwordInput?.value || '').trim());
+    confirmBtn.disabled = !hasPassword;
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('danger-btn');
+    confirmBtn.textContent = options.confirmText || 'Защитить';
+    cancelBtn.textContent = options.cancelText || 'Отмена';
+
+    const submitHandler = () => {
+      if (confirmBtn.disabled) return;
+      resolveResult({
+        password: (passwordInput?.value || '').trim(),
+        hint: (hintInput?.value || '').trim(),
+      });
+    };
+
+    confirmBtn.addEventListener('click', submitHandler);
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitHandler();
+    });
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    if (passwordInput) {
+      passwordInput.addEventListener('input', updateConfirmState);
+    }
+    updateConfirmState();
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      if (passwordInput) {
+        passwordInput.focus({ preventScroll: true });
+        passwordInput.select();
       } else {
         card.focus({ preventScroll: true });
       }
