@@ -28,7 +28,7 @@ import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
-import { showPrompt } from './modal.js';
+import { showPrompt, showConfirm } from './modal.js';
 
 function handleViewKey(event) {
   if (!state.article) return;
@@ -490,6 +490,15 @@ export function attachEvents() {
       event.stopPropagation();
       closeListMenu();
       try {
+        const confirmed = await showConfirm({
+          title: 'Импорт из Logseq',
+          message:
+            'Все существующие страницы с такими же названиями будут удалены и заменены версиями из архива Logseq. Продолжить?',
+          confirmText: 'Импортировать',
+          cancelText: 'Отмена',
+        });
+        if (!confirmed) return;
+
         let baseUrl = '';
         try {
           const saved = window.localStorage.getItem('logseqAssetsBaseUrl') || '';

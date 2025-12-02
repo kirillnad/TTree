@@ -19,7 +19,17 @@ import urllib.parse
 import urllib.request
 
 import aiofiles
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, Request, Response
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    Request,
+    Response,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +42,7 @@ from .auth import (
     create_user,
     ensure_superuser,
     get_current_user,
+    get_user_by_id,
     get_user_by_username,
     set_session_cookie,
     verify_password,
@@ -98,10 +109,19 @@ logger = logging.getLogger('uvicorn.error')
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or ''
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or ''
 GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI') or 'https://memus.pro/api/auth/google/callback'
+USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
+
+# Состояние фоновых задач импорта Logseq (в памяти процесса).
+LOGSEQ_IMPORT_TASKS: dict[str, dict[str, Any]] = {}
 
 ensure_sample_article()
 ensure_inbox_article()
-rebuild_search_indexes()
+# Полная перестройка поисковых индексов может занимать много времени
+# на больших базах и замедлять запуск сервера, поэтому по умолчанию
+# она отключена. При необходимости её можно включить через
+# переменную окружения SERVPY_REBUILD_INDEXES_ON_STARTUP=1.
+if os.environ.get('SERVPY_REBUILD_INDEXES_ON_STARTUP') == '1':
+    rebuild_search_indexes()
 # Гарантируем наличие суперпользователя kirill.
 ensure_superuser('kirill', 'zZ141400', 'kirill')
 
@@ -1273,6 +1293,137 @@ def list_users(request: Request, current_user: User = Depends(get_current_user))
     ]
 
 
+@app.post('/api/import/logseq/upload')
+async def upload_logseq_archive(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Быстрая загрузка ZIP-архива Logseq на сервер без длительной обработки.
+    Возвращает идентификатор архива, который затем можно передать в /api/import/logseq/start.
+    """
+    filename = file.filename or ''
+    if not filename.lower().endswith('.zip'):
+        raise HTTPException(status_code=400, detail='Ожидается ZIP-архив Logseq (.zip)')
+
+    user_root = UPLOADS_DIR / current_user.id / 'logseq_archives'
+    user_root.mkdir(parents=True, exist_ok=True)
+    archive_id = uuid4().hex
+    dest_path = user_root / f'{archive_id}.zip'
+
+    # Потоковая запись файла на диск, чтобы не держать всё в памяти.
+    async with aiofiles.open(dest_path, 'wb') as out:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            await out.write(chunk)
+
+    return {
+        'archiveId': archive_id,
+        'originalName': filename,
+    }
+
+
+def _run_logseq_import_task(task_id: str, user_id: str, archive_path_str: str, assets_base_url: str | None) -> None:
+    """
+    Фоновая задача: читает сохранённый ZIP-архив Logseq и запускает импорт.
+    """
+    task = LOGSEQ_IMPORT_TASKS.get(task_id)
+    if not task:
+        return
+    task['status'] = 'running'
+    task['updatedAt'] = datetime.utcnow().isoformat()
+
+    archive_path = Path(archive_path_str)
+    try:
+        user = get_user_by_id(user_id)
+        if not user:
+            raise RuntimeError('Пользователь не найден для задачи импорта Logseq')
+        raw = archive_path.read_bytes()
+        articles = _import_logseq_from_bytes(raw, archive_path.name, assets_base_url, user)
+        task['status'] = 'completed'
+        task['updatedAt'] = datetime.utcnow().isoformat()
+        task['articles'] = [
+            {
+                'id': a.get('id'),
+                'title': a.get('title'),
+                'updatedAt': a.get('updatedAt'),
+            }
+            for a in (articles or [])
+            if isinstance(a, dict) and a.get('id')
+        ]
+        task['error'] = None
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Logseq import task %s failed: %r', task_id, exc)
+        task['status'] = 'failed'
+        task['updatedAt'] = datetime.utcnow().isoformat()
+        task['error'] = str(exc)
+        task['articles'] = []
+    finally:
+        # Пытаемся удалить архив, чтобы не засорять диск.
+        try:
+            archive_path.unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+@app.post('/api/import/logseq/start')
+def start_logseq_import(
+    payload: dict[str, Any],
+    background: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Запускает фоновую задачу импорта Logseq из ранее загруженного архива.
+    """
+    archive_id = (payload.get('archiveId') or '').strip()
+    assets_base_url = (payload.get('assetsBaseUrl') or '').strip() or None
+    if not archive_id:
+        raise HTTPException(status_code=400, detail='archiveId обязателен')
+
+    archive_path = UPLOADS_DIR / current_user.id / 'logseq_archives' / f'{archive_id}.zip'
+    if not archive_path.is_file():
+        raise HTTPException(status_code=404, detail='Архив не найден')
+
+    task_id = uuid4().hex
+    now = datetime.utcnow().isoformat()
+    LOGSEQ_IMPORT_TASKS[task_id] = {
+        'id': task_id,
+        'userId': current_user.id,
+        'archiveId': archive_id,
+        'status': 'pending',
+        'createdAt': now,
+        'updatedAt': now,
+        'error': None,
+        'articles': [],
+    }
+
+    background.add_task(_run_logseq_import_task, task_id, current_user.id, str(archive_path), assets_base_url)
+
+    return {'taskId': task_id}
+
+
+@app.get('/api/import/logseq/status/{task_id}')
+def get_logseq_import_status(task_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Возвращает состояние фоновой задачи импорта Logseq.
+    """
+    task = LOGSEQ_IMPORT_TASKS.get(task_id)
+    if not task or task.get('userId') != current_user.id:
+        raise HTTPException(status_code=404, detail='Задача не найдена')
+    result: dict[str, Any] = {
+        'id': task['id'],
+        'status': task['status'],
+        'createdAt': task['createdAt'],
+        'updatedAt': task['updatedAt'],
+        'error': task.get('error'),
+    }
+    if task['status'] == 'completed':
+        result['articles'] = task.get('articles') or []
+    return result
+
+
 @app.delete('/api/users/{user_id}')
 def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
     if not getattr(current_user, 'is_superuser', False):
@@ -1867,27 +2018,21 @@ async def import_article_from_markdown(
     return created
 
 
-@app.post('/api/import/logseq')
-async def import_from_logseq(
-    file: UploadFile = File(...),
-    assets_base_url: str | None = Form(None, alias='assetsBaseUrl'),
-    current_user: User = Depends(get_current_user),
-):
+def _import_logseq_from_bytes(
+    raw: bytes,
+    filename: str,
+    assets_base_url: str | None,
+    current_user: User,
+) -> list[dict[str, Any]]:
     """
-    Импортирует набор страниц из архива Logseq.
+    Общая реализация импорта Logseq из ZIP-архива.
 
-    Ожидается ZIP-архив с двумя папками в корне:
-    - pages/  — Markdown-файлы (.md) с содержимым страниц;
-    - assets/ — вложения (изображения, файлы и т.п.), на которые ссылаются страницы.
-
-    Каждая страница из pages/*.md превращается в отдельную статью,
-    вложения из assets/ загружаются в uploads и ссылки на них переписываются.
+    Используется как синхронным API-эндпоинтом, так и фоновыми задачами.
     """
-    filename = (file.filename or '').lower()
-    if not filename.endswith('.zip'):
+    filename_lc = (filename or '').lower()
+    if not filename_lc.endswith('.zip'):
         raise HTTPException(status_code=400, detail='Ожидается ZIP-архив Logseq (pages/ и assets/)')
 
-    raw = await file.read()
     # Защита от слишком больших архивов (например, > 1 ГБ).
     max_size = 1024 * 1024 * 1024  # 1 GiB
     if len(raw) > max_size:
@@ -2056,6 +2201,16 @@ async def import_from_logseq(
         except UnicodeDecodeError:
             md_text = content_bytes.decode('utf-8', errors='ignore')
 
+        # Удаляем любые строки, содержащие "collapsed::", чтобы
+        # служебные пометки Logseq не попадали в текст блоков.
+        try:
+            lines = md_text.splitlines()
+            filtered = [ln for ln in lines if 'collapsed::' not in ln]
+            md_text = '\n'.join(filtered)
+        except Exception:  # noqa: BLE001
+            # В крайнем случае продолжаем с исходным текстом.
+            pass
+
         blocks_tree = _parse_markdown_blocks(md_text)
         if not blocks_tree:
             continue
@@ -2063,6 +2218,21 @@ async def import_from_logseq(
         # Имя статьи = имя файла без расширения (после корректного UTF-8-декодирования в zipfile).
         title_stem = PurePosixPath(info.filename or '').stem or 'Импортированная страница'
         base_title = title_stem.strip() or 'Импортированная страница'
+
+        # Перед созданием новой статьи удаляем все существующие статьи
+        # этого пользователя с таким же заголовком (полная замена).
+        try:
+            existing_rows = CONN.execute(
+                'SELECT id FROM articles WHERE author_id = ? AND title = ? AND deleted_at IS NULL',
+                (current_user.id, base_title),
+            ).fetchall()
+            for row in existing_rows or []:
+                try:
+                    delete_article(row['id'], force=True)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error('Failed to delete old article %s before Logseq import: %r', row['id'], exc)
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Failed to query existing articles before Logseq import: %r', exc)
 
         new_article_id = str(uuid4())
 
@@ -2113,6 +2283,21 @@ async def import_from_logseq(
     if not imported_articles:
         raise HTTPException(status_code=400, detail='Не удалось импортировать ни одной страницы из архива Logseq')
     return imported_articles
+
+
+@app.post('/api/import/logseq')
+async def import_from_logseq(
+    file: UploadFile = File(...),
+    assets_base_url: str | None = Form(None, alias='assetsBaseUrl'),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Синхронный импорт Logseq (оставлен для совместимости).
+    Для крупных архивов лучше использовать upload/start/status API.
+    """
+    raw = await file.read()
+    filename = file.filename or ''
+    return _import_logseq_from_bytes(raw, filename, assets_base_url, current_user)
 
 
 @app.get('/api/search')
