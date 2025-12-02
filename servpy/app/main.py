@@ -1235,6 +1235,7 @@ def list_articles(current_user: User = Depends(get_current_user)):
             'id': article['id'],
             'title': article['title'],
             'updatedAt': article['updatedAt'],
+            'publicSlug': article.get('publicSlug'),
             'encrypted': bool(article.get('encrypted', False)),
         }
         for article in get_articles(current_user.id)

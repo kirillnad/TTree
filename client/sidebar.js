@@ -88,6 +88,7 @@ export function upsertArticleIndex(article) {
     id: article.id,
     title: article.title || 'Без названия',
     updatedAt: article.updatedAt || new Date().toISOString(),
+    publicSlug: article.publicSlug || null,
   };
   const idx = state.articlesIndex.findIndex((item) => item.id === summary.id);
   if (idx >= 0) {
@@ -156,7 +157,9 @@ export function renderSidebarArticleList() {
     button.type = 'button';
     if (!state.isTrashView && article.id === state.articleId) button.classList.add('active');
     const isFav = favs.has(article.id);
-    button.innerHTML = `<span>${escapeHtml(article.title || 'Без названия')}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
+    const titleText = escapeHtml(article.title || 'Без названия');
+    const publicIcon = article.publicSlug ? '🌐 ' : '';
+    button.innerHTML = `<span>${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
     button.addEventListener('click', () => {
       navigate(routing.article(article.id));
       // Автоматически закрываем сайдбар на мобильном.
@@ -232,9 +235,11 @@ export function renderMainArticleList(articles = null) {
         }
       } else {
         const isFav = favs.has(article.id);
+        const titleText = escapeHtml(article.title || 'Без названия');
+        const publicIcon = article.publicSlug ? '🌐 ' : '';
         item.innerHTML = `
       <span>
-        <strong>${escapeHtml(article.title)}</strong><br />
+        <strong>${publicIcon}${titleText}</strong><br />
         <small>${new Date(article.updatedAt).toLocaleString()}</small>
       </span>
       <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</button>
