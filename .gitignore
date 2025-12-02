@@ -9,3 +9,10 @@ logs/servpy.log
 logs/servpy.log
 servpy/app/__pycache__/*.*
 logs/servpy.log
+servpy/app/__pycache__/data_store.cpython-38.pyc
+servpy/app/__pycache__/data_store.cpython-38.pyc
+servpy/app/__pycache__/main.cpython-38.pyc
+servpy/app/__pycache__/data_store.cpython-38.pyc
+servpy/app/__pycache__/main.cpython-38.pyc
+servpy/app/__pycache__/schema.cpython-38.pyc
+logs/servpy.log

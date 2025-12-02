@@ -284,6 +284,51 @@ export function attachEvents() {
       removeArticleEncryption();
     });
   }
+  if (refs.articlePublicLinkBtn) {
+    // Диагностика: проверяем, что ссылка найдена и хендлер навешан.
+    // eslint-disable-next-line no-console
+    console.log('[memus] articlePublicLinkBtn найден', refs.articlePublicLinkBtn);
+    refs.articlePublicLinkBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      // eslint-disable-next-line no-console
+      console.log('[memus] articlePublicLinkBtn click', {
+        articleId: state.article && state.article.id,
+        publicSlug: state.article && state.article.publicSlug,
+      });
+      if (!state.article || !state.article.publicSlug) {
+        showToast('Эта страница ещё не опубликована');
+        return;
+      }
+      const slug = state.article.publicSlug;
+      const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`;
+      // Открываем вкладку синхронно, чтобы не блокировал браузер.
+      window.open(url, '_blank', 'noopener,noreferrer');
+      // Копирование ссылки — асинхронно, но уже после открытия вкладки.
+      (async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+          } else {
+            const tmp = document.createElement('textarea');
+            tmp.value = url;
+            tmp.setAttribute('readonly', '');
+            tmp.style.position = 'absolute';
+            tmp.style.left = '-9999px';
+            document.body.appendChild(tmp);
+            tmp.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(tmp);
+            if (!ok) {
+              throw new Error('copy command failed');
+            }
+          }
+          showToast('Публичная ссылка скопирована');
+        } catch (error) {
+          showToast(error.message || 'Не удалось скопировать ссылку');
+        }
+      })();
+    });
+  }
   if (refs.articlePublicToggleBtn) {
     refs.articlePublicToggleBtn.addEventListener('click', async (event) => {
       event.stopPropagation();

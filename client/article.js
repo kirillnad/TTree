@@ -852,8 +852,7 @@ export function renderArticle() {
   const rootBlocks = article.id === 'inbox' ? [...(article.blocks || [])].reverse() : article.blocks;
 
   const titleText = article.title || 'Без названия';
-  const displayTitle = article.publicSlug ? `🌐 ${titleText}` : titleText;
-  refs.articleTitle.textContent = displayTitle;
+  refs.articleTitle.textContent = titleText;
   refs.articleTitle.classList.toggle('article-title--encrypted', Boolean(article.encrypted));
   if (!state.isEditingTitle && refs.articleTitleInput) {
     refs.articleTitleInput.value = titleText;
@@ -864,6 +863,13 @@ export function renderArticle() {
   }
   if (refs.editTitleBtn) {
     refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
+  }
+  if (refs.articlePublicLinkBtn) {
+    const hasPublic = Boolean(article.publicSlug);
+    refs.articlePublicLinkBtn.classList.toggle('hidden', !hasPublic);
+    if (hasPublic) {
+      refs.articlePublicLinkBtn.title = 'Скопировать публичную ссылку';
+    }
   }
   if (refs.deleteArticleBtn) {
     refs.deleteArticleBtn.classList.toggle('hidden', article.id === 'inbox');

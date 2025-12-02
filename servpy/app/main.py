@@ -132,6 +132,48 @@ def _decode_data_url(data_url: str) -> tuple[bytes, str]:
   return raw, mime_type
 
 
+_INTERNAL_ARTICLE_LINK_RE = re.compile(
+    r'<a\s+([^>]*?)href="/article/([0-9a-fA-F-]+)"([^>]*)>(.*?)</a>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _rewrite_internal_links_for_public(html_text: str) -> str:
+    """
+    В публичной статье внутренние ссылки на /article/<id> переписываем:
+    - если у статьи есть public_slug, ведём на /p/<slug>;
+    - иначе оставляем ссылку, но без перехода (href="#", data-unpublished="1").
+    """
+    if '/article/' not in (html_text or ''):
+        return html_text
+
+    cache: dict[str, str] = {}
+
+    def _replace(match: re.Match[str]) -> str:
+        before_attrs = match.group(1) or ''
+        article_id = match.group(2)
+        after_attrs = match.group(3) or ''
+        inner_html = match.group(4) or ''
+        if not article_id:
+            return match.group(0)
+        if article_id in cache:
+            slug = cache[article_id]
+        else:
+            row = CONN.execute(
+                'SELECT public_slug FROM articles WHERE id = ? AND deleted_at IS NULL',
+                (article_id,),
+            ).fetchone()
+            slug = (row['public_slug'] or '') if row and row['public_slug'] else ''
+            cache[article_id] = slug
+        if not slug:
+            # Целевая статья не опубликована — оставляем "пустую" ссылку с пометкой.
+            return f'<a {before_attrs}href="#" data-unpublished="1"{after_attrs}>{inner_html}</a>'
+        href = f'/p/{slug}'
+        return f'<a {before_attrs}href="{href}"{after_attrs}>{inner_html}</a>'
+
+    return _INTERNAL_ARTICLE_LINK_RE.sub(_replace, html_text or '')
+
+
 def _import_image_from_data_url(data_url: str, current_user: User) -> str:
     """
     Сохраняет картинку из data: URL в uploads так же, как upload_file,
@@ -670,7 +712,20 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     except Exception:  # noqa: BLE001
         updated_label = updated_raw or ''
 
+    # Перед рендерингом переписываем внутренние ссылки /article/<id> в тексте блоков.
+    def _walk_and_rewrite(blocks: list[dict[str, Any]] | None) -> None:
+        if not blocks:
+            return
+        for b in blocks:
+            if not isinstance(b, dict):
+                continue
+            text_html = b.get('text') or ''
+            if text_html:
+                b['text'] = _rewrite_internal_links_for_public(text_html)
+            _walk_and_rewrite(b.get('children'))
+
     blocks = article.get('blocks') or []
+    _walk_and_rewrite(blocks)
     blocks_html = ''.join(_render_public_block(b) for b in blocks)
     header = f"""
     <div class="panel-header article-header">
@@ -850,6 +905,12 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
   }
 
   root.addEventListener('click', function(event) {
+    var unpublished = event.target.closest('a[data-unpublished="1"]');
+    if (unpublished) {
+      event.preventDefault();
+      alert('Эта страница пока не опубликована');
+      return;
+    }
     var btn = event.target.closest('.collapse-btn');
     if (btn) {
       var targetId = btn.getAttribute('data-block-id');

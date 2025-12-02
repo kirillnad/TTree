@@ -678,6 +678,18 @@ main.content {
   white-space: nowrap;
 }
 
+.public-link-button {
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.public-link-button:hover {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
 @media (max-width: 640px) {
   .article-toolbar .toolbar-label {
     display: none;
