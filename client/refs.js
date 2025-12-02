@@ -10,6 +10,7 @@ export const refs = {
   authRegisterPassword: document.getElementById('authRegisterPassword'),
   authRegisterDisplayName: document.getElementById('authRegisterDisplayName'),
   authError: document.getElementById('authError'),
+  authGoogleLoginBtn: document.getElementById('authGoogleLoginBtn'),
   currentUserLabel: document.getElementById('currentUserLabel'),
   logoutBtn: document.getElementById('logoutBtn'),
   usersBtn: document.getElementById('usersBtn'),

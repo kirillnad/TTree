@@ -19070,3 +19070,1289 @@ INFO:     104.23.223.16:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/image
 INFO:     104.23.223.16:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
 INFO:     104.23.223.16:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
 INFO:     104.23.223.16:0 - "GET /p/sFF86jOg-v HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/blocks/5f315a55-7be8-4821-926c-0d25e6c7821b/siblings HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "PATCH /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/blocks/bfc6841c-f6fd-44b6-96e1-d506b33da69e HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /p/sFF86jOg-v HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /article/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.0" 200 OK
+INFO:     172.69.224.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.217.81:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.64.192.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.217.81:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     104.23.217.81:0 - "POST /api/auth/login HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.71.103.58:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     162.159.113.75:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     104.23.170.108:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     104.23.168.67:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.71.183.58:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.71.183.57:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.69.194.231:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.164.186:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.190.157:0 - "GET / HTTP/1.0" 200 OK
+INFO:     198.235.24.177:0 - "GET / HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [199722]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [201325]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:0 - "GET / HTTP/1.0" 200 OK
+INFO:     46.242.12.114:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.71.31.184:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /p/Xgale3yX2B HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /p/Xgale3yX2B HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [201325]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [201648]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /p/b7ptU0PkU2 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /p/lI8vmAHWuK HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /p/b7ptU0PkU2 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     193.142.147.209:0 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.69.87.19:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.2.168:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.70.85.211:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.68.186.90:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.69.224.4:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.178.74:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [201648]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [202197]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.71.222.116:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.222.22:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.172.34:0 - "GET / HTTP/1.0" 200 OK
+INFO:     8.211.34.237:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.164.187:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.111.227:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.239.49:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.148.87:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.187.75:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [202197]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [203347]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     172.70.111.69:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [203347]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [203497]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.155.196:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.71.6.70:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.95.48:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [203497]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [203619]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.154.215:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.154.215:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [203619]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [203705]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.209.194:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.69.224.4:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.99.131:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.70.46.187:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     172.71.144.123:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.68.229.197:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.86.172:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.209.194:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.213.27:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [203705]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [204418]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.70.111.70:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     209.38.83.23:0 - "GET /%2BCSCOL%2B/Java.jar HTTP/1.0" 404 Not Found
+INFO:     209.38.83.23:0 - "GET /%2BCSCOE%2B/logon_forms.js HTTP/1.0" 404 Not Found
+INFO:     209.38.83.23:0 - "GET /%2BCSCOL%2B/a1.jar HTTP/1.0" 404 Not Found
+INFO:     209.38.83.23:0 - "GET /%2BCSCOE%2B/transfer.js HTTP/1.0" 404 Not Found
+INFO:     162.158.159.45:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.159.45:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.159.45:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.159.45:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.159.45:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.159.45:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /p/lI8vmAHWuK HTTP/1.0" 200 OK
+INFO:     172.70.248.191:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.69.224.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.241.76:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [204418]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [205020]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     104.23.187.74:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.187.74:0 - "GET /p/lI8vmAHWuK HTTP/1.0" 200 OK
+INFO:     162.158.216.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.187.74:0 - "GET /p/lI8vmAHWuK HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     104.23.190.156:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.71.203.52:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.71.203.52:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.70.179.124:0 - "GET /api/auth/google/callback HTTP/1.0" 404 Not Found
+INFO:     172.217.36.190:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.217.36.190:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.217.36.190:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.70.179.153:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "POST /api/auth/login HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614208458-70027986.webp HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614312502-2b15ed82.webp HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614389243-fe9a6c17.webp HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614416037-bcbb0146.webp HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614365943-0cfc2dfa.webp HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/collapse HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "POST /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/d82cfbb9-df05-4689-856c-e2e8942b90ce/siblings HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/957b806d-a01e-4832-bebe-cda571613638 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     185.12.59.118:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.178.74:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.86.173:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.70.242.171:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.68.186.90:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     20.64.106.71:0 - "GET /autodiscover/autodiscover.json?@zdi/Powershell HTTP/1.0" 404 Not Found
+INFO:     104.23.213.89:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     185.242.226.80:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.182.147:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.221.22:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.170.108:0 - "GET /.git/config HTTP/1.0" 200 OK
+INFO:     3.80.137.207:0 - "GET / HTTP/1.0" 200 OK
+INFO:     3.89.221.211:0 - "GET /robots.txt HTTP/1.0" 404 Not Found
+INFO:     104.23.221.22:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.182.165:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     13.221.162.178:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/957b806d-a01e-4832-bebe-cda571613638 HTTP/1.0" 200 OK
+INFO:     172.70.111.69:0 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [205020]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [207830]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [207830]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [207867]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.62.243:0 - "GET /article/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/google/login HTTP/1.0" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [207867]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [208043]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.62.243:0 - "GET /article/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     104.23.253.114:0 - "GET /api/auth/google/callback?state=f94a9e57afb0b965da583fed348c2508&code=4%2F0Ab32j91azkprAPfyeueaVbuVsU1u8IeK4tsLohbNW-6eG7vQwJiOmCUjqOHVXymemfPiKQ&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent HTTP/1.0" 302 Found
+INFO:     104.23.253.123:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [208043]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [208312]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     172.70.230.194:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.70.230.195:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     172.70.230.195:0 - "GET /api/auth/google/callback?state=ffb6d278915477951b56810fd37f4b48&code=4%2F0Ab32j937IW14SHKM-5_CnbRxGI1fasECivNVk7ImvD9Hk8lRy2LJCbUPf4NbhRAcIt_fLA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     172.70.230.194:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.70.230.195:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.221.23:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.159.46:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     162.158.159.46:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.158.44:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.158.45:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.158.45:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.159.46:0 - "POST /api/auth/login HTTP/1.0" 200 OK
+INFO:     162.158.159.46:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.159.46:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.159.46:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     162.158.182.164:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.182.164:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.223.17:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.68.70.230:0 - "GET / HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [208312]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [208648]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     172.71.203.114:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "DELETE /api/users/f1f5ef61abf49d7408a799ecbf0b2114 HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.71.203.53:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.71.203.53:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     162.158.62.243:0 - "GET /api/auth/google/callback?state=433697bfa162a44d9bcacebc751ea000&code=4%2F0Ab32j93FPXmszJPWW9pe8ohgHFmx5S7ozfnlP86AvsuK1O5ab84zit3NqgoKA3yKq2GqKg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     162.158.62.243:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "POST /api/auth/login HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "DELETE /api/users/2fa604b0dc7af86b3f35a7465bc942a1 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.132:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.187.132:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.187.132:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.187.133:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     104.23.187.75:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     104.23.187.75:0 - "GET /api/auth/google/callback?state=9813c00e1231e8b5d96380baf0f45c8a&code=4%2F0Ab32j90NtkllGWo8EU8RLjL6_flMcKDWvrxnnRaqD6kFIz3At1f_c3NTpHN4TAWyYX_XBw&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     104.23.187.75:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     104.23.187.75:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     104.23.187.75:0 - "GET /api/auth/google/callback?state=30622751455c906edb1c78054d0389b2&code=4%2F0Ab32j921bB9bqxTU75wn9ojzqJD1b50Xk5_RlqtZAXVHfIxjbMTuk4qgK0pKLvJYV7FVxA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     104.23.187.75:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.187.75:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.70.230.194:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.70.230.194:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [208648]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [209288]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.62.242:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.242:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [209288]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [209461]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.62.243:0 - "GET / HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     162.158.62.243:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     104.23.253.114:0 - "GET /api/auth/google/callback?state=8f28cde5a0ead6315fe1795a47aa36bb&code=4%2F0Ab32j93FFzh-uMQwywBqjVK662a3AHrEXmihGIOaURlf6llDePTXX8lojFHAGzTXjAiiXg&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     104.23.253.114:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.253.114:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     172.68.229.196:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.190.157:0 - "DELETE /api/users/29a9f1b19a149b1bbf1878c931b57537 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "DELETE /api/users/de4086951d305dbfdf85f530306a5709 HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "POST /api/auth/logout HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.68.229.196:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.190.157:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.71.172.4:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.190.157:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     104.23.190.157:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     104.23.190.157:0 - "GET /api/auth/google/callback?state=4fbcdeadfbccbb29441b75406432dae9&code=4%2F0Ab32j90KEYG-9pI3XfI0AIyD3JJdm-RvO58BcilrykULMZhVNKgtgpSH1oBHbIGIyQ_q-w&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     104.23.190.157:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET / HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.71.172.4:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.190.157:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     104.23.190.157:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     104.23.190.156:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     162.158.62.243:0 - "POST /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279/public HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK

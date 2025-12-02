@@ -1388,6 +1388,34 @@ button:hover {
   width: 100%;
 }
 
+.auth-google-btn {
+  background: #ffffff;
+  color: #1f2933;
+  border-radius: 999px;
+  border: 1px solid #d0d0d0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.auth-google-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.auth-google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.auth-google-label {
+  white-space: nowrap;
+}
+
 .auth-error {
   margin: 0.2rem 0 0;
   font-size: 0.85rem;

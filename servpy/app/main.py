@@ -15,11 +15,13 @@ import html as html_mod
 import re
 import zipfile
 from pathlib import PurePosixPath
+import urllib.parse
+import urllib.request
 
 import aiofiles
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
@@ -92,6 +94,10 @@ ALLOWED_ATTACHMENT_TYPES = {
 }
 
 logger = logging.getLogger('uvicorn.error')
+
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or ''
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or ''
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI') or 'https://memus.pro/api/auth/google/callback'
 
 ensure_sample_article()
 ensure_inbox_article()
@@ -993,6 +999,151 @@ def _present_article(article: dict[str, Any] | None, requested_id: str) -> dict[
     return article
 
 
+@app.get('/api/auth/google/login')
+def google_login(request: Request):
+    """
+    Запускает OAuth-авторизацию через Google:
+    редиректит пользователя на accounts.google.com.
+    """
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail='Google OAuth не настроен')
+
+    state = os.urandom(16).hex()
+    response = RedirectResponse(
+        url='https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(
+            {
+                'client_id': GOOGLE_CLIENT_ID,
+                'redirect_uri': GOOGLE_REDIRECT_URI,
+                'response_type': 'code',
+                'scope': 'openid email profile',
+                'state': state,
+                'access_type': 'online',
+                'prompt': 'select_account',
+            },
+        ),
+    )
+    # Простой CSRF-guard через cookie.
+    response.set_cookie(
+        key='google_oauth_state',
+        value=state,
+        httponly=True,
+        secure=False,
+        samesite='lax',
+        path='/',
+    )
+    return response
+
+
+@app.get('/api/auth/google/callback')
+def google_callback(request: Request):
+    """
+    Обрабатывает колбек от Google:
+    - проверяет state;
+    - обменивает code на токены;
+    - получает email/имя пользователя;
+    - находит/создаёт пользователя и создаёт сессию;
+    - редиректит на SPA.
+    """
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail='Google OAuth не настроен')
+
+    params = dict(request.query_params)
+    error = params.get('error')
+    if error:
+        logger.warning('Google OAuth error: %s', error)
+        raise HTTPException(status_code=400, detail=f'Ошибка Google OAuth: {error}')
+
+    code = params.get('code')
+    state = params.get('state') or ''
+    if not code:
+        raise HTTPException(status_code=400, detail='Не передан code от Google')
+
+    cookie_state = request.cookies.get('google_oauth_state') or ''
+    if not cookie_state or cookie_state != state:
+        raise HTTPException(status_code=400, detail='Некорректный state для Google OAuth')
+
+    # Обмениваем code на access_token и id_token.
+    token_data = urllib.parse.urlencode(
+        {
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': GOOGLE_REDIRECT_URI,
+            'grant_type': 'authorization_code',
+        },
+    ).encode('utf-8')
+    try:
+        token_req = urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=token_data,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        with urllib.request.urlopen(token_req, timeout=10) as resp:
+            token_info = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to exchange code for token: %s', exc)
+        raise HTTPException(status_code=502, detail='Не удалось связаться с Google (token)')
+
+    access_token = token_info.get('access_token')
+    if not access_token:
+        raise HTTPException(status_code=400, detail='Google не вернул access_token')
+
+    # Запрашиваем данные пользователя.
+    try:
+        user_req = urllib.request.Request(
+            'https://openidconnect.googleapis.com/v1/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+        )
+        with urllib.request.urlopen(user_req, timeout=10) as resp:
+            user_info = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to fetch Google userinfo: %s', exc)
+        raise HTTPException(status_code=502, detail='Не удалось получить профиль Google')
+
+    email = (user_info.get('email') or '').strip().lower()
+    name = (user_info.get('name') or '').strip() or None
+    if not email:
+        raise HTTPException(status_code=400, detail='Google не вернул email')
+
+    # Для администратора: логиним существующего пользователя "kirill"
+    # по Google-аккаунту с email kirillnad@gmail.com.
+    admin_user: User | None = None
+    if email == 'kirillnad@gmail.com':
+        try:
+            admin_user = get_user_by_username('kirill')
+        except Exception:  # noqa: BLE001
+            admin_user = None
+
+    if admin_user:
+        user = admin_user
+    else:
+        # Для остальных всегда создаём отдельного локального пользователя для Google-логина.
+        # Если username с таким email уже существует, подберём новый (email+gN),
+        # чтобы не "склеивать" учётки, созданные через пароль и через Google.
+        base_username = email
+        username = base_username
+        existing = get_user_by_username(username)
+        if existing:
+            suffix = 1
+            while True:
+                candidate = f'{base_username}+g{suffix}'
+                if not get_user_by_username(candidate):
+                    username = candidate
+                    break
+                suffix += 1
+
+        random_pwd = os.urandom(16).hex()
+        user = create_user(username, random_pwd, name or username, is_superuser=False)
+
+    # Создаём сессию и редиректим в SPA.
+    sid = create_session(user.id)
+    redirect = RedirectResponse(url='/', status_code=302)
+    set_session_cookie(redirect, sid)
+    # Удаляем одноразовый state.
+    redirect.delete_cookie('google_oauth_state', path='/')
+    return redirect
+
+
 @app.middleware('http')
 async def spa_fallback_middleware(request: Request, call_next):
     """
@@ -1013,8 +1164,10 @@ async def spa_fallback_middleware(request: Request, call_next):
     return FileResponse(index_path)
 
 
-@app.post('/api/auth/register')
-def register(payload: dict[str, Any], response: Response):
+# Password-based auth endpoints временно выключены: оставляем код ниже без роутинга,
+# чтобы при необходимости можно было быстро вернуть функциональность.
+
+def legacy_register(payload: dict[str, Any], response: Response):  # pragma: no cover - legacy
     username = (payload.get('username') or '').strip()
     password = payload.get('password') or ''
     display_name = (payload.get('displayName') or '').strip() or None
@@ -1034,8 +1187,7 @@ def register(payload: dict[str, Any], response: Response):
     }
 
 
-@app.post('/api/auth/login')
-def login(payload: dict[str, Any], response: Response):
+def legacy_login(payload: dict[str, Any], response: Response):  # pragma: no cover - legacy
     username = (payload.get('username') or '').strip()
     password = payload.get('password') or ''
     if not username or not password:
