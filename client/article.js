@@ -1047,49 +1047,33 @@ export function renderArticle() {
       }
       registerBlockDragSource(surface, block.id);
 
-      if (state.mode === 'view' && block.id === state.currentBlockId && state.articleId !== 'inbox') {
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'block-add-btn';
-        addBtn.title = 'Добавить блок ниже';
-        addBtn.setAttribute('aria-label', 'Добавить блок ниже');
-        addBtn.textContent = '+';
-        surface.appendChild(addBtn);
-        addBtn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setCurrentBlock(block.id);
-          createSibling('after');
-        });
-      }
-
       if (isEditingThisBlock) {
+        const actions = document.createElement('div');
+        actions.className = 'block-edit-actions';
+
         const saveBtn = document.createElement('button');
         saveBtn.type = 'button';
-        saveBtn.className = 'block-add-btn block-edit-save-btn';
-        saveBtn.title = 'Сохранить изменения';
-        saveBtn.setAttribute('aria-label', 'Сохранить изменения');
-        saveBtn.textContent = '✔';
-        surface.appendChild(saveBtn);
+        saveBtn.className = 'ghost small';
+        saveBtn.textContent = 'Сохранить';
         saveBtn.addEventListener('click', async (event) => {
           event.preventDefault();
           event.stopPropagation();
           await saveEditing();
         });
-      }
 
-      if (isEditingThisBlock) {
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
-        cancelBtn.className = 'block-edit-cancel-btn';
-        cancelBtn.title = 'Отменить изменения';
-        cancelBtn.textContent = '✕';
-        surface.appendChild(cancelBtn);
+        cancelBtn.className = 'ghost small';
+        cancelBtn.textContent = 'Отмена';
         cancelBtn.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
           cancelEditing();
         });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        content.appendChild(actions);
       }
 
       attachRichContentHandlers(body, block.id);

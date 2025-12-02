@@ -181,6 +181,18 @@ function handleEditKey(event) {
   }
 }
 
+function toggleListMenuVisibility(open) {
+  if (!refs.listMenu || !refs.listMenuBtn) return;
+  refs.listMenu.classList.toggle('hidden', !open);
+  refs.listMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function closeListMenu() {
+  if (!refs.listMenu || !refs.listMenuBtn) return;
+  if (refs.listMenu.classList.contains('hidden')) return;
+  toggleListMenuVisibility(false);
+}
+
 export function attachEvents() {
   document.addEventListener('keydown', (event) => {
     if (state.mode === 'view') {
@@ -243,6 +255,23 @@ export function attachEvents() {
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);
   }
+  if (refs.listMenuBtn && refs.listMenu) {
+    refs.listMenuBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const open = refs.listMenu.classList.contains('hidden');
+      toggleListMenuVisibility(open);
+    });
+    document.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target;
+        if (!refs.listMenu || refs.listMenu.classList.contains('hidden')) return;
+        if (refs.listMenu.contains(target) || refs.listMenuBtn.contains(target)) return;
+        closeListMenu();
+      },
+      true,
+    );
+  }
   if (refs.articleEncryptionBtn) {
     refs.articleEncryptionBtn.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -265,7 +294,7 @@ export function attachEvents() {
   if (refs.importArticleBtn) {
     refs.importArticleBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
-      closeArticleMenu();
+      closeListMenu();
       try {
         const input = document.createElement('input');
         input.type = 'file';
@@ -298,7 +327,7 @@ export function attachEvents() {
   if (refs.importMarkdownBtn) {
     refs.importMarkdownBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
-      closeArticleMenu();
+      closeListMenu();
       try {
         let baseUrl = '';
         try {
@@ -356,7 +385,7 @@ export function attachEvents() {
   if (refs.importLogseqBtn) {
     refs.importLogseqBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
-      closeArticleMenu();
+      closeListMenu();
       try {
         let baseUrl = '';
         try {
@@ -467,6 +496,29 @@ export function attachEvents() {
   );
   if (refs.articleFilterInput) {
     refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
+  }
+
+  if (refs.articleUndoBtn) {
+    refs.articleUndoBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      handleUndoAction();
+    });
+  }
+  if (refs.articleRedoBtn) {
+    refs.articleRedoBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      handleRedoAction();
+    });
+  }
+  if (refs.articleNewBlockBtn) {
+    refs.articleNewBlockBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (!state.article || !state.currentBlockId) {
+        showToast('Нет выбранного блока');
+        return;
+      }
+      createSibling('after');
+    });
   }
   if (refs.articlesTabBtn) {
     refs.articlesTabBtn.addEventListener('click', () => setTrashMode(false));

@@ -141,6 +141,30 @@
               <button id="articlesTabBtn" class="ghost small active" type="button" aria-pressed="true">Статьи</button>
               <button id="trashTabBtn" class="ghost small" type="button" aria-pressed="false">Корзина</button>
             </div>
+            <div class="list-header-actions">
+              <button
+                id="listMenuBtn"
+                class="ghost icon-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="list-menu"
+                title="Импорт статей"
+              >
+                &#8942;
+              </button>
+              <div id="listMenu" class="article-menu hidden" role="menu">
+                <button id="importArticleBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из HTML
+                </button>
+                <button id="importMarkdownBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из Markdown
+                </button>
+                <button id="importLogseqBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из Logseq
+                </button>
+              </div>
+            </div>
           </div>
           <ul id="articleList"></ul>
         </section>
@@ -154,15 +178,6 @@
                   <input id="articleTitleInput" class="hidden" type="text" />
                   <div class="article-actions">
                     <button
-                      id="dragModeToggleBtn"
-                      class="ghost small drag-mode-toggle-btn"
-                      type="button"
-                      aria-pressed="false"
-                      title="Переключить режим перетаскивания блоков"
-                    >
-                      ⇅ Перетаскивание
-                    </button>
-                    <button
                      id="articleMenuBtn"
                       class="ghost icon-button"
                     type="button"
@@ -174,23 +189,14 @@
                     &#8942;
                   </button>
                   <div id="articleMenu" class="article-menu hidden" role="menu">
+                    <button id="exportArticleBtn" class="menu-item" type="button" role="menuitem">
+                      Экспорт в HTML
+                    </button>
                     <button id="articleEncryptionBtn" class="menu-item" type="button" role="menuitem">
                       Зашифровать
                     </button>
                     <button id="articleEncryptionRemoveBtn" class="menu-item" type="button" role="menuitem">
                       Снять защиту
-                    </button>
-                    <button id="exportArticleBtn" class="menu-item" type="button" role="menuitem">
-                      Экспорт в HTML
-                    </button>
-                    <button id="importArticleBtn" class="menu-item" type="button" role="menuitem">
-                      Импорт из HTML
-                    </button>
-                    <button id="importMarkdownBtn" class="menu-item" type="button" role="menuitem">
-                      Импорт из Markdown
-                    </button>
-                    <button id="importLogseqBtn" class="menu-item" type="button" role="menuitem">
-                      Импорт из Logseq
                     </button>
                     <button id="deleteArticleBtn" class="menu-item danger" type="button" role="menuitem">
                       Удалить статью
@@ -199,6 +205,26 @@
                 </div>
               </div>
               <p id="updatedAt" class="meta"></p>
+              <div id="articleToolbar" class="article-toolbar">
+                <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
+                  ↺<span class="toolbar-label"> Отменить</span>
+                </button>
+                <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
+                  ↻<span class="toolbar-label"> Повторить</span>
+                </button>
+                <button
+                  id="dragModeToggleBtn"
+                  class="ghost small drag-mode-toggle-btn"
+                  type="button"
+                  aria-pressed="false"
+                  title="Переключить режим перетаскивания блоков"
+                >
+                  ⇅<span class="toolbar-label"> Перетаскивание</span>
+                </button>
+                <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
+                  Новый блок
+                </button>
+              </div>
             </div>
             <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
               <span class="inline-progress__spinner" aria-hidden="true"></span>

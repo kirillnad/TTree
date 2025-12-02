@@ -656,6 +656,7 @@ def me(current_user: User = Depends(get_current_user)):
 
 @app.get('/api/articles')
 def list_articles(current_user: User = Depends(get_current_user)):
+    inbox_id = f'inbox-{current_user.id}'
     return [
         {
             'id': article['id'],
@@ -664,6 +665,7 @@ def list_articles(current_user: User = Depends(get_current_user)):
             'encrypted': bool(article.get('encrypted', False)),
         }
         for article in get_articles(current_user.id)
+        if article['id'] != inbox_id
     ]
 
 
