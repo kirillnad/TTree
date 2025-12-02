@@ -481,6 +481,18 @@ export function attachEvents() {
       closeSidebarMobile();
     });
   }
+  if (refs.sidebar) {
+    refs.sidebar.addEventListener(
+      'click',
+      (event) => {
+        if (!state.isSidebarMobileOpen) return;
+        const btn = event.target.closest('button');
+        if (!btn) return;
+        closeSidebarMobile();
+      },
+      true,
+    );
+  }
   document.addEventListener(
     'click',
     (event) => {

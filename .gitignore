@@ -3,6 +3,9 @@ server/data/*.sqlite*
 servpy/data/*.sqlite*
 uploads
 debug*
-logs
-servpy/app/__pycache__
+logs/*.*
 servpy/__pycache__
+logs/servpy.log
+logs/servpy.log
+servpy/app/__pycache__/*.*
+logs/servpy.log

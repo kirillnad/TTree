@@ -14,12 +14,7 @@ from sqlalchemy.engine import RowMapping
 from .db import CONN, IS_POSTGRES, IS_SQLITE, mark_search_index_clean
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
-from .text_utils import (
-    build_lemma,
-    build_lemma_tokens,
-    build_normalized_tokens,
-    strip_html,
-)
+from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
 
 init_schema()
 
@@ -1236,9 +1231,47 @@ def list_attachments(article_id: str) -> List[Dict[str, Any]]:
 
 
 def _tokenize_search_term(term: str) -> Tuple[List[str], List[str]]:
+    """
+    Разбивает поисковый запрос на леммы и нормализованные токены.
+    Дополнительно добавляет "укороченные" префиксы нормализованных токенов, чтобы
+    запросы вроде "приветик" могли находить "Привет" (по общему началу слова).
+    """
     lemma_tokens = build_lemma_tokens(term)
-    normalized_tokens = [token for token in build_normalized_tokens(term).split() if token]
-    return lemma_tokens, normalized_tokens
+    base_tokens = [token for token in build_normalized_tokens(term).split() if token]
+    prefix_tokens: List[str] = []
+    for token in base_tokens:
+        # Для более-менее длинных слов добавляем префикс из первых 4–5 символов.
+        # Например, "приветик" -> "приве", "integration" -> "integ".
+        if len(token) >= 5:
+            prefix = token[:5]
+            if prefix not in base_tokens:
+                prefix_tokens.append(prefix)
+    # Сохраняем порядок и убираем дубликаты.
+    all_normalized: List[str] = []
+    for tok in base_tokens + prefix_tokens:
+        if tok not in all_normalized:
+            all_normalized.append(tok)
+    return lemma_tokens, all_normalized
+
+
+def _mapping_get_first(mapping: Any, *keys: str) -> Any:
+    """
+    Безопасно достаёт значение из RowMapping/словаря по первому существующему ключу.
+    Нужен из‑за различий в регистре/формате имён колонок между SQLite и Postgres.
+    """
+    if mapping is None:
+        return None
+    try:
+        keys_view = mapping.keys()
+    except Exception:  # noqa: BLE001
+        keys_view = ()
+    for key in keys:
+        if key in keys_view:
+            try:
+                return mapping[key]
+            except Exception:  # noqa: BLE001
+                continue
+    return None
 
 
 def build_sqlite_fts_query(term: str) -> str:
@@ -1311,12 +1344,14 @@ def search_articles(query: str, limit: int = 10, author_id: Optional[str] = None
         rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results: List[Dict[str, Any]] = []
     for row in rows:
-        title = row['title'] or ''
-        snippet = row['snippet'] or title
+        mapping = getattr(row, '_mapping', row)
+        title = _mapping_get_first(mapping, 'title') or ''
+        snippet = _mapping_get_first(mapping, 'snippet') or title
+        article_id = _mapping_get_first(mapping, 'articleId', 'articleid', 'article_id')
         results.append(
             {
                 'type': 'article',
-                'articleId': row['articleId'],
+                'articleId': article_id,
                 'articleTitle': title,
                 'snippet': snippet,
             }
@@ -1373,16 +1408,20 @@ def search_blocks(query: str, limit: int = 20, author_id: Optional[str] = None) 
         base_sql += ' ORDER BY rank DESC, blocks.updated_at DESC LIMIT %s'
         params.append(limit)
         rows = CONN.execute(base_sql, tuple(params)).fetchall()
-    results = []
+    results: List[Dict[str, Any]] = []
     for row in rows:
-        block_text = row['blockText'] or ''
-        snippet = row['snippet'] or strip_html(block_text)[:160]
+        mapping = getattr(row, '_mapping', row)
+        block_text = _mapping_get_first(mapping, 'blockText', 'blocktext', 'block_text', 'text') or ''
+        snippet = _mapping_get_first(mapping, 'snippet') or strip_html(block_text)[:160]
+        article_id = _mapping_get_first(mapping, 'articleId', 'articleid', 'article_id')
+        article_title = _mapping_get_first(mapping, 'articleTitle', 'articletitle', 'article_title') or ''
+        block_id = _mapping_get_first(mapping, 'blockId', 'blockid', 'block_id')
         results.append(
             {
                 'type': 'block',
-                'articleId': row['articleId'],
-                'articleTitle': row['articleTitle'],
-                'blockId': row['blockId'],
+                'articleId': article_id,
+                'articleTitle': article_title,
+                'blockId': block_id,
                 'snippet': snippet,
                 'blockText': block_text,
             }

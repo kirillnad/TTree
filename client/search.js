@@ -3,6 +3,7 @@ import { refs } from './refs.js';
 import { escapeHtml, escapeRegExp, htmlToLines, htmlToPlainText, logDebug } from './utils.js';
 import { apiRequest, search as apiSearch } from './api.js';
 import { navigate, routing } from './routing.js';
+import { setSidebarMobileOpen } from './sidebar.js';
 
 function highlightSnippet(snippet = '') {
   const term = state.searchQuery.trim();
@@ -145,5 +146,8 @@ function handleSearchResultClick(result) {
   const isArticle = result.type === 'article';
   state.scrollTargetBlockId = isArticle ? null : result.blockId;
   state.currentBlockId = isArticle ? null : result.blockId;
+  if (state.isSidebarMobileOpen) {
+    setSidebarMobileOpen(false);
+  }
   navigate(routing.article(result.articleId));
 }
