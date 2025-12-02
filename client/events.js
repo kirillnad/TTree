@@ -260,10 +260,8 @@ export function attachEvents() {
       event.stopPropagation();
       if (!state.article || !state.article.id || state.article.id === 'inbox') return;
       toggleFavorite(state.article.id);
-      // Обновляем заголовок и списки, чтобы звёздочка синхронизировалась.
+      // Обновляем заголовок текущей статьи; списки обновляются внутри toggleFavorite.
       renderArticle();
-      renderSidebarArticleList();
-      renderMainArticleList();
     });
   }
   if (refs.listMenuBtn && refs.listMenu) {
