@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import mimetypes
+import logging
 from datetime import datetime
 from pathlib import Path, PurePath
 from typing import Any
@@ -10,9 +11,13 @@ from io import BytesIO
 import base64
 import binascii
 import json
+import html as html_mod
+import re
+import zipfile
+from pathlib import PurePosixPath
 
 import aiofiles
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Request, Response
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -65,6 +70,7 @@ from .data_store import (
     build_sqlite_fts_query,
     build_postgres_ts_query,
     delete_user_with_data,
+    _expand_wikilinks,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -83,6 +89,8 @@ ALLOWED_ATTACHMENT_TYPES = {
     'text/csv',
     'application/rtf',
 }
+
+logger = logging.getLogger('uvicorn.error')
 
 ensure_sample_article()
 ensure_inbox_article()
@@ -141,12 +149,17 @@ def _import_image_from_data_url(data_url: str, current_user: User) -> str:
     return f"/uploads/{rel}"
 
 
-def _import_attachment_from_data_url(data_url: str, current_user: User, article_id: str, display_name: str | None = None) -> str:
+def _import_attachment_from_bytes(
+    raw: bytes,
+    mime_type: str,
+    current_user: User,
+    article_id: str,
+    display_name: str | None = None,
+) -> str:
     """
-    Сохраняет вложение из data: URL в uploads/attachments и создаёт запись в БД.
+    Сохраняет бинарные данные вложения в uploads/attachments и создаёт запись в БД.
     Возвращает относительный URL /uploads/...
     """
-    raw, mime_type = _decode_data_url(data_url)
     target_dir = UPLOADS_DIR / current_user.id / 'attachments' / article_id
     target_dir.mkdir(parents=True, exist_ok=True)
     base_name = (display_name or 'attachment').strip() or 'attachment'
@@ -164,6 +177,15 @@ def _import_attachment_from_data_url(data_url: str, current_user: User, article_
     stored_path = f'/uploads/{current_user.id}/attachments/{article_id}/{filename}'
     create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
     return stored_path
+
+
+def _import_attachment_from_data_url(data_url: str, current_user: User, article_id: str, display_name: str | None = None) -> str:
+    """
+    Сохраняет вложение из data: URL в uploads/attachments и создаёт запись в БД.
+    Возвращает относительный URL /uploads/...
+    """
+    raw, mime_type = _decode_data_url(data_url)
+    return _import_attachment_from_bytes(raw, mime_type, current_user, article_id, display_name)
 
 
 def _parse_memus_export_payload(html_text: str) -> dict[str, Any]:
@@ -310,6 +332,218 @@ def _process_block_html_for_import(
         else:
             search_pos = url_end + 1
     return result
+
+
+def _md_bold_to_html(text: str) -> str:
+    """Обработка **жирного** текста внутри обычной строки."""
+    if not text:
+        return ''
+    result: list[str] = []
+    last = 0
+    pattern = re.compile(r'\*\*(.+?)\*\*')
+    for match in pattern.finditer(text):
+        before = text[last : match.start()]
+        if before:
+            result.append(html_mod.escape(before, quote=False))
+        inner = match.group(1) or ''
+        result.append(f'<strong>{html_mod.escape(inner, quote=False)}</strong>')
+        last = match.end()
+    tail = text[last:]
+    if tail:
+        result.append(html_mod.escape(tail, quote=False))
+    return ''.join(result)
+
+
+def _md_inline_to_html(text: str) -> str:
+    """
+    Простой Markdown-инлайн:
+    - **жирный** -> <strong>жирный</strong>
+    - ![alt](url):
+      - если url начинается с http/https — обычная ссылка;
+      - иначе считаем вложением и оформляем как .attachment-link.
+    """
+    if not text:
+        return ''
+
+    result: list[str] = []
+    last = 0
+    img_pattern = re.compile(r'!\[([^\]]*)]\(([^)]+)\)')
+
+    for match in img_pattern.finditer(text):
+        before = text[last : match.start()]
+        if before:
+            result.append(_md_bold_to_html(before))
+
+        alt_raw = match.group(1) or ''
+        url_raw = (match.group(2) or '').strip()
+        if not url_raw:
+            last = match.end()
+            continue
+
+        url_escaped = html_mod.escape(url_raw, quote=True)
+        alt_escaped = html_mod.escape(alt_raw, quote=False) if alt_raw else ''
+
+        if url_raw.startswith(('http://', 'https://')):
+            label = alt_escaped or url_escaped
+            result.append(
+                f'<a href="{url_escaped}" target="_blank" rel="noopener noreferrer">{label}</a>'
+            )
+        else:
+            # Относительный путь: считаем вложением, отображаем как ссылку.
+            filename = url_raw.rsplit('/', 1)[-1] or url_raw
+            label = alt_escaped or html_mod.escape(filename, quote=False)
+            result.append(
+                f'<a href="{url_escaped}" class="attachment-link" target="_blank" '
+                f'rel="noopener noreferrer">{label}</a>'
+            )
+
+        last = match.end()
+
+    tail = text[last:]
+    if tail:
+        result.append(_md_bold_to_html(tail))
+    return ''.join(result)
+
+
+def _build_block_html_from_md_lines(lines: list[str]) -> str:
+    """
+    Собирает HTML блока из списка строк Markdown с учётом правил:
+    - строки с **...** -> <strong>...</strong>
+    - первая строка, начинающаяся с #..####, становится заголовком блока;
+      после неё вставляется пустая строка (разделитель заголовка и тела).
+    """
+    if not lines:
+        return ''
+
+    # Обрезаем хвостовые пустые строки
+    while lines and not (lines[-1] or '').strip():
+        lines.pop()
+    if not lines:
+        return ''
+
+    paragraphs: list[str] = []
+    first = lines[0].strip()
+    heading_match = re.match(r'^(#{1,4})\s*(.+)$', first)
+
+    if heading_match:
+        title_text = heading_match.group(2).strip()
+        paragraphs.append(f'<p>{_md_inline_to_html(title_text)}</p>')
+        # Пустая строка-разделитель, чтобы заголовок стал titleHtml
+        paragraphs.append('<p><br /></p>')
+        rest_lines = lines[1:]
+    else:
+        paragraphs.append(f'<p>{_md_inline_to_html(first)}</p>')
+        rest_lines = lines[1:]
+
+    for raw in rest_lines:
+        if not raw.strip():
+            paragraphs.append('<p><br /></p>')
+            continue
+        paragraphs.append(f'<p>{_md_inline_to_html(raw.strip())}</p>')
+
+    return ''.join(paragraphs)
+
+
+def _parse_markdown_blocks(md_text: str) -> list[dict[str, Any]]:
+    """
+    Парсер простого Markdown-списка в дерево блоков.
+
+    Правила:
+    - каждый блок начинается с новой строки и символа "-" (после табов);
+    - уровень вложенности определяется количеством табов перед "-";
+    - строки, начинающиеся (после табов) с "collapsed::" игнорируются;
+    - остальные строки без "-" считаются продолжением предыдущего блока.
+    """
+    lines = md_text.splitlines()
+    root_blocks: list[dict[str, Any]] = []
+    stack: list[dict[str, Any]] = []  # элементы: {'level', 'block', 'lines'}
+
+    def finish_block(node: dict[str, Any] | None) -> None:
+        if not node:
+            return
+        html_text = _build_block_html_from_md_lines(node.get('lines') or [])
+        node['block']['text'] = html_text
+
+    current: dict[str, Any] | None = None
+
+    for raw_line in lines:
+        if not raw_line.strip():
+            # Пустая строка — продолжение текущего блока
+            if current is not None:
+                current.setdefault('lines', []).append('')
+            continue
+
+        # Уровень = количество табов перед первым нетабовым символом
+        indent_tabs = 0
+        for ch in raw_line:
+            if ch == '\t':
+                indent_tabs += 1
+            else:
+                break
+        content = raw_line[indent_tabs:]
+
+        stripped_for_ctrl = content.lstrip()
+        if stripped_for_ctrl.startswith('collapsed::') or stripped_for_ctrl.startswith('logseq.'):
+            continue
+
+        # Новая строка-блок?
+        if stripped_for_ctrl.startswith('-'):
+            # Закончили предыдущий блок
+            finish_block(current)
+
+            # Текст после "-".
+            after_dash = stripped_for_ctrl[1:].lstrip()
+            new_block: dict[str, Any] = {
+                'id': str(uuid4()),
+                'text': '',
+                'collapsed': False,
+                'children': [],
+            }
+            node = {
+                'level': indent_tabs,
+                'block': new_block,
+                'lines': [after_dash],
+            }
+
+            # Ищем родителя по уровню
+            while stack and stack[-1]['level'] >= indent_tabs:
+                stack.pop()
+            if stack:
+                stack[-1]['block'].setdefault('children', []).append(new_block)
+            else:
+                root_blocks.append(new_block)
+            stack.append(node)
+            current = node
+        else:
+            # Обычная строка — продолжение текущего блока
+            if current is not None:
+                current.setdefault('lines', []).append(content.strip())
+
+    # Последний блок
+    finish_block(current)
+
+    return root_blocks
+
+
+def _walk_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Плоский обход дерева блоков для постобработки."""
+    result: list[dict[str, Any]] = []
+    stack = list(blocks or [])
+    while stack:
+        block = stack.pop()
+        result.append(block)
+        children = block.get('children') or []
+        stack.extend(children)
+    return result
+
+
+def _strip_html_tags(html_text: str) -> str:
+    """Грубое удаление HTML-тегов для извлечения текстового заголовка."""
+    if not html_text:
+        return ''
+    # Удаляем теги и декодируем сущности.
+    text = re.sub(r'<[^>]+>', '', html_text)
+    return html_mod.unescape(text).strip()
 
 
 def _resolve_article_id_for_user(article_id: str, current_user: User) -> str:
@@ -831,6 +1065,404 @@ async def import_article_from_html(file: UploadFile = File(...), current_user: U
     if not created:
         raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
     return created
+
+
+@app.post('/api/import/markdown')
+async def import_article_from_markdown(
+    file: UploadFile = File(...),
+    assets_base_url: str | None = Form(None, alias='assetsBaseUrl'),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Импортирует статью из простого Markdown-списка.
+
+    Формат:
+    - каждый блок начинается с новой строки и символа "-" (после табов);
+    - уровень вложенности определяется количеством табов перед "-";
+    - строки, начинающиеся (после табов) с "collapsed::" игнорируются;
+    - фрагменты **текста** становятся жирными (<strong>...</strong>);
+    - если первая строка блока начинается с #/##/###/####,
+      она становится заголовком блока (перед телом вставляется пустая строка).
+    """
+    filename = (file.filename or '').lower()
+    if not (filename.endswith('.md') or filename.endswith('.txt')):
+        raise HTTPException(status_code=400, detail='Ожидается файл в формате Markdown (.md)')
+    raw = await file.read()
+    try:
+        text = raw.decode('utf-8')
+    except UnicodeDecodeError:
+        text = raw.decode('utf-8', errors='ignore')
+
+    blocks_tree = _parse_markdown_blocks(text)
+    if not blocks_tree:
+        raise HTTPException(status_code=400, detail='Не удалось выделить блоки из Markdown')
+
+    now = datetime.utcnow().isoformat()
+    new_article_id = str(uuid4())
+    # Имя статьи = имя файла без расширения (без эвристик).
+    base_title = (file.filename or 'Импортированная статья').rsplit('.', 1)[0].strip() or 'Импортированная статья'
+
+    # Сохраняем «пустую» статью, чтобы запись в articles уже существовала
+    # перед тем, как создавать записи во вложениях (attachments).
+    skeleton_article = {
+        'id': new_article_id,
+        'title': base_title,
+        'createdAt': now,
+        'updatedAt': now,
+        'deletedAt': None,
+        'blocks': [],
+        'history': [],
+        'redoHistory': [],
+        'authorId': current_user.id,
+    }
+    save_article(skeleton_article)
+
+    base_url = (assets_base_url or '').strip().rstrip('/') or None
+
+    if base_url:
+        from urllib.parse import urljoin, urlsplit, urlunsplit, quote
+        import urllib.request
+
+        def _resolve_md_assets(html_text: str) -> str:
+            """
+            Ищет ссылки href="...assets/..." и, если возможно, подтягивает файлы
+            из внешнего assetsBaseUrl в uploads/attachments.
+            """
+
+            def _replace_href(match: re.Match[str]) -> str:
+                href = match.group(1) or ''
+                href_stripped = href.strip()
+                if not href_stripped or href_stripped.startswith('/uploads/'):
+                    return match.group(0)
+                parts = list(PurePosixPath(href_stripped).parts)
+                if 'assets' not in parts:
+                    return match.group(0)
+                idx = parts.index('assets')
+                rel = PurePosixPath(*parts[idx + 1 :]).as_posix()
+                if not rel:
+                    return match.group(0)
+
+                # Пробуем варианты: файл лежит в корне base_url или в подпапке /assets.
+                candidates = [rel, f'assets/{rel}']
+                for remote_path in candidates:
+                    full_url = urljoin(base_url + '/', remote_path)
+                    try:
+                        # Логируем URL, который пробуем подтянуть.
+                        logger.info(
+                            '[md_import] trying to fetch asset from %s for article %s',
+                            full_url,
+                            new_article_id,
+                        )
+                        # Корректно кодируем путь (кириллица и др.) в URL.
+                        parts = urlsplit(full_url)
+                        safe_path = quote(parts.path)
+                        safe_url = urlunsplit((parts.scheme, parts.netloc, safe_path, parts.query, parts.fragment))
+                        req = urllib.request.Request(safe_url, headers={'User-Agent': 'memus-md-import/1.0'})
+                        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+                            data = resp.read()
+                            mime_type = (
+                                resp.headers.get_content_type()
+                                or mimetypes.guess_type(full_url)[0]
+                                or 'application/octet-stream'
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        # Логируем неудачные попытки подтянуть вложение из внешнего assetsBaseUrl.
+                        logger.warning(
+                            '[md_import] failed to fetch asset from %s for article %s: %r',
+                            full_url,
+                            new_article_id,
+                            exc,
+                        )
+                        continue
+
+                    stored_path = _import_attachment_from_bytes(
+                        data,
+                        mime_type,
+                        current_user,
+                        new_article_id,
+                        display_name=PurePosixPath(remote_path).name,
+                    )
+                    new_href = html_mod.escape(stored_path, quote=True)
+                    return f'href="{new_href}"'
+
+            return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+
+        for block in _walk_blocks(blocks_tree):
+            text_html = block.get('text') or ''
+            if text_html:
+                block['text'] = _resolve_md_assets(text_html)
+
+    # После загрузки вложений разворачиваем wikilinks [[...]] в ссылки на статьи.
+    for block in _walk_blocks(blocks_tree):
+        text_html = block.get('text') or ''
+        if text_html:
+            block['text'] = _expand_wikilinks(text_html, current_user.id)
+
+    article = {
+        'id': new_article_id,
+        'title': base_title,
+        'createdAt': now,
+        'updatedAt': now,
+        'deletedAt': None,
+        'blocks': blocks_tree,
+        'history': [],
+        'redoHistory': [],
+        'authorId': current_user.id,
+    }
+
+    save_article(article)
+    created = get_article(new_article_id, current_user.id)
+    if not created:
+        raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
+    return created
+
+
+@app.post('/api/import/logseq')
+async def import_from_logseq(
+    file: UploadFile = File(...),
+    assets_base_url: str | None = Form(None, alias='assetsBaseUrl'),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Импортирует набор страниц из архива Logseq.
+
+    Ожидается ZIP-архив с двумя папками в корне:
+    - pages/  — Markdown-файлы (.md) с содержимым страниц;
+    - assets/ — вложения (изображения, файлы и т.п.), на которые ссылаются страницы.
+
+    Каждая страница из pages/*.md превращается в отдельную статью,
+    вложения из assets/ загружаются в uploads и ссылки на них переписываются.
+    """
+    filename = (file.filename or '').lower()
+    if not filename.endswith('.zip'):
+        raise HTTPException(status_code=400, detail='Ожидается ZIP-архив Logseq (pages/ и assets/)')
+
+    raw = await file.read()
+    # Защита от слишком больших архивов (например, > 1 ГБ).
+    max_size = 1024 * 1024 * 1024  # 1 GiB
+    if len(raw) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail='Архив Logseq слишком большой (максимум 1 ГБ)',
+        )
+    try:
+        zf = zipfile.ZipFile(BytesIO(raw))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail='Не удалось прочитать ZIP-архив') from exc
+
+    page_entries: list[zipfile.ZipInfo] = []
+    asset_entries: dict[str, zipfile.ZipInfo] = {}
+    has_non_utf8_names = False
+
+    for info in zf.infolist():
+        name = info.filename or ''
+        if not name or info.is_dir():
+            continue
+        # Если в имени есть не-ASCII символы и не установлен UTF-8-флаг,
+        # считаем, что архив собран без поддержки UTF-8.
+        if any(ord(ch) > 127 for ch in name) and not (info.flag_bits & 0x800):
+            has_non_utf8_names = True
+        path = PurePosixPath(name)
+        parts = path.parts
+        if not parts:
+            continue
+        top = parts[0].lower()
+        if top == 'pages' and path.suffix.lower() in {'.md', '.markdown', '.txt'}:
+            page_entries.append(info)
+        elif top == 'assets':
+            # Ключ: путь внутри assets/
+            rel = PurePosixPath(*parts[1:]).as_posix()
+            asset_entries[rel] = info
+
+    if has_non_utf8_names:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                'Собери ZIP через PeaZip (https://peazip.github.io/)'
+                'с кодировкой имён файлов в UTF-8.'
+            ),
+        )
+
+    if not page_entries:
+        raise HTTPException(status_code=400, detail='В архиве не найдено ни одной страницы в папке pages/')
+
+    imported_articles: list[dict[str, Any]] = []
+
+    base_url = (assets_base_url or '').strip().rstrip('/') or None
+
+    # Если базовый URL задан, но в архиве нет assets/,
+    # явно логируем, что будем использовать только внешний источник.
+    if base_url and not asset_entries:
+        print(
+            '[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; '
+            'вложения будут подтягиваться только по внешнему URL:',
+            base_url,
+        )
+
+    def _resolve_assets_in_html(html_text: str, article_id: str) -> str:
+        """
+        Ищет ссылки вида href="...assets/..." и, если файл есть в архиве,
+        сохраняет его в uploads/attachments и переписывает href на внутренний путь.
+        """
+
+        def _replace_href(match: re.Match[str]) -> str:
+            href = match.group(1) or ''
+            href_stripped = href.strip()
+            if not href_stripped:
+                return match.group(0)
+            # Уже внутренние uploads не трогаем.
+            if href_stripped.startswith('/uploads/'):
+                return match.group(0)
+
+            # Пытаемся найти сегмент "assets" в относительном пути.
+            parts = list(PurePosixPath(href_stripped).parts)
+            if 'assets' not in parts:
+                return match.group(0)
+            idx = parts.index('assets')
+            rel = PurePosixPath(*parts[idx + 1 :]).as_posix()
+            if not rel:
+                return match.group(0)
+
+            # 1) Пробуем взять файл из assets внутри ZIP (если есть).
+            info = asset_entries.get(rel)
+            if info:
+                try:
+                    data = zf.read(info)
+                except KeyError:
+                    info = None
+                else:
+                    mime_type = mimetypes.guess_type(info.filename or '')[0] or 'application/octet-stream'
+                    stored_path = _import_attachment_from_bytes(
+                        data,
+                        mime_type,
+                        current_user,
+                        article_id,
+                        display_name=PurePosixPath(info.filename).name,
+                    )
+                    new_href = html_mod.escape(stored_path, quote=True)
+                    return f'href="{new_href}"'
+
+            # 2) Если указан внешний базовый URL, пробуем скачать оттуда.
+            if base_url:
+                import urllib.request
+                from urllib.parse import urljoin, urlsplit, urlunsplit, quote
+
+                # Пробуем варианты: файл лежит в корне base_url или в подпапке /assets.
+                candidates = [rel, f'assets/{rel}']
+                for remote_path in candidates:
+                    full_url = urljoin(base_url + '/', remote_path)
+                    try:
+                        # Логируем URL, который пробуем подтянуть.
+                        logger.info(
+                            '[logseq_import] trying to fetch asset from %s for article %s',
+                            full_url,
+                            article_id,
+                        )
+                        # Корректно кодируем путь (кириллица и др.) в URL.
+                        parts = urlsplit(full_url)
+                        safe_path = quote(parts.path)
+                        safe_url = urlunsplit((parts.scheme, parts.netloc, safe_path, parts.query, parts.fragment))
+                        req = urllib.request.Request(safe_url, headers={'User-Agent': 'memus-logseq-import/1.0'})
+                        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+                            data = resp.read()
+                            mime_type = (
+                                resp.headers.get_content_type()
+                                or mimetypes.guess_type(full_url)[0]
+                                or 'application/octet-stream'
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        # Логируем неудачные попытки подтянуть вложение из внешнего assetsBaseUrl.
+                        logger.warning(
+                            '[logseq_import] failed to fetch asset from %s for article %s: %r',
+                            full_url,
+                            article_id,
+                            exc,
+                        )
+                        continue
+
+                    stored_path = _import_attachment_from_bytes(
+                        data,
+                        mime_type,
+                        current_user,
+                        article_id,
+                        display_name=PurePosixPath(remote_path).name,
+                    )
+                    new_href = html_mod.escape(stored_path, quote=True)
+                    return f'href="{new_href}"'
+
+            return match.group(0)
+
+        return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+
+    now = datetime.utcnow().isoformat()
+
+    for info in page_entries:
+        try:
+            content_bytes = zf.read(info)
+        except KeyError:
+            continue
+        try:
+            md_text = content_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            md_text = content_bytes.decode('utf-8', errors='ignore')
+
+        blocks_tree = _parse_markdown_blocks(md_text)
+        if not blocks_tree:
+            continue
+
+        # Имя статьи = имя файла без расширения (после корректного UTF-8-декодирования в zipfile).
+        title_stem = PurePosixPath(info.filename or '').stem or 'Импортированная страница'
+        base_title = title_stem.strip() or 'Импортированная страница'
+
+        new_article_id = str(uuid4())
+
+        # Сначала создаём «пустую» статью, чтобы запись в articles уже существовала,
+        # а затем подтягиваем вложения и только после этого сохраняем финальное дерево блоков.
+        skeleton_article = {
+            'id': new_article_id,
+            'title': base_title,
+            'createdAt': now,
+            'updatedAt': now,
+            'deletedAt': None,
+            'blocks': [],
+            'history': [],
+            'redoHistory': [],
+            'authorId': current_user.id,
+        }
+        save_article(skeleton_article)
+
+        # Применяем переписывание ссылок на вложения для каждого блока.
+        for block in _walk_blocks(blocks_tree):
+            text_html = block.get('text') or ''
+            if text_html:
+                block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+
+        # После загрузки вложений разворачиваем wikilinks [[...]] в ссылки на статьи.
+        for block in _walk_blocks(blocks_tree):
+            text_html = block.get('text') or ''
+            if text_html:
+                block['text'] = _expand_wikilinks(text_html, current_user.id)
+
+        article = {
+            'id': new_article_id,
+            'title': base_title,
+            'createdAt': now,
+            'updatedAt': now,
+            'deletedAt': None,
+            'blocks': blocks_tree,
+            'history': [],
+            'redoHistory': [],
+            'authorId': current_user.id,
+        }
+
+        save_article(article)
+        created = get_article(new_article_id, current_user.id)
+        if created:
+            imported_articles.append(created)
+
+    if not imported_articles:
+        raise HTTPException(status_code=400, detail='Не удалось импортировать ни одной страницы из архива Logseq')
+    return imported_articles
 
 
 @app.get('/api/search')

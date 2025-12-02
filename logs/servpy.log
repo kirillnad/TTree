@@ -12062,3 +12062,2617 @@ INFO:     46.242.12.114:6272 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f
 INFO:     46.242.12.114:6272 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
 WARNING:  Invalid HTTP request received.
 WARNING:  Invalid HTTP request received.
+INFO:     172.70.248.190:13340 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.71.26.118:9999 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6390 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6406 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6390 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6458 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6457 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [134230]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [135381]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:9648 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9651 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9651 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9651 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9652 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9648 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9649 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9653 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6311 - "POST /api/import/markdown HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6311 - "GET /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6281 - "GET /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6308 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6308 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6308 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6308 - "PATCH /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600/collapse HTTP/1.1" 200 OK
+INFO:     172.71.241.77:9292 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [135381]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [135979]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6273 - "GET /article/aba4de02-0b26-4c81-b2c4-f6269d391600 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6273 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6392 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6310 - "DELETE /api/articles/aba4de02-0b26-4c81-b2c4-f6269d391600 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6310 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6310 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6310 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6429 - "POST /api/import/markdown HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6429 - "GET /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6297 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6297 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6297 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6297 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     172.71.144.49:13421 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6294 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "DELETE /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/blocks/7826c4db-e295-4f5a-8d1e-6b9896d704a0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "PATCH /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0/collapse HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     185.16.39.16:42254 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6439 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6439 - "POST /api/articles/2adaf922-778e-4c58-b858-f23f462bac25/blocks/8cf4b22d-b933-494c-8b1a-e12af0903c5a/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6439 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6439 - "PATCH /api/articles/2adaf922-778e-4c58-b858-f23f462bac25/blocks/44ed9cd2-54aa-4e5e-a1e7-7c9ebdb140e3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6439 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "PATCH /api/articles/2adaf922-778e-4c58-b858-f23f462bac25/blocks/44ed9cd2-54aa-4e5e-a1e7-7c9ebdb140e3 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6472 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     209.38.72.104:34634 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     209.38.72.104:34646 - "GET /t4 HTTP/1.1" 200 OK
+INFO:     209.38.72.104:34662 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.94.97:12676 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     204.101.161.15:59428 - "GET / HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59444 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59444 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59456 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59458 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59450 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59444 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59464 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59456 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59458 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59450 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59464 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59458 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59464 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59456 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59458 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59444 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59428 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59456 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     204.101.161.15:59456 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     204.101.161.15:59428 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     213.180.203.23:58418 - "GET /robots.txt HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     54.247.57.72:58870 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     54.247.57.72:58884 - "GET / HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58888 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58892 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58914 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58914 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58888 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58892 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58888 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58892 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58892 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58914 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58884 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58872 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58888 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     54.247.57.72:58888 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     54.247.57.72:58872 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     172.70.160.214:12038 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [135979]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [137719]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6272 - "GET /article/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6455 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6339 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6462 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "PATCH /api/articles/2adaf922-778e-4c58-b858-f23f462bac25/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "PATCH /api/articles/2adaf922-778e-4c58-b858-f23f462bac25/blocks/8cf4b22d-b933-494c-8b1a-e12af0903c5a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "DELETE /api/articles/2adaf922-778e-4c58-b858-f23f462bac25 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764604422115-28e25b0c.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "DELETE /api/articles/343ff404-6cfb-4a74-9fd3-97d8f931d34d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6287 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6287 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [137719]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [137939]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6473 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6480 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6480 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6480 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6483 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6480 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6483 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6291 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6476 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6371 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6371 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6378 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6371 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6385 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6371 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6288 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6371 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6364 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6355 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6492 - "POST /api/import/logseq HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1217, in import_from_logseq
+    |     block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1193, in _resolve_assets_in_html
+    |     return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+    |   File "/usr/lib/python3.8/re.py", line 210, in sub
+    |     return _compile(pattern, flags).sub(repl, string, count)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1183, in _replace_href
+    |     stored_path = _import_attachment_from_bytes(
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    |     create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    |     raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+    | servpy.app.data_store.ArticleNotFound: Статья с ID db371224-3d95-46c0-b12f-64793247cf1d не найдена
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1217, in import_from_logseq
+    block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1193, in _resolve_assets_in_html
+    return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+  File "/usr/lib/python3.8/re.py", line 210, in sub
+    return _compile(pattern, flags).sub(repl, string, count)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1183, in _replace_href
+    stored_path = _import_attachment_from_bytes(
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+servpy.app.data_store.ArticleNotFound: Статья с ID db371224-3d95-46c0-b12f-64793247cf1d не найдена
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [137939]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [138554]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6386 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6386 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6445 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6468 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "POST /api/import/logseq HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1224, in import_from_logseq
+    |     block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1200, in _resolve_assets_in_html
+    |     return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+    |   File "/usr/lib/python3.8/re.py", line 210, in sub
+    |     return _compile(pattern, flags).sub(repl, string, count)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1190, in _replace_href
+    |     stored_path = _import_attachment_from_bytes(
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    |     create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    |     raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+    | servpy.app.data_store.ArticleNotFound: Статья с ID dc796549-fcd3-4be4-b323-ef49b4166bea не найдена
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1224, in import_from_logseq
+    block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1200, in _resolve_assets_in_html
+    return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+  File "/usr/lib/python3.8/re.py", line 210, in sub
+    return _compile(pattern, flags).sub(repl, string, count)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1190, in _replace_href
+    stored_path = _import_attachment_from_bytes(
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+servpy.app.data_store.ArticleNotFound: Статья с ID dc796549-fcd3-4be4-b323-ef49b4166bea не найдена
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.182.165:11045 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [138554]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [139187]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6301 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6397 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6397 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6397 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6412 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6301 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6366 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6333 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     162.158.182.164:10915 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6302 - "POST /api/import/logseq HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1224, in import_from_logseq
+    |     block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1200, in _resolve_assets_in_html
+    |     return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+    |   File "/usr/lib/python3.8/re.py", line 210, in sub
+    |     return _compile(pattern, flags).sub(repl, string, count)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1190, in _replace_href
+    |     stored_path = _import_attachment_from_bytes(
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    |     create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    |     raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+    | servpy.app.data_store.ArticleNotFound: Статья с ID 05f66540-780a-48da-9d2f-c43949569915 не найдена
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 568, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1224, in import_from_logseq
+    block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1200, in _resolve_assets_in_html
+    return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+  File "/usr/lib/python3.8/re.py", line 210, in sub
+    return _compile(pattern, flags).sub(repl, string, count)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1190, in _replace_href
+    stored_path = _import_attachment_from_bytes(
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 174, in _import_attachment_from_bytes
+    create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+servpy.app.data_store.ArticleNotFound: Статья с ID 05f66540-780a-48da-9d2f-c43949569915 не найдена
+INFO:     193.142.147.209:19246 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+INFO:     212.83.150.6:62326 - "GET /admin/config.php HTTP/1.0" 404 Not Found
+INFO:     46.242.12.114:6412 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6412 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9643 - "PATCH /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a/blocks/226839fd-63c1-4573-aae3-e9646f66271e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9643 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "PATCH /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a/blocks/226839fd-63c1-4573-aae3-e9646f66271e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "PATCH /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6334 - "GET /api/articles/75a223b3-6ad2-4e2b-8cd9-f0c607d1fed9 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "DELETE /api/articles/75a223b3-6ad2-4e2b-8cd9-f0c607d1fed9 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /api/articles/570a457f-2840-4969-98f6-fd50bedd3af7 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /api/articles/fe75575d-c068-4fa5-9ced-e2078365e4bb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /api/articles/570a457f-2840-4969-98f6-fd50bedd3af7 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.69.224.5:12715 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6480 - "GET /api/articles/fe75575d-c068-4fa5-9ced-e2078365e4bb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6480 - "GET /api/articles/570a457f-2840-4969-98f6-fd50bedd3af7 HTTP/1.1" 200 OK
+INFO:     172.70.240.45:11870 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:9605 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "PATCH /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a/collapse HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     193.34.213.150:56670 - "GET / HTTP/1.1" 200 OK
+INFO:     185.16.39.16:52304 - "GET / HTTP/1.1" 200 OK
+INFO:     35.93.58.210:57186 - "GET / HTTP/1.1" 200 OK
+INFO:     35.90.108.59:51776 - "GET / HTTP/1.1" 200 OK
+INFO:     35.93.58.210:57196 - "GET / HTTP/1.1" 200 OK
+INFO:     35.90.108.59:51792 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [139187]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [141810]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6525 - "GET /article/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9602 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9602 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9604 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6514 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6514 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9602 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6307 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6525 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles/948ab1cd-3660-4e60-9540-dff2218e4040 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "DELETE /api/articles/948ab1cd-3660-4e60-9540-dff2218e4040 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles/363a19a6-e223-4958-9bc3-195cbc0bc5cb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "DELETE /api/articles/363a19a6-e223-4958-9bc3-195cbc0bc5cb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles/827bbbc0-d160-436e-a5d2-5aee888dfd39 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9600 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles/827bbbc0-d160-436e-a5d2-5aee888dfd39 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "DELETE /api/articles/827bbbc0-d160-436e-a5d2-5aee888dfd39 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles/fe75575d-c068-4fa5-9ced-e2078365e4bb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "DELETE /api/articles/fe75575d-c068-4fa5-9ced-e2078365e4bb HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles/cb5bb211-1d78-4a2f-9bed-496ff5162c50 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "DELETE /api/articles/cb5bb211-1d78-4a2f-9bed-496ff5162c50 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles/f33180e6-9531-4f62-94cb-6659f1308b5e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "DELETE /api/articles/f33180e6-9531-4f62-94cb-6659f1308b5e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles/2b874e0e-6970-4317-8e52-1decb59dd08b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "DELETE /api/articles/2b874e0e-6970-4317-8e52-1decb59dd08b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6466 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "GET /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6272 - "DELETE /api/articles/12eb9463-78bf-44a5-92ad-5212954832b0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9637 - "GET /api/articles/bece3733-01c1-4ecc-b4dd-2877daffe0b0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9637 - "DELETE /api/articles/bece3733-01c1-4ecc-b4dd-2877daffe0b0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9637 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9637 - "GET /api/articles/1872eec3-47c1-4d76-b803-93165cd89721 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9637 - "PATCH /api/articles/1872eec3-47c1-4d76-b803-93165cd89721/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6363 - "DELETE /api/articles/1872eec3-47c1-4d76-b803-93165cd89721 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6363 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles/6e59889f-6239-481c-99c1-c6277bf875de HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "DELETE /api/articles/6e59889f-6239-481c-99c1-c6277bf875de HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles/75d38a8f-0bb8-4aae-a70e-45c992b93935 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "DELETE /api/articles/75d38a8f-0bb8-4aae-a70e-45c992b93935 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles/b84c87c9-7127-47e8-93ed-086024c854d2 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "DELETE /api/articles/b84c87c9-7127-47e8-93ed-086024c854d2 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles/570a457f-2840-4969-98f6-fd50bedd3af7 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "DELETE /api/articles/570a457f-2840-4969-98f6-fd50bedd3af7 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9607 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /api/articles/6ec8736f-ef66-4b3b-b6d7-5b6f2248e9fa HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6380 - "DELETE /api/articles/6ec8736f-ef66-4b3b-b6d7-5b6f2248e9fa HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6504 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9627 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9627 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6380 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6451 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /api/articles/e2c5c923-55a5-4ca8-a35a-2734efc4da09 HTTP/1.1" 200 OK
+INFO:     172.68.229.197:13700 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6400 - "DELETE /api/articles/e2c5c923-55a5-4ca8-a35a-2734efc4da09 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6400 - "GET /api/articles HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6402 - "GET /api/articles/ca8529e5-9eb0-44ea-bbdf-dd271586fed0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6402 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6402 - "GET /api/articles/1d34922f-f8c8-4731-b763-6f312776b0b1 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "DELETE /api/articles/1d34922f-f8c8-4731-b763-6f312776b0b1 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "PATCH /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "PATCH /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9656 - "GET /api/articles/ca8529e5-9eb0-44ea-bbdf-dd271586fed0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "DELETE /api/articles/ca8529e5-9eb0-44ea-bbdf-dd271586fed0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /api/articles/004584a5-65cd-4a61-af54-233ddac53049 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "DELETE /api/articles/004584a5-65cd-4a61-af54-233ddac53049 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     172.70.240.191:10043 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:9674 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6456 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9674 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6503 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /api/articles/ccae92de-3da8-4362-92b5-0b461a77403d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /api/articles/ccae92de-3da8-4362-92b5-0b461a77403d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /api/articles/0cee7aaf-438c-4388-bd00-2555764c4376 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6282 - "GET /api/articles/ccae92de-3da8-4362-92b5-0b461a77403d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "DELETE /api/articles/ccae92de-3da8-4362-92b5-0b461a77403d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6413 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6421 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6421 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6413 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6421 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6365 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6413 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6421 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "POST /api/import/markdown HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /api/articles/cde27464-e64b-4ba3-abe3-85751c0a7b33 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "DELETE /api/articles/cde27464-e64b-4ba3-abe3-85751c0a7b33 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     165.154.120.13:37972 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     45.194.70.249:52532 - "GET / HTTP/1.1" 200 OK
+INFO:     45.194.70.249:52578 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     45.194.70.249:52636 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     45.194.70.249:52670 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     45.194.70.249:52672 - "GET /sitemap.xml HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     20.221.57.26:56374 - "GET /developmentserver/metadatauploader HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     192.178.4.97:37683 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     192.178.4.97:50410 - "GET / HTTP/1.1" 200 OK
+INFO:     192.178.4.97:50410 - "GET / HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     192.178.4.97:37683 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     192.178.4.97:37683 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     192.178.4.96:40039 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:39141 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     192.178.4.105:50844 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.69.224.4:13087 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6385 - "POST /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6385 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.1" 200 OK
+INFO:     141.101.98.119:13437 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:9645 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/d82cfbb9-df05-4689-856c-e2e8942b90ce HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9645 - "POST /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/d82cfbb9-df05-4689-856c-e2e8942b90ce/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9645 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/739dd25a-8973-4253-89ac-5469ee55856d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9645 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9645 - "POST /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/739dd25a-8973-4253-89ac-5469ee55856d/indent HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9645 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.1" 200 OK
+INFO:     194.163.129.51:63584 - "GET /admin/config.php HTTP/1.0" 404 Not Found
+INFO:     46.242.12.114:6353 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6353 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614177088-cb85f42a.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6395 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614208458-70027986.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6322 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6322 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614312502-2b15ed82.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6383 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6383 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614365943-0cfc2dfa.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9654 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614389243-fe9a6c17.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6507 - "POST /api/uploads HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6507 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764614416037-bcbb0146.webp HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/blocks/739dd25a-8973-4253-89ac-5469ee55856d HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "GET /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "PATCH /api/articles/a0be6484-b1d3-4360-be39-aafda4e25f50/collapse HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     194.163.129.51:60508 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     109.144.176.217:7556 - "GET / HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     109.144.176.217:8256 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:8256 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:39726 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:21093 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:53439 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:8256 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:39726 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:21093 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:53439 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:27865 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:8256 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:21093 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:27865 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:39726 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:8256 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:7556 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:39726 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:53439 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     109.144.176.217:53439 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     3.80.129.114:56002 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.178.75:10645 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.111.194:14251 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     20.127.219.109:34312 - "GET /hudson HTTP/1.1" 200 OK
+INFO:     185.16.39.16:50322 - "GET / HTTP/1.1" 200 OK
+INFO:     202.83.56.10:28926 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     35.93.210.42:49992 - "GET / HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49992 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46638 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46648 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46650 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49992 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46638 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46650 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46666 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49992 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46648 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46650 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46638 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46666 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49992 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46648 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46638 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:49998 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46648 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:46648 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     35.93.210.42:46650 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     35.93.210.42:51844 - "GET / HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51858 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51858 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51888 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51878 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51862 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51858 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51888 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51902 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51878 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51862 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51858 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51862 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51878 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51888 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51844 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51858 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51888 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51902 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     35.93.210.42:51902 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     35.93.210.42:51888 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     104.23.221.22:11221 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     52.12.30.178:46640 - "GET / HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46642 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46640 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46642 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46640 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60664 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60672 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60662 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60672 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60664 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60662 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46642 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46640 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60686 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60664 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60662 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46642 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60664 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46640 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60662 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46642 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60672 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:46640 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60686 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60686 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     52.12.30.178:60672 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     52.12.30.178:60702 - "GET / HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60702 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60716 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60716 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60754 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60702 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60742 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60726 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60716 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60702 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60754 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60742 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60770 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60726 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60754 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60742 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60726 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60702 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60770 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60716 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60742 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60726 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60702 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60770 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     52.12.30.178:60770 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     52.12.30.178:60726 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     104.23.217.80:10828 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:9626 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9627 - "GET /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6277 - "DELETE /api/articles/922fd398-4b43-47b7-b5c7-a97f0880f737 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6277 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [141810]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [146572]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:9659 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9660 - "GET /auth.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9659 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9660 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9661 - "GET /toast.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9661 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9660 - "GET /title.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9659 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9661 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9661 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9659 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6347 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "GET /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "PATCH /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6347 - "PATCH /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6317 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6326 - "PATCH /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "PATCH /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "POST /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/blocks/f58db0b4-57d7-4e63-82c0-6d70732ecc3e/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6276 - "POST /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/attachments HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6481 - "POST /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee/attachments HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [146572]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [147275]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6391 - "GET /article/0f5f997d-33a2-48fa-9baf-bf289df75dee HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6335 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6391 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6401 - "GET /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6276 - "DELETE /api/articles/0f5f997d-33a2-48fa-9baf-bf289df75dee HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6276 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6308 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6436 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /api/articles/4c120a00-ee3a-49f8-8865-ac54a6045d8b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "PATCH /api/articles/4c120a00-ee3a-49f8-8865-ac54a6045d8b/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "PATCH /api/articles/4c120a00-ee3a-49f8-8865-ac54a6045d8b/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.172.5:13406 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.69.194.231:11543 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [147275]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [147978]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     178.128.226.52:48696 - "GET /.env HTTP/1.1" 200 OK
+INFO:     178.128.226.52:48698 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6295 - "DELETE /api/articles/4c120a00-ee3a-49f8-8865-ac54a6045d8b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6295 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6295 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6295 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6289 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6289 - "GET /api/articles/1965fe27-f269-41da-9097-c07e6dc12eef HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "DELETE /api/articles/1965fe27-f269-41da-9097-c07e6dc12eef HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     188.166.37.151:56252 - "GET / HTTP/1.1" 200 OK
+INFO:     188.166.37.151:56264 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.144.48:12823 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.71.241.77:11394 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6509 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6509 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6514 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6514 - "GET /api/articles/4a6bb537-993b-4aeb-96e5-30231bf5edbc HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6349 - "DELETE /api/articles/4a6bb537-993b-4aeb-96e5-30231bf5edbc HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6349 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [147978]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [149651]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6374 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6374 - "GET /events.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6374 - "GET /article.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6376 - "GET /refs.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6374 - "GET /api.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9605 - "GET /toast.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6374 - "GET /exporter.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9605 - "GET /sidebar.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:6376 - "GET /title.js HTTP/1.1" 304 Not Modified
+INFO:     46.242.12.114:9605 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6376 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6376 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9605 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:9606 - "POST /api/import/logseq HTTP/1.1" 400 Bad Request
+INFO:     172.71.178.10:12314 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.70.240.45:10036 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     79.124.40.86:42794 - "HEAD / HTTP/1.0" 200 OK
+INFO:     48.214.144.125:47604 - "GET /portal/redlion HTTP/1.1" 200 OK
+INFO:     185.16.39.16:55874 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     43.166.237.57:49964 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     141.101.98.119:9661 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     162.158.87.60:9233 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     49.51.72.76:53940 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.70.240.45:13279 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     104.23.239.49:10795 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.216.5:11055 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.69.194.230:13703 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.94.97:11070 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     176.53.220.127:45051 - "GET / HTTP/1.1" 200 OK
+INFO:     193.142.147.209:1364 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     185.16.39.16:43736 - "GET / HTTP/1.1" 200 OK
+INFO:     172.64.192.4:10993 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.69.194.230:9947 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     113.141.91.58:34683 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     34.207.176.239:39980 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     50.17.7.80:56594 - "GET / HTTP/1.1" 200 OK
+INFO:     172.71.178.74:13251 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     135.148.195.12:22475 - "GET / HTTP/1.1" 200 OK
+INFO:     135.148.195.3:40833 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.68.194.146:11276 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     87.121.84.52:43448 - "GET / HTTP/1.0" 200 OK
+INFO:     85.174.107.86:34664 - "GET / HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34666 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34666 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34672 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34670 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34668 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34672 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34668 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34670 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34666 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34674 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34670 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34668 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34666 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34674 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34672 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34668 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34666 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     85.174.107.86:34664 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.68.194.147:10075 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.69.150.19:10419 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.139:47780 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.139:47814 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     66.132.153.139:50160 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     66.132.153.139:57080 - "GET /security.txt HTTP/1.1" 404 Not Found
+INFO:     43.130.110.130:56736 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     195.184.76.7:48925 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     91.231.89.117:54689 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     104.23.239.48:14320 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.69.194.231:13660 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     91.196.152.216:44587 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     185.16.39.16:33676 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.69.150.19:9635 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.64.192.5:14198 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     193.142.147.209:53002 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+INFO:     176.65.148.246:50462 - "GET / HTTP/1.0" 200 OK
+INFO:     172.69.150.18:11647 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.246.210:10453 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     86.54.31.38:33712 - "GET / HTTP/1.1" 200 OK
+INFO:     86.54.31.38:33880 - "GET /robots.txt HTTP/1.1" 404 Not Found
+INFO:     86.54.31.38:33972 - "GET /sitemap.xml HTTP/1.1" 404 Not Found
+INFO:     86.54.31.38:34022 - "GET /.well-known/security.txt HTTP/1.1" 404 Not Found
+INFO:     86.54.31.38:34366 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     34.96.40.39:35490 - "HEAD / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     89.188.76.176:38967 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.94.96:13741 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     162.158.94.96:11859 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     87.236.176.4:46267 - "GET / HTTP/1.1" 200 OK
+INFO:     79.124.40.86:44496 - "HEAD / HTTP/1.0" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     36.112.209.154:42732 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.172.4:12032 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     103.252.89.75:52390 - "GET / HTTP/1.1" 200 OK
+INFO:     172.71.241.76:11989 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     185.16.39.16:47194 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.146.56:63216 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.146.56:63244 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     167.94.146.56:63294 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.146.56:33392 - "GET /robots.txt HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.247.48:10362 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.69.194.134:13591 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     43.166.247.82:40766 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     198.235.24.220:49573 - "GET / HTTP/1.0" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     141.101.98.141:9865 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     51.38.135.19:60527 - "GET / HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:59069 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:50373 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     54.37.10.247:43531 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     54.37.10.247:43531 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:50373 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:59069 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     54.37.10.247:51149 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:59069 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:50373 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     54.37.10.247:43531 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     57.129.4.123:39933 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     54.37.10.247:43531 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     51.38.135.19:60527 - "GET /api/auth/me HTTP/1.1" 401 Unauthorized
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     34.143.223.182:58454 - "GET / HTTP/1.1" 200 OK
+INFO:     34.143.223.182:58454 - "GET /wordpress/ HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     104.23.221.23:12625 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     104.23.221.23:12224 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     185.16.39.146:51878 - "GET / HTTP/1.1" 200 OK
+INFO:     185.242.226.107:53077 - "GET / HTTP/1.1" 200 OK
+INFO:     162.158.111.139:11912 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.164.186:10790 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     167.94.138.194:45344 - "GET /wiki HTTP/1.1" 200 OK
+INFO:     167.94.138.194:45366 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     43.157.22.109:40566 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     193.142.147.209:3060 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+INFO:     113.31.186.146:38458 - "GET / HTTP/1.1" 200 OK
+INFO:     113.31.186.146:38462 - "GET / HTTP/1.1" 200 OK
+INFO:     113.31.186.146:38463 - "GET /favicon.ico HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.64.192.5:10705 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     185.16.39.16:34216 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.216.5:13424 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     3.134.148.59:54964 - "GET / HTTP/1.1" 200 OK
+INFO:     3.134.148.59:39304 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     103.203.57.3:45746 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     104.23.223.17:11384 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     104.23.223.16:10615 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     183.134.59.133:18434 - "GET / HTTP/1.1" 200 OK
+INFO:     172.71.241.76:12079 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.246.131:12349 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.70.163.51:12031 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     184.105.247.252:34780 - "GET / HTTP/1.1" 200 OK
+INFO:     184.105.247.252:41806 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     184.105.247.252:10392 - "GET /geoserver/web/ HTTP/1.1" 200 OK
+INFO:     172.71.148.86:13377 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.70.248.168:13315 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     164.52.24.187:38641 - "POST /wsman HTTP/1.1" 405 Method Not Allowed
+INFO:     164.52.24.187:57091 - "POST /wsman HTTP/1.1" 405 Method Not Allowed
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     164.52.24.187:34735 - "GET / HTTP/1.1" 200 OK
+INFO:     164.52.24.187:34735 - "GET / HTTP/1.1" 200 OK
+INFO:     164.52.24.187:34735 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     164.52.24.187:34735 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     164.52.24.187:42337 - "POST /wsman HTTP/1.1" 405 Method Not Allowed
+INFO:     164.52.24.187:47835 - "POST /wsman HTTP/1.1" 405 Method Not Allowed
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     164.52.24.187:58307 - "GET / HTTP/1.1" 200 OK
+INFO:     164.52.24.187:58307 - "GET / HTTP/1.1" 200 OK
+INFO:     164.52.24.187:58307 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     93.174.93.12:60000 - "GET / HTTP/1.0" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.241.76:10053 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     172.70.86.129:13171 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     185.16.39.16:45004 - "GET / HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     193.34.213.150:56984 - "GET / HTTP/1.1" 200 OK
+INFO:     172.70.242.79:12186 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.178.74:10073 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     58.49.233.126:43874 - "GET / HTTP/1.1" 200 OK
+INFO:     128.199.103.139:52346 - "POST /cgi-bin/../../../../../../../../../../bin/sh HTTP/1.1" 405 Method Not Allowed
+INFO:     128.199.103.139:52346 - "POST /cgi-bin/%252e%252e/%252e%252e/%252e%252e/%252e%252e/%252e%252e/%252e%252e/%252e%252e/bin/sh HTTP/1.1" 405 Method Not Allowed
+INFO:     128.199.103.139:52346 - "POST /hello.world?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input HTTP/1.1" 405 Method Not Allowed
+INFO:     128.199.103.139:52346 - "POST /?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input HTTP/1.1" 405 Method Not Allowed
+INFO:     128.199.103.139:52346 - "GET /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /vendor/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /vendor/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /vendor/phpunit/phpunit/LICENSE/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /lib/phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /lib/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /lib/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /admin/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /index.php?s=/index/\think\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /public/index.php?s=/index/\think\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /index.php?lang=../../../../../../../../usr/local/lib/php/pearcmd&+config-create+/&/<?echo(md5("hi"));?>+/tmp/index1.php HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /index.php?lang=../../../../../../../../tmp/index1 HTTP/1.1" 404 Not Found
+INFO:     128.199.103.139:52346 - "GET /containers/json HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6432 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6432 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6432 - "GET /api/articles/ebe1520a-f94a-4e50-bb27-f642dc5d9fce HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6438 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6439 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6439 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     178.128.226.52:38538 - "GET /.env HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     178.128.226.52:38562 - "GET /.git/config HTTP/1.1" 200 OK
+INFO:     172.70.248.190:9980 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [149651]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [167792]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6423 - "GET /article/ebe1520a-f94a-4e50-bb27-f642dc5d9fce HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6441 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6441 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6441 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6517 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6426 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6441 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6517 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6517 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6517 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6517 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /api/articles/ebe1520a-f94a-4e50-bb27-f642dc5d9fce HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "DELETE /api/articles/ebe1520a-f94a-4e50-bb27-f642dc5d9fce HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6448 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     172.71.241.76:13316 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6448 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6524 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "GET /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "PATCH /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "PATCH /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "PATCH /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "PATCH /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6524 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     79.124.40.174:37214 - "GET /?XDEBUG_SESSION_START=phpstorm HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [167792]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [168101]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6410 - "GET /article/a35e84c5-f12b-4bcd-97f9-24beeaadade8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6415 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6415 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6415 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6410 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6415 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6381 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6420 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "DELETE /api/articles/a35e84c5-f12b-4bcd-97f9-24beeaadade8 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6403 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6284 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6284 - "GET /api/articles/122fa8c6-9764-4b0c-89d0-204418f647f0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6367 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6396 - "GET /article/122fa8c6-9764-4b0c-89d0-204418f647f0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6417 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6418 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6419 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6422 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6423 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6396 - "GET /api/articles/122fa8c6-9764-4b0c-89d0-204418f647f0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "DELETE /api/articles/122fa8c6-9764-4b0c-89d0-204418f647f0 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6272 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6275 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6275 - "GET /api/articles/f23aa6c4-4b4a-47fb-a68c-87474885432b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6275 - "GET /assets/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [168101]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [168922]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6433 - "GET /article/f23aa6c4-4b4a-47fb-a68c-87474885432b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6431 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6433 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6444 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6454 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6434 - "GET /api/articles/f23aa6c4-4b4a-47fb-a68c-87474885432b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "DELETE /api/articles/f23aa6c4-4b4a-47fb-a68c-87474885432b HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     172.71.246.130:9295 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  [logseq_import] failed to fetch asset from https://prismatic-salamander-2afe94.netlify.app/1_раздел_Урок_3_1698948641693_0.pdf for article 5adc8c99-2f67-4516-aea5-a1f28ed74496: UnicodeEncodeError('ascii', 'GET /1_раздел_Урок_3_1698948641693_0.pdf HTTP/1.1', 7, 13, 'ordinal not in range(128)')
+WARNING:  [logseq_import] failed to fetch asset from https://prismatic-salamander-2afe94.netlify.app/assets/1_раздел_Урок_3_1698948641693_0.pdf for article 5adc8c99-2f67-4516-aea5-a1f28ed74496: UnicodeEncodeError('ascii', 'GET /assets/1_раздел_Урок_3_1698948641693_0.pdf HTTP/1.1', 14, 20, 'ordinal not in range(128)')
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6430 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /api/articles/5adc8c99-2f67-4516-aea5-a1f28ed74496 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     172.70.163.126:13967 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [168922]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [169058]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [169058]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [169187]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6337 - "GET /article/5adc8c99-2f67-4516-aea5-a1f28ed74496 HTTP/1.1" 200 OK
+INFO:     193.142.147.209:13578 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6474 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6474 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6474 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6460 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6474 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6473 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6469 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6337 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /api/articles/5adc8c99-2f67-4516-aea5-a1f28ed74496 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "DELETE /api/articles/5adc8c99-2f67-4516-aea5-a1f28ed74496 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6475 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6322 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+WARNING:  [logseq_import] failed to fetch asset from https://prismatic-salamander-2afe94.netlify.app/1_раздел_Урок_3_1698948641693_0.pdf for article fa41d68b-148f-47d1-93db-a7ef5e6de708: UnicodeEncodeError('ascii', 'GET /1_раздел_Урок_3_1698948641693_0.pdf HTTP/1.1', 7, 13, 'ordinal not in range(128)')
+WARNING:  [logseq_import] failed to fetch asset from https://prismatic-salamander-2afe94.netlify.app/assets/1_раздел_Урок_3_1698948641693_0.pdf for article fa41d68b-148f-47d1-93db-a7ef5e6de708: UnicodeEncodeError('ascii', 'GET /assets/1_раздел_Урок_3_1698948641693_0.pdf HTTP/1.1', 14, 20, 'ordinal not in range(128)')
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6322 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6322 - "GET /api/articles/fa41d68b-148f-47d1-93db-a7ef5e6de708 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [169187]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [169513]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6482 - "GET /article/fa41d68b-148f-47d1-93db-a7ef5e6de708 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6399 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6399 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /article/fa41d68b-148f-47d1-93db-a7ef5e6de708 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6399 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6494 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6493 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6493 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6494 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6493 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6494 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6494 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6493 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6496 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /api/articles/fa41d68b-148f-47d1-93db-a7ef5e6de708 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "DELETE /api/articles/fa41d68b-148f-47d1-93db-a7ef5e6de708 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6487 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     [logseq_import] trying to fetch asset from https://prismatic-salamander-2afe94.netlify.app/1_раздел_Урок_3_1698948641693_0.pdf for article b7860b6e-96de-4113-983c-cb96f27b89b2
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6505 - "POST /api/import/logseq HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 580, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1397, in import_from_logseq
+    |     block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1373, in _resolve_assets_in_html
+    |     return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+    |   File "/usr/lib/python3.8/re.py", line 210, in sub
+    |     return _compile(pattern, flags).sub(repl, string, count)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1361, in _replace_href
+    |     stored_path = _import_attachment_from_bytes(
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 177, in _import_attachment_from_bytes
+    |     create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    |     raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+    | servpy.app.data_store.ArticleNotFound: Статья с ID b7860b6e-96de-4113-983c-cb96f27b89b2 не найдена
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 580, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1397, in import_from_logseq
+    block['text'] = _resolve_assets_in_html(text_html, new_article_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1373, in _resolve_assets_in_html
+    return re.sub(r'href="([^"]+)"', _replace_href, html_text)
+  File "/usr/lib/python3.8/re.py", line 210, in sub
+    return _compile(pattern, flags).sub(repl, string, count)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1361, in _replace_href
+    stored_path = _import_attachment_from_bytes(
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 177, in _import_attachment_from_bytes
+    create_attachment(article_id, stored_path, filename, mime_type or '', len(raw))
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 66, in wrapper
+    raise ArticleNotFound(f'Статья с ID {article_id} не найдена')
+servpy.app.data_store.ArticleNotFound: Статья с ID b7860b6e-96de-4113-983c-cb96f27b89b2 не найдена
+INFO:     149.50.96.133:52788 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [169513]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [169653]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6358 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6428 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6428 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6442 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6442 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6428 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6442 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6428 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6358 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6442 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6436 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6478 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6430 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     [logseq_import] trying to fetch asset from https://prismatic-salamander-2afe94.netlify.app/1_раздел_Урок_3_1698948641693_0.pdf for article 14ada7a3-2c05-4d96-b526-628bb52a7a47
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6486 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "PATCH /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "PATCH /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/collapse HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6486 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/attachments/14ada7a3-2c05-4d96-b526-628bb52a7a47/1_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB_%D0%A3%D1%80%D0%BE%D0%BA_3_1698948641693_0.pdf.pdf HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     172.71.241.76:9238 - "GET /wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+INFO:     46.242.12.114:6350 - "PATCH /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/bb16fc09-4a7f-4c7e-8714-9b10132bb68a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6350 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     162.158.86.172:11221 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+INFO:     46.242.12.114:6313 - "POST /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/bb16fc09-4a7f-4c7e-8714-9b10132bb68a/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6313 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6488 - "DELETE /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/e8778ee7-7636-4eb4-b9c1-9b445e3f8d2e HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6488 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6488 - "POST /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/a08e6582-2e15-416a-8ef5-8bf58e5230b0/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6488 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "PATCH /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/322f3368-ed51-4e7c-9a98-656f289d5e5c HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6411 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+WARNING:  Invalid HTTP request received.
+INFO:     212.192.158.73:57200 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [169653]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [170445]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     46.242.12.114:6461 - "GET /article/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6453 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6453 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6453 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6495 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6452 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6453 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6461 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6452 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6453 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6452 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6508 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "PATCH /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47/blocks/bb16fc09-4a7f-4c7e-8714-9b10132bb68a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8608 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8596 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8596 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8608 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8596 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8609 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8608 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6501 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8596 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8608 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8609 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6450 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8611 - "GET /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "DELETE /api/articles/14ada7a3-2c05-4d96-b526-628bb52a7a47 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6373 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     [logseq_import] trying to fetch asset from https://prismatic-salamander-2afe94.netlify.app/1_раздел_Урок_3_1698948641693_0.pdf for article d1ab860b-6f28-404e-8736-84d46b2066ba
+[logseq_import] assetsBaseUrl задан, но папка assets/ в архиве не найдена; вложения будут подтягиваться только по внешнему URL: https://prismatic-salamander-2afe94.netlify.app
+INFO:     46.242.12.114:6437 - "POST /api/import/logseq HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6437 - "GET /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "POST /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba/blocks/41a4e134-4f12-45ea-afc0-f98e7e4bf7d7/siblings HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6464 - "GET /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "PATCH /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba/blocks/23472c79-d6dc-44ed-9910-01b03963b869 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6467 - "GET /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "DELETE /api/articles/d1ab860b-6f28-404e-8736-84d46b2066ba HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6393 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6399 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     185.16.39.16:35610 - "GET / HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6400 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6400 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6400 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6400 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6290 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6290 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6290 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6326 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6485 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6463 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6471 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6482 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6479 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8600 - "GET /article/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8600 - "GET /style.css HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8605 - "GET /app.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8600 - "GET /routing.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8605 - "GET /events.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8623 - "GET /changelog.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8624 - "GET /auth.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /users.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /article.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8624 - "GET /state.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8623 - "GET /refs.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8605 - "GET /api.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8600 - "GET /toast.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8626 - "GET /undo.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8624 - "GET /actions.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8623 - "GET /block.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8605 - "GET /search.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8600 - "GET /title.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /sidebar.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8626 - "GET /exporter.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8624 - "GET /modal.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8624 - "GET /utils.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8626 - "GET /encryption.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /markdown.js HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8626 - "GET /favicon.ico HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8626 - "GET /api/changelog HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /api/articles HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /api/users HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /api/articles/afd61c5f-b78c-4c77-8db2-cc278f92c279 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:8625 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/images/2025/12/1764605774177-b23bc258 HTTP/1.1" 200 OK
+INFO:     46.242.12.114:6295 - "GET /api/articles/inbox-0a2b2bbaada6533050e6b2eaa8bc5831 HTTP/1.1" 200 OK

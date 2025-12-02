@@ -183,3 +183,43 @@ export function importArticleFromHtml(file) {
     return details;
   });
 }
+
+export function importArticleFromMarkdown(file, assetsBaseUrl = '') {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (assetsBaseUrl && typeof assetsBaseUrl === 'string') {
+    formData.append('assetsBaseUrl', assetsBaseUrl);
+  }
+  return fetch('/api/import/markdown', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(async (res) => {
+    const details = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message = details?.detail || `Import failed (status ${res.status})`;
+      throw new Error(message);
+    }
+    return details;
+  });
+}
+
+export function importFromLogseqArchive(file, assetsBaseUrl = '') {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (assetsBaseUrl && typeof assetsBaseUrl === 'string') {
+    formData.append('assetsBaseUrl', assetsBaseUrl);
+  }
+  return fetch('/api/import/logseq', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(async (res) => {
+    const details = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message = details?.detail || `Import failed (status ${res.status})`;
+      throw new Error(message);
+    }
+    return details;
+  });
+}

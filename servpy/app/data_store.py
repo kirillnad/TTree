@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import html as html_mod
 import json
+import logging
 import re
 import uuid
 from datetime import datetime
@@ -57,6 +59,9 @@ class InvalidOperation(DataStoreError):
     pass
 
 
+logger = logging.getLogger('uvicorn.error')
+
+
 def with_article(func):
     """Декоратор для загрузки, модификации и сохранения статьи."""
     @wraps(func)
@@ -82,6 +87,47 @@ BLOCK_INSERT_SQL = '''
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 '''
 TOKEN_SANITIZE_RE = re.compile(r'[^0-9a-zа-яё]+', re.IGNORECASE)
+
+WIKILINK_RE = re.compile(r'\[\[([^\]]+)\]\]')
+
+
+def _expand_wikilinks(html_text: str, author_id: str) -> str:
+    """
+    Раскрывает wikilinks вида [[Название]] в ссылки на существующие статьи пользователя.
+    Поиск статьи по названию делается регистронезависимо.
+    """
+    if not html_text or '[[' not in html_text:
+        return html_text
+
+    def _replace(match: re.Match[str]) -> str:
+        title_raw = (match.group(1) or '').strip()
+        if not title_raw:
+            return match.group(0)
+        key = title_raw.lower()
+        try:
+            row = CONN.execute(
+                '''
+                SELECT id
+                FROM articles
+                WHERE deleted_at IS NULL
+                  AND author_id = ?
+                  AND LOWER(title) = ?
+                LIMIT 1
+                ''',
+                (author_id, key),
+            ).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('[wikilink] failed to resolve [[%s]] for author %s: %r', title_raw, author_id, exc)
+            return match.group(0)
+        if not row:
+            # Статья с таким названием не найдена — оставляем как есть.
+            return match.group(0)
+        article_id = row['id']
+        safe_text = html_mod.escape(title_raw, quote=False)
+        href = f'/article/{article_id}'
+        return f'<a href="{href}">{safe_text}</a>'
+
+    return WIKILINK_RE.sub(_replace, html_text)
 
 
 def _insert_block_row(params: Tuple[Any, ...]) -> int:
@@ -601,11 +647,18 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
             if 'text' in attrs:
                 previous_text = block_data['text']
                 new_text = sanitize_html(attrs['text'] or '')
-                
-                # Получаем текущую историю для добавления новой записи
-                article_row = CONN.execute('SELECT history, redo_history FROM articles WHERE id = ?', (article_id,)).fetchone()
+
+                # Автоматически разворачиваем wikilinks [[...]] в ссылки на статьи пользователя.
+                article_row = CONN.execute(
+                    'SELECT history, redo_history, author_id FROM articles WHERE id = ?',
+                    (article_id,),
+                ).fetchone()
                 if not article_row:
                     raise ArticleNotFound(f'Статья с ID {article_id} не найдена при обновлении блока')
+                author_id = article_row['author_id']
+                if author_id:
+                    new_text = _expand_wikilinks(new_text, author_id)
+                
                 article_history = deserialize_history(article_row['history'])
                 
                 history_entry = push_text_history_entry({'history': article_history, 'redoHistory': []}, block_id, previous_text, new_text)

@@ -799,6 +799,7 @@ async function handlePointerUp(event) {
 export async function loadArticleView(id) {
   await ensureArticlesIndexLoaded();
   setViewMode(true);
+  if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
     const editTarget = state.pendingEditBlockId || undefined;
@@ -811,6 +812,7 @@ export async function loadArticleView(id) {
 }
 
 export async function loadListView() {
+  if (refs.usersView) refs.usersView.classList.add('hidden');
   state.article = null;
   state.articleId = null;
   state.currentBlockId = null;

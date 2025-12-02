@@ -26,8 +26,9 @@ import {
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
-import { importArticleFromHtml } from './api.js';
-import { showToast } from './toast.js';
+import { importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
+import { showToast, showPersistentToast, hideToast } from './toast.js';
+import { showPrompt } from './modal.js';
 
 function handleViewKey(event) {
   if (!state.article) return;
@@ -274,8 +275,9 @@ export function attachEvents() {
           const file = input.files && input.files[0];
           if (!file) return;
           try {
-            showToast('Импортируем HTML...');
+            showPersistentToast('Загружаем и обрабатываем HTML...');
             const article = await importArticleFromHtml(file);
+            hideToast();
             if (article && article.id) {
               navigate(routing.article(article.id));
               showToast('Статья импортирована');
@@ -283,12 +285,133 @@ export function attachEvents() {
               showToast('Импорт завершился без результата');
             }
           } catch (error) {
-            showToast(error.message || 'Не удалось импортировать HTML');
+            hideToast();
+            showPersistentToast(error.message || 'Не удалось импортировать HTML');
           }
         });
         input.click();
       } catch (error) {
         showToast(error.message || 'Не удалось запустить импорт');
+      }
+    });
+  }
+  if (refs.importMarkdownBtn) {
+    refs.importMarkdownBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      try {
+        let baseUrl = '';
+        try {
+          const saved = window.localStorage.getItem('logseqAssetsBaseUrl') || '';
+          baseUrl = await showPrompt({
+            title: 'Адрес assets для Markdown',
+            message:
+              'Если в файле есть ссылки вида ../assets/..., укажи базовый URL, где лежат эти файлы (например https://prismatic-salamander-2afe94.netlify.app). '
+              + 'Внутри него будут искаться файлы в корне или в подпапке /assets.',
+            confirmText: 'Продолжить',
+            cancelText: 'Отмена',
+            placeholder: 'https://example.netlify.app',
+            defaultValue: saved,
+          });
+        } catch (_) {
+          return;
+        }
+        baseUrl = (baseUrl || '').trim();
+        if (baseUrl) {
+          try {
+            window.localStorage.setItem('logseqAssetsBaseUrl', baseUrl);
+          } catch (_) {
+            // ignore
+          }
+        }
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.md,text/markdown,text/plain';
+        input.multiple = false;
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            showPersistentToast('Загружаем и обрабатываем Markdown...');
+            const article = await importArticleFromMarkdown(file, baseUrl);
+            hideToast();
+            if (article && article.id) {
+              navigate(routing.article(article.id));
+              showToast('Статья импортирована из Markdown');
+            } else {
+              showToast('Импорт из Markdown завершился без результата');
+            }
+          } catch (error) {
+            hideToast();
+            showPersistentToast(error.message || 'Не удалось импортировать Markdown');
+          }
+        });
+        input.click();
+      } catch (error) {
+        showToast(error.message || 'Не удалось запустить импорт Markdown');
+      }
+    });
+  }
+  if (refs.importLogseqBtn) {
+    refs.importLogseqBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      try {
+        let baseUrl = '';
+        try {
+          const saved = window.localStorage.getItem('logseqAssetsBaseUrl') || '';
+          baseUrl = await showPrompt({
+            title: 'Адрес assets для Logseq',
+            message: 'Укажи базовый URL, где лежат assets (например https://prismatic-salamander-2afe94.netlify.app). Внутри него должны быть файлы в папке /assets.',
+            confirmText: 'Продолжить',
+            cancelText: 'Отмена',
+            placeholder: 'https://example.netlify.app',
+            defaultValue: saved,
+          });
+        } catch (_) {
+          // Если пользователь закрыл диалог — просто выходим.
+          return;
+        }
+        baseUrl = (baseUrl || '').trim();
+        if (!baseUrl) return;
+        try {
+          window.localStorage.setItem('logseqAssetsBaseUrl', baseUrl);
+        } catch (_) {
+          // ignore
+        }
+
+        showToast('Выберите ZIP-архив Logseq с папкой pages/');
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.zip,application/zip';
+        input.multiple = false;
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            showPersistentToast('Загружаем и обрабатываем архив Logseq...');
+            const articles = await importFromLogseqArchive(file, baseUrl);
+            hideToast();
+            const list = Array.isArray(articles) ? articles : [];
+            if (list.length > 0 && list[0].id) {
+              navigate(routing.article(list[0].id));
+              if (list.length === 1) {
+                showToast('Страница импортирована из Logseq');
+              } else {
+                showToast(`Импортировано страниц из Logseq: ${list.length}`);
+              }
+            } else {
+              showToast('Импорт из Logseq завершился без результата');
+            }
+          } catch (error) {
+            hideToast();
+            showPersistentToast(error.message || 'Не удалось импортировать архив Logseq');
+          }
+        });
+        input.click();
+      } catch (error) {
+        showToast(error.message || 'Не удалось запустить импорт Logseq');
       }
     });
   }
