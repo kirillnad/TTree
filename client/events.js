@@ -14,7 +14,7 @@ import {
 import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
-import { toggleHintPopover, hideHintPopover, setTrashMode } from './sidebar.js';
+import { toggleHintPopover, hideHintPopover, setTrashMode, toggleFavorite } from './sidebar.js';
 import {
   toggleSidebarCollapsed,
   handleArticleFilterInput,
@@ -254,6 +254,17 @@ export function attachEvents() {
   }
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);
+  }
+  if (refs.articleFavoriteBtn) {
+    refs.articleFavoriteBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (!state.article || !state.article.id || state.article.id === 'inbox') return;
+      toggleFavorite(state.article.id);
+      // Обновляем заголовок и списки, чтобы звёздочка синхронизировалась.
+      renderArticle();
+      renderSidebarArticleList();
+      renderMainArticleList();
+    });
   }
   if (refs.listMenuBtn && refs.listMenu) {
     refs.listMenuBtn.addEventListener('click', (event) => {

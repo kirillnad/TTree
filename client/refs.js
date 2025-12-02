@@ -47,6 +47,7 @@ export const refs = {
   listMenu: document.getElementById('listMenu'),
   articleMenuBtn: document.getElementById('articleMenuBtn'),
   articleMenu: document.getElementById('articleMenu'),
+  articleFavoriteBtn: document.getElementById('articleFavoriteBtn'),
   articlePublicLinkBtn: document.getElementById('articlePublicLinkBtn'),
   articlePublicToggleBtn: document.getElementById('articlePublicToggleBtn'),
   articleEncryptionBtn: document.getElementById('articleEncryptionBtn'),

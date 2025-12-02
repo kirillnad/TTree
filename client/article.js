@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { refs } from './refs.js';
 import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi, apiRequest } from './api.js';
 import { clearPendingTextPreview, hydrateUndoRedoFromArticle, moveBlockToParent } from './undo.js';
-import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode } from './sidebar.js';
+import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode, toggleFavorite } from './sidebar.js';
 import {
   findBlock,
   flattenVisible,
@@ -863,6 +863,12 @@ export function renderArticle() {
   }
   if (refs.editTitleBtn) {
     refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
+  }
+  if (refs.articleFavoriteBtn) {
+    const favs = new Set(state.favoriteArticles || []);
+    const isFav = favs.has(article.id);
+    refs.articleFavoriteBtn.textContent = isFav ? '★' : '☆';
+    refs.articleFavoriteBtn.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
   }
   if (refs.articlePublicLinkBtn) {
     const hasPublic = Boolean(article.publicSlug);

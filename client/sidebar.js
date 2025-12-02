@@ -41,7 +41,7 @@ function sortArticles(arr = []) {
   });
 }
 
-function toggleFavorite(articleId) {
+export function toggleFavorite(articleId) {
   if (!articleId) return;
   if (!state.favoriteArticles) state.favoriteArticles = [];
   const set = new Set(state.favoriteArticles);

@@ -519,11 +519,63 @@ def _parse_markdown_blocks(md_text: str) -> list[dict[str, Any]]:
 
     Правила:
     - каждый блок начинается с новой строки и символа "-" (после табов);
+      ИЛИ с новой строки без табов, которая не начинается с "-";
     - уровень вложенности определяется количеством табов перед "-";
     - строки, начинающиеся (после табов) с "collapsed::" игнорируются;
     - остальные строки без "-" считаются продолжением предыдущего блока.
     """
     lines = md_text.splitlines()
+    # Предобработка служебных маркеров collapsed::/logseq.
+    # Шаблон Logseq:
+    #   - collapsed:: true
+    #     1. Текст
+    # Нужно превратить в:
+    #   - 1. Текст
+    processed_lines: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Отделяем табы (уровень вложенности), остальное анализируем.
+        indent_tabs = 0
+        for ch in line:
+            if ch == '\t':
+                indent_tabs += 1
+            else:
+                break
+        content = line[indent_tabs:]
+        stripped = content.lstrip()
+
+        # Полностью пропускаем строки-конфиги Logseq.
+        if stripped.startswith('logseq.'):
+            i += 1
+            continue
+
+        # Случай "- collapsed:: true/false" или похожий.
+        if stripped.startswith('-') and 'collapsed::' in stripped:
+            # Если есть следующая строка — сливаем её в текст пункта.
+            if i + 1 < len(lines):
+                next_line = lines[i + 1]
+                # Текст следующей строки без табов/пробелов в начале.
+                next_content = next_line.lstrip('\t')
+                next_content = next_content.lstrip(' ')
+                indent_prefix = '\t' * indent_tabs
+                merged = f"{indent_prefix}- {next_content}"
+                processed_lines.append(merged)
+                i += 2
+                continue
+            # Иначе просто пропускаем маркер.
+            i += 1
+            continue
+
+        # Любые одиночные строки с collapsed:: (без "-") просто выкидываем.
+        if 'collapsed::' in stripped:
+            i += 1
+            continue
+
+        processed_lines.append(line)
+        i += 1
+
+    lines = processed_lines
     root_blocks: list[dict[str, Any]] = []
     stack: list[dict[str, Any]] = []  # элементы: {'level', 'block', 'lines'}
 
@@ -552,7 +604,26 @@ def _parse_markdown_blocks(md_text: str) -> list[dict[str, Any]]:
         content = raw_line[indent_tabs:]
 
         stripped_for_ctrl = content.lstrip()
-        if stripped_for_ctrl.startswith('collapsed::') or stripped_for_ctrl.startswith('logseq.'):
+
+        # Новая строка без табов и без начального "-" — отдельный корневой блок.
+        # Это позволяет импортировать заголовки / нумерованные пункты вида "1. Текст"
+        # как отдельные блоки верхнего уровня.
+        if indent_tabs == 0 and stripped_for_ctrl and not stripped_for_ctrl.startswith('-'):
+            finish_block(current)
+            new_block: dict[str, Any] = {
+                'id': str(uuid4()),
+                'text': '',
+                'collapsed': False,
+                'children': [],
+            }
+            node = {
+                'level': 0,
+                'block': new_block,
+                'lines': [stripped_for_ctrl],
+            }
+            root_blocks.append(new_block)
+            stack = [node]
+            current = node
             continue
 
         # Новая строка-блок?
@@ -2200,16 +2271,6 @@ def _import_logseq_from_bytes(
             md_text = content_bytes.decode('utf-8')
         except UnicodeDecodeError:
             md_text = content_bytes.decode('utf-8', errors='ignore')
-
-        # Удаляем любые строки, содержащие "collapsed::", чтобы
-        # служебные пометки Logseq не попадали в текст блоков.
-        try:
-            lines = md_text.splitlines()
-            filtered = [ln for ln in lines if 'collapsed::' not in ln]
-            md_text = '\n'.join(filtered)
-        except Exception:  # noqa: BLE001
-            # В крайнем случае продолжаем с исходным текстом.
-            pass
 
         blocks_tree = _parse_markdown_blocks(md_text)
         if not blocks_tree:
