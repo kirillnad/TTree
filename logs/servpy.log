@@ -20409,3 +20409,106 @@ INFO:     162.158.62.243:0 - "GET /uploads/0a2b2bbaada6533050e6b2eaa8bc5831/imag
 INFO:     104.23.190.156:0 - "GET /api/users HTTP/1.0" 200 OK
 INFO:     104.23.190.156:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
 INFO:     104.23.190.156:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [209936]
+[start_servpy] starting postgres cluster in /home/aadminn/pgdata
+waiting for server to start.... done
+server started
+INFO:     Started server process [210711]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     162.158.62.242:0 - "GET /article/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/users HTTP/1.0" 403 Forbidden
+INFO:     162.158.62.242:0 - "GET /api/users HTTP/1.0" 403 Forbidden
+INFO:     162.158.62.242:0 - "GET /api/users HTTP/1.0" 403 Forbidden
+INFO:     162.158.62.242:0 - "GET /article/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     104.23.221.22:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.62.242:0 - "GET /api/users HTTP/1.0" 200 OK
+INFO:     172.64.200.28:0 - "HEAD / HTTP/1.0" 200 OK
+INFO:     104.23.217.81:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.217.81:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.223.17:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /p/ZnyVfTiJ6h HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "POST /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a/public HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 304 Not Modified
+INFO:     162.158.62.242:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     162.158.62.242:0 - "GET /api/articles/5a1f398c-9d48-41ab-a58d-13159616216a HTTP/1.0" 200 OK

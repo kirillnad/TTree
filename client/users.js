@@ -1,6 +1,7 @@
 import { refs } from './refs.js';
 import { fetchUsers, deleteUser } from './api.js';
 import { showToast } from './toast.js';
+import { showPrompt } from './modal.js';
 
 function hideAllPanels() {
   if (refs.articleListView) refs.articleListView.classList.add('hidden');
@@ -18,11 +19,11 @@ function hideUsersPanel() {
   if (refs.articleView) refs.articleView.classList.add('hidden');
 }
 
-async function loadUsers() {
+async function loadUsers(adminPassword) {
   if (!refs.usersList) return;
   refs.usersList.textContent = '';
   try {
-    const users = await fetchUsers();
+    const users = await fetchUsers(adminPassword);
     if (!users.length) {
       const li = document.createElement('li');
       li.textContent = 'Пользователей нет';
@@ -74,15 +75,29 @@ async function loadUsers() {
   }
 }
 
-export async function openUsersPage() {
+export async function openUsersPage(adminPassword) {
   showUsersPanel();
-  await loadUsers();
+  await loadUsers(adminPassword);
 }
 
 export function initUsersPanel() {
   if (refs.usersBtn) {
-    refs.usersBtn.addEventListener('click', () => {
-      openUsersPage();
+    refs.usersBtn.addEventListener('click', async () => {
+      let password = '';
+      try {
+        password = await showPrompt({
+          title: 'Доступ к управлению пользователями',
+          message: 'Введите пароль администратора.',
+          confirmText: 'Открыть',
+          cancelText: 'Отмена',
+          placeholder: 'Пароль',
+          inputType: 'password',
+        });
+      } catch (_) {
+        password = '';
+      }
+      if (!password) return;
+      openUsersPage(password);
     });
   }
   if (refs.usersBackBtn) {
@@ -91,4 +106,3 @@ export function initUsersPanel() {
     });
   }
 }
-

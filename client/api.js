@@ -91,8 +91,12 @@ export function restoreArticle(id) {
   return apiRequest(`/api/articles/${id}/restore`, { method: 'POST' });
 }
 
-export function fetchUsers() {
-  return apiRequest('/api/users');
+export function fetchUsers(adminPassword) {
+  const headers = {};
+  if (adminPassword) {
+    headers['X-Users-Password'] = adminPassword;
+  }
+  return apiRequest('/api/users', { headers });
 }
 
 export function deleteUser(userId) {

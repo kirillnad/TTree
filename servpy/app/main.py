@@ -1243,9 +1243,15 @@ def list_articles(current_user: User = Depends(get_current_user)):
     ]
 
 
+USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
+
+
 @app.get('/api/users')
-def list_users(current_user: User = Depends(get_current_user)):
+def list_users(request: Request, current_user: User = Depends(get_current_user)):
     if not getattr(current_user, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    supplied = request.headers.get('X-Users-Password') or ''
+    if USERS_PANEL_PASSWORD and supplied != USERS_PANEL_PASSWORD:
         raise HTTPException(status_code=403, detail='Forbidden')
     rows = CONN.execute(
         '''
