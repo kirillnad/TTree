@@ -71,6 +71,7 @@ from .data_store import (
     build_postgres_ts_query,
     delete_user_with_data,
     _expand_wikilinks,
+    build_article_from_row,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -558,6 +559,365 @@ def _resolve_article_id_for_user(article_id: str, current_user: User) -> str:
     return article_id
 
 
+def _generate_public_slug() -> str:
+    """
+    Генерирует уникальный короткий slug для публичной ссылки на статью.
+    Используем urlsafe base64 от случайных байт и обрезаем до 10 символов.
+    """
+    while True:
+        raw = os.urandom(8)
+        candidate = base64.urlsafe_b64encode(raw).decode('ascii').rstrip('=\n')[:10]
+        row = CONN.execute(
+            'SELECT 1 FROM articles WHERE public_slug = ?',
+            (candidate,),
+        ).fetchone()
+        if not row:
+            return candidate
+
+
+def _render_public_block(block: dict[str, Any]) -> str:
+    """
+    Простая HTML-версия блока для публичной страницы.
+    Используем ту же разметку .block / .block-surface / .block-content / .block-text,
+    но без интерактивных кнопок и drag-элементов.
+    """
+    raw_html = block.get('text') or ''
+    children = block.get('children') or []
+    has_children = bool(children)
+    collapsed = bool(block.get('collapsed'))
+    block_id = html_mod.escape(str(block.get('id') or ''))
+
+    # Грубое разбиение stored HTML на заголовок и тело по первому <p><br /></p>,
+    # как это делает buildStoredBlockHtml/extractBlockSections в клиенте.
+    title_html = ''
+    body_html = raw_html
+    for sep in ('<p><br /></p>', '<p><br/></p>', '<p><br></p>'):
+        idx = raw_html.find(sep)
+        if idx != -1:
+            title_html = raw_html[:idx]
+            body_html = raw_html[idx + len(sep) :]
+            break
+    has_title = bool(title_html.strip())
+
+    # Кнопка сворачивания как в экспорте: с data-block-id и aria-expanded.
+    if has_children or raw_html:
+        collapse_btn = (
+            f'<button class="collapse-btn" type="button" '
+            f'data-block-id="{block_id}" aria-expanded="{ "false" if collapsed else "true" }"></button>'
+        )
+    else:
+        collapse_btn = (
+            '<button class="collapse-btn collapse-btn--placeholder" type="button" '
+            'aria-hidden="true"></button>'
+        )
+
+    # Заголовок блока (если есть).
+    header_html = ''
+    if has_title:
+        header_html = (
+            '<div class="block-header">'
+            '<div class="block-header__left">'
+            '<div class="block-title" style="flex: 1 1 0%; min-width: 0px;">'
+            f'{title_html}'
+            '</div>'
+            '</div>'
+            '</div>'
+        )
+
+    body_classes = ['block-text', 'block-body']
+    if not has_title:
+        body_classes.append('block-body--no-title')
+    # Для блоков с заголовком в свёрнутом состоянии скрываем тело (как в экспорте):
+    if has_title and collapsed:
+        body_classes.append('collapsed')
+    body = f'<div class="{" ".join(body_classes)}" data-block-body>{body_html}</div>'
+    content = f'<div class="block-content">{header_html}{body}</div>'
+    surface = f'<div class="block-surface">{collapse_btn}{content}</div>'
+
+    children_html = ''.join(_render_public_block(child) for child in children)
+    if children_html:
+        children_classes = ['block-children']
+        if collapsed:
+            children_classes.append('collapsed')
+        children_container = f'<div class="{" ".join(children_classes)}" data-children>{children_html}</div>'
+    else:
+        children_container = ''
+
+    block_classes = ['block']
+    if not has_title:
+        block_classes.append('block--no-title')
+
+    return (
+        f'<div class="{" ".join(block_classes)}" data-block-id="{block_id}" '
+        f'data-collapsed="{"true" if collapsed else "false"}" tabindex="0">'
+        f'{surface}{children_container}</div>'
+    )
+
+
+def _build_public_article_html(article: dict[str, Any]) -> str:
+    """
+    Собирает минимальную HTML-страницу для публичного просмотра статьи.
+    Использует базовые стили /style.css и ту же структуру блоков, что и экспорт.
+    """
+    title = html_mod.escape(article.get('title') or 'Без названия')
+    updated_raw = article.get('updatedAt') or article.get('updated_at')
+    try:
+        updated_label = (
+            datetime.fromisoformat(updated_raw).strftime('%Y-%m-%d %H:%M:%S')
+            if updated_raw
+            else ''
+        )
+    except Exception:  # noqa: BLE001
+        updated_label = updated_raw or ''
+
+    blocks = article.get('blocks') or []
+    blocks_html = ''.join(_render_public_block(b) for b in blocks)
+    header = f"""
+    <div class="panel-header article-header">
+      <div class="title-block">
+        <div class="title-row">
+          <h1 class="export-title">{title}</h1>
+        </div>
+        {f'<p class="meta">Обновлено: {html_mod.escape(updated_label)}</p>' if updated_label else ''}
+        <p class="meta">Публичная страница Memus (только для чтения)</p>
+      </div>
+    </div>
+    """
+    body_inner = f"""
+    <div class="export-shell" aria-label="Публичная статья">
+      <main class="content export-content">
+        <section class="panel export-panel" aria-label="Статья">
+          {header}
+          <div id="exportBlocksRoot" class="blocks" role="tree">
+            {blocks_html}
+          </div>
+        </section>
+      </main>
+    </div>
+    """
+
+    # Берём тот же extraCss, что и экспорт HTML в exporter.js
+    extra_css = """
+    body.export-page {
+      margin: 0;
+      background: #eef2f8;
+      overflow: auto;
+      height: auto;
+    }
+    .export-shell {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: #eef2f8;
+    }
+    .export-content {
+      padding: 1.5rem 1rem 2rem;
+      width: 100%;
+      max-width: 960px;
+    }
+    .export-panel {
+      min-height: auto;
+      height: auto;
+    }
+    .block-children.collapsed {
+      display: none;
+    }
+    .block {
+      cursor: default;
+    }
+    .export-title {
+      margin: 0;
+    }
+    """
+
+    # Загружаем тот же style.css, что и SPA.
+    try:
+        css_text = (CLIENT_DIR / 'style.css').read_text(encoding='utf-8')
+    except OSError:
+        css_text = ''
+
+    interactions_script = """
+    <script>
+(function() {
+  var root = document.getElementById('exportBlocksRoot');
+  if (!root) return;
+  var collapseIcon = { open: '▾', closed: '▸' };
+  var firstBlock = root.querySelector('.block');
+  var currentId = firstBlock ? firstBlock.getAttribute('data-block-id') : null;
+
+  function getParentBlock(block) {
+    if (!block || !block.parentElement) return null;
+    return block.parentElement.closest('.block');
+  }
+
+  function updateBlockView(block, collapsed) {
+    block.dataset.collapsed = collapsed ? 'true' : 'false';
+    var body = block.querySelector('.block-body');
+    var noTitle = block.classList.contains('block--no-title');
+    if (body && !noTitle) {
+      body.classList.toggle('collapsed', collapsed);
+    }
+    var children = block.querySelector('.block-children');
+    if (children) children.classList.toggle('collapsed', collapsed);
+    var btn = block.querySelector('.collapse-btn');
+    if (btn) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.textContent = collapsed ? collapseIcon.closed : collapseIcon.open;
+    }
+  }
+
+  function collectVisible() {
+    var result = [];
+    function walk(container) {
+      var children = container.children;
+      for (var i = 0; i < children.length; i += 1) {
+        var node = children[i];
+        if (!node.classList || !node.classList.contains('block')) continue;
+        result.push(node);
+        var isCollapsed = node.dataset.collapsed === 'true';
+        var kids = node.querySelector('.block-children');
+        if (!isCollapsed && kids) walk(kids);
+      }
+    }
+    walk(root);
+    return result;
+  }
+
+  function setCurrent(block) {
+    if (!block) return;
+    currentId = block.getAttribute('data-block-id') || null;
+    Array.prototype.forEach.call(
+      root.querySelectorAll('.block.selected'),
+      function(el) { el.classList.remove('selected'); }
+    );
+    block.classList.add('selected');
+    block.focus({ preventScroll: false });
+  }
+
+  function toggleBlock(block, desired) {
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    var next = typeof desired === 'boolean' ? desired : !collapsed;
+    updateBlockView(block, next);
+  }
+
+  function moveSelection(offset) {
+    if (!currentId) {
+      var first = root.querySelector('.block');
+      if (first) setCurrent(first);
+      return;
+    }
+    var ordered = collectVisible();
+    var index = -1;
+    for (var i = 0; i < ordered.length; i += 1) {
+      if (ordered[i].getAttribute('data-block-id') === currentId) {
+        index = i;
+        break;
+      }
+    }
+    if (index === -1) return;
+    var next = ordered[index + offset];
+    if (next) setCurrent(next);
+  }
+
+  function handleArrowLeft() {
+    if (!currentId) return;
+    var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    if (!collapsed) {
+      toggleBlock(block, true);
+      return;
+    }
+    var parent = getParentBlock(block);
+    if (parent) setCurrent(parent);
+  }
+
+  function handleArrowRight() {
+    if (!currentId) return;
+    var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    var firstChild = block.querySelector('.block-children .block');
+    if (collapsed) {
+      toggleBlock(block, false);
+      if (firstChild) setCurrent(firstChild);
+      return;
+    }
+    if (firstChild) {
+      setCurrent(firstChild);
+    }
+  }
+
+  root.addEventListener('click', function(event) {
+    var btn = event.target.closest('.collapse-btn');
+    if (btn) {
+      var targetId = btn.getAttribute('data-block-id');
+      var block = root.querySelector('.block[data-block-id=\"' + targetId + '\"]');
+      toggleBlock(block);
+      setCurrent(block);
+      return;
+    }
+    var block = event.target.closest('.block');
+    if (block) {
+      setCurrent(block);
+    }
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', ' '].indexOf(event.code) !== -1) {
+      event.preventDefault();
+    } else {
+      return;
+    }
+    if (event.code === 'ArrowDown') {
+      moveSelection(1);
+      return;
+    }
+    if (event.code === 'ArrowUp') {
+      moveSelection(-1);
+      return;
+    }
+    if (event.code === 'ArrowLeft') {
+      handleArrowLeft();
+      return;
+    }
+    if (event.code === 'ArrowRight') {
+      handleArrowRight();
+      return;
+    }
+    if (event.code === 'Enter' || event.code === 'Space' || event.code === ' ') {
+      if (!currentId) return;
+      var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
+      toggleBlock(block);
+    }
+  });
+
+  if (firstBlock) setCurrent(firstBlock);
+})();
+    </script>
+    """
+
+    html = f"""<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+{css_text}
+{extra_css}
+    </style>
+  </head>
+  <body class="export-page">
+    {body_inner}
+    {interactions_script}
+  </body>
+</html>
+"""
+    return html
+
+
 def _present_article(article: dict[str, Any] | None, requested_id: str) -> dict[str, Any]:
     """
     Нормализует JSON статьи перед отдачей клиенту.
@@ -745,6 +1105,74 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
+
+
+@app.post('/api/articles/{article_id}/public')
+def set_article_public(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Включает или выключает публичный доступ к статье.
+    payload: {"public": true|false}
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    article = get_article(real_article_id, current_user.id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    make_public = bool(payload.get('public', True))
+    new_slug: str | None
+    if make_public:
+        new_slug = article.get('publicSlug') or _generate_public_slug()
+    else:
+        new_slug = None
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET public_slug = ?, updated_at = ? WHERE id = ?',
+            (new_slug, datetime.utcnow().isoformat(), real_article_id),
+        )
+    updated = get_article(real_article_id, current_user.id)
+    if not updated:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return _present_article(updated, article_id)
+
+
+@app.get('/api/public/articles/{slug}')
+def read_public_article(slug: str):
+    """
+    Публичное чтение статьи по её slug без авторизации.
+    Возвращает только данные статьи и блоков; редактирование на клиенте отключается.
+    """
+    row = CONN.execute(
+        'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
+        (slug,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail='Article not found')
+    article = build_article_from_row(row)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return _present_article(article, article.get('id', ''))
+
+
+@app.get('/p/{slug}')
+def read_public_article_page(slug: str):
+    """
+    HTML-страница для публичного просмотра статьи по её slug.
+    Не требует авторизации.
+    """
+    row = CONN.execute(
+        'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
+        (slug,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail='Article not found')
+    article = build_article_from_row(row)
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not found')
+    html = _build_public_article_html(article)
+    return Response(content=html, media_type='text/html')
 
 
 @app.delete('/api/articles/{article_id}')

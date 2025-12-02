@@ -21,6 +21,12 @@ import { showPrompt, showConfirm, showPasswordWithHintPrompt } from './modal.js'
 import { startEditing, saveEditing, cancelEditing, createSibling } from './actions.js';
 import { deriveKeyFromPassword, decryptArticleBlocks, checkEncryptionVerifier, createEncryptionVerifier, encryptTextForArticle } from './encryption.js';
 
+function updatePublicToggleLabel() {
+  if (!refs.articlePublicToggleBtn) return;
+  const slug = state.article?.publicSlug || null;
+  refs.articlePublicToggleBtn.textContent = slug ? 'Сделать приватной' : 'Сделать публичной';
+}
+
 function getCurrentArticleKey() {
   if (!state.articleId) return null;
   return state.articleEncryptionKeys[state.articleId] || null;
@@ -372,6 +378,7 @@ export async function loadArticle(id, options = {}) {
   }
 
   upsertArticleIndex(article);
+  updatePublicToggleLabel();
   return article;
 }
 
@@ -845,7 +852,8 @@ export function renderArticle() {
   const rootBlocks = article.id === 'inbox' ? [...(article.blocks || [])].reverse() : article.blocks;
 
   const titleText = article.title || 'Без названия';
-  refs.articleTitle.textContent = titleText;
+  const displayTitle = article.publicSlug ? `🌐 ${titleText}` : titleText;
+  refs.articleTitle.textContent = displayTitle;
   refs.articleTitle.classList.toggle('article-title--encrypted', Boolean(article.encrypted));
   if (!state.isEditingTitle && refs.articleTitleInput) {
     refs.articleTitleInput.value = titleText;

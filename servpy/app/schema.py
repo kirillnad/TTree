@@ -26,7 +26,8 @@ def _init_sqlite_schema():
             is_encrypted INTEGER NOT NULL DEFAULT 0,
             encryption_salt TEXT,
             encryption_verifier TEXT,
-            encryption_hint TEXT
+            encryption_hint TEXT,
+            public_slug TEXT UNIQUE
         )
         ''',
         '''
@@ -90,6 +91,9 @@ def _init_sqlite_schema():
         execute("ALTER TABLE articles ADD COLUMN encryption_verifier TEXT")
     if 'encryption_hint' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN encryption_hint TEXT")
+    if 'public_slug' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN public_slug TEXT")
+        execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug)")
 
     execute('DROP TABLE IF EXISTS blocks_fts')
     execute(
@@ -146,7 +150,8 @@ def _init_postgres_schema():
             is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
             encryption_salt TEXT,
             encryption_verifier TEXT,
-            encryption_hint TEXT
+            encryption_hint TEXT,
+            public_slug TEXT UNIQUE
         )
         ''',
         '''
@@ -268,6 +273,14 @@ def _init_postgres_schema():
                 WHERE table_name = 'articles' AND column_name = 'encryption_hint'
             ) THEN
                 ALTER TABLE articles ADD COLUMN encryption_hint TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'public_slug'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN public_slug TEXT;
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug);
             END IF;
         END$$;
         """

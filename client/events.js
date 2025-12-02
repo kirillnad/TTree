@@ -23,10 +23,10 @@ import {
   setSidebarMobileOpen,
   setSidebarCollapsed,
 } from './sidebar.js';
-import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption } from './article.js';
+import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
-import { importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
+import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { showPrompt } from './modal.js';
 
@@ -282,6 +282,64 @@ export function attachEvents() {
     refs.articleEncryptionRemoveBtn.addEventListener('click', (event) => {
       event.stopPropagation();
       removeArticleEncryption();
+    });
+  }
+  if (refs.articlePublicToggleBtn) {
+    refs.articlePublicToggleBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      if (!state.article || !state.articleId) {
+        showToast('Сначала откройте статью');
+        return;
+      }
+      if (!state.currentUser) {
+        showToast('Нужно войти в систему');
+        return;
+      }
+      const makePublic = !state.article.publicSlug;
+      try {
+        const updated = await apiRequest(`/api/articles/${state.articleId}/public`, {
+          method: 'POST',
+          body: JSON.stringify({ public: makePublic }),
+        });
+        const slug = updated.publicSlug || null;
+        state.article = { ...state.article, publicSlug: slug };
+        if (refs.articlePublicToggleBtn) {
+          refs.articlePublicToggleBtn.textContent = slug ? 'Сделать приватной' : 'Сделать публичной';
+        }
+        renderArticle();
+        if (makePublic && slug) {
+          const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(url);
+            } else {
+              // Fallback через временное текстовое поле.
+              const tmp = document.createElement('textarea');
+              tmp.value = url;
+              tmp.setAttribute('readonly', '');
+              tmp.style.position = 'absolute';
+              tmp.style.left = '-9999px';
+              document.body.appendChild(tmp);
+              tmp.select();
+              try {
+                document.execCommand('copy');
+              } catch (_) {
+                // ignore
+              }
+              document.body.removeChild(tmp);
+            }
+          } catch (_) {
+            // игнорируем ошибки буфера обмена
+          }
+          window.open(url, '_blank', 'noopener,noreferrer');
+          showToast('Публичная ссылка скопирована');
+        } else if (!makePublic) {
+          showToast('Публичный доступ к странице выключен');
+        }
+      } catch (error) {
+        showToast(error.message || 'Не удалось изменить публичный доступ');
+      }
     });
   }
   if (refs.exportArticleBtn) {

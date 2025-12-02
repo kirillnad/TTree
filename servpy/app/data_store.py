@@ -214,6 +214,7 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'updatedAt': row['updated_at'],
         'deletedAt': row['deleted_at'],
         'authorId': row.get('author_id'),
+        'publicSlug': row.get('public_slug'),
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
         'encrypted': encrypted_flag,
@@ -375,6 +376,7 @@ def save_article(article: Dict[str, Any]) -> None:
     normalized['updatedAt'] = now
     title_value = normalized.get('title') or 'Новая статья'
     author_id = normalized.get('authorId')
+    public_slug = normalized.get('publicSlug')
     with CONN:
         exists = CONN.execute(
             'SELECT created_at FROM articles WHERE id = ?', (normalized['id'],)
@@ -383,7 +385,7 @@ def save_article(article: Dict[str, Any]) -> None:
             CONN.execute(
                 '''
                 UPDATE articles
-                SET title = ?, updated_at = ?, history = ?, redo_history = ?
+                SET title = ?, updated_at = ?, history = ?, redo_history = ?, public_slug = ?
                 WHERE id = ?
                 ''',
                 (
@@ -391,14 +393,15 @@ def save_article(article: Dict[str, Any]) -> None:
                     now,
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
+                    public_slug,
                     normalized['id'],
                 ),
             )
         else:
             CONN.execute(
                 '''
-                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, author_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, author_id, public_slug)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     normalized['id'],
@@ -408,6 +411,7 @@ def save_article(article: Dict[str, Any]) -> None:
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
                     author_id,
+                    public_slug,
                 ),
             )
         CONN.execute('DELETE FROM blocks WHERE article_id = ?', (normalized['id'],))
