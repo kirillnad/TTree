@@ -930,7 +930,10 @@ export function renderArticle() {
       const blockEl = document.createElement('div');
       blockEl.className = 'block';
       blockEl.dataset.blockId = block.id;
-      if (block.id === state.currentBlockId) blockEl.classList.add('selected');
+      const isSelected =
+        block.id === state.currentBlockId ||
+        (Array.isArray(state.selectedBlockIds) && state.selectedBlockIds.includes(block.id));
+      if (isSelected) blockEl.classList.add('selected');
       if (block.id === state.editingBlockId) blockEl.classList.add('editing');
       const surface = document.createElement('div');
       surface.className = 'block-surface';
@@ -1155,18 +1158,13 @@ export function renderArticle() {
             target.setAttribute('tabindex', '-1');
             target.focus({ preventScroll: true });
           }
-          const prevSelected = refs.blocksContainer?.querySelector('.block.selected');
-          if (prevSelected && prevSelected !== target) {
-            prevSelected.classList.remove('selected');
-          }
-          target.classList.add('selected');
         }
-    state.currentBlockId = targetId;
-    state.scrollTargetBlockId = null;
-  });
-  }
-  ensureEditingBlockVisible();
-  focusEditingBlock();
+        state.currentBlockId = targetId;
+        state.scrollTargetBlockId = null;
+      });
+    }
+    ensureEditingBlockVisible();
+    focusEditingBlock();
   });
 }
 

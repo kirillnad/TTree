@@ -11,7 +11,7 @@ import {
   handleGlobalPaste,
   splitEditingBlockAtCaret,
 } from './actions.js';
-import { moveSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
+import { moveSelection, extendSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import { toggleHintPopover, hideHintPopover, setTrashMode, toggleFavorite } from './sidebar.js';
@@ -112,11 +112,21 @@ function handleViewKey(event) {
     return;
   }
   if (event.code === 'ArrowDown') {
+    if (!event.ctrlKey && event.shiftKey) {
+      event.preventDefault();
+      extendSelection(1);
+      return;
+    }
     event.preventDefault();
     moveSelection(1);
     return;
   }
   if (event.code === 'ArrowUp') {
+    if (!event.ctrlKey && event.shiftKey) {
+      event.preventDefault();
+      extendSelection(-1);
+      return;
+    }
     event.preventDefault();
     moveSelection(-1);
     return;

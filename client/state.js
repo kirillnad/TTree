@@ -5,6 +5,9 @@ export const state = {
   article: null,
   currentBlockId: null,
   editingBlockId: null,
+  // Мультивыделение блоков в режиме просмотра.
+  selectionAnchorBlockId: null,
+  selectedBlockIds: [],
   undoStack: [],
   redoStack: [],
   pendingTextPreview: null,

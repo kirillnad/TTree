@@ -34,12 +34,7 @@ export function findBlock(blockId, blocks = state.article?.blocks || [], parent 
 }
 
 export function setCurrentBlock(blockId) {
-  if (!blockId || state.currentBlockId === blockId) return;
-  state.currentBlockId = blockId;
-  if (state.mode === 'view') {
-    state.scrollTargetBlockId = blockId;
-  }
-  renderArticle();
+  setCurrentBlockInternal(blockId, { preserveSelection: false });
 }
 
 export function moveSelection(offset) {
@@ -49,8 +44,60 @@ export function moveSelection(offset) {
   if (index === -1) return;
   const next = ordered[index + offset];
   if (next) {
-    setCurrentBlock(next.id);
+    // Обычное перемещение стрелками — сбрасываем мультивыделение.
+    setCurrentBlockInternal(next.id, { preserveSelection: false });
   }
+}
+
+/**
+ * Внутренний помощник для установки текущего блока.
+ * Можно управлять тем, сбрасывать ли мультивыделение.
+ */
+function setCurrentBlockInternal(blockId, options = {}) {
+  if (!blockId || state.currentBlockId === blockId) return;
+  const { preserveSelection = false } = options;
+  state.currentBlockId = blockId;
+  if (!preserveSelection) {
+    state.selectionAnchorBlockId = null;
+    state.selectedBlockIds = [];
+  }
+  if (state.mode === 'view') {
+    state.scrollTargetBlockId = blockId;
+  }
+  renderArticle();
+}
+
+export function extendSelection(offset) {
+  if (!state.article) return;
+  const ordered = flattenVisible(state.article.blocks);
+  if (!ordered.length) return;
+
+  // Базовый якорь — либо уже существующий, либо текущий блок.
+  let anchorId = state.selectionAnchorBlockId || state.currentBlockId || ordered[0].id;
+  if (!anchorId) anchorId = ordered[0].id;
+  if (!state.selectionAnchorBlockId) {
+    state.selectionAnchorBlockId = anchorId;
+  }
+
+  const anchorIndex = ordered.findIndex((b) => b.id === anchorId);
+  if (anchorIndex === -1) return;
+
+  const currentId = state.currentBlockId || anchorId;
+  let currentIndex = ordered.findIndex((b) => b.id === currentId);
+  if (currentIndex === -1) currentIndex = anchorIndex;
+
+  const newIndex = currentIndex + offset;
+  if (newIndex < 0 || newIndex >= ordered.length) return;
+
+  const [start, end] = newIndex >= anchorIndex ? [anchorIndex, newIndex] : [newIndex, anchorIndex];
+  const selected = ordered.slice(start, end + 1).map((b) => b.id);
+
+  state.selectedBlockIds = selected;
+  state.currentBlockId = ordered[newIndex].id;
+  if (state.mode === 'view') {
+    state.scrollTargetBlockId = state.currentBlockId;
+  }
+  renderArticle();
 }
 
 export function isSeparatorNode(node) {
