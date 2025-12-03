@@ -504,11 +504,76 @@ def _build_block_html_from_md_lines(lines: list[str]) -> str:
         paragraphs.append(f'<p>{_md_inline_to_html(first)}</p>')
         rest_lines = lines[1:]
 
+    # Пробуем распознать Markdown-таблицу вида:
+    # |col1|col2|
+    # |---|---|
+    # |v1|v2|
+    table_mode = False
+    table_rows: list[list[str]] = []
+
+    def flush_table() -> None:
+        nonlocal table_mode, table_rows
+        if not table_mode or not table_rows:
+            table_mode = False
+            table_rows = []
+            return
+        # Первая строка — заголовки, остальные — строки тела.
+        header = table_rows[0]
+        body = table_rows[1:] or []
+        col_count = max(len(header), *(len(r) for r in body)) if body else len(header)
+        # Усреднённые ширины колонок в процентах.
+        width = 100.0 / max(col_count, 1)
+        colgroup_parts = [f'<col width="{width:.4f}%"/>' for _ in range(col_count)]
+
+        parts: list[str] = []
+        parts.append('<table class="memus-table"><colgroup>')
+        parts.extend(colgroup_parts)
+        parts.append('</colgroup><thead><tr>')
+        for cell in header:
+            parts.append(f'<th>{_md_inline_to_html(cell.strip())}</th>')
+        parts.append('</tr></thead><tbody>')
+        for row in body:
+            parts.append('<tr>')
+            # Дополняем недостающие ячейки пустыми.
+            cells = list(row) + [''] * (col_count - len(row))
+            for cell in cells:
+                parts.append(f'<td>{_md_inline_to_html((cell or "").strip())}</td>')
+            parts.append('</tr>')
+        parts.append('</tbody></table>')
+        paragraphs.append(''.join(parts))
+        table_mode = False
+        table_rows = []
+
+    def is_table_row(line: str) -> bool:
+        stripped = line.strip()
+        return stripped.startswith('|') and '|' in stripped[1:]
+
     for raw in rest_lines:
         if not raw.strip():
+            # Пустая строка завершает таблицу, если она идёт.
+            if table_mode:
+                flush_table()
             paragraphs.append('<p><br /></p>')
             continue
+
+        if is_table_row(raw):
+            # Продолжаем или начинаем таблицу.
+            table_mode = True
+            # Разбиваем по |, отбрасывая крайние пустые элементы, если строка начинается/заканчивается "|".
+            stripped = raw.strip()
+            inner = stripped[1:-1] if stripped.endswith('|') else stripped[1:]
+            cells = [cell.strip() for cell in inner.split('|')]
+            table_rows.append(cells)
+            continue
+
+        # Обычная строка — перед ней нужно, если было, завершить таблицу.
+        if table_mode:
+            flush_table()
         paragraphs.append(f'<p>{_md_inline_to_html(raw.strip())}</p>')
+
+    # Завершаем возможную таблицу в конце.
+    if table_mode:
+        flush_table()
 
     return ''.join(paragraphs)
 
@@ -1332,6 +1397,65 @@ def list_articles(current_user: User = Depends(get_current_user)):
         for article in get_articles(current_user.id)
         if article['id'] != inbox_id
     ]
+
+
+@app.get('/api/graph')
+def get_articles_graph(current_user: User = Depends(get_current_user)):
+    """
+    Возвращает граф связей статей текущего пользователя.
+
+    Формат:
+    {
+      "nodes": [
+        { "id": "...", "title": "...", "updatedAt": "...", "public": true/false, "encrypted": true/false }
+      ],
+      "edges": [
+        { "source": "<from_id>", "target": "<to_id>" }
+      ]
+    }
+    """
+    inbox_id = f'inbox-{current_user.id}'
+    articles = [a for a in get_articles(current_user.id) if a['id'] != inbox_id]
+    nodes_by_id: dict[str, dict[str, Any]] = {}
+    for a in articles:
+        aid = a.get('id')
+        if not aid:
+            continue
+        nodes_by_id[aid] = {
+            'id': aid,
+            'title': a.get('title') or 'Без названия',
+            'updatedAt': a.get('updatedAt'),
+            'public': bool(a.get('publicSlug')),
+            'publicSlug': a.get('publicSlug') or None,
+            'encrypted': bool(a.get('encrypted', False)),
+        }
+    if not nodes_by_id:
+        return {'nodes': [], 'edges': []}
+
+    # Собираем рёбра из article_links, но только между статьями текущего пользователя.
+    node_ids = set(nodes_by_id.keys())
+    try:
+        link_rows = CONN.execute('SELECT from_id, to_id FROM article_links').fetchall()
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to read article_links for graph: %r', exc)
+        return {'nodes': list(nodes_by_id.values()), 'edges': []}
+
+    edges: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in link_rows or []:
+        from_id = row.get('from_id')
+        to_id = row.get('to_id')
+        if not from_id or not to_id:
+            continue
+        if from_id not in node_ids or to_id not in node_ids:
+            continue
+        key = (from_id, to_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        edges.append({'source': from_id, 'target': to_id})
+
+    return {'nodes': list(nodes_by_id.values()), 'edges': edges}
 
 
 USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'

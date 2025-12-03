@@ -57,6 +57,88 @@ class InvalidOperation(DataStoreError):
 logger = logging.getLogger('uvicorn.error')
 
 
+_PIPE_TABLE_RE = re.compile(
+    r'^(?:\s*<p>(?:\s|\&nbsp;|<br\s*/?>)*\|.*?\|\s*</p>\s*)+$',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _maybe_convert_pipe_table_html(html: str) -> str:
+    """
+    Детектирует и конвертирует Markdown-таблицу вида:
+      <p>| col1 | col2 |</p><p>| row | ... |</p>
+    в <table class="memus-table">...</table>.
+
+    Также чинит старые случаи, когда к HTML уже был добавлен <table>,
+    но перед ним остались исходные <p>|...|</p>: в этом случае оставляем только таблицу.
+    """
+    if not html:
+        return ''
+
+    # Если есть уже таблица и при этом остались строки с pipe-таблицей,
+    # считаем, что это устаревший артефакт и оставляем только таблицу.
+    if '<table' in html and '| Свойство |' in html or '<table' in html and '<p>|' in html:
+        idx = html.find('<table')
+        if idx != -1:
+            return html[idx:]
+        return html
+
+    stripped = html.strip()
+    if not _PIPE_TABLE_RE.match(stripped):
+        return html
+
+    # Вынимаем строки из <p>...</p>
+    lines = []
+    for m in re.finditer(r'<p>(.*?)</p>', stripped, flags=re.IGNORECASE | re.DOTALL):
+        inner = m.group(1) or ''
+        # Убираем возможные <br> и неразрывные пробелы.
+        inner = re.sub(r'<br\s*/?>', '', inner, flags=re.IGNORECASE)
+        text = html_mod.unescape(re.sub(r'<[^>]+>', '', inner))
+        text = text.replace('\u00a0', ' ').strip()
+        if text:
+            lines.append(text)
+
+    if len(lines) < 2:
+        return html
+
+    rows: list[list[str]] = []
+    for raw in lines:
+        line = raw.strip()
+        if not (line.startswith('|') and '|' in line[1:]):
+            # Не все строки подходят — оставляем как есть.
+            return html
+        inner = line[1:-1] if line.endswith('|') else line[1:]
+        cells = [cell.strip() for cell in inner.split('|')]
+        rows.append(cells)
+
+    if not rows:
+        return html
+
+    header = rows[0]
+    body = rows[1:]
+    col_count = max(len(header), *(len(r) for r in body)) if body else len(header)
+    col_count = max(col_count, 1)
+    width = 100.0 / col_count
+
+    parts: list[str] = []
+    parts.append('<table class="memus-table"><colgroup>')
+    for _ in range(col_count):
+        parts.append(f'<col width="{width:.4f}%"/>')
+    parts.append('</colgroup><thead><tr>')
+    for i in range(col_count):
+        cell = header[i] if i < len(header) else ''
+        parts.append(f'<th>{html_mod.escape(cell, quote=False)}</th>')
+    parts.append('</tr></thead><tbody>')
+    for row in body:
+        parts.append('<tr>')
+        for i in range(col_count):
+            cell = row[i] if i < len(row) else ''
+            parts.append(f'<td>{html_mod.escape(cell, quote=False)}</td>')
+        parts.append('</tr>')
+    parts.append('</tbody></table>')
+    return ''.join(parts)
+
+
 def with_article(func):
     """Декоратор для загрузки, модификации и сохранения статьи."""
     @wraps(func)
@@ -74,6 +156,59 @@ def with_article(func):
             save_article(article)
         return result
     return wrapper
+
+
+def _extract_article_links_from_blocks(blocks: List[Dict[str, Any]]) -> List[str]:
+    """
+    Извлекает ID статей, на которые ссылаются блоки (по href="/article/<id>").
+    Возвращает список уникальных to_id.
+    """
+    ids: set[str] = set()
+
+    def walk(node_list: List[Dict[str, Any]]):
+        for blk in node_list or []:
+            text = blk.get('text') or ''
+            if text and '/article/' in text:
+                for match in re.finditer(r'href="/article/([0-9a-fA-F-]+)"', text):
+                    target_id = match.group(1)
+                    if target_id:
+                        ids.add(target_id)
+            children = blk.get('children') or []
+            walk(children)
+
+    walk(blocks or [])
+    return list(ids)
+
+
+def _update_article_links_for_article(article: Dict[str, Any]) -> None:
+    """
+    Перестраивает связи article_links для одной статьи:
+    - удаляет все старые связи from_id = article['id'];
+    - добавляет новые для всех ссылок href="/article/<id>" в блоках.
+    Работает внутри существующей транзакции (использует глобальный CONN).
+    """
+    article_id = article.get('id')
+    author_id = article.get('authorId')
+    if not article_id or not author_id:
+        return
+    to_ids = _extract_article_links_from_blocks(article.get('blocks') or [])
+    # Очищаем старые связи.
+    CONN.execute('DELETE FROM article_links WHERE from_id = ?', (article_id,))
+    if not to_ids:
+        return
+    # Вставляем новые, игнорируя ссылки на несуществующие статьи.
+    values = [(article_id, tid, 'internal') for tid in to_ids if tid and tid != article_id]
+    if not values:
+        return
+    # Используем единый синтаксис UPSERT, который поддерживается и SQLite (3.24+) и PostgreSQL.
+    CONN.executemany(
+        '''
+        INSERT INTO article_links (from_id, to_id, kind)
+        VALUES (?, ?, ?)
+        ON CONFLICT (from_id, to_id) DO NOTHING
+        ''',
+        values,
+    )
 
 
 BLOCK_INSERT_SQL = '''
@@ -417,6 +552,8 @@ def save_article(article: Dict[str, Any]) -> None:
         CONN.execute('DELETE FROM blocks WHERE article_id = ?', (normalized['id'],))
         CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (normalized['id'],))
         insert_blocks_recursive(normalized['id'], normalized['blocks'], now)
+        # Обновляем карту ссылок статьи на другие статьи.
+        _update_article_links_for_article(normalized)
     upsert_article_search_index(normalized['id'], title_value)
 
 
@@ -646,6 +783,7 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
             if 'text' in attrs:
                 previous_text = block_data['text']
                 new_text = sanitize_html(attrs['text'] or '')
+                new_text = _maybe_convert_pipe_table_html(new_text)
 
                 # Автоматически разворачиваем wikilinks [[...]] в ссылки на статьи пользователя.
                 article_row = CONN.execute(

@@ -14,6 +14,8 @@ PG_CTL_BIN=${PG_CTL_BIN:-}
 if [[ -z "${PG_CTL_BIN}" ]]; then
   if command -v pg_ctl >/dev/null 2>&1; then
     PG_CTL_BIN=$(command -v pg_ctl)
+  elif [[ -x "/usr/lib/postgresql/12/bin/pg_ctl" ]]; then
+    PG_CTL_BIN="/usr/lib/postgresql/12/bin/pg_ctl"
   elif [[ -x "$HOME/pg16/bin/pg_ctl" ]]; then
     PG_CTL_BIN="$HOME/pg16/bin/pg_ctl"
   fi

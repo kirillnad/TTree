@@ -984,12 +984,84 @@ button:hover {
 
 .block-body--no-title {
   margin-top: 0;
+  min-width: 100%;
 }
 
 .block-text[contenteditable='true'] {
   outline: none;
-  overflow-y: auto;
-  max-height: 65vh;
+  overflow: visible;
+  max-height: none;
+}
+
+.memus-table {
+  border-collapse: collapse;
+  width: 100% !important;
+  max-width: 100%;
+  table-layout: fixed;
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+}
+
+.memus-table thead tr {
+  background: #f3f4f6;
+}
+
+.memus-table th,
+.memus-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.25rem 0.4rem;
+  text-align: left;
+  vertical-align: top;
+  min-width: 3ch;
+}
+
+.memus-table tbody tr:nth-child(odd) {
+  background: #f9fafb;
+}
+
+.memus-table tbody tr:hover {
+  background: #eef2ff;
+}
+
+.block-text[contenteditable='true'] .memus-table {
+  overflow: visible;
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.table-toolbar {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.1rem 0.2rem;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  z-index: 2000;
+}
+
+.table-toolbar button,
+.table-toolbar-btn {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid #4b5563;
+  background: transparent;
+  color: #f9fafb;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.table-col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 5;
 }
 
 .block.editing > .block-surface > .block-text {
@@ -1489,6 +1561,22 @@ button:hover {
 .block-title__placeholder {
   color: #94a3b8;
   font-style: italic;
+}
+
+.graph-container {
+  flex: 1;
+  min-height: 0;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  overflow: hidden;
+  position: relative;
+}
+
+#graphCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .block-body.collapsed {

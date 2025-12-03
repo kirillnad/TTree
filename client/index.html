@@ -110,6 +110,14 @@
             </div>
           <div class="sidebar-actions">
             <button
+              id="graphToggleBtn"
+              class="ghost small"
+              type="button"
+              title="Граф страниц"
+            >
+              Граф
+            </button>
+            <button
               id="usersBtn"
               class="ghost small hidden"
               type="button"
@@ -267,6 +275,16 @@
             <button id="usersBackBtn" class="ghost small" type="button">Назад</button>
           </div>
           <ul id="usersList" class="users-list"></ul>
+        </section>
+
+        <section id="graphView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Граф страниц</h2>
+            <button id="graphBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <div class="graph-container">
+            <canvas id="graphCanvas"></canvas>
+          </div>
         </section>
       </main>
     </div>

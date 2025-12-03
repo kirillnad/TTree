@@ -3,6 +3,8 @@ import { attachEvents } from './events.js';
 import { loadLastChangeFromChangelog } from './changelog.js';
 import { initAuth, bootstrapAuth } from './auth.js';
 import { initUsersPanel } from './users.js';
+import { initGraphView } from './graph.js';
+import { initTables } from './tables.js';
 
 /**
  * Инициализация приложения
@@ -11,6 +13,8 @@ function startApp() {
   initRouting();
   attachEvents();
   initUsersPanel();
+  initGraphView();
+  initTables();
   loadLastChangeFromChangelog();
   route(window.location.pathname);
 }

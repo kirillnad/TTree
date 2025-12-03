@@ -181,6 +181,72 @@ export function cleanupEditableHtml(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
 
+  // Специальный случай: блок состоит только из строк вида "|...|...|"
+  // Превращаем их сразу в HTML-таблицу и выходим.
+  const tryConvertPipeTable = () => {
+    const children = Array.from(template.content.childNodes || []);
+    if (!children.length) return false;
+    const paras = Array.from(template.content.querySelectorAll('p'));
+    if (paras.length < 2) return false;
+    const isTableRow = (line) => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('|') && trimmed.indexOf('|', 1) !== -1;
+    };
+    const lines = paras.map((p) => (p.textContent || '').replace(/\u00a0/g, ' ').trim());
+    const nonEmptyLines = lines.filter((t) => t);
+    if (nonEmptyLines.length < 2) return false;
+    if (!nonEmptyLines.every(isTableRow)) return false;
+
+    const allRows = nonEmptyLines.map((raw) => {
+      const stripped = raw.trim();
+      const inner = stripped.endsWith('|') ? stripped.slice(1, -1) : stripped.slice(1);
+      return inner.split('|').map((cell) => cell.trim());
+    });
+    const header = allRows[0];
+    const body = allRows.slice(1);
+    const colCount = body.reduce((max, row) => Math.max(max, row.length), header.length);
+    const table = document.createElement('table');
+    table.className = 'memus-table';
+    const colgroup = document.createElement('colgroup');
+    const width = 100 / Math.max(colCount, 1);
+    for (let i = 0; i < colCount; i += 1) {
+      const col = document.createElement('col');
+      col.setAttribute('width', `${width.toFixed(4)}%`);
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+    const thead = document.createElement('thead');
+    const trHead = document.createElement('tr');
+    for (let i = 0; i < colCount; i += 1) {
+      const th = document.createElement('th');
+      th.textContent = header[i] || '';
+      trHead.appendChild(th);
+    }
+    thead.appendChild(trHead);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    body.forEach((row) => {
+      const tr = document.createElement('tr');
+      const cells = [...row];
+      for (let i = 0; i < colCount; i += 1) {
+        const td = document.createElement('td');
+        td.textContent = cells[i] || '';
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    template.content.innerHTML = '';
+    template.content.appendChild(table);
+    const cleanedTable = linkifyHtml(template.innerHTML);
+    return cleanedTable.replace(/<\/a>\s*<a/gi, '</a> <a');
+  };
+
+  const tableResult = tryConvertPipeTable();
+  if (tableResult) {
+    return tableResult;
+  }
+
   // СЂР°Р·РІРѕСЂР°С‡РёРІР°РµРј .block-header, СѓР±РёСЂР°РµРј РєР»Р°СЃСЃС‹
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
@@ -262,7 +328,17 @@ export function cleanupEditableHtml(html = '') {
     break;
   }
 
-  // РµСЃР»Рё РЅРµС‚ РЅРё РѕРґРЅРѕРіРѕ Р°Р±Р·Р°С†Р° вЂ” РґРѕР±Р°РІР»СЏРµРј РїСѓСЃС‚РѕР№
+  // Удаляем пустые абзацы внутри ячеек таблиц, чтобы
+  // в заголовках и ячейках не появлялись лишние пустые строки.
+  template.content.querySelectorAll('table.memus-table p').forEach((p) => {
+    const rawText = (p.textContent || '').replace(/\u00a0/g, ' ').trim();
+    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
+    if (!rawText && !inner) {
+      p.remove();
+    }
+  });
+
+  // если нет ни одного абзаца — добавляем пустой
   if (!template.content.querySelector('p')) {
     const p = document.createElement('p');
     p.appendChild(document.createElement('br'));

@@ -25,16 +25,26 @@ ALLOWED_TAGS = {
     'li',
     'a',
     'img',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+    'colgroup',
+    'col',
 }
 
 ALLOWED_ATTRS = {
     'a': {'href', 'title', 'target', 'rel'},
     'img': {'src', 'alt', 'title'},
     'div': {'class'},
+    'table': {'class'},
+    'col': {'width'},
 }
 
 ALLOWED_SCHEMES = {'http', 'https', 'mailto', 'data'}
-VOID_TAGS = {'br', 'img'}
+VOID_TAGS = {'br', 'img', 'col'}
 
 
 def _is_allowed_url(value: str) -> bool:

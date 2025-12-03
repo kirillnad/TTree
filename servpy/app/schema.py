@@ -66,6 +66,20 @@ def _init_sqlite_schema():
         CREATE INDEX IF NOT EXISTS idx_attachments_article
         ON attachments(article_id)
         ''',
+        '''
+        CREATE TABLE IF NOT EXISTS article_links (
+            from_id TEXT NOT NULL,
+            to_id TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'internal',
+            PRIMARY KEY (from_id, to_id),
+            FOREIGN KEY(from_id) REFERENCES articles(id) ON DELETE CASCADE,
+            FOREIGN KEY(to_id) REFERENCES articles(id) ON DELETE CASCADE
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_article_links_to
+        ON article_links(to_id)
+        ''',
     ]
 
     for stmt in statements:
@@ -221,6 +235,18 @@ def _init_postgres_schema():
         '''
         CREATE INDEX IF NOT EXISTS idx_articles_fts_search
         ON articles_fts USING GIN (search_vector)
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS article_links (
+            from_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            to_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL DEFAULT 'internal',
+            PRIMARY KEY (from_id, to_id)
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_article_links_to
+        ON article_links(to_id)
         ''',
     ]
 

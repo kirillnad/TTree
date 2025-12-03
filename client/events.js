@@ -659,6 +659,31 @@ export function attachEvents() {
   if (refs.trashTabBtn) {
     refs.trashTabBtn.addEventListener('click', () => setTrashMode(true));
   }
+  // Автосохранение блока при клике вне него в режиме редактирования.
+  let isAutoSaving = false;
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (isAutoSaving) return;
+      if (state.mode !== 'edit' || !state.editingBlockId) return;
+       const target = event.target;
+       if (!(target instanceof Element)) return;
+       // Не автосохраняем при клике по панели управления таблицей.
+       if (target.closest('.table-toolbar')) return;
+      const blockEl = document.querySelector(
+        `.block[data-block-id="${state.editingBlockId}"]`,
+      );
+      if (!blockEl) return;
+      if (blockEl.contains(target)) return;
+      isAutoSaving = true;
+      Promise.resolve()
+        .then(() => saveEditing())
+        .finally(() => {
+          isAutoSaving = false;
+        });
+    },
+    true,
+  );
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
       hideSearchResults();

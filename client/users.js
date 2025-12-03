@@ -6,6 +6,7 @@ import { showPrompt } from './modal.js';
 function hideAllPanels() {
   if (refs.articleListView) refs.articleListView.classList.add('hidden');
   if (refs.articleView) refs.articleView.classList.add('hidden');
+  if (refs.graphView) refs.graphView.classList.add('hidden');
 }
 
 function showUsersPanel() {
