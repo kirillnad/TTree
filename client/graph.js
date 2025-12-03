@@ -1,127 +1,352 @@
 import { refs } from './refs.js';
 import { apiRequest } from './api.js';
 import { navigate, routing } from './routing.js';
+import { state } from './state.js';
+import { showToast } from './toast.js';
 
+// Данные графа с сервера.
 let graphData = null;
-let positions = {};
-let draggingNodeId = null;
-let isDragging = false;
-let deviceRatio = 1;
 
-function ensureCanvas() {
-  if (!refs.graphCanvas) return null;
-  const canvas = refs.graphCanvas;
-  const rect = canvas.getBoundingClientRect();
-  deviceRatio = window.devicePixelRatio || 1;
-  canvas.width = rect.width * deviceRatio;
-  canvas.height = rect.height * deviceRatio;
-  return canvas;
+// Экземпляр vis-network и его датасеты.
+let network = null;
+let nodesDataset = null;
+let edgesDataset = null;
+
+// Карты компонент связности (созвездий) для подсветки.
+let nodeToComponent = new Map();
+let componentToNodes = new Map();
+
+// Базовые стили, чтобы можно было временно подсвечивать/тускнить.
+let baseNodeStyles = new Map();
+let baseEdgeStyles = new Map();
+
+// Геометрия узлов (используем для размера и расстояний).
+const NODE_DIAMETER = 22;
+
+function ensureVis() {
+  if (typeof window === 'undefined') return null;
+  const vis = window.vis;
+  if (!vis || !vis.Network) return null;
+  return vis;
 }
 
-function initialLayout(nodes) {
-  // Очень простой стартовый расклад: узлы по кругу.
-  const placed = {};
-  const R = 220;
-  const cx = 0;
-  const cy = 0;
-  const n = nodes.length || 1;
-  nodes.forEach((node, index) => {
-    const angle = (2 * Math.PI * index) / n;
-    placed[node.id] = {
-      x: cx + R * Math.cos(angle),
-      y: cy + R * Math.sin(angle),
+function computeComponents(nodeIds, edges) {
+  const adjacency = new Map();
+  nodeIds.forEach((id) => {
+    adjacency.set(id, new Set());
+  });
+  edges.forEach((e) => {
+    const { from, to } = e;
+    if (!adjacency.has(from) || !adjacency.has(to)) return;
+    adjacency.get(from).add(to);
+    adjacency.get(to).add(from);
+  });
+
+  const nodeToComp = new Map();
+  const compToNodes = new Map();
+  let compIndex = 0;
+
+  nodeIds.forEach((id) => {
+    if (nodeToComp.has(id)) return;
+    const queue = [id];
+    nodeToComp.set(id, compIndex);
+    const set = new Set([id]);
+    while (queue.length) {
+      const cur = queue.shift();
+      const neighbors = adjacency.get(cur) || new Set();
+      neighbors.forEach((nid) => {
+        if (!nodeToComp.has(nid)) {
+          nodeToComp.set(nid, compIndex);
+          set.add(nid);
+          queue.push(nid);
+        }
+      });
+    }
+    compToNodes.set(compIndex, set);
+    compIndex += 1;
+  });
+
+  return { nodeToComp, compToNodes };
+}
+
+function prepareVisData() {
+  if (!graphData) return { nodes: [], edges: [] };
+  const rawNodes = graphData.nodes || [];
+  const rawEdges = graphData.edges || [];
+
+  // Палитра для «созвездий».
+  const palette = ['#fecaca', '#fde68a', '#bbf7d0', '#bfdbfe', '#ddd6fe', '#f9a8d4'];
+
+  // Строим список узлов и рёбер для vis-network.
+  const nodeIds = rawNodes.map((n) => n.id);
+  const edges = rawEdges.map((e, idx) => ({
+    id: `e-${idx}`,
+    from: e.source,
+    to: e.target,
+  }));
+
+  // Компоненты связности по текущим рёбрам.
+  const { nodeToComp: ntc, compToNodes: ctn } = computeComponents(nodeIds, edges);
+  nodeToComponent = ntc;
+  componentToNodes = ctn;
+
+  baseNodeStyles = new Map();
+  baseEdgeStyles = new Map();
+
+  const nodes = rawNodes.map((n) => {
+    const id = n.id;
+    const degree =
+      rawEdges.filter((e) => e.source === id || e.target === id).length;
+    const comp = nodeToComponent.get(id) ?? 0;
+    const baseFill = palette[comp % palette.length];
+
+    const isCurrent = state.articleId === id;
+    const stroke =
+      isCurrent ? '#f97316' : n.public ? '#0ea5e9' : '#64748b';
+    const borderWidth = isCurrent ? 3 : degree >= 4 ? 2 : 1.5;
+
+    const fontConfig = {
+      size: 18,
+      color: '#111827',
+      face: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    };
+
+    const baseColor = {
+      background: baseFill,
+      border: stroke,
+    };
+    const dimColor = {
+      background: '#e5e7eb',
+      border: '#cbd5f5',
+    };
+    const highlightColor = {
+      background: baseFill,
+      border: '#f97316',
+    };
+
+    baseNodeStyles.set(id, {
+      color: baseColor,
+      dimColor,
+      highlightColor,
+      borderWidth,
+      font: fontConfig,
+    });
+
+    return {
+      id,
+      label: n.title || 'Без названия',
+      title: n.title || 'Без названия',
+      value: Math.max(1, degree),
+      shape: 'dot',
+      size: NODE_DIAMETER / 2,
+      color: baseColor,
+      borderWidth,
+      font: fontConfig,
     };
   });
-  return placed;
+
+  edges.forEach((e) => {
+    baseEdgeStyles.set(e.id, {
+      color: '#d1d5db',
+      highlightColor: '#f97316',
+      width: 1,
+      highlightWidth: 1.5,
+    });
+  });
+
+  return { nodes, edges };
 }
 
-function ensurePositions() {
-  if (!graphData) return;
-  if (!positions || Object.keys(positions).length === 0) {
-    positions = initialLayout(graphData.nodes);
+function getVisOptions() {
+  const container = refs.graphCanvas;
+  const rect = container.getBoundingClientRect();
+  const width = rect.width || 600;
+  const height = rect.height || 400;
+
+  return {
+    autoResize: true,
+    width: `${width}px`,
+    height: `${height}px`,
+    interaction: {
+      hover: true,
+      tooltipDelay: 80,
+    },
+    physics: {
+      enabled: true,
+      solver: 'forceAtlas2Based',
+      stabilization: {
+        enabled: true,
+        // Меньше итераций — быстрее «успокаивается».
+        iterations: 300,
+        updateInterval: 30,
+        fit: false,
+      },
+      forceAtlas2Based: {
+        gravitationalConstant: -60,
+        springLength: NODE_DIAMETER * 5,
+        springConstant: 0.08,
+        avoidOverlap: 1.0,
+      },
+      // Чем больше minVelocity — тем раньше физика считает,
+      // что всё достаточно стабилизировалось.
+      minVelocity: 0.7,
+    },
+    nodes: {
+      shape: 'dot',
+      scaling: {
+        min: 10,
+        max: 20,
+      },
+      font: {
+        size: 14,
+        color: '#111827',
+        face: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+        strokeWidth: 2,
+        strokeColor: '#f8fafc',
+      },
+    },
+    edges: {
+      smooth: false,
+      color: {
+        color: '#d1d5db',
+        highlight: '#f97316',
+      },
+    },
+  };
+}
+
+function highlightComponent(componentIndex) {
+  if (!nodesDataset || !edgesDataset) return;
+
+  if (componentIndex === null || componentIndex === undefined) {
+    const resetNodes = [];
+    nodesDataset.forEach((node) => {
+      const base = baseNodeStyles.get(node.id);
+      if (!base) return;
+      resetNodes.push({
+        id: node.id,
+        color: base.color,
+        borderWidth: base.borderWidth,
+        font: base.font,
+      });
+    });
+    nodesDataset.update(resetNodes);
+
+    const resetEdges = [];
+    edgesDataset.forEach((edge) => {
+      const base = baseEdgeStyles.get(edge.id);
+      if (!base) return;
+      resetEdges.push({
+        id: edge.id,
+        color: base.color,
+        width: base.width,
+      });
+    });
+    edgesDataset.update(resetEdges);
     return;
   }
-  // Если появились новые узлы — добавляем им стартовые позиции.
-  const known = new Set(Object.keys(positions));
-  const missing = graphData.nodes.filter((n) => !known.has(n.id));
-  if (missing.length) {
-    const extra = initialLayout(missing);
-    positions = { ...positions, ...extra };
+
+  const compNodes = componentToNodes.get(componentIndex) || new Set();
+
+  const updatedNodes = [];
+  nodesDataset.forEach((node) => {
+    const base = baseNodeStyles.get(node.id);
+    if (!base) return;
+    const inComp = compNodes.has(node.id);
+    updatedNodes.push({
+      id: node.id,
+      color: inComp ? base.highlightColor : base.dimColor,
+      borderWidth: base.borderWidth,
+      font: base.font,
+    });
+  });
+  nodesDataset.update(updatedNodes);
+
+  const updatedEdges = [];
+  edgesDataset.forEach((edge) => {
+    const base = baseEdgeStyles.get(edge.id);
+    if (!base) return;
+    const inComp =
+      compNodes.has(edge.from) && compNodes.has(edge.to);
+    updatedEdges.push({
+      id: edge.id,
+      color: inComp ? base.highlightColor : base.color,
+      width: inComp ? base.highlightWidth : base.width,
+    });
+  });
+  edgesDataset.update(updatedEdges);
+}
+
+function renderWithVis() {
+  const vis = ensureVis();
+  if (!vis || !refs.graphCanvas) {
+    showToast('Не удалось загрузить библиотеку графа (vis-network)');
+    return;
   }
-}
 
-function renderGraph() {
-  if (!graphData || !refs.graphCanvas) return;
-  const canvas = ensureCanvas();
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width, height } = canvas;
-  ctx.clearRect(0, 0, width, height);
+  const { nodes, edges } = prepareVisData();
 
-  ensurePositions();
-  const centerX = width / 2;
-  const centerY = height / 2;
+  if (!network) {
+    nodesDataset = new vis.DataSet(nodes);
+    edgesDataset = new vis.DataSet(edges);
 
-  // Рёбра
-  ctx.strokeStyle = '#d1d5db';
-  ctx.lineWidth = 1;
-  graphData.edges.forEach((edge) => {
-    const a = positions[edge.source];
-    const b = positions[edge.target];
-    if (!a || !b) return;
-    ctx.beginPath();
-    ctx.moveTo(centerX + a.x, centerY + a.y);
-    ctx.lineTo(centerX + b.x, centerY + b.y);
-    ctx.stroke();
-  });
+    const options = getVisOptions();
+    network = new vis.Network(refs.graphCanvas, { nodes: nodesDataset, edges: edgesDataset }, options);
 
-  // Узлы
-  graphData.nodes.forEach((node) => {
-    const pos = positions[node.id];
-    if (!pos) return;
-    const isPublic = Boolean(node.public);
-    const isEncrypted = Boolean(node.encrypted);
-    const r = isEncrypted ? 6 : 4;
-    ctx.beginPath();
-    ctx.arc(centerX + pos.x, centerY + pos.y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = isPublic ? '#0ea5e9' : '#111827';
-    ctx.fill();
-  });
-}
+    // Переход по клику на ноду.
+    network.on('click', (params) => {
+      if (!params.nodes || !params.nodes.length) return;
+      const id = params.nodes[0];
+      if (!id) return;
+      navigate(routing.article(id));
+    });
 
-function pickNodeAt(canvasX, canvasY) {
-  if (!graphData) return null;
-  const width = refs.graphCanvas.width;
-  const height = refs.graphCanvas.height;
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const hitRadius = 10;
-  let picked = null;
-  graphData.nodes.forEach((node) => {
-    const pos = positions[node.id];
-    if (!pos) return;
-    const dx = centerX + pos.x - canvasX;
-    const dy = centerY + pos.y - canvasY;
-    const dist2 = dx * dx + dy * dy;
-    if (dist2 <= hitRadius * hitRadius) {
-      picked = node;
-    }
-  });
-  return picked;
+    // Подсветка всего созвездия при наведении.
+    network.on('hoverNode', (params) => {
+      const nodeId = params.node;
+      const comp = nodeToComponent.get(nodeId);
+      if (comp === undefined) return;
+      highlightComponent(comp);
+    });
+
+    network.on('blurNode', () => {
+      highlightComponent(null);
+    });
+  } else {
+    nodesDataset.clear();
+    edgesDataset.clear();
+    nodesDataset.add(nodes);
+    edgesDataset.add(edges);
+
+    const options = getVisOptions();
+    network.setOptions(options);
+  }
 }
 
 export async function openGraphView() {
   if (!refs.graphView || !refs.graphCanvas) return;
-  // Ленивая загрузка графа.
-  if (!graphData) {
-    graphData = await apiRequest('/api/graph');
-  }
-  refs.articleListView.classList.add('hidden');
-  refs.articleView.classList.add('hidden');
-  refs.usersView.classList.add('hidden');
+
+  if (refs.articleListView) refs.articleListView.classList.add('hidden');
+  if (refs.articleView) refs.articleView.classList.add('hidden');
+  if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.graphView.classList.remove('hidden');
-  renderGraph();
+
+  const vis = ensureVis();
+  if (!vis) {
+    showToast('Не удалось загрузить библиотеку графа (vis-network)');
+    return;
+  }
+
+  if (!graphData) {
+    try {
+      graphData = await apiRequest('/api/graph');
+    } catch (error) {
+      showToast(error.message || 'Не удалось загрузить данные графа');
+      return;
+    }
+  }
+
+  renderWithVis();
 }
 
 export function initGraphView() {
@@ -139,45 +364,10 @@ export function initGraphView() {
     });
   }
 
-  // Обработка перерисовки при изменении размера.
   window.addEventListener('resize', () => {
-    if (!refs.graphView.classList.contains('hidden')) {
-      renderGraph();
+    if (!refs.graphView.classList.contains('hidden') && network) {
+      const options = getVisOptions();
+      network.setOptions(options);
     }
-  });
-
-  // Drag & drop узлов.
-  refs.graphCanvas.addEventListener('mousedown', (event) => {
-    if (!graphData) return;
-    const rect = refs.graphCanvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * deviceRatio;
-    const y = (event.clientY - rect.top) * deviceRatio;
-    const picked = pickNodeAt(x, y);
-    if (picked) {
-      draggingNodeId = picked.id;
-      isDragging = true;
-      event.preventDefault();
-    }
-  });
-
-  window.addEventListener('mousemove', (event) => {
-    if (!isDragging || !draggingNodeId || !refs.graphCanvas) return;
-    const rect = refs.graphCanvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * deviceRatio;
-    const y = (event.clientY - rect.top) * deviceRatio;
-    const width = refs.graphCanvas.width;
-    const height = refs.graphCanvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const pos = positions[draggingNodeId];
-    if (!pos) return;
-    pos.x = x - centerX;
-    pos.y = y - centerY;
-    renderGraph();
-  });
-
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-    draggingNodeId = null;
   });
 }
