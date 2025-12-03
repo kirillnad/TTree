@@ -62,6 +62,11 @@ _PIPE_TABLE_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+_INTERNAL_ARTICLE_HREF_RE = re.compile(
+    r'href="/article/([0-9a-fA-F-]+)"',
+    re.IGNORECASE,
+)
+
 
 def _maybe_convert_pipe_table_html(html: str) -> str:
     """
@@ -158,6 +163,21 @@ def with_article(func):
     return wrapper
 
 
+def _extract_article_ids_from_html(html_text: str) -> set[str]:
+    """
+    Извлекает ID статей из HTML‑фрагмента по href="/article/<id>".
+    Возвращает множество уникальных to_id.
+    """
+    ids: set[str] = set()
+    if not html_text or '/article/' not in html_text:
+        return ids
+    for match in _INTERNAL_ARTICLE_HREF_RE.finditer(html_text):
+        target_id = match.group(1)
+        if target_id:
+            ids.add(target_id)
+    return ids
+
+
 def _extract_article_links_from_blocks(blocks: List[Dict[str, Any]]) -> List[str]:
     """
     Извлекает ID статей, на которые ссылаются блоки (по href="/article/<id>").
@@ -168,16 +188,51 @@ def _extract_article_links_from_blocks(blocks: List[Dict[str, Any]]) -> List[str
     def walk(node_list: List[Dict[str, Any]]):
         for blk in node_list or []:
             text = blk.get('text') or ''
-            if text and '/article/' in text:
-                for match in re.finditer(r'href="/article/([0-9a-fA-F-]+)"', text):
-                    target_id = match.group(1)
-                    if target_id:
-                        ids.add(target_id)
+            ids.update(_extract_article_ids_from_html(text))
             children = blk.get('children') or []
             walk(children)
 
     walk(blocks or [])
     return list(ids)
+
+
+def _rebuild_article_links_for_article_id(article_id: str) -> None:
+    """
+    Пересобирает связи article_links для статьи по всем её блокам
+    (используется при инкрементальном редактировании блоков).
+    """
+    if not article_id:
+        return
+
+    rows = CONN.execute(
+        'SELECT id, text FROM blocks WHERE article_id = ?',
+        (article_id,),
+    ).fetchall()
+
+    # Очищаем старые связи.
+    CONN.execute('DELETE FROM article_links WHERE from_id = ?', (article_id,))
+
+    values: list[tuple[str, str, str, str]] = []
+    for row in rows or []:
+        block_id = row.get('id')
+        text = row.get('text') or ''
+        if not block_id or not text:
+            continue
+        to_ids = _extract_article_ids_from_html(text)
+        for target_id in to_ids:
+            if target_id and target_id != article_id:
+                values.append((article_id, block_id, target_id, 'internal'))
+
+    if not values:
+        return
+
+    CONN.executemany(
+        '''
+        INSERT INTO article_links (from_id, block_id, to_id, kind)
+        VALUES (?, ?, ?, ?)
+        ''',
+        values,
+    )
 
 
 def _update_article_links_for_article(article: Dict[str, Any]) -> None:
@@ -191,24 +246,8 @@ def _update_article_links_for_article(article: Dict[str, Any]) -> None:
     author_id = article.get('authorId')
     if not article_id or not author_id:
         return
-    to_ids = _extract_article_links_from_blocks(article.get('blocks') or [])
-    # Очищаем старые связи.
-    CONN.execute('DELETE FROM article_links WHERE from_id = ?', (article_id,))
-    if not to_ids:
-        return
-    # Вставляем новые, игнорируя ссылки на несуществующие статьи.
-    values = [(article_id, tid, 'internal') for tid in to_ids if tid and tid != article_id]
-    if not values:
-        return
-    # Используем единый синтаксис UPSERT, который поддерживается и SQLite (3.24+) и PostgreSQL.
-    CONN.executemany(
-        '''
-        INSERT INTO article_links (from_id, to_id, kind)
-        VALUES (?, ?, ?)
-        ON CONFLICT (from_id, to_id) DO NOTHING
-        ''',
-        values,
-    )
+    # Полностью пересчитываем связи по всем блокам статьи.
+    _rebuild_article_links_for_article_id(article_id)
 
 
 BLOCK_INSERT_SQL = '''
@@ -765,6 +804,52 @@ def push_text_history_entry(article: Dict[str, Any], block_id: str, before: str,
     return entry
 
 
+def _update_article_links_for_block(
+    article_id: str,
+    block_id: str,
+    old_text: str,
+    new_text: str,
+) -> None:
+    """
+    Инкрементально обновляет article_links для одного блока:
+    - вычитает ссылки, которые были в старом тексте, но исчезли;
+    - добавляет ссылки, которые появились в новом тексте.
+    """
+    old_ids = _extract_article_ids_from_html(old_text)
+    new_ids = _extract_article_ids_from_html(new_text)
+
+    if not old_ids and not new_ids:
+        return
+
+    to_delete = old_ids - new_ids
+    to_add = new_ids - old_ids
+
+    if to_delete:
+        placeholders = ','.join('?' for _ in to_delete)
+        CONN.execute(
+            f'''
+            DELETE FROM article_links
+            WHERE from_id = ? AND block_id = ? AND to_id IN ({placeholders})
+            ''',
+            (article_id, block_id, *to_delete),
+        )
+
+    if to_add:
+        values = [
+            (article_id, block_id, tid, 'internal')
+            for tid in to_add
+            if tid and tid != article_id
+        ]
+        if values:
+            CONN.executemany(
+                '''
+                INSERT INTO article_links (from_id, block_id, to_id, kind)
+                VALUES (?, ?, ?, ?)
+                ''',
+                values,
+            )
+
+
 def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # Оптимизированный вариант, который не перезаписывает всю статью
     if 'text' in attrs or 'collapsed' in attrs:
@@ -775,7 +860,10 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
         with CONN:
             # Получаем данные блока один раз, чтобы проверить его существование
             # и получить необходимые поля (text и rowid)
-            block_data = CONN.execute('SELECT text, block_rowid FROM blocks WHERE id = ?', (block_id,)).fetchone()
+            block_data = CONN.execute(
+                'SELECT text, block_rowid FROM blocks WHERE id = ?',
+                (block_id,),
+            ).fetchone()
             if not block_data:
                 raise BlockNotFound(f'Блок с ID {block_id} не найден.')
             block_rowid = block_data['block_rowid']
@@ -795,24 +883,43 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
                 author_id = article_row['author_id']
                 if author_id:
                     new_text = _expand_wikilinks(new_text, author_id)
-                
+
                 article_history = deserialize_history(article_row['history'])
-                
-                history_entry = push_text_history_entry({'history': article_history, 'redoHistory': []}, block_id, previous_text, new_text)
-                
+
+                history_entry = push_text_history_entry(
+                    {'history': article_history, 'redoHistory': []},
+                    block_id,
+                    previous_text,
+                    new_text,
+                )
+
                 plain_text = strip_html(new_text)
                 lemma = build_lemma(plain_text)
                 normalized_text = build_normalized_tokens(plain_text)
 
-                CONN.execute('UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ?', (new_text, normalized_text, now, block_id))
+                CONN.execute(
+                    'UPDATE blocks SET text = ?, normalized_text = ?, updated_at = ? WHERE id = ?',
+                    (new_text, normalized_text, now, block_id),
+                )
                 upsert_block_search_index(block_rowid, article_id, new_text, lemma, normalized_text)
-                CONN.execute('UPDATE articles SET updated_at = ?, history = ?, redo_history = ? WHERE id = ?', (now, serialize_history(article_history), '[]', article_id))
+                CONN.execute(
+                    'UPDATE articles SET updated_at = ?, history = ?, redo_history = ? WHERE id = ?',
+                    (now, serialize_history(article_history), '[]', article_id),
+                )
                 response['text'] = new_text
+                # После изменения текста блока инкрементально обновляем связи.
+                _update_article_links_for_block(article_id, block_id, previous_text, new_text)
 
             if 'collapsed' in attrs:
                 collapsed_val = bool(attrs['collapsed'])
-                CONN.execute('UPDATE blocks SET collapsed = ?, updated_at = ? WHERE id = ?', (int(collapsed_val), now, block_id))
-                CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+                CONN.execute(
+                    'UPDATE blocks SET collapsed = ?, updated_at = ? WHERE id = ?',
+                    (int(collapsed_val), now, block_id),
+                )
+                CONN.execute(
+                    'UPDATE articles SET updated_at = ? WHERE id = ?',
+                    (now, article_id),
+                )
                 response['collapsed'] = collapsed_val
 
         if history_entry:
@@ -857,6 +964,8 @@ def insert_block(article_id: str, target_block_id: str, direction: str, payload:
     inserted = _insert_block_tree(article_id, new_block, target['parent_id'], insertion, now)
     with CONN:
         CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+        # Новый блок мог содержать ссылки — обновляем связи статьи.
+        _rebuild_article_links_for_article_id(article_id)
     return {'block': inserted, 'parentId': target['parent_id'], 'index': insertion}
 
 
@@ -904,6 +1013,8 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
             (article_id, *params, target_row['position']),
         )
         CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+        # После удаления блока пересчитываем связи для статьи.
+        _rebuild_article_links_for_article_id(article_id)
     return {
         'removedBlockId': block_id,
         'parentId': parent_id,
@@ -1022,6 +1133,8 @@ def restore_block(article_id: str, parent_id: Optional[str], index: Optional[int
     inserted = _insert_block_tree(article_id, restored, parent_id, insertion, now)
     with CONN:
         CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+        # Восстановленный блок мог содержать ссылки.
+        _rebuild_article_links_for_article_id(article_id)
     return {'block': inserted, 'parentId': parent_id or None, 'index': insertion}
 
 

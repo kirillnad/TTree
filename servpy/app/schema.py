@@ -69,9 +69,10 @@ def _init_sqlite_schema():
         '''
         CREATE TABLE IF NOT EXISTS article_links (
             from_id TEXT NOT NULL,
+            block_id TEXT NOT NULL DEFAULT '',
             to_id TEXT NOT NULL,
             kind TEXT NOT NULL DEFAULT 'internal',
-            PRIMARY KEY (from_id, to_id),
+            PRIMARY KEY (from_id, block_id, to_id),
             FOREIGN KEY(from_id) REFERENCES articles(id) ON DELETE CASCADE,
             FOREIGN KEY(to_id) REFERENCES articles(id) ON DELETE CASCADE
         )
@@ -108,6 +109,40 @@ def _init_sqlite_schema():
     if 'public_slug' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN public_slug TEXT")
         execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug)")
+
+    # Миграция article_links для добавления block_id и нового первичного ключа.
+    link_columns = execute("PRAGMA table_info(article_links)").fetchall()
+    link_col_names = {col['name'] for col in link_columns}
+    if link_columns and 'block_id' not in link_col_names:
+        # Пересоздаём таблицу article_links с нужной схемой, сохраняя данные.
+        execute('DROP TABLE IF EXISTS article_links_new')
+        execute(
+            '''
+            CREATE TABLE article_links_new (
+                from_id TEXT NOT NULL,
+                block_id TEXT NOT NULL DEFAULT '',
+                to_id TEXT NOT NULL,
+                kind TEXT NOT NULL DEFAULT 'internal',
+                PRIMARY KEY (from_id, block_id, to_id),
+                FOREIGN KEY(from_id) REFERENCES articles(id) ON DELETE CASCADE,
+                FOREIGN KEY(to_id) REFERENCES articles(id) ON DELETE CASCADE
+            )
+            ''',
+        )
+        execute(
+            '''
+            INSERT INTO article_links_new (from_id, block_id, to_id, kind)
+            SELECT from_id, '', to_id, kind FROM article_links
+            ''',
+        )
+        execute('DROP TABLE article_links')
+        execute('ALTER TABLE article_links_new RENAME TO article_links')
+        execute(
+            '''
+            CREATE INDEX IF NOT EXISTS idx_article_links_to
+            ON article_links(to_id)
+            ''',
+        )
 
     execute('DROP TABLE IF EXISTS blocks_fts')
     execute(
@@ -239,9 +274,10 @@ def _init_postgres_schema():
         '''
         CREATE TABLE IF NOT EXISTS article_links (
             from_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            block_id TEXT NOT NULL DEFAULT '',
             to_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
             kind TEXT NOT NULL DEFAULT 'internal',
-            PRIMARY KEY (from_id, to_id)
+            PRIMARY KEY (from_id, block_id, to_id)
         )
         ''',
         '''
@@ -253,7 +289,8 @@ def _init_postgres_schema():
     for stmt in statements:
         execute(stmt)
 
-    # Ensure author_id, encryption flags and is_superuser exist even if tables pre-existed.
+    # Ensure author_id, encryption flags, is_superuser and article_links.block_id exist
+    # even if tables pre-existed.
     execute(
         """
         DO $$
@@ -308,6 +345,27 @@ def _init_postgres_schema():
                 ALTER TABLE articles ADD COLUMN public_slug TEXT;
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug);
             END IF;
+
+            -- article_links.block_id и обновлённый первичный ключ
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'article_links' AND column_name = 'block_id'
+            ) THEN
+                ALTER TABLE article_links ADD COLUMN block_id TEXT NOT NULL DEFAULT '';
+            END IF;
+
+            -- Обновляем первичный ключ article_links до (from_id, block_id, to_id)
+            BEGIN
+                ALTER TABLE article_links DROP CONSTRAINT IF EXISTS article_links_pkey;
+            EXCEPTION
+                WHEN undefined_object THEN
+                    NULL;
+            END;
+
+            ALTER TABLE article_links
+                ADD CONSTRAINT article_links_pkey
+                PRIMARY KEY (from_id, block_id, to_id);
         END$$;
         """
     )
