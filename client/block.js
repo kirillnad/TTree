@@ -44,6 +44,9 @@ export function moveSelection(offset) {
   if (index === -1) return;
   const next = ordered[index + offset];
   if (next) {
+    if (state.mode === 'view') {
+      state.scrollTargetBlockId = next.id;
+    }
     // Обычное перемещение стрелками — сбрасываем мультивыделение.
     setCurrentBlockInternal(next.id, { preserveSelection: false });
   }
@@ -60,9 +63,6 @@ function setCurrentBlockInternal(blockId, options = {}) {
   if (!preserveSelection) {
     state.selectionAnchorBlockId = null;
     state.selectedBlockIds = [];
-  }
-  if (state.mode === 'view') {
-    state.scrollTargetBlockId = blockId;
   }
   renderArticle();
 }
@@ -414,6 +414,21 @@ export function cleanupEditableHtml(html = '') {
     const rawText = (p.textContent || '').replace(/\u00a0/g, ' ').trim();
     const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
     if (!rawText && !inner) {
+      p.remove();
+    }
+  });
+
+  // Схлопываем последовательности пустых абзацев: оставляем не более одного подряд.
+  template.content.querySelectorAll('p').forEach((p) => {
+    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
+    if (inner) return;
+    const prev = p.previousElementSibling;
+    if (!prev || prev.tagName !== 'P') return;
+    const prevInner = (prev.innerHTML || '')
+      .replace(/&nbsp;/gi, '')
+      .replace(/<br\s*\/?>/gi, '')
+      .trim();
+    if (!prevInner) {
       p.remove();
     }
   });

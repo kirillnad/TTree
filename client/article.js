@@ -158,10 +158,46 @@ async function renderBlocks(blocks, container) {
     const content = document.createElement('div');
     content.className = 'block-content';
 
-    const sections = extractBlockSections(block.text || '');
-    const hasTitle = Boolean(sections.titleHtml);
-    const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
+    let sections = extractBlockSections(block.text || '');
+    let hasTitle = Boolean(sections.titleHtml);
+    let hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
     const hasChildren = Boolean(block.children?.length);
+
+    // Если у блока явно нет заголовка, но есть дети и в содержимом
+    // всего одна непустая строка, считаем её заголовком при отрисовке.
+    if (!hasTitle && hasChildren) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = sections.bodyHtml || block.text || '';
+      const meaningful = Array.from(tmp.childNodes || []).filter((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return (node.textContent || '').trim().length > 0;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.tagName === 'BR') return false;
+          if (node.tagName === 'P') {
+            const inner = (node.innerHTML || '')
+              .replace(/&nbsp;/gi, '')
+              .replace(/<br\s*\/?>/gi, '')
+              .trim();
+            return inner.length > 0;
+          }
+          return true;
+        }
+        return false;
+      });
+      if (meaningful.length === 1) {
+        const only = meaningful[0];
+        if (only.nodeType === Node.ELEMENT_NODE && only.tagName === 'P') {
+          sections = {
+            titleHtml: only.outerHTML,
+            bodyHtml: '',
+          };
+          hasTitle = true;
+          hasBodyContent = false;
+        }
+      }
+    }
+
     const canCollapse = hasTitle || hasChildren;
     const hasNoTitleNoChildren = !hasTitle && !hasChildren;
     blockEl.classList.toggle('block--no-title', !hasTitle);
@@ -206,7 +242,12 @@ async function renderBlocks(blocks, container) {
       requestAnimationFrame(() => {
         // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
         document.execCommand('defaultParagraphSeparator', false, 'p');
-        body.focus();
+        // Не скроллим страницу при входе в режим редактирования.
+        try {
+          body.focus({ preventScroll: true });
+        } catch {
+          body.focus();
+        }
         if (state.editingCaretPosition === 'start') {
           body.scrollTop = 0;
           placeCaretAtStart(body);
@@ -272,9 +313,13 @@ async function renderBlocks(blocks, container) {
     }
 
     if (header) content.appendChild(header);
-    // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
-    // Это предотвращает "прыжки" при переключении в режим редактирования.
-    content.appendChild(body);
+    // В режиме просмотра не рисуем пустое тело для блоков с заголовком,
+    // чтобы не занимать лишнее место. В режиме редактирования и для
+    // блоков без заголовка тело нужно всегда.
+    const shouldRenderBody = isEditingThisBlock || !hasTitle || Boolean(bodyHtml);
+    if (shouldRenderBody) {
+      content.appendChild(body);
+    }
 
     surface.appendChild(content);
 
@@ -1138,7 +1183,9 @@ export async function loadArticleView(id) {
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
     const editTarget = state.pendingEditBlockId || undefined;
-    const desired = state.scrollTargetBlockId || editTarget || undefined;
+    // При входе в режим редактирования не скроллим блок к центру,
+    // а используем scrollTargetBlockId только для переходов/поиска.
+    const desired = state.scrollTargetBlockId || undefined;
     await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired, editBlockId: editTarget });
     renderArticle();
   } catch (error) {
@@ -1283,7 +1330,8 @@ export function renderArticle() {
         state.scrollTargetBlockId = null;
       });
     }
-    ensureEditingBlockVisible();
+    // При открытии блока на редактирование не принудительно "центрируем" его,
+    // чтобы не было резкого автоскролла.
     focusEditingBlock();
   });
 }
