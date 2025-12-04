@@ -67,6 +67,7 @@ export const refs = {
   articleUndoBtn: document.getElementById('articleUndoBtn'),
   articleRedoBtn: document.getElementById('articleRedoBtn'),
   mergeBlocksBtn: document.getElementById('mergeBlocksBtn'),
+  insertTableBtn: document.getElementById('insertTableBtn'),
   articleNewBlockBtn: document.getElementById('articleNewBlockBtn'),
   pasteProgress: document.getElementById('pasteProgress'),
   mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),

@@ -199,7 +199,21 @@ export function buildEditableBlockHtml(html = '') {
   const sections = extractBlockSections(html);
   if (!sections.titleHtml) return html || '';
   const titleContent = normalizeToParagraphs(sections.titleHtml);
-  const bodyContent = normalizeToParagraphs(sections.bodyHtml || '');
+  // Очищаем ведущие «пустые» абзацы в теле (p/br),
+  // чтобы между заголовком и телом всегда была ровно одна пустая строка.
+  let bodyHtml = sections.bodyHtml || '';
+  if (bodyHtml) {
+    const tmp = document.createElement('template');
+    tmp.innerHTML = bodyHtml;
+    let first = tmp.content.firstChild;
+    while (first && isSeparatorNode(first)) {
+      const toRemove = first;
+      first = first.nextSibling;
+      tmp.content.removeChild(toRemove);
+    }
+    bodyHtml = tmp.innerHTML;
+  }
+  const bodyContent = normalizeToParagraphs(bodyHtml || '');
   return `${titleContent}<p><br /></p>${bodyContent}`;
 }
 
@@ -294,6 +308,12 @@ export function cleanupEditableHtml(html = '') {
     return tableResult;
   }
 
+  // Удаляем служебные элементы UI (панель управления таблицей и её кнопки),
+  // чтобы они не попадали в сохранённый HTML блока.
+  template.content.querySelectorAll('.table-toolbar, .table-toolbar-btn').forEach((node) => {
+    node.remove();
+  });
+
   // СЂР°Р·РІРѕСЂР°С‡РёРІР°РµРј .block-header, СѓР±РёСЂР°РµРј РєР»Р°СЃСЃС‹
   template.content.querySelectorAll('.block-header').forEach((node) => {
     const parent = node.parentNode;
@@ -354,7 +374,9 @@ export function cleanupEditableHtml(html = '') {
     }
   });
 
-  // remove trailing empty paragraphs
+  // remove trailing empty paragraphs,
+  // но оставляем ОДИН пустой <p> сразу после таблицы,
+  // чтобы под таблицей можно было поставить курсор и дописать текст.
   const nodes = Array.from(template.content.childNodes || []);
   for (let i = nodes.length - 1; i >= 0; i -= 1) {
     const node = nodes[i];
@@ -368,6 +390,17 @@ export function cleanupEditableHtml(html = '') {
     if (node.tagName === 'P') {
       const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').replace(/<br\s*\/?>/gi, '').trim();
       if (!inner) {
+        const prev = node.previousSibling;
+        if (
+          prev &&
+          prev.nodeType === Node.ELEMENT_NODE &&
+          prev.tagName === 'TABLE' &&
+          prev.classList &&
+          prev.classList.contains('memus-table')
+        ) {
+          // Это единственная пустая строка сразу после таблицы — оставляем.
+          break;
+        }
         if (node.parentNode) node.parentNode.removeChild(node);
         continue;
       }
@@ -767,6 +800,29 @@ export function attachRichContentHandlers(element, blockId) {
     if (hasFiles) {
       event.preventDefault();
     }
+  });
+
+  element.addEventListener('keydown', (event) => {
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    if (event.key !== 'Tab') return;
+    // Таб в режиме редактирования: не уходим на другие контролы,
+    // а смещаем элементы списка (ul/ol) вправо/влево.
+    event.preventDefault();
+    event.stopPropagation();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const node =
+      range.commonAncestorContainer?.nodeType === Node.ELEMENT_NODE
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer?.parentElement;
+    const li = node?.closest?.('li');
+    if (!li) {
+      // Не в элементе списка — просто блокируем переход фокуса.
+      return;
+    }
+    const command = event.shiftKey ? 'outdent' : 'indent';
+    document.execCommand(command, false, null);
   });
 
   // Не перехватываем PageUp/PageDown и колесо мыши в режиме редактирования,

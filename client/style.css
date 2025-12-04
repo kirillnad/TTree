@@ -546,7 +546,7 @@ main.content {
   position: sticky;
   top: 0;
   z-index: 15;
-  /* background: #ededed; */
+  background: #f9fafb;
   border-bottom: 1px solid #dcdcdc;
   margin-bottom: 0.4rem;
   padding: 0.4rem 0.5rem;
@@ -1064,6 +1064,13 @@ button:hover {
   cursor: col-resize;
   user-select: none;
   z-index: 5;
+  /* Небольшой визуальный индикатор, чтобы было за что "схватиться" */
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(31, 41, 55, 0.45),
+    transparent
+  );
 }
 
 .block.editing > .block-surface > .block-text {
@@ -2053,6 +2060,10 @@ main.content {
 }
 
 @media (max-width: 640px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+  }
   .app-shell {
     flex-direction: column;
     height: auto;
@@ -2125,6 +2136,20 @@ main.content {
   }
   .mobile-only {
     display: inline-flex;
+  }
+  /* В мобильном режиме скроллим body, а не внутренние контейнеры,
+     чтобы sticky-заголовок статьи оставался на месте. */
+  .app-shell,
+  main.content,
+  .panel {
+    overflow: visible;
+  }
+  /* В мобильном режиме прокручиваем всю страницу,
+     а не внутренние списки, чтобы sticky-заголовок статьи оставался на месте. */
+  #articleList,
+  #blocksContainer {
+    overflow-y: visible;
+    padding-right: 0;
   }
 }
 

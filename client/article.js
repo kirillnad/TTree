@@ -143,6 +143,262 @@ async function encryptAllBlocksOnServer(article, key) {
   }
 }
 
+async function renderBlocks(blocks, container) {
+  for (const block of blocks) {
+    const blockEl = document.createElement('div');
+    blockEl.className = 'block';
+    blockEl.dataset.blockId = block.id;
+    const isSelected =
+      block.id === state.currentBlockId ||
+      (Array.isArray(state.selectedBlockIds) && state.selectedBlockIds.includes(block.id));
+    if (isSelected) blockEl.classList.add('selected');
+    if (block.id === state.editingBlockId) blockEl.classList.add('editing');
+    const surface = document.createElement('div');
+    surface.className = 'block-surface';
+    const content = document.createElement('div');
+    content.className = 'block-content';
+
+    const sections = extractBlockSections(block.text || '');
+    const hasTitle = Boolean(sections.titleHtml);
+    const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
+    const hasChildren = Boolean(block.children?.length);
+    const canCollapse = hasTitle || hasChildren;
+    const hasNoTitleNoChildren = !hasTitle && !hasChildren;
+    blockEl.classList.toggle('block--no-title', !hasTitle);
+
+    const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
+
+    if (canCollapse || hasNoTitleNoChildren) {
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'collapse-btn';
+      if (hasNoTitleNoChildren) {
+        collapseBtn.classList.add('collapse-btn--placeholder');
+        collapseBtn.setAttribute('aria-hidden', 'true');
+        collapseBtn.removeAttribute('aria-expanded');
+        collapseBtn.removeAttribute('title');
+      } else {
+        collapseBtn.setAttribute('aria-expanded', block.collapsed ? 'false' : 'true');
+        collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
+        collapseBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleCollapse(block.id);
+        });
+      }
+      surface.appendChild(collapseBtn);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'block-text block-body';
+    const rawHtml = block.text || '';
+    const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
+    body.innerHTML = bodyHtml || '';
+    if (!hasTitle) body.classList.add('block-body--no-title');
+    if (!bodyHtml) body.classList.add('block-body--empty');
+    body.spellcheck = false;
+    body.setAttribute('data-placeholder', 'Введите текст');
+
+    if (state.mode === 'edit' && state.editingBlockId === block.id) {
+      const { buildEditableBlockHtml } = await import('./block.js');
+      body.setAttribute('contenteditable', 'true');
+      body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<br />';
+      body.classList.remove('block-body--empty');
+      // body.classList.remove('block-body--no-title'); // Оставляем класс для корректных стилей
+      requestAnimationFrame(() => {
+        // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
+        document.execCommand('defaultParagraphSeparator', false, 'p');
+        body.focus();
+        if (state.editingCaretPosition === 'start') {
+          body.scrollTop = 0;
+          placeCaretAtStart(body);
+        } else {
+          placeCaretAtEnd(body);
+        }
+      });
+    } else {
+      body.setAttribute('contenteditable', 'false');
+    }
+
+    body.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (state.mode === 'view') setCurrentBlock(block.id);
+    });
+
+    body.addEventListener('dblclick', (event) => {
+      event.stopPropagation();
+      if (state.mode !== 'view') return;
+      setCurrentBlock(block.id);
+      startEditing();
+    });
+
+    let header = null;
+    if (!isEditingThisBlock) {
+      header = document.createElement('div');
+      header.className = 'block-header';
+      if (!hasTitle) {
+        header.classList.add('block-header--no-title');
+      }
+      const headerLeft = document.createElement('div');
+      headerLeft.className = 'block-header__left';
+
+      if (hasTitle) {
+        const titleEl = document.createElement('div');
+        titleEl.className = 'block-title';
+        titleEl.innerHTML = sections.titleHtml;
+        titleEl.style.flex = '1';
+        titleEl.style.minWidth = '0';
+        headerLeft.appendChild(titleEl);
+      } else {
+        const spacer = document.createElement('div');
+        spacer.className = 'block-title-spacer';
+        spacer.style.flex = '1';
+        spacer.style.minWidth = '0';
+        headerLeft.appendChild(spacer);
+      }
+
+      if (state.articleId === 'inbox') {
+        const moveBtn = document.createElement('button');
+        moveBtn.type = 'button';
+        moveBtn.className = 'ghost small move-block-btn';
+        moveBtn.innerHTML = '&#10140;';
+        moveBtn.title = 'Перенести блок в другую статью';
+        moveBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          moveBlockFromInbox(block.id);
+        });
+        headerLeft.appendChild(moveBtn);
+      }
+
+      header.appendChild(headerLeft);
+    }
+
+    if (header) content.appendChild(header);
+    // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
+    // Это предотвращает "прыжки" при переключении в режим редактирования.
+    content.appendChild(body);
+
+    surface.appendChild(content);
+
+    if (isEditingThisBlock) {
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (isTouchDevice) {
+        content.addEventListener('click', (event) => {
+          const editable = content.querySelector('.block-text[contenteditable="true"]');
+          if (!editable) return;
+          if (editable.contains(event.target)) return;
+          event.stopPropagation();
+          editable.focus();
+          if (state.editingCaretPosition === 'start') {
+            editable.scrollTop = 0;
+            placeCaretAtStart(editable);
+          } else {
+            placeCaretAtEnd(editable);
+          }
+        });
+      }
+    }
+    registerBlockDragSource(surface, block.id);
+
+    if (isEditingThisBlock) {
+      const actions = document.createElement('div');
+      actions.className = 'block-edit-actions';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'ghost small';
+      saveBtn.textContent = 'Сохранить';
+      saveBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await saveEditing();
+      });
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'ghost small';
+      cancelBtn.textContent = 'Отмена';
+      cancelBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        cancelEditing();
+      });
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(saveBtn);
+      content.appendChild(actions);
+    }
+
+    attachRichContentHandlers(body, block.id);
+
+    blockEl.appendChild(surface);
+
+    blockEl.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (state.mode === 'view') setCurrentBlock(block.id);
+    });
+
+    surface.addEventListener('dblclick', (event) => {
+      if (state.mode !== 'view') return;
+      const interactive = event.target.closest('button, a, [contenteditable="true"]');
+      if (interactive && !interactive.matches('.block-text[contenteditable="true"]')) return;
+      event.stopPropagation();
+      setCurrentBlock(block.id);
+      startEditing();
+    });
+
+    const shouldHideBody = block.collapsed && block.id !== state.editingBlockId && hasTitle;
+    if (!body.classList.contains('block-body--empty')) {
+      body.classList.toggle('collapsed', shouldHideBody);
+    }
+
+    let childrenContainer = null;
+    if (block.children?.length > 0 && !block.collapsed) {
+      childrenContainer = document.createElement('div');
+      childrenContainer.className = 'block-children';
+      // eslint-disable-next-line no-await-in-loop
+      await renderBlocks(block.children, childrenContainer);
+    }
+
+    container.appendChild(blockEl);
+    if (childrenContainer) {
+      if (isEditingThisBlock) {
+        container.appendChild(childrenContainer);
+      } else {
+        blockEl.appendChild(childrenContainer);
+      }
+    }
+    // Overlay drag handles removed: inline handle is now primary.
+  }
+}
+
+export async function rerenderSingleBlock(blockId) {
+  if (!state.article || !Array.isArray(state.article.blocks)) return;
+  const located = findBlock(blockId);
+  if (!located) return;
+  const oldBlockEl = document.querySelector(`.block[data-block-id="${blockId}"]`);
+  if (!oldBlockEl) return;
+  const container = oldBlockEl.parentElement;
+  if (!container) return;
+  // В режиме редактирования дети блока могут быть рендерены отдельным .block-children сразу после него.
+  const extraNodes = [];
+  let cursor = oldBlockEl.nextElementSibling;
+  if (cursor && cursor.classList.contains('block-children')) {
+    extraNodes.push(cursor);
+  }
+  const insertBefore = (extraNodes[extraNodes.length - 1] || oldBlockEl).nextSibling;
+  container.removeChild(oldBlockEl);
+  extraNodes.forEach((node) => {
+    if (node.parentNode === container) {
+      container.removeChild(node);
+    }
+  });
+  const tmp = document.createElement('div');
+  await renderBlocks([located.block], tmp);
+  const newNodes = Array.from(tmp.childNodes);
+  newNodes.forEach((node) => {
+    container.insertBefore(node, insertBefore);
+  });
+}
+
 export async function toggleArticleEncryption() {
   if (!state.article || !state.articleId) {
     showToast('Сначала откройте статью');
@@ -1000,232 +1256,6 @@ export function renderArticle() {
     }
   };
 
-  const renderBlocks = async (blocks, container) => {
-    for (const block of blocks) {
-      const blockEl = document.createElement('div');
-      blockEl.className = 'block';
-      blockEl.dataset.blockId = block.id;
-      const isSelected =
-        block.id === state.currentBlockId ||
-        (Array.isArray(state.selectedBlockIds) && state.selectedBlockIds.includes(block.id));
-      if (isSelected) blockEl.classList.add('selected');
-      if (block.id === state.editingBlockId) blockEl.classList.add('editing');
-      const surface = document.createElement('div');
-      surface.className = 'block-surface';
-      const content = document.createElement('div');
-      content.className = 'block-content';
-
-      const sections = extractBlockSections(block.text || '');
-      const hasTitle = Boolean(sections.titleHtml);
-      const hasBodyContent = Boolean(sections.bodyHtml && sections.bodyHtml.trim());
-      const hasChildren = Boolean(block.children?.length);
-      const canCollapse = hasTitle || hasChildren;
-      const hasNoTitleNoChildren = !hasTitle && !hasChildren;
-      blockEl.classList.toggle('block--no-title', !hasTitle);
-
-      const isEditingThisBlock = state.mode === 'edit' && state.editingBlockId === block.id;
-
-      if (canCollapse || hasNoTitleNoChildren) {
-        const collapseBtn = document.createElement('button');
-        collapseBtn.className = 'collapse-btn';
-        if (hasNoTitleNoChildren) {
-          collapseBtn.classList.add('collapse-btn--placeholder');
-          collapseBtn.setAttribute('aria-hidden', 'true');
-          collapseBtn.removeAttribute('aria-expanded');
-          collapseBtn.removeAttribute('title');
-        } else {
-          collapseBtn.setAttribute('aria-expanded', block.collapsed ? 'false' : 'true');
-          collapseBtn.title = block.collapsed ? 'Развернуть' : 'Свернуть';
-          collapseBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            toggleCollapse(block.id);
-          });
-        }
-        surface.appendChild(collapseBtn);
-      }
-
-      const body = document.createElement('div');
-      body.className = 'block-text block-body';
-      const rawHtml = block.text || '';
-      const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
-      body.innerHTML = bodyHtml || '';
-      if (!hasTitle) body.classList.add('block-body--no-title');
-      if (!bodyHtml) body.classList.add('block-body--empty');
-      body.spellcheck = false;
-      body.setAttribute('data-placeholder', 'Введите текст');
-
-      if (state.mode === 'edit' && state.editingBlockId === block.id) {
-        const { buildEditableBlockHtml } = await import('./block.js');
-        body.setAttribute('contenteditable', 'true');
-        body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<br />';
-        body.classList.remove('block-body--empty');
-        // body.classList.remove('block-body--no-title'); // Оставляем класс для корректных стилей
-        requestAnimationFrame(() => {
-          // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
-          document.execCommand('defaultParagraphSeparator', false, 'p');
-          body.focus();
-          if (state.editingCaretPosition === 'start') {
-            body.scrollTop = 0;
-            placeCaretAtStart(body);
-          } else {
-            placeCaretAtEnd(body);
-          }
-        });
-      } else {
-        body.setAttribute('contenteditable', 'false');
-      }
-
-      body.addEventListener('click', (event) => {
-        event.stopPropagation();
-        if (state.mode === 'view') setCurrentBlock(block.id);
-      });
-
-      body.addEventListener('dblclick', (event) => {
-        event.stopPropagation();
-        if (state.mode !== 'view') return;
-        setCurrentBlock(block.id);
-        startEditing();
-      });
-
-      let header = null;
-      if (!isEditingThisBlock) {
-        header = document.createElement('div');
-        header.className = 'block-header';
-        if (!hasTitle) {
-          header.classList.add('block-header--no-title');
-        }
-        const headerLeft = document.createElement('div');
-        headerLeft.className = 'block-header__left';
-
-        if (hasTitle) {
-          const titleEl = document.createElement('div');
-          titleEl.className = 'block-title';
-          titleEl.innerHTML = sections.titleHtml;
-          titleEl.style.flex = '1';
-          titleEl.style.minWidth = '0';
-          headerLeft.appendChild(titleEl);
-        } else {
-          const spacer = document.createElement('div');
-          spacer.className = 'block-title-spacer';
-          spacer.style.flex = '1';
-          spacer.style.minWidth = '0';
-        headerLeft.appendChild(spacer);
-        }
-
-        if (state.articleId === 'inbox') {
-          const moveBtn = document.createElement('button');
-          moveBtn.type = 'button';
-          moveBtn.className = 'ghost small move-block-btn';
-          moveBtn.innerHTML = '&#10140;';
-          moveBtn.title = 'Перенести блок в другую статью';
-          moveBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            moveBlockFromInbox(block.id);
-          });
-          headerLeft.appendChild(moveBtn);
-        }
-
-        header.appendChild(headerLeft);
-      }
-
-      if (header) content.appendChild(header);
-      // Тело блока теперь всегда добавляется, а его видимость контролируется через CSS (display: none для .collapsed)
-      // Это предотвращает "прыжки" при переключении в режим редактирования.
-      content.appendChild(body);
-
-      surface.appendChild(content);
-
-      if (isEditingThisBlock) {
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        if (isTouchDevice) {
-          content.addEventListener('click', (event) => {
-            const editable = content.querySelector('.block-text[contenteditable="true"]');
-            if (!editable) return;
-            if (editable.contains(event.target)) return;
-            event.stopPropagation();
-            editable.focus();
-            if (state.editingCaretPosition === 'start') {
-              editable.scrollTop = 0;
-              placeCaretAtStart(editable);
-            } else {
-              placeCaretAtEnd(editable);
-            }
-          });
-        }
-      }
-      registerBlockDragSource(surface, block.id);
-
-      if (isEditingThisBlock) {
-        const actions = document.createElement('div');
-        actions.className = 'block-edit-actions';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.className = 'ghost small';
-        saveBtn.textContent = 'Сохранить';
-        saveBtn.addEventListener('click', async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          await saveEditing();
-        });
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'ghost small';
-        cancelBtn.textContent = 'Отмена';
-        cancelBtn.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          cancelEditing();
-        });
-
-        actions.appendChild(cancelBtn);
-        actions.appendChild(saveBtn);
-        content.appendChild(actions);
-      }
-
-      attachRichContentHandlers(body, block.id);
-
-      blockEl.appendChild(surface);
-
-      blockEl.addEventListener('click', (event) => {
-        event.stopPropagation();
-        if (state.mode === 'view') setCurrentBlock(block.id);
-      });
-
-      surface.addEventListener('dblclick', (event) => {
-        if (state.mode !== 'view') return;
-        const interactive = event.target.closest('button, a, [contenteditable="true"]');
-        if (interactive && !interactive.matches('.block-text[contenteditable="true"]')) return;
-        event.stopPropagation();
-        setCurrentBlock(block.id);
-        startEditing();
-      });
-
-      const shouldHideBody = block.collapsed && block.id !== state.editingBlockId && hasTitle;
-      if (!body.classList.contains('block-body--empty')) {
-        body.classList.toggle('collapsed', shouldHideBody);
-      }
-
-      let childrenContainer = null;
-      if (block.children?.length > 0 && !block.collapsed) {
-        childrenContainer = document.createElement('div');
-        childrenContainer.className = 'block-children';
-        renderBlocks(block.children, childrenContainer);
-      }
-
-      container.appendChild(blockEl);
-      if (childrenContainer) {
-        if (isEditingThisBlock) {
-          container.appendChild(childrenContainer);
-        } else {
-          blockEl.appendChild(childrenContainer);
-        }
-      }
-      // Overlay drag handles removed: inline handle is now primary.
-    }
-  };
-
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
     applyPendingPreviewMarkup();
     if (state.scrollTargetBlockId) {
@@ -1251,7 +1281,6 @@ export function renderArticle() {
         }
         state.currentBlockId = targetId;
         state.scrollTargetBlockId = null;
-        state.editingCaretPosition = 'end';
       });
     }
     ensureEditingBlockVisible();

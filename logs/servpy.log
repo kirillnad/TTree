@@ -36396,3 +36396,1701 @@ INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07a
 INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
 INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/blocks/1b480726-72fe-451b-bc6a-3b39abb8a877 HTTP/1.0" 200 OK
 INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/blocks/1b480726-72fe-451b-bc6a-3b39abb8a877 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/blocks/1b480726-72fe-451b-bc6a-3b39abb8a877 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/blocks/1b480726-72fe-451b-bc6a-3b39abb8a877 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70/collapse HTTP/1.0" 200 OK
+INFO:     162.55.97.171:0 - "GET / HTTP/1.0" 200 OK
+INFO:     103.169.160.163:0 - "GET / HTTP/1.0" 200 OK
+[article_encryption] update_article_meta 144fba13-b39a-4ee4-bfa1-ecad9e07ac70 encrypted= False salt= False verifier= False hint= False
+INFO:     142.252.8.147:0 - "PATCH /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/import/html HTTP/1.0" 400 Bad Request
+INFO:     86.57.140.224:0 - "GET / HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/144fba13-b39a-4ee4-bfa1-ecad9e07ac70 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/c73c7f44-254b-4ca6-95e8-d63411fdfefa HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/c73c7f44-254b-4ca6-95e8-d63411fdfefa HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/c73c7f44-254b-4ca6-95e8-d63411fdfefa/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4d7a4473-88d0-4c4d-aeb8-f7bc9777ff98 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4d7a4473-88d0-4c4d-aeb8-f7bc9777ff98 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4d7a4473-88d0-4c4d-aeb8-f7bc9777ff98/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/9885ac57-db01-4329-8cfc-cd28d1d25fb1 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/9885ac57-db01-4329-8cfc-cd28d1d25fb1 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4d7a4473-88d0-4c4d-aeb8-f7bc9777ff98 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/c73c7f44-254b-4ca6-95e8-d63411fdfefa HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/96ff57b8-cd38-4995-9673-8a000b6930a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/96ff57b8-cd38-4995-9673-8a000b6930a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/96ff57b8-cd38-4995-9673-8a000b6930a0/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/97f84f98-dfc9-4d51-b753-ed7d8240e2d4 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/97f84f98-dfc9-4d51-b753-ed7d8240e2d4 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/97f84f98-dfc9-4d51-b753-ed7d8240e2d4/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8ef3357f-d299-45e9-b804-c9dafcbd02a9 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/13491d46-3d36-40cd-8473-a76c4796af0e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/13491d46-3d36-40cd-8473-a76c4796af0e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/13491d46-3d36-40cd-8473-a76c4796af0e/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bacc4f30-0aca-4db6-bf3b-38a6a17583b5 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bacc4f30-0aca-4db6-bf3b-38a6a17583b5 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/96ff57b8-cd38-4995-9673-8a000b6930a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/96ff57b8-cd38-4995-9673-8a000b6930a0/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f91cabec-ac3d-4532-ba18-d40616692c22 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f91cabec-ac3d-4532-ba18-d40616692c22 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f91cabec-ac3d-4532-ba18-d40616692c22/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/97f84f98-dfc9-4d51-b753-ed7d8240e2d4/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/13491d46-3d36-40cd-8473-a76c4796af0e/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/13491d46-3d36-40cd-8473-a76c4796af0e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/d2bd3293-a99a-4f55-a3bc-46af834aadf6 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/move HTTP/1.0" 400 Bad Request
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/outdent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     104.23.223.16:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.223.17:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     23.23.253.54:0 - "GET /api/auth/google/callback HTTP/1.0" 400 Bad Request
+INFO:     119.12.166.6:0 - "HEAD / HTTP/1.0" 200 OK
+INFO:     172.64.192.5:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.70.91.51:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.86.173:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.94.97:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+psycopg.ProgrammingError: can't change 'autocommit' now: connection in transaction status INTRANS
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1811, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 285, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 275, in app
+    solved_result = await solve_dependencies(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/dependencies/utils.py", line 600, in solve_dependencies
+    solved = await run_in_threadpool(call, **sub_values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 144, in get_current_user
+    user = get_user_by_session(session_id)
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 122, in get_user_by_session
+    _create_sessions_table()
+  File "/home/aadminn/Ttree/TTree/servpy/app/auth.py", line 54, in _create_sessions_table
+    init_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 378, in init_schema
+    _init_postgres_schema()
+  File "/home/aadminn/Ttree/TTree/servpy/app/schema.py", line 290, in _init_postgres_schema
+    execute(stmt)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 156, in execute
+    return CONN.execute(sql, params)
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 112, in execute
+    with self.engine.begin() as conn:
+  File "/usr/lib/python3.8/contextlib.py", line 113, in __enter__
+    return next(self.gen)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3242, in begin
+    with self.connect() as conn:
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1372, in _checkout
+    del fairy
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/pool/base.py", line 1300, in _checkout
+    result = pool._dialect._do_ping_w_event(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/engine/default.py", line 716, in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/sqlalchemy/dialects/postgresql/_psycopg_common.py", line 178, in do_ping
+    dbapi_connection.autocommit = True
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 190, in autocommit
+    self._set_autocommit(value)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 988, in _set_autocommit
+    self.wait(self._set_autocommit_gen(value))
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 970, in wait
+    return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+  File "psycopg_binary/_psycopg/waiting.pyx", line 176, in psycopg_binary._psycopg.wait_c
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 196, in _set_autocommit_gen
+    yield from self._check_intrans_gen("autocommit")
+  File "/home/aadminn/.local/lib/python3.8/site-packages/psycopg/connection.py", line 269, in _check_intrans_gen
+    raise e.ProgrammingError(
+sqlalchemy.exc.ProgrammingError: (psycopg.ProgrammingError) can't change 'autocommit' now: connection in transaction status INTRANS
+(Background on this error at: https://sqlalche.me/e/20/f405)
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f7c6fa12-96c6-41f7-9854-b7e5324b151f HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     172.70.162.143:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     172.71.26.119:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.71.164.187:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.216.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/06f2be33-66bf-4383-bd56-f3ea31918e85 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/80a8e8d3-7f04-4862-b769-e94073969a53 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0dc206bb-b748-4652-9cd6-b68dd4020b2e HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662/move HTTP/1.0" 200 OK
+INFO:     66.132.153.61:0 - "GET / HTTP/1.0" 200 OK
+INFO:     66.132.153.61:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     66.132.153.61:0 - "GET /wiki HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE%D0%BB HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2%D0%BE HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82%D0%B2 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%81 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%82%D1%8C HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D0%B8 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D0%B8%D1%82 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/search?q=%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%20%D1%80%D1%83%D0%BA%D0%BE%D0%B2%D0%BE%D0%B4%D0%B8%D1%82%D1%8C HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/56dd995c-7ac2-4bb8-8c51-8b856906f662 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/ed4f2748-90a8-47fe-b3af-c63a0a8d83c3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     62.109.13.133:0 - "GET / HTTP/1.0" 200 OK
+INFO:     193.142.147.209:0 - "GET /cgi-bin/luci/%3Bstok%3D/locale HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/8cc67035-b71d-4798-b0fa-8e88d8bbb84c/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/de1814c1-e807-4206-87ab-69182b8f3b17 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bacc4f30-0aca-4db6-bf3b-38a6a17583b5 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bacc4f30-0aca-4db6-bf3b-38a6a17583b5/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98537145-d756-4305-b07b-16ac27ffc1a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98537145-d756-4305-b07b-16ac27ffc1a0/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98537145-d756-4305-b07b-16ac27ffc1a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98537145-d756-4305-b07b-16ac27ffc1a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/16c9afa0-9445-4817-95fd-3a2cf5795c90 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET / HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     106.215.174.126:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     106.215.174.126:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     104.23.221.22:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.217.81:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     104.23.217.81:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     162.158.182.165:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/785546cf-c349-4937-a0d3-2dd35bbc1172 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a7cec224-e0eb-40da-92ad-420d013870bb/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/048a073f-e949-4c2e-87c6-d8f1d3949f56 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/16c9afa0-9445-4817-95fd-3a2cf5795c90/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/16c9afa0-9445-4817-95fd-3a2cf5795c90/outdent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/048a073f-e949-4c2e-87c6-d8f1d3949f56/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/785546cf-c349-4937-a0d3-2dd35bbc1172 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/785546cf-c349-4937-a0d3-2dd35bbc1172/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a294f1d9-01d6-44c1-8c48-a1b6d91a09fd HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a294f1d9-01d6-44c1-8c48-a1b6d91a09fd HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a294f1d9-01d6-44c1-8c48-a1b6d91a09fd/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4b0d1cc0-50d8-4504-a6d0-763be90f4761 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4b0d1cc0-50d8-4504-a6d0-763be90f4761 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4b0d1cc0-50d8-4504-a6d0-763be90f4761/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/a294f1d9-01d6-44c1-8c48-a1b6d91a09fd/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/4b0d1cc0-50d8-4504-a6d0-763be90f4761/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98537145-d756-4305-b07b-16ac27ffc1a0 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     172.68.186.91:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     172.70.248.190:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     141.101.98.119:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     172.71.164.187:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     147.185.132.215:0 - "GET / HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1811, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    |     return await run_in_threadpool(dependant.call, **values)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    |     return await anyio.to_thread.run_sync(func, *args)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    |     return await get_async_backend().run_sync_in_worker_thread(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    |     return await future
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    |     result = context.run(func, *args)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 2295, in patch_collapse
+    |     block = update_block_collapse(real_article_id, block_id, collapsed)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 946, in update_block_collapse
+    |     return update_block(article_id, block_id, {'collapsed': collapsed})
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 923, in update_block
+    |     response['collapsed'] = collapsed_val
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 83, in __exit__
+    |     return self._tx.__exit__(exc_type, exc, tb)
+    |   File "/usr/lib/python3.8/contextlib.py", line 124, in __exit__
+    |     raise RuntimeError("generator didn't stop")
+    | RuntimeError: generator didn't stop
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1811, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 2295, in patch_collapse
+    block = update_block_collapse(real_article_id, block_id, collapsed)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 946, in update_block_collapse
+    return update_block(article_id, block_id, {'collapsed': collapsed})
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 923, in update_block
+    response['collapsed'] = collapsed_val
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 83, in __exit__
+    return self._tx.__exit__(exc_type, exc, tb)
+  File "/usr/lib/python3.8/contextlib.py", line 124, in __exit__
+    raise RuntimeError("generator didn't stop")
+RuntimeError: generator didn't stop
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+  |     yield
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+  |     response_sent.set()
+  |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 685, in __aexit__
+  |     raise BaseExceptionGroup(
+  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    |     return await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    |     response_sent.set()
+    |   File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    |     self.gen.throw(type, value, traceback)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1811, in spa_fallback_middleware
+    |     response = await call_next(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    |     raise app_exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    |     raise exc
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    |     response = await func(request)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    |     raise e
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    |     raw_response = await run_endpoint_function(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    |     return await run_in_threadpool(dependant.call, **values)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    |     return await anyio.to_thread.run_sync(func, *args)
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    |     return await get_async_backend().run_sync_in_worker_thread(
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    |     return await future
+    |   File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    |     result = context.run(func, *args)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 2295, in patch_collapse
+    |     block = update_block_collapse(real_article_id, block_id, collapsed)
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 946, in update_block_collapse
+    |     return update_block(article_id, block_id, {'collapsed': collapsed})
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 860, in update_block
+    |     with CONN:
+    |   File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 77, in __enter__
+    |     self._conn = self._tx.__enter__()
+    | AttributeError: 'NoneType' object has no attribute '__enter__'
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/home/aadminn/.local/lib/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response_sent.set()
+  File "/usr/lib/python3.8/contextlib.py", line 131, in __exit__
+    self.gen.throw(type, value, traceback)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_utils.py", line 91, in collapse_excgroups
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 191, in __call__
+    response = await self.dispatch_func(request, call_next)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 1811, in spa_fallback_middleware
+    response = await call_next(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 165, in call_next
+    raise app_exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/base.py", line 151, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 762, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 782, in app
+    await route.handle(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 299, in app
+    raise e
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 294, in app
+    raw_response = await run_endpoint_function(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/starlette/concurrency.py", line 40, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/to_thread.py", line 56, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 2364, in run_sync_in_worker_thread
+    return await future
+  File "/home/aadminn/.local/lib/python3.8/site-packages/anyio/_backends/_asyncio.py", line 864, in run
+    result = context.run(func, *args)
+  File "/home/aadminn/Ttree/TTree/servpy/app/main.py", line 2295, in patch_collapse
+    block = update_block_collapse(real_article_id, block_id, collapsed)
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 946, in update_block_collapse
+    return update_block(article_id, block_id, {'collapsed': collapsed})
+  File "/home/aadminn/Ttree/TTree/servpy/app/data_store.py", line 860, in update_block
+    with CONN:
+  File "/home/aadminn/Ttree/TTree/servpy/app/db.py", line 77, in __enter__
+    self._conn = self._tx.__enter__()
+AttributeError: 'NoneType' object has no attribute '__enter__'
+INFO:     146.112.163.35:0 - "GET / HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     146.112.163.35:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     146.112.163.35:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/0ecd83ef-1d61-4407-a1e8-9c092a7d7853 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 400 Bad Request
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/outdent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/indent HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 400 Bad Request
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     216.180.246.139:0 - "GET / HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/6ca81526-14b8-46d9-aa73-f2ef4fced7e5 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/move HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2936cecd-31da-4a2a-b9d0-1c607ac7a194 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/e5d240ad-e7b8-4846-905a-d2f78ba30688 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2936cecd-31da-4a2a-b9d0-1c607ac7a194/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/f6be4ee7-93ef-4bb1-b10c-5bef6d71bbe7 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     216.180.246.139:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     216.180.246.139:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2936cecd-31da-4a2a-b9d0-1c607ac7a194 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3 HTTP/1.0" 200 OK
+INFO:     172.71.172.5:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     172.71.241.77:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/3907f261-7d00-4841-999d-4e2e23a904ca HTTP/1.0" 200 OK
+INFO:     162.158.94.96:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     172.69.150.19:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2d31bbad-9262-4c05-a24c-c6fbe55f9b1c HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2d31bbad-9262-4c05-a24c-c6fbe55f9b1c HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/048a073f-e949-4c2e-87c6-d8f1d3949f56 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2d31bbad-9262-4c05-a24c-c6fbe55f9b1c HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/048a073f-e949-4c2e-87c6-d8f1d3949f56 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/fc23f5f6-1d1b-4861-ae96-dc3ec4725352 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/98f46c5f-a215-4a69-a560-ed897dce7b54 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/3907f261-7d00-4841-999d-4e2e23a904ca HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "POST /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/3907f261-7d00-4841-999d-4e2e23a904ca/siblings HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/61c62852-e45f-431c-8666-23eed106ce0d HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "DELETE /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/16c9afa0-9445-4817-95fd-3a2cf5795c90 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/blocks/2936cecd-31da-4a2a-b9d0-1c607ac7a194 HTTP/1.0" 200 OK

@@ -28,6 +28,7 @@ import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
+import { insertHtmlAtCaret } from './utils.js';
 import { showPrompt, showConfirm, showImportConflictDialog } from './modal.js';
 
 async function parseMemusExportFromFile(file) {
@@ -910,6 +911,43 @@ export function attachEvents() {
       await mergeAllBlocksIntoFirst();
     });
   }
+  if (refs.insertTableBtn) {
+    refs.insertTableBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (state.mode !== 'edit' || !state.editingBlockId) {
+        showToast('Сначала включите редактирование блока');
+        return;
+      }
+      const editable = document.querySelector(
+        `.block[data-block-id="${state.editingBlockId}"] .block-text[contenteditable="true"]`,
+      );
+      if (!editable) {
+        showToast('Не удалось найти блок для вставки таблицы');
+        return;
+      }
+      const tableHtml = [
+        '<table class="memus-table">',
+        '<thead>',
+        '<tr>',
+        '<th>Заголовок 1</th>',
+        '<th>Заголовок 2</th>',
+        '</tr>',
+        '</thead>',
+        '<tbody>',
+        '<tr>',
+        '<td>Ячейка 1</td>',
+        '<td>Ячейка 2</td>',
+        '</tr>',
+        '</tbody>',
+        '</table>',
+        // Сразу создаём пустой абзац под таблицей, чтобы в него можно было
+        // поставить курсор и ввести текст.
+        '<p><br /></p>',
+      ].join('');
+      insertHtmlAtCaret(editable, tableHtml);
+      editable.classList.remove('block-body--empty');
+    });
+  }
   if (refs.articlesTabBtn) {
     refs.articlesTabBtn.addEventListener('click', () => setTrashMode(false));
   }
@@ -923,10 +961,13 @@ export function attachEvents() {
     (event) => {
       if (isAutoSaving) return;
       if (state.mode !== 'edit' || !state.editingBlockId) return;
-       const target = event.target;
-       if (!(target instanceof Element)) return;
-       // Не автосохраняем при клике по панели управления таблицей.
-       if (target.closest('.table-toolbar')) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      // Не автосохраняем при клике по панели управления таблицей, rich-context-меню
+      // и по кнопкам articleToolbar (Undo/Redo/Таблица/Новый блок и т.п.).
+      if (target.closest('.table-toolbar')) return;
+      if (target.closest('.rich-context-menu')) return;
+      if (target.closest('#articleToolbar')) return;
       const blockEl = document.querySelector(
         `.block[data-block-id="${state.editingBlockId}"]`,
       );

@@ -497,11 +497,31 @@ export async function moveBlock(blockId, direction, options = {}) {
   if (!blockId || !['up', 'down'].includes(direction)) return false;
   const { skipRecord = false } = options;
   try {
+    const located = findBlock(blockId);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move`, {
       method: 'POST',
       body: JSON.stringify({ direction }),
     });
-    await loadArticle(state.articleId, { desiredBlockId: blockId });
+    // Локально обновляем порядок соседей без полной перезагрузки статьи.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = located.siblings || state.article.blocks;
+      const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
+      if (index >= 0) {
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < siblings.length) {
+          const [moved] = siblings.splice(index, 1);
+          siblings.splice(targetIndex, 0, moved);
+        }
+      }
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.currentBlockId = blockId;
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'move', blockId, direction } });
@@ -560,7 +580,47 @@ export async function moveBlockToParent(blockId, targetParentId = null, targetIn
         placement: placement || null,
       }),
     });
-    await loadArticle(state.articleId, { desiredBlockId: blockId });
+    // Локально обновляем дерево блоков без полной перезагрузки.
+    if (state.article && Array.isArray(state.article.blocks)) {
+      const originSiblings = located.siblings || state.article.blocks;
+      const fromIndex = located.index ?? originSiblings.findIndex((b) => b.id === blockId);
+      let movedBlock = null;
+      if (fromIndex >= 0) {
+        [movedBlock] = originSiblings.splice(fromIndex, 1);
+      }
+      if (!movedBlock) {
+        // Блок не нашли в массиве — на всякий случай не ломаем дерево.
+        movedBlock = located.block;
+      }
+      // Находим массив детей у целевого родителя.
+      let targetChildren;
+      if (targetParentId) {
+        const targetParent = findBlock(targetParentId);
+        if (targetParent && targetParent.block) {
+          if (!Array.isArray(targetParent.block.children)) {
+            targetParent.block.children = [];
+          }
+          targetChildren = targetParent.block.children;
+        } else {
+          targetChildren = state.article.blocks;
+        }
+      } else {
+        targetChildren = state.article.blocks;
+      }
+      const insertAt =
+        typeof insertionIndex === 'number' && insertionIndex >= 0
+          ? Math.min(insertionIndex, targetChildren.length)
+          : targetChildren.length;
+      targetChildren.splice(insertAt, 0, movedBlock);
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.currentBlockId = blockId;
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({
@@ -595,14 +655,37 @@ export async function indentBlock(blockId, options = {}) {
       state.pendingEditBlockId = blockId;
       state.scrollTargetBlockId = blockId;
     }
+    const located = findBlock(blockId);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/indent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, {
-      desiredBlockId: blockId,
-      editBlockId: keepEditing ? blockId : undefined,
-    });
+    // Локально повторяем то же преобразование, что и на сервере:
+    // новый родитель — предыдущий сосед по siblings, вставка в конец его детей.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = located.siblings || state.article.blocks;
+      const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
+      if (index > 0) {
+        const newParentBlock = siblings[index - 1];
+        const [moved] = siblings.splice(index, 1);
+        if (!Array.isArray(newParentBlock.children)) {
+          newParentBlock.children = [];
+        }
+        newParentBlock.children.push(moved);
+        if (state.article.updatedAt) {
+          try {
+            state.article.updatedAt = new Date().toISOString();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+    state.currentBlockId = blockId;
+    if (keepEditing) {
+      state.mode = 'edit';
+      state.editingBlockId = blockId;
+    }
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'indent', blockId } });
@@ -626,14 +709,44 @@ export async function outdentBlock(blockId, options = {}) {
       state.pendingEditBlockId = blockId;
       state.scrollTargetBlockId = blockId;
     }
+    const located = findBlock(blockId);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/outdent`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    await loadArticle(state.articleId, {
-      desiredBlockId: blockId,
-      editBlockId: keepEditing ? blockId : undefined,
-    });
+    // Локально повторяем outdent-логику сервера:
+    // новый родитель — родитель текущего родителя, вставка сразу после родителя.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      const parent = located.parent;
+      const grandParent = parent ? findBlock(parent.id)?.parent : null;
+      const originSiblings = located.siblings || (parent ? parent.children || [] : state.article.blocks);
+      const fromIndex = located.index ?? originSiblings.findIndex((b) => b.id === blockId);
+      let moved = null;
+      if (fromIndex >= 0) {
+        [moved] = originSiblings.splice(fromIndex, 1);
+      }
+      if (!moved) {
+        moved = located.block;
+      }
+      const targetChildren = grandParent
+        ? grandParent.block.children || (grandParent.block.children = [])
+        : state.article.blocks;
+      const parentIndex = targetChildren.indexOf(parent ? parent.block : null);
+      const insertPos = parentIndex >= 0 ? parentIndex + 1 : targetChildren.length;
+      targetChildren.splice(insertPos, 0, moved);
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.currentBlockId = blockId;
+    if (keepEditing) {
+      state.mode = 'edit';
+      state.editingBlockId = blockId;
+    }
     renderArticle();
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });

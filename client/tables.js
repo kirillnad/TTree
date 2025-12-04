@@ -1,4 +1,5 @@
 import { refs } from './refs.js';
+import { state } from './state.js';
 
 function getTableFromEvent(event) {
   if (!event) return null;
@@ -259,11 +260,26 @@ function onMouseUp() {
 
 function attachResizeHandles(table) {
   const thead = table.tHead;
-  const colgroup = table.querySelector('colgroup');
-  if (!thead || !colgroup) return;
-  const cols = Array.from(colgroup.querySelectorAll('col'));
+  if (!thead) return;
+
   const headerRow = thead.rows[0];
   if (!headerRow) return;
+
+  // Гарантируем наличие colgroup для новых таблиц (например, вставленных из редактора),
+  // чтобы столбцы занимали всю ширину и работал ресайз колонок.
+  let colgroup = table.querySelector('colgroup');
+  if (!colgroup) {
+    const colCount = Math.max(headerRow.cells.length || 1, 1);
+    const width = 100 / colCount;
+    colgroup = document.createElement('colgroup');
+    for (let i = 0; i < colCount; i += 1) {
+      const col = document.createElement('col');
+      col.setAttribute('width', `${width.toFixed(4)}%`);
+      colgroup.appendChild(col);
+    }
+    table.insertBefore(colgroup, thead);
+  }
+
   Array.from(headerRow.cells).forEach((th, index) => {
     const handle = document.createElement('div');
     handle.className = 'table-col-resize-handle';
@@ -280,7 +296,10 @@ export function initTables() {
       'click',
       (event) => {
         const cell = getCellFromEvent(event);
-        if (!cell) {
+        // Панель показываем только:
+        // - в режиме редактирования блока;
+        // - когда клик пришёлся по ячейке таблицы внутри редактируемого блока.
+        if (!cell || state.mode !== 'edit' || !state.editingBlockId) {
           closeToolbar();
           return;
         }

@@ -3,7 +3,7 @@ import { apiRequest } from './api.js';
 import { refs } from './refs.js';
 import { showToast } from './toast.js';
 import { loadArticle } from './article.js';
-import { renderArticle } from './article.js';
+import { renderArticle, rerenderSingleBlock } from './article.js';
 import { pushUndoEntry, cloneBlockSnapshot } from './undo.js';
 import { findBlock, countBlocks, findFallbackBlockId } from './block.js';
 import { buildBlockPayloadFromParsed, parseMarkdownBlocksInput, looksLikeMarkdownBlocks } from './markdown.js';
@@ -48,7 +48,8 @@ export async function startEditing() {
 export async function saveEditing() {
   if (state.mode !== 'edit' || !state.editingBlockId) return;
   const editedBlockId = state.editingBlockId;
-  const previousText = findBlock(editedBlockId)?.block.text || '';
+  const located = findBlock(editedBlockId);
+  const previousText = located?.block.text || '';
   const textElement = document.querySelector(
     `.block[data-block-id="${state.editingBlockId}"] .block-text`,
   );
@@ -72,6 +73,17 @@ export async function saveEditing() {
     }
     return;
   }
+  // Если после очистки HTML содержимое не изменилось, ничего не сохраняем.
+  if (newText === previousText) {
+    state.mode = 'view';
+    state.editingBlockId = null;
+    state.editingInitialText = '';
+    state.pendingEditBlockId = null;
+    state.currentBlockId = editedBlockId;
+    state.scrollTargetBlockId = editedBlockId;
+    await rerenderSingleBlock(editedBlockId);
+    return;
+  }
   try {
     const payloadText = await maybeEncryptTextForCurrentArticle(newText);
     const updatedBlock = await apiRequest(
@@ -88,15 +100,24 @@ export async function saveEditing() {
         historyEntryId: updatedBlock?.historyEntryId || null,
       });
     }
+    // Обновляем текст блока в локальном состоянии, чтобы не перезагружать всю статью.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      located.block.text = newText;
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     state.mode = 'view';
     state.editingBlockId = null;
     state.editingInitialText = '';
     state.pendingEditBlockId = null;
+    state.currentBlockId = editedBlockId;
     state.scrollTargetBlockId = editedBlockId;
-    await loadArticle(state.articleId, {
-      desiredBlockId: editedBlockId,
-    });
-    renderArticle();
+    await rerenderSingleBlock(editedBlockId);
     showToast('Блок обновлён');
   } catch (error) {
     showToast(error.message);
@@ -155,7 +176,8 @@ export async function splitEditingBlockAtCaret() {
   if (!afterClean || afterClean === beforeClean) return;
 
   try {
-    const previousBlock = findBlock(blockId)?.block;
+    const located = findBlock(blockId);
+    const previousBlock = located?.block;
     const previousSnapshot = previousBlock ? cloneBlockSnapshot(previousBlock) : null;
     const beforePayloadText = await maybeEncryptTextForCurrentArticle(beforeClean);
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
@@ -179,11 +201,36 @@ export async function splitEditingBlockAtCaret() {
       method: 'PATCH',
       body: JSON.stringify({ text: afterPayloadText }),
     });
-    state.pendingEditBlockId = newBlockId;
+    // Обновляем локальное дерево блоков без полной перезагрузки статьи.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      // Обновляем текст исходного блока.
+      located.block.text = beforeClean;
+      // Вставляем новый блок рядом.
+      const parent = located.parent;
+      const siblings = located.siblings || (state.article.blocks || []);
+      const insertIndex = (located.index ?? 0) + 1;
+      const newBlock = {
+        id: newBlockId,
+        text: afterClean,
+        children: [],
+        collapsed: false,
+      };
+      siblings.splice(insertIndex, 0, newBlock);
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    // После разбиения блока сразу редактируем новый блок, с кареткой в начале.
+    state.mode = 'edit';
+    state.editingBlockId = newBlockId;
+    state.pendingEditBlockId = null;
+    state.currentBlockId = newBlockId;
     state.scrollTargetBlockId = newBlockId;
-    // После разбиения блока курсор должен оказаться в начале нового блока.
     state.editingCaretPosition = 'start';
-    await loadArticle(state.articleId, { desiredBlockId: newBlockId, editBlockId: newBlockId });
     renderArticle();
     if (previousSnapshot) {
       pushUndoEntry({

@@ -34,7 +34,7 @@ export const state = {
   // Процесс объединения блоков (чтобы избежать повторных кликов).
   isMergingBlocks: false,
   // Предпочтительная позиция каретки при входе в режим редактирования блока: 'start' | 'end'.
-  editingCaretPosition: 'end',
+  editingCaretPosition: 'start',
 };
 
 export let isSavingTitle = false;
