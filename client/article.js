@@ -143,7 +143,7 @@ async function encryptAllBlocksOnServer(article, key) {
   }
 }
 
-async function renderBlocks(blocks, container) {
+async function renderBlocks(blocks, container, depth = 1) {
   for (const block of blocks) {
     const blockEl = document.createElement('div');
     blockEl.className = 'block';
@@ -282,7 +282,9 @@ async function renderBlocks(blocks, container) {
       headerLeft.className = 'block-header__left';
 
       if (hasTitle) {
-        const titleEl = document.createElement('div');
+        const level = Math.min(Math.max(depth, 1), 6);
+        const headingTag = `h${level}`;
+        const titleEl = document.createElement(headingTag);
         titleEl.className = 'block-title';
         titleEl.innerHTML = sections.titleHtml;
         titleEl.style.flex = '1';
@@ -400,7 +402,7 @@ async function renderBlocks(blocks, container) {
       childrenContainer = document.createElement('div');
       childrenContainer.className = 'block-children';
       // eslint-disable-next-line no-await-in-loop
-      await renderBlocks(block.children, childrenContainer);
+      await renderBlocks(block.children, childrenContainer, depth + 1);
     }
 
     container.appendChild(blockEl);
@@ -413,6 +415,41 @@ async function renderBlocks(blocks, container) {
     }
     // Overlay drag handles removed: inline handle is now primary.
   }
+}
+
+export function reorderDomBlock(blockId, direction) {
+  if (!blockId || !['up', 'down'].includes(direction)) return false;
+  const blockEl = document.querySelector(`.block[data-block-id="${blockId}"]`);
+  if (!blockEl) return false;
+  // В режиме редактирования структура DOM вокруг блока сложнее;
+  // для надёжности не пытаемся выполнять «быструю» перестановку.
+  if (blockEl.classList.contains('editing')) return false;
+  const container = blockEl.parentElement;
+  if (!container) return false;
+
+  if (direction === 'up') {
+    let prev = blockEl.previousElementSibling;
+    while (prev && !prev.classList.contains('block')) {
+      prev = prev.previousElementSibling;
+    }
+    if (!prev) return false;
+    container.insertBefore(blockEl, prev);
+    return true;
+  }
+
+  // direction === 'down'
+  let next = blockEl.nextElementSibling;
+  while (next && !next.classList.contains('block')) {
+    next = next.nextElementSibling;
+  }
+  if (!next) return false;
+  const after = next.nextSibling;
+  if (after) {
+    container.insertBefore(blockEl, after);
+  } else {
+    container.appendChild(blockEl);
+  }
+  return true;
 }
 
 export async function rerenderSingleBlock(blockId) {

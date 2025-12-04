@@ -40,6 +40,9 @@ async function maybeEncryptBlockPayloadForCurrentArticle(blockPayload) {
 export async function startEditing() {
   if (!state.currentBlockId) return;
   state.mode = 'edit';
+  // При входе в режим редактирования не должно быть автоскролла
+  // по старому scrollTargetBlockId.
+  state.scrollTargetBlockId = null;
   state.editingBlockId = state.currentBlockId;
   state.editingInitialText = findBlock(state.currentBlockId)?.block.text || '';
   renderArticle();
@@ -61,12 +64,46 @@ export async function saveEditing() {
   if (!trimmedNew) {
     try {
       const fallbackId = findFallbackBlockId(editedBlockId);
-      await apiRequest(`/api/articles/${state.articleId}/blocks/${editedBlockId}`, { method: 'DELETE' });
+      const locatedForDelete = findBlock(editedBlockId);
+      const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${editedBlockId}`, {
+        method: 'DELETE',
+      });
+      // Оптимистично удаляем блок из локального дерева без полной перезагрузки статьи.
+      if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
+        const siblings = locatedForDelete.siblings || state.article.blocks;
+        const index =
+          locatedForDelete.index ?? siblings.findIndex((b) => b && b.id === editedBlockId);
+        if (index >= 0) {
+          siblings.splice(index, 1);
+        }
+        if (state.article.updatedAt) {
+          try {
+            state.article.updatedAt = new Date().toISOString();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       state.mode = 'view';
       state.editingBlockId = null;
       state.editingInitialText = '';
-      await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+      state.currentBlockId = fallbackId;
+      state.scrollTargetBlockId = fallbackId;
       renderArticle();
+      if (result?.block) {
+        const snapshot = cloneBlockSnapshot(result.block);
+        pushUndoEntry({
+          type: 'structure',
+          action: {
+            kind: 'delete',
+            parentId: result.parentId || null,
+            index: result.index ?? null,
+            block: snapshot,
+            blockId: snapshot?.id,
+            fallbackId,
+          },
+        });
+      }
       showToast('Пустой блок удалён');
     } catch (error) {
       showToast(error.message || 'Не удалось удалить пустой блок');
@@ -133,6 +170,7 @@ export function cancelEditing() {
   const currentText = (blockEl?.textContent || '').replace(/\u00a0/g, ' ').trim();
   const shouldDelete = !currentText;
 
+  // Выходим из режима редактирования немедленно, без ожидания сетевых операций.
   state.mode = 'view';
   state.editingBlockId = null;
   state.editingInitialText = '';
@@ -141,13 +179,50 @@ export function cancelEditing() {
     if (shouldDelete) {
       const fallbackId = findFallbackBlockId(blockId);
       try {
-        await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, { method: 'DELETE' });
-        await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+        // Оптимистично удаляем блок из локального дерева без полной перезагрузки статьи.
+        const located = findBlock(blockId);
+        const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
+          method: 'DELETE',
+        });
+        if (located && state.article && Array.isArray(state.article.blocks)) {
+          const siblings = located.siblings || state.article.blocks;
+          const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
+          if (index >= 0) {
+            siblings.splice(index, 1);
+          }
+          if (state.article.updatedAt) {
+            try {
+              state.article.updatedAt = new Date().toISOString();
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        state.currentBlockId = fallbackId;
+        state.scrollTargetBlockId = fallbackId;
+        renderArticle();
+        // Для undo используем тот же формат, что и deleteCurrentBlock.
+        if (result?.block) {
+          const snapshot = cloneBlockSnapshot(result.block);
+          pushUndoEntry({
+            type: 'structure',
+            action: {
+              kind: 'delete',
+              parentId: result.parentId || null,
+              index: result.index ?? null,
+              block: snapshot,
+              blockId: snapshot?.id,
+              fallbackId,
+            },
+          });
+        }
       } catch (error) {
         showToast(error.message || 'Не удалось удалить пустой блок');
+        renderArticle();
       }
+    } else {
+      renderArticle();
     }
-    renderArticle();
   })();
 }
 
@@ -246,6 +321,10 @@ export async function splitEditingBlockAtCaret() {
 
 export async function createSibling(direction) {
   if (!state.currentBlockId) return;
+  if (!state.article || !Array.isArray(state.article.blocks)) {
+    showToast('Сначала откройте статью');
+    return;
+  }
   const anchorBlockId = state.currentBlockId;
   try {
     const data = await apiRequest(
@@ -255,22 +334,76 @@ export async function createSibling(direction) {
         body: JSON.stringify({ direction }),
       },
     );
-    await loadArticle(state.articleId, { desiredBlockId: data.block.id, editBlockId: data.block.id });
-    renderArticle();
-    if (data?.block) {
-      const snapshot = cloneBlockSnapshot(data.block);
-      pushUndoEntry({
-        type: 'structure',
-        action: {
-          kind: 'create',
-          parentId: data.parentId || null,
-          index: data.index ?? null,
-          blockId: data.block.id,
-          block: snapshot,
-          fallbackId: anchorBlockId,
-        },
-      });
+    const newBlock = data?.block;
+    if (!newBlock || !newBlock.id) {
+      showToast('Не удалось создать новый блок');
+      return;
     }
+
+    const parentId = data.parentId || null;
+    const insertIndexFromServer = typeof data.index === 'number' ? data.index : null;
+
+    // Вставляем новый блок в локальное дерево без полной перезагрузки статьи.
+    let siblingsArray = null;
+    if (parentId) {
+      const parentLocated = findBlock(parentId);
+      const parentBlock = parentLocated?.block || null;
+      if (parentBlock) {
+        if (!Array.isArray(parentBlock.children)) {
+          parentBlock.children = [];
+        }
+        siblingsArray = parentBlock.children;
+      }
+    } else {
+      siblingsArray = state.article.blocks;
+    }
+
+    if (!Array.isArray(siblingsArray)) {
+      siblingsArray = state.article.blocks;
+    }
+
+    const insertIndex =
+      insertIndexFromServer !== null && insertIndexFromServer >= 0 && insertIndexFromServer <= siblingsArray.length
+        ? insertIndexFromServer
+        : siblingsArray.length;
+    const localBlock = cloneBlockSnapshot(newBlock) || newBlock;
+    siblingsArray.splice(insertIndex, 0, localBlock);
+
+    if (state.article.updatedAt) {
+      try {
+        state.article.updatedAt = new Date().toISOString();
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const newBlockId = newBlock.id;
+    state.mode = 'edit';
+    state.editingBlockId = newBlockId;
+    state.editingInitialText = '';
+    state.pendingEditBlockId = null;
+    state.currentBlockId = newBlockId;
+    // Не трогаем scrollTargetBlockId, чтобы не было лишнего автоскролла:
+    // новый блок окажется рядом с текущим и будет виден.
+
+    if (parentId) {
+      await rerenderSingleBlock(parentId);
+    } else {
+      renderArticle();
+    }
+
+    const snapshot = cloneBlockSnapshot(newBlock);
+    pushUndoEntry({
+      type: 'structure',
+      action: {
+        kind: 'create',
+        parentId: parentId,
+        index: insertIndexFromServer,
+        blockId: newBlockId,
+        block: snapshot,
+        fallbackId: anchorBlockId,
+      },
+    });
   } catch (error) {
     showToast(error.message);
   }

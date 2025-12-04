@@ -1,7 +1,14 @@
 import { state, isHintVisible } from './state.js';
 import { refs } from './refs.js';
 import { handleUndoAction, handleRedoAction, clearPendingTextPreview } from './undo.js';
-import { moveCurrentBlock, indentCurrentBlock, outdentCurrentBlock } from './undo.js';
+import {
+  moveCurrentBlock,
+  moveSelectedBlocks,
+  indentCurrentBlock,
+  indentSelectedBlocks,
+  outdentCurrentBlock,
+  outdentSelectedBlocks,
+} from './undo.js';
 import {
   createSibling,
   deleteCurrentBlock,
@@ -211,12 +218,12 @@ function handleViewKey(event) {
   }
   if (event.ctrlKey && event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
-    moveCurrentBlock('down');
+    moveSelectedBlocks('down');
     return;
   }
   if (event.ctrlKey && event.shiftKey && event.code === 'ArrowUp') {
     event.preventDefault();
-    moveCurrentBlock('up');
+    moveSelectedBlocks('up');
     return;
   }
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
@@ -236,12 +243,12 @@ function handleViewKey(event) {
   }
   if (event.ctrlKey && event.code === 'ArrowRight') {
     event.preventDefault();
-    indentCurrentBlock();
+    indentSelectedBlocks();
     return;
   }
   if (event.ctrlKey && event.code === 'ArrowLeft') {
     event.preventDefault();
-    outdentCurrentBlock();
+    outdentSelectedBlocks();
     return;
   }
   if (event.code === 'ArrowDown') {

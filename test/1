@@ -1,0 +1,316 @@
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Иерархические заметки</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div id="authOverlay" class="auth-overlay">
+      <div class="auth-card">
+        <h1 class="auth-title">Memus.pro</h1>
+        <p id="authSubtitle" class="auth-subtitle">Загружаем ваши заметки…</p>
+        <button id="authGoogleLoginBtn" type="button" class="auth-submit auth-google-btn hidden">
+          <span class="auth-google-icon" aria-hidden="true">
+            <svg
+              viewBox="0.99 0.99 18.01 18.01"
+              class="google"
+              width="16"
+              height="16"
+            >
+              <g clip-path="url(#clip0_2234_44729)">
+                <path
+                  fill="#4285F4"
+                  d="M18.64 10.205q-.002-.958-.164-1.841H10v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615"
+                ></path>
+                <path
+                  fill="#34A853"
+                  d="M10 19c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H1.957v2.332A9 9 0 0 0 10 19"
+                ></path>
+                <path
+                  fill="#FBBC04"
+                  d="M4.964 11.71A5.4 5.4 0 0 1 4.682 10c0-.593.102-1.17.282-1.71V5.958H1.957A9 9 0 0 0 1 10c0 1.452.348 2.827.957 4.042z"
+                ></path>
+                <path
+                  fill="#E94235"
+                  d="M10 4.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C14.463 1.891 12.426.999 10 .999a9 9 0 0 0-8.043 4.958L4.964 8.29C5.672 6.163 7.656 4.58 10 4.58"
+                ></path>
+              </g>
+              <defs>
+                <clipPath id="clip0_2234_44729">
+                  <path fill="#fff" d="M1 1h18v18H1z"></path>
+                </clipPath>
+              </defs>
+            </svg>
+          </span>
+          <span class="auth-google-label">Войти через Google</span>
+        </button>
+        <p id="authError" class="auth-error hidden" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <button
+          id="sidebarToggle"
+          class="ghost sidebar-toggle"
+          type="button"
+          aria-expanded="true"
+          title="Свернуть панель"
+        >
+          x
+        </button>
+        <div class="hint-control">
+          <button
+            id="hintToggleBtn"
+            class="ghost hint-toggle-btn"
+            type="button"
+            aria-expanded="false"
+            title="Советы по навигации"
+          >
+            ?
+          </button>
+          <div id="hintPopover" class="hint-popover hidden">
+            <div class="hint">
+              <strong>Советы по навигации:</strong> ↑/↓ — сменить выделение, Enter — редактировать блок, Ctrl+↑/↓ — добавить соседний блок.
+              <br />
+              <strong>Горячие клавиши управления:</strong> Ctrl+Delete — удалить, Ctrl+Shift+↑/↓ — переместить блок в своей ветке, Ctrl+→ — сделать дочерним, Ctrl+← — поднять уровень вложенности.
+              <br />
+              <strong>Отмена и повтор:</strong> Ctrl+Z — вернуть последнее действие, Ctrl+Y — повторить отменённое.
+              <br />
+              <strong>Режим редактирования:</strong> Ctrl+Enter — сохранить изменения и выйти.
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-header">
+          <h1 class="app-logo">Memus</h1>
+          <p class="sidebar-caption">Ваши мысли здесь</p>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="quick-notes-row">
+            <button id="openInboxBtn" class="ghost small" type="button" title="Открыть быстрые заметки">Быстрые заметки</button>
+            <button id="quickNoteAddBtn" class="ghost small" type="button" title="Добавить быструю заметку">Новая</button>
+          </div>
+          <div class="search-panel sidebar-section">
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Поиск..."
+              autocomplete="off"
+            />
+            <div id="searchResults" class="search-results hidden"></div>
+          </div>
+            <div class="sidebar-articles sidebar-section">
+              <div class="sidebar-articles__header">
+                <button id="backToList" class="ghost small" type="button" title="Открыть список всех статей">Все статьи</button>
+                <button id="sidebarNewArticleBtn" class="ghost small" title="Создать статью">Создать</button>
+              </div>
+              <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
+            </div>
+          <div class="sidebar-actions">
+            <button
+              id="graphToggleBtn"
+              class="ghost small"
+              type="button"
+              title="Граф страниц"
+            >
+              Граф
+            </button>
+            <button
+              id="usersBtn"
+              class="ghost small hidden"
+              type="button"
+              title="Управление пользователями"
+            >
+              Пользователи
+            </button>
+          </div>
+          <div class="sidebar-footer">
+            <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>
+            <span id="lastChangeValue"></span>
+            <div class="sidebar-user">
+              <span id="currentUserLabel" class="sidebar-user__name"></span>
+              <button id="logoutBtn" class="ghost small sidebar-user__logout" type="button">Выйти</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main id="app" class="content">
+        <section id="articleListView" class="panel">
+          <div class="panel-header list-header">
+            <button
+              id="listSidebarBtn"
+              class="ghost icon-button mobile-only"
+              type="button"
+              title="Открыть боковую панель"
+              aria-label="Открыть боковую панель"
+            >
+              ☰
+            </button>
+            <h2>Список статей</h2>
+            <div class="list-tabs">
+              <button id="articlesTabBtn" class="ghost small active" type="button" aria-pressed="true">Статьи</button>
+              <button id="trashTabBtn" class="ghost small" type="button" aria-pressed="false">Корзина</button>
+            </div>
+            <div class="list-header-actions">
+              <button
+                id="listMenuBtn"
+                class="ghost icon-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="list-menu"
+                title="Импорт статей"
+              >
+                &#8942;
+              </button>
+              <div id="listMenu" class="article-menu hidden" role="menu">
+                <button id="exportAllHtmlZipBtn" class="menu-item" type="button" role="menuitem">
+                  Резервная копия (ZIP)
+                </button>
+                <button id="importArticleBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из HTML
+                </button>
+                <button id="importBackupFolderBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из резервной копии (папка)
+                </button>
+                <button id="importMarkdownBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из Markdown
+                </button>
+                <button id="importLogseqBtn" class="menu-item" type="button" role="menuitem">
+                  Импорт из Logseq
+                </button>
+              </div>
+            </div>
+          </div>
+          <ul id="articleList"></ul>
+        </section>
+
+        <section id="articleView" class="panel hidden">
+          <div class="panel-header article-header">
+            <div class="title-block">
+                <div class="title-row">
+                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей">☰</button>
+                  <h2 id="articleTitle"></h2>
+                  <input id="articleTitleInput" class="hidden" type="text" />
+                  <button
+                    id="articleFavoriteBtn"
+                    class="ghost icon-button small"
+                    type="button"
+                    title="Добавить в избранное"
+                    aria-label="Добавить в избранное"
+                  >
+                    ☆
+                  </button>
+                  <button
+                    id="articlePublicLinkBtn"
+                    class="ghost icon-button small public-link-button"
+                    type="button"
+                    title="Скопировать публичную ссылку"
+                    aria-label="Скопировать публичную ссылку"
+                  >
+                    🌐
+                  </button>
+                  <div class="article-actions">
+                    <button
+                     id="articleMenuBtn"
+                      class="ghost icon-button"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="article-menu"
+                    title="Действия со статьёй"
+                  >
+                    &#8942;
+                  </button>
+                  <div id="articleMenu" class="article-menu hidden" role="menu">
+                    <button id="articlePublicToggleBtn" class="menu-item" type="button" role="menuitem">
+                      Сделать публичной
+                    </button>
+                    <button id="exportArticleBtn" class="menu-item" type="button" role="menuitem">
+                      Экспорт в HTML
+                    </button>
+                    <button id="articleEncryptionBtn" class="menu-item" type="button" role="menuitem">
+                      Зашифровать
+                    </button>
+                    <button id="articleEncryptionRemoveBtn" class="menu-item" type="button" role="menuitem">
+                      Снять защиту
+                    </button>
+                    <button id="deleteArticleBtn" class="menu-item danger" type="button" role="menuitem">
+                      Удалить статью
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p id="updatedAt" class="meta"></p>
+              <div id="articleToolbar" class="article-toolbar">
+                <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
+                  ↺<span class="toolbar-label"> Отменить</span>
+                </button>
+                <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
+                  ↻<span class="toolbar-label"> Повторить</span>
+                </button>
+                <button
+                  id="dragModeToggleBtn"
+                  class="ghost small drag-mode-toggle-btn"
+                  type="button"
+                  aria-pressed="false"
+                  title="Переключить режим перетаскивания блоков"
+                >
+                  ⇅<span class="toolbar-label"> Перетаскивание</span>
+                </button>
+                <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
+                  ⇤<span class="toolbar-label"> Объединить</span>
+                </button>
+                <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
+                  ⌗<span class="toolbar-label"> Таблица</span>
+                </button>
+                <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
+                  Новый блок
+                </button>
+              </div>
+            </div>
+            <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
+              <span class="inline-progress__spinner" aria-hidden="true"></span>
+              <span class="inline-progress__text">Вставляем Markdown...</span>
+            </div>
+          </div>
+
+          <div id="blocksContainer" class="blocks"></div>
+        </section>
+
+        <section id="usersView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Пользователи</h2>
+            <button id="usersBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <ul id="usersList" class="users-list"></ul>
+        </section>
+
+        <section id="graphView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Граф страниц</h2>
+            <button id="graphBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <div class="graph-container">
+            <div id="graphCanvas"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="modal-root"></div>
+    <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css"
+    />
+    <script src="https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

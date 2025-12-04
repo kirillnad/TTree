@@ -2,8 +2,8 @@ import { state } from './state.js';
 import { apiRequest } from './api.js';
 import { showToast } from './toast.js';
 import { loadArticle } from './article.js';
-import { renderArticle } from './article.js';
-import { findBlock, setCurrentBlock, ensureBlockVisible } from './block.js';
+import { renderArticle, rerenderSingleBlock, reorderDomBlock } from './article.js';
+import { findBlock, setCurrentBlock, ensureBlockVisible, flattenVisible } from './block.js';
 import { logDebug, textareaToTextContent, extractImagesFromHtml } from './utils.js';
 import { encryptBlockTree } from './encryption.js';
 
@@ -528,6 +528,86 @@ export function cloneBlockSnapshot(block) {
   }
 }
 
+/**
+ * Страховка от ситуаций, когда один и тот же объект блока
+ * по ошибке оказывается вставлен в дерево несколько раз.
+ * В корректном состоянии каждый block.id и объект блока
+ * должны встречаться ровно один раз.
+ */
+function ensureSingleObjectPlacement(targetBlock) {
+  if (!targetBlock || !state.article || !Array.isArray(state.article.blocks)) return;
+  let seen = false;
+  const visit = (blocks) => {
+    if (!Array.isArray(blocks)) return;
+    for (let i = 0; i < blocks.length; i += 1) {
+      const blk = blocks[i];
+      if (!blk) continue;
+      if (blk === targetBlock) {
+        if (!seen) {
+          seen = true;
+        } else {
+          blocks.splice(i, 1);
+          i -= 1;
+          continue;
+        }
+      }
+      if (Array.isArray(blk.children) && blk.children.length) {
+        visit(blk.children);
+      }
+    }
+  };
+  visit(state.article.blocks);
+}
+
+async function processMoveQueue() {
+  if (!state.articleId) return;
+  if (state.isMoveQueueProcessing) return;
+  state.isMoveQueueProcessing = true;
+  try {
+    // Последовательно отправляем все накопившиеся /move на сервер.
+    // Локальное дерево уже обновлено, поэтому сеть здесь — «догоняющая».
+    // При любой ошибке синхронизируем статью целиком.
+    // eslint-disable-next-line no-constant-condition
+    while (state.moveQueue.length) {
+      const item = state.moveQueue.shift();
+      if (!item) break;
+      const { blockId, direction } = item;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move`, {
+          method: 'POST',
+          body: JSON.stringify({ direction }),
+        });
+      } catch (error) {
+        showToast(error.message || 'Не удалось сохранить порядок блоков, перезагружаем статью');
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await loadArticle(state.articleId, { desiredBlockId: blockId });
+          renderArticle();
+        } catch {
+          // Если и перезагрузка не удалась — просто выходим.
+        }
+        state.moveQueue = [];
+        break;
+      }
+    }
+  } finally {
+    state.isMoveQueueProcessing = false;
+  }
+}
+
+function enqueueMove(blockId, direction) {
+  if (!blockId || !['up', 'down'].includes(direction)) return;
+  if (!Array.isArray(state.moveQueue)) {
+    state.moveQueue = [];
+  }
+  state.moveQueue.push({ blockId, direction });
+  // Запускаем отправку, но не ждём её завершения.
+  // Ошибки обрабатываются внутри processMoveQueue.
+  // eslint-disable-next-line no-floating-promises
+  processMoveQueue();
+}
+
 export async function focusBlock(blockId) {
   if (!blockId) return;
   await ensureBlockVisible(blockId);
@@ -550,46 +630,63 @@ export function clearPendingTextPreview({ restoreDom = true } = {}) {
 
 export async function moveBlock(blockId, direction, options = {}) {
   if (!blockId || !['up', 'down'].includes(direction)) return false;
-  const { skipRecord = false, internal = false } = options;
-  if (!internal) {
-    if (state.isMovingBlock) return false;
-    state.isMovingBlock = true;
-  }
+  const { skipRecord = false, internal = false, suppressRerender = false } = options;
   try {
     const located = findBlock(blockId);
 
     // Особый случай: пытаемся поднять самый верхний дочерний блок.
-    // Вместо "ошибки" трактуем это как выход на уровень родителя
-    // (outdent + один шаг вверх, чтобы встать рядом с братом родителя).
+    // Если у родителя есть "старший" брат, перемещаем блок в конец детей
+    // этого брата (становится ребёнком верхнего брата родителя).
+    // Если у родителя нет старшего брата — действуем по обычным правилам.
     if (direction === 'up' && located && located.parent) {
       const siblings = located.siblings || state.article?.blocks || [];
       const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
       if (index === 0) {
         const parentId = located.parent.id;
-        // 1) Выносим блок на уровень выше.
-        const outdented = await outdentBlock(blockId, { skipRecord: true, keepEditing: false });
-        if (!outdented) {
+        const parentLocated = findBlock(parentId);
+        const parentSiblings = parentLocated?.siblings || state.article?.blocks || [];
+        const parentIndex =
+          parentLocated?.index ??
+          parentSiblings.findIndex((b) => b && b.id === (parentLocated?.block?.id || parentId));
+
+        // Нет старшего брата у родителя — оставляем стандартное поведение (ниже).
+        if (parentIndex <= 0) {
+          // Но при этом сам блок является первым ребёнком, поэтому обычный move "up"
+          // ничего не сделает — сразу выходим.
           return false;
         }
-        // 2) После outdent блок стоит сразу после родителя — поднимаем его
-        // на одну позицию вверх, чтобы оказаться рядом с "братом родителя".
-        const movedUp = await moveBlock(blockId, 'up', { skipRecord: true, internal: true });
-        // Если по какой‑то причине поднять нельзя (родитель был первым),
-        // просто считаем операцию успешной после outdent.
-        if (!movedUp) {
-          state.currentBlockId = blockId;
-          renderArticle();
-          if (!skipRecord) {
-            pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });
-          }
-          return true;
+
+        const newParent = parentSiblings[parentIndex - 1];
+        if (!newParent || !newParent.id) {
+          return false;
         }
+        // Переносим блок в конец детей старшего брата родителя.
+        const targetChildrenCount = Array.isArray(newParent.children) ? newParent.children.length : 0;
+        const relocateResult = await moveBlockToParent(blockId, newParent.id, targetChildrenCount, {
+          skipRecord: true,
+          anchorId: null,
+          placement: null,
+          suppressRerender,
+        });
+        if (!relocateResult.success) {
+          return false;
+        }
+
         state.currentBlockId = blockId;
-        renderArticle();
+        // Перерисовку выполняет moveBlockToParent, если suppressRerender === false.
+        // В групповом режиме (suppressRerender === true) перерисовка будет выполнена
+        // один раз после серии перемещений.
         if (!skipRecord) {
           pushUndoEntry({
             type: 'structure',
-            action: { kind: 'moveUpThroughParent', blockId, parentId },
+            action: {
+              kind: 'reorder',
+              blockId,
+              fromParentId: parentId,
+              fromIndex: located.index ?? 0,
+              toParentId: newParent.id,
+              toIndex: relocateResult.to?.index ?? targetChildrenCount,
+            },
           });
         }
         return true;
@@ -611,11 +708,8 @@ export async function moveBlock(blockId, direction, options = {}) {
       }
     }
 
-    await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move`, {
-      method: 'POST',
-      body: JSON.stringify({ direction }),
-    });
-    // Локально обновляем порядок соседей без полной перезагрузки статьи.
+    // Локально обновляем порядок соседей.
+    let parentIdForRerender = null;
     if (located && state.article && Array.isArray(state.article.blocks)) {
       const siblings = located.siblings || state.article.blocks;
       const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
@@ -633,9 +727,24 @@ export async function moveBlock(blockId, direction, options = {}) {
           /* ignore */
         }
       }
+      parentIdForRerender = located.parent?.id || null;
     }
     state.currentBlockId = blockId;
-    renderArticle();
+    // Ставим сетевую операцию в очередь и сразу обновляем UI.
+    enqueueMove(blockId, direction);
+    if (!suppressRerender) {
+      // Пытаемся выполнить максимально лёгкую DOM-перестановку без полной перерисовки.
+      const reordered = reorderDomBlock(blockId, direction);
+      if (!reordered) {
+        // Если быстрый путь недоступен (например, в режиме редактирования),
+        // откатываемся к частичной/полной перерисовке.
+        if (parentIdForRerender) {
+          await rerenderSingleBlock(parentIdForRerender);
+        } else {
+          renderArticle();
+        }
+      }
+    }
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'move', blockId, direction } });
     }
@@ -643,10 +752,6 @@ export async function moveBlock(blockId, direction, options = {}) {
   } catch (error) {
     showToast(error.message);
     return false;
-  } finally {
-    if (!internal) {
-      state.isMovingBlock = false;
-    }
   }
 }
 
@@ -654,9 +759,102 @@ export function moveCurrentBlock(direction) {
   return moveBlock(state.currentBlockId, direction);
 }
 
+export async function moveSelectedBlocks(direction) {
+  if (!state.article || !Array.isArray(state.article.blocks)) return false;
+  if (!['up', 'down'].includes(direction)) return false;
+  const selectedIds = Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : [];
+  if (selectedIds.length <= 1) {
+    return moveCurrentBlock(direction);
+  }
+  if (state.isMovingBlock) return false;
+
+  // Строим список видимых блоков и отфильтровываем только выбранные,
+  // чтобы работать c непрерывным диапазоном siblings.
+  const ordered = flattenVisible(state.article.blocks);
+  const selectedOrdered = ordered.filter((b) => selectedIds.includes(b.id));
+  if (selectedOrdered.length <= 1) {
+    return moveCurrentBlock(direction);
+  }
+
+  // Проверяем, что у всех один родитель и они идут подряд.
+  const parentId = findBlock(selectedOrdered[0].id)?.parent?.id || null;
+  const indices = [];
+  let contiguous = true;
+  selectedOrdered.forEach((b, idx) => {
+    const located = findBlock(b.id);
+    if (!located) {
+      contiguous = false;
+      return;
+    }
+    const pid = located.parent?.id || null;
+    if (pid !== parentId) {
+      contiguous = false;
+      return;
+    }
+    indices.push(located.index);
+  });
+  if (!contiguous || !indices.length) {
+    showToast('Множественное перемещение доступно только для подряд идущих блоков с одним родителем');
+    return false;
+  }
+  indices.sort((a, b) => a - b);
+  for (let i = 1; i < indices.length; i += 1) {
+    if (indices[i] !== indices[0] + i) {
+      showToast('Множественное перемещение доступно только для подряд идущих блоков');
+      return false;
+    }
+  }
+
+  state.isMovingBlock = true;
+  try {
+    // Для подъёма идём сверху вниз, для опускания — снизу вверх.
+    const idsInOrder = direction === 'up' ? [...selectedOrdered] : [...selectedOrdered].reverse();
+    for (const b of idsInOrder) {
+      // eslint-disable-next-line no-await-in-loop
+      const ok = await moveBlock(b.id, direction, {
+        skipRecord: true,
+        internal: true,
+        suppressRerender: true,
+      });
+      if (!ok) {
+        showToast('Не удалось переместить блоки');
+        return false;
+      }
+    }
+    // После успешного группового движения фиксируем одно структурное действие.
+    const firstIdx = indices[0];
+    const lastIdx = indices[indices.length - 1];
+    const siblings = (parentId ? findBlock(parentId)?.block.children : state.article.blocks) || [];
+    const fromParentId = parentId;
+    const toParentId = parentId;
+    const fromIndex = firstIdx;
+    const toIndex = direction === 'up' ? firstIdx - 1 : lastIdx + 1;
+    pushUndoEntry({
+      type: 'structure',
+      action: {
+        kind: 'reorder',
+        blockId: selectedOrdered[0].id,
+        fromParentId,
+        fromIndex,
+        toParentId,
+        toIndex,
+      },
+    });
+    state.currentBlockId = selectedOrdered[0].id;
+    if (parentId) {
+      await rerenderSingleBlock(parentId);
+    } else {
+      renderArticle();
+    }
+    return true;
+  } finally {
+    state.isMovingBlock = false;
+  }
+}
+
 export async function moveBlockToParent(blockId, targetParentId = null, targetIndex = null, options = {}) {
   if (!blockId) return { success: false };
-  const { skipRecord = false, anchorId = null, placement = null } = options;
+  const { skipRecord = false, anchorId = null, placement = null, suppressRerender = false } = options;
   const located = findBlock(blockId);
   if (!located) {
     showToast('Блок не найден');
@@ -729,6 +927,9 @@ export async function moveBlockToParent(blockId, targetParentId = null, targetIn
           ? Math.min(insertionIndex, targetChildren.length)
           : targetChildren.length;
       targetChildren.splice(insertAt, 0, movedBlock);
+      // На всякий случай убеждаемся, что этот объект блока
+      // не остался где-то ещё во второй копии.
+      ensureSingleObjectPlacement(movedBlock);
       if (state.article.updatedAt) {
         try {
           state.article.updatedAt = new Date().toISOString();
@@ -738,7 +939,26 @@ export async function moveBlockToParent(blockId, targetParentId = null, targetIn
       }
     }
     state.currentBlockId = blockId;
-    renderArticle();
+    const finalParentId = moveResult?.parentId ?? targetParentId ?? null;
+    if (!suppressRerender) {
+      // Перерисовываем только затронутые поддеревья, где это возможно.
+      if (originParentId && finalParentId) {
+        // Оба родителя не корневые: обновляем старого и (при необходимости) нового.
+        await rerenderSingleBlock(originParentId);
+        if (finalParentId !== originParentId) {
+          await rerenderSingleBlock(finalParentId);
+        }
+      } else if (originParentId && !finalParentId) {
+        // Блок ушёл из потомка на корень: нужно обновить корневой список целиком.
+        renderArticle();
+      } else if (!originParentId && finalParentId) {
+        // Блок с корня ушёл в потомка: корневой список тоже меняется.
+        renderArticle();
+      } else {
+        // Перемещение корневых блоков между собой.
+        renderArticle();
+      }
+    }
     if (!skipRecord) {
       pushUndoEntry({
         type: 'structure',
@@ -766,7 +986,7 @@ export async function moveBlockToParent(blockId, targetParentId = null, targetIn
 
 export async function indentBlock(blockId, options = {}) {
   if (!blockId) return false;
-  const { skipRecord = false, keepEditing = false } = options;
+  const { skipRecord = false, keepEditing = false, suppressRerender = false } = options;
   try {
     if (!options.internal) {
       if (state.isMovingBlock) return false;
@@ -777,6 +997,7 @@ export async function indentBlock(blockId, options = {}) {
       state.scrollTargetBlockId = blockId;
     }
     const located = findBlock(blockId);
+    const parentId = located?.parent?.id || null;
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/indent`, {
       method: 'POST',
       body: JSON.stringify({}),
@@ -793,6 +1014,21 @@ export async function indentBlock(blockId, options = {}) {
           newParentBlock.children = [];
         }
         newParentBlock.children.push(moved);
+        ensureSingleObjectPlacement(moved);
+        // Если новый родитель был свёрнут, разворачиваем его, чтобы
+        // только что перемещённый блок не "пропадал" с экрана.
+        if (newParentBlock.collapsed) {
+          newParentBlock.collapsed = false;
+          try {
+            await apiRequest(`/api/articles/${state.articleId}/collapse`, {
+              method: 'PATCH',
+              body: JSON.stringify({ blockId: newParentBlock.id, collapsed: false }),
+            });
+          } catch {
+            // Если не удалось синхронизировать состояние на сервере,
+            // просто оставляем локально развёрнутым.
+          }
+        }
         if (state.article.updatedAt) {
           try {
             state.article.updatedAt = new Date().toISOString();
@@ -807,7 +1043,13 @@ export async function indentBlock(blockId, options = {}) {
       state.mode = 'edit';
       state.editingBlockId = blockId;
     }
-    renderArticle();
+    if (!suppressRerender) {
+      if (parentId) {
+        await rerenderSingleBlock(parentId);
+      } else {
+        renderArticle();
+      }
+    }
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'indent', blockId } });
     }
@@ -826,9 +1068,90 @@ export function indentCurrentBlock(options = {}) {
   return indentBlock(state.currentBlockId, options);
 }
 
+export async function indentSelectedBlocks(options = {}) {
+  if (!state.article || !Array.isArray(state.article.blocks)) return false;
+  const selectedIds = Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : [];
+  if (selectedIds.length <= 1) {
+    return indentCurrentBlock(options);
+  }
+  if (state.isMovingBlock) return false;
+
+  const ordered = flattenVisible(state.article.blocks);
+  const selectedOrdered = ordered.filter((b) => selectedIds.includes(b.id));
+  if (selectedOrdered.length <= 1) {
+    return indentCurrentBlock(options);
+  }
+
+  const firstLocated = findBlock(selectedOrdered[0].id);
+  if (!firstLocated || !firstLocated.siblings) return false;
+  const siblings = firstLocated.siblings;
+  const firstIndex = firstLocated.index ?? siblings.findIndex((b) => b.id === firstLocated.block.id);
+  if (firstIndex <= 0) {
+    showToast('Нельзя увеличить вложенность первой группы блоков');
+    return false;
+  }
+  const parentId = firstLocated.parent?.id || null;
+
+  // Проверяем, что все выбранные — подряд и имеют одного родителя.
+  const indices = [];
+  let contiguous = true;
+  selectedOrdered.forEach((b) => {
+    const located = findBlock(b.id);
+    if (!located) {
+      contiguous = false;
+      return;
+    }
+    const pid = located.parent?.id || null;
+    if (pid !== parentId) {
+      contiguous = false;
+      return;
+    }
+    indices.push(located.index);
+  });
+  if (!contiguous || !indices.length) {
+    showToast('Множественный отступ доступен только для подряд идущих блоков с одним родителем');
+    return false;
+  }
+  indices.sort((a, b) => a - b);
+  for (let i = 1; i < indices.length; i += 1) {
+    if (indices[i] !== indices[0] + i) {
+      showToast('Множественный отступ доступен только для подряд идущих блоков');
+      return false;
+    }
+  }
+
+  state.isMovingBlock = true;
+  try {
+    // Индентация выполняется сверху вниз (индексы пересчитываются корректно).
+    for (const b of selectedOrdered) {
+      // eslint-disable-next-line no-await-in-loop
+      const ok = await indentBlock(b.id, {
+        ...options,
+        skipRecord: true,
+        internal: true,
+        suppressRerender: true,
+      });
+      if (!ok) {
+        showToast('Не удалось изменить вложенность блоков');
+        return false;
+      }
+    }
+    pushUndoEntry({ type: 'structure', action: { kind: 'indent', blockId: selectedOrdered[0].id } });
+    state.currentBlockId = selectedOrdered[0].id;
+    if (parentId) {
+      await rerenderSingleBlock(parentId);
+    } else {
+      renderArticle();
+    }
+    return true;
+  } finally {
+    state.isMovingBlock = false;
+  }
+}
+
 export async function outdentBlock(blockId, options = {}) {
   if (!blockId) return false;
-  const { skipRecord = false, keepEditing = false } = options;
+  const { skipRecord = false, keepEditing = false, suppressRerender = false } = options;
   try {
     if (!options.internal) {
       if (state.isMovingBlock) return false;
@@ -845,10 +1168,15 @@ export async function outdentBlock(blockId, options = {}) {
     });
     // Локально повторяем outdent-логику сервера:
     // новый родитель — родитель текущего родителя, вставка сразу после родителя.
+    let grandParentId = null;
     if (located && state.article && Array.isArray(state.article.blocks)) {
-      const parent = located.parent;
-      const grandParent = parent ? findBlock(parent.id)?.parent : null;
-      const originSiblings = located.siblings || (parent ? parent.children || [] : state.article.blocks);
+      const parentBlock = located.parent || null;
+      const parentLocated = parentBlock ? findBlock(parentBlock.id) : null;
+      const grandParentBlock = parentLocated?.parent || null;
+      grandParentId = grandParentBlock?.id || null;
+
+      const originSiblings =
+        located.siblings || (parentBlock ? parentBlock.children || [] : state.article.blocks);
       const fromIndex = located.index ?? originSiblings.findIndex((b) => b.id === blockId);
       let moved = null;
       if (fromIndex >= 0) {
@@ -857,12 +1185,23 @@ export async function outdentBlock(blockId, options = {}) {
       if (!moved) {
         moved = located.block;
       }
-      const targetChildren = grandParent
-        ? grandParent.block.children || (grandParent.block.children = [])
-        : state.article.blocks;
-      const parentIndex = targetChildren.indexOf(parent ? parent.block : null);
+
+      let targetChildren;
+      if (grandParentBlock) {
+        if (!Array.isArray(grandParentBlock.children)) {
+          grandParentBlock.children = [];
+        }
+        targetChildren = grandParentBlock.children;
+      } else {
+        targetChildren = state.article.blocks;
+      }
+
+      const parentIndex = parentBlock ? targetChildren.indexOf(parentBlock) : -1;
       const insertPos = parentIndex >= 0 ? parentIndex + 1 : targetChildren.length;
       targetChildren.splice(insertPos, 0, moved);
+
+      ensureSingleObjectPlacement(moved);
+
       if (state.article.updatedAt) {
         try {
           state.article.updatedAt = new Date().toISOString();
@@ -876,7 +1215,13 @@ export async function outdentBlock(blockId, options = {}) {
       state.mode = 'edit';
       state.editingBlockId = blockId;
     }
-    renderArticle();
+    if (!suppressRerender) {
+      if (grandParentId) {
+        await rerenderSingleBlock(grandParentId);
+      } else {
+        renderArticle();
+      }
+    }
     if (!skipRecord) {
       pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });
     }
@@ -893,4 +1238,84 @@ export async function outdentBlock(blockId, options = {}) {
 
 export function outdentCurrentBlock(options = {}) {
   return outdentBlock(state.currentBlockId, options);
+}
+
+export async function outdentSelectedBlocks(options = {}) {
+  if (!state.article || !Array.isArray(state.article.blocks)) return false;
+  const selectedIds = Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : [];
+  if (selectedIds.length <= 1) {
+    return outdentCurrentBlock(options);
+  }
+  if (state.isMovingBlock) return false;
+
+  const ordered = flattenVisible(state.article.blocks);
+  const selectedOrdered = ordered.filter((b) => selectedIds.includes(b.id));
+  if (selectedOrdered.length <= 1) {
+    return outdentCurrentBlock(options);
+  }
+
+  const firstLocated = findBlock(selectedOrdered[0].id);
+  if (!firstLocated || !firstLocated.parent) {
+    showToast('Нельзя уменьшить вложенность корневых блоков');
+    return false;
+  }
+  const parentId = firstLocated.parent.id;
+
+  // Проверяем, что все выбранные — подряд и имеют одного родителя.
+  const indices = [];
+  let contiguous = true;
+  selectedOrdered.forEach((b) => {
+    const located = findBlock(b.id);
+    if (!located || !located.parent) {
+      contiguous = false;
+      return;
+    }
+    if (located.parent.id !== parentId) {
+      contiguous = false;
+      return;
+    }
+    indices.push(located.index);
+  });
+  if (!contiguous || !indices.length) {
+    showToast('Множественный отступ доступен только для подряд идущих блоков с одним родителем');
+    return false;
+  }
+  indices.sort((a, b) => a - b);
+  for (let i = 1; i < indices.length; i += 1) {
+    if (indices[i] !== indices[0] + i) {
+      showToast('Множественный отступ доступен только для подряд идущих блоков');
+      return false;
+    }
+  }
+
+  state.isMovingBlock = true;
+  try {
+    // Для корректного порядка при outdent обрабатываем блоки снизу вверх.
+    const inReverse = [...selectedOrdered].reverse();
+    for (const b of inReverse) {
+      // eslint-disable-next-line no-await-in-loop
+      const ok = await outdentBlock(b.id, {
+        ...options,
+        skipRecord: true,
+        internal: true,
+        suppressRerender: true,
+      });
+      if (!ok) {
+        showToast('Не удалось изменить вложенность блоков');
+        return false;
+      }
+    }
+    pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId: selectedOrdered[0].id } });
+    state.currentBlockId = selectedOrdered[0].id;
+    const firstAfter = findBlock(selectedOrdered[0].id);
+    const newParentId = firstAfter?.parent?.id || null;
+    if (newParentId) {
+      await rerenderSingleBlock(newParentId);
+    } else {
+      renderArticle();
+    }
+    return true;
+  } finally {
+    state.isMovingBlock = false;
+  }
 }
