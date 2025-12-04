@@ -182,9 +182,11 @@ function getVisOptions() {
         fit: false,
       },
       forceAtlas2Based: {
-        gravitationalConstant: -60,
+        gravitationalConstant: -100, // Сильное отталкивание
+        centralGravity: 0.005,       // Очень слабая гравитация к центру
         springLength: NODE_DIAMETER * 5,
-        springConstant: 0.08,
+        springConstant: 0.1,         // Пружины держат друзей крепко
+        damping: 0.4, // это сопротивление среды или «вязкость воздуха». Этот параметр определяет, как быстро узел теряет скорость и останавливается после того, как его толкнули или потянула пружина.
         avoidOverlap: 1.0,
       },
       // Чем больше minVelocity — тем раньше физика считает,
