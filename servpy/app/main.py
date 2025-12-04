@@ -519,14 +519,44 @@ def _process_block_html_for_import(
         if url_start == 0 or url_end == -1:
             break
         data_url = result[url_start:url_end]
-        try:
-            if attr == 'src':
-                new_url = _import_image_from_data_url(data_url, current_user)
-            else:
-                # Для href пытаемся угадать имя по ближайшему тексту не будем — оставим generic.
-                new_url = _import_attachment_from_data_url(data_url, current_user, article_id)
-        except Exception:
-            new_url = ''
+
+        # Пытаемся сначала использовать исходный путь до uploads, если он есть и доступен текущему пользователю.
+        # Для этого ищем data-original-src / data-original-href в пределах текущего тега.
+        tag_end = result.find('>', idx)
+        if tag_end == -1:
+            break
+        tag_chunk = result[idx:tag_end]
+
+        original_attr = 'data-original-src' if attr == 'src' else 'data-original-href'
+        original_url: str | None = None
+        marker = f'{original_attr}="'
+        m_idx = tag_chunk.find(marker)
+        if m_idx != -1:
+            val_start = m_idx + len(marker)
+            val_end = tag_chunk.find('"', val_start)
+            if val_end != -1:
+                original_url = tag_chunk[val_start:val_end]
+
+        new_url = ''
+        if original_url and original_url.startswith('/uploads/'):
+            # Проверяем, что путь принадлежит текущему пользователю и файл существует.
+            rel = original_url[len('/uploads/') :].lstrip('/')
+            parts = PurePosixPath(rel).parts
+            if parts and parts[0] == current_user.id:
+                candidate_path = UPLOADS_DIR / PurePosixPath(rel)
+                if candidate_path.is_file():
+                    new_url = original_url
+
+        # Если не удалось переиспользовать исходный файл, распаковываем data: URL как раньше.
+        if not new_url:
+            try:
+                if attr == 'src':
+                    new_url = _import_image_from_data_url(data_url, current_user)
+                else:
+                    # Для href пытаемся угадать имя по ближайшему тексту не будем — оставим generic.
+                    new_url = _import_attachment_from_data_url(data_url, current_user, article_id)
+            except Exception:
+                new_url = ''
         if new_url:
             result = result[:url_start] + new_url + result[url_end:]
             search_pos = url_start + len(new_url)
@@ -1571,6 +1601,48 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
 """
 
 
+def _inline_uploads_for_backup(html_text: str, current_user: User | None) -> str:
+    """
+    Делает резервную HTML-страницу самодостаточной:
+    - все ссылки src=\"/uploads/...\" и href=\"/uploads/...\" для текущего пользователя
+      конвертирует в data: URL;
+    - при этом добавляет data-original-src/href с исходным путём, чтобы импорт
+      мог при желании переиспользовать существующие файлы и не плодить дубликаты.
+    """
+    if not current_user or '/uploads/' not in (html_text or ''):
+        return html_text
+
+    def _replace(match: re.Match[str]) -> str:
+        attr = match.group(1)  # src | href
+        original_url = match.group(2) or ''
+        if not original_url.startswith('/uploads/'):
+            return match.group(0)
+        # Путь внутри uploads
+        rel = original_url[len('/uploads/') :].lstrip('/')
+        rel_path = PurePosixPath(rel)
+        parts = rel_path.parts
+        # Гарантируем, что путь принадлежит текущему пользователю.
+        if not parts or parts[0] != current_user.id:
+            return match.group(0)
+        file_path = UPLOADS_DIR / rel_path
+        if not file_path.is_file():
+            return match.group(0)
+        try:
+            raw = file_path.read_bytes()
+        except OSError:
+            return match.group(0)
+        mime_type, _ = mimetypes.guess_type(str(file_path))
+        if not mime_type:
+            mime_type = 'application/octet-stream'
+        b64 = base64.b64encode(raw).decode('ascii')
+        data_url = f'data:{mime_type};base64,{b64}'
+        # src=\"...\" -> src=\"data:...\" data-original-src=\"...\"
+        return f'{attr}=\"{data_url}\" data-original-{attr}=\"{original_url}\"'
+
+    pattern = re.compile(r'(src|href)=\"(/uploads/[^\"]+)\"')
+    return pattern.sub(_replace, html_text or '')
+
+
 def _present_article(article: dict[str, Any] | None, requested_id: str) -> dict[str, Any]:
     """
     Нормализует JSON статьи перед отдачей клиенту.
@@ -2456,6 +2528,8 @@ def export_all_articles_html_zip(current_user: User = Depends(get_current_user))
             else:
                 used_names[filename] = 1
             html = _build_backup_article_html(article, css_text, lang='ru')
+            # Делаем HTML самодостаточным: инлайн всех /uploads/ текущего пользователя.
+            html = _inline_uploads_for_backup(html, current_user)
             zf.writestr(filename, html.encode('utf-8'))
 
     buf.seek(0)
@@ -2468,7 +2542,12 @@ def export_all_articles_html_zip(current_user: User = Depends(get_current_user))
 
 
 @app.post('/api/import/html')
-async def import_article_from_html(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+async def import_article_from_html(
+    file: UploadFile = File(...),
+    mode: str | None = Form(None),
+    versionPrefix: str | None = Form(None),
+    current_user: User = Depends(get_current_user),
+):
     """
     Импортирует статью из HTML-файла, созданного опцией «Сохранить в HTML».
     Поддерживаются только файлы текущего формата Memus (memus;v=1).
@@ -2489,9 +2568,41 @@ async def import_article_from_html(file: UploadFile = File(...), current_user: U
     article_meta = payload.get('article') or {}
     blocks_meta = payload.get('blocks') or []
 
-    title = (article_meta.get('title') or file.filename or 'Импортированная статья').strip() or 'Импортированная статья'
+    base_title = (article_meta.get('title') or file.filename or 'Импортированная статья').strip() or 'Импортированная статья'
+    import_mode = (mode or '').strip().lower()
+    if import_mode not in {'overwrite', 'copy'}:
+        import_mode = 'new'
+
+    source_article_id = (article_meta.get('id') or '').strip()
+
+    # Определяем целевой ID и заголовок в зависимости от режима.
+    target_article_id: str
+    title: str
+
+    if import_mode == 'overwrite' and source_article_id:
+        # Перезапись существующей статьи (или восстановление по исходному UUID).
+        row = CONN.execute(
+            'SELECT author_id FROM articles WHERE id = ?',
+            (source_article_id,),
+        ).fetchone()
+        if row and row.get('author_id') not in (None, current_user.id):
+            raise HTTPException(status_code=403, detail='Нельзя перезаписать чужую статью')
+        target_article_id = source_article_id
+        title = base_title
+    elif import_mode == 'copy':
+        # Создаём копию с новым UUID и префиксом версии в заголовке.
+        target_article_id = str(uuid4())
+        prefix = (versionPrefix or '').strip()
+        if not prefix:
+            # На всякий случай строим префикс из текущего времени.
+            now_dt = datetime.utcnow()
+            prefix = now_dt.strftime('ver_%Y%m%d_%H%M%S')
+        title = f'{prefix} {base_title}'
+    else:
+        # Стандартный импорт: новая статья с новым UUID.
+        target_article_id = str(uuid4())
+        title = base_title
     now = datetime.utcnow().isoformat()
-    new_article_id = str(uuid4())
 
     def build_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
@@ -2519,7 +2630,7 @@ async def import_article_from_html(file: UploadFile = File(...), current_user: U
     blocks_tree = build_blocks(blocks_meta)
 
     article = {
-        'id': new_article_id,
+        'id': target_article_id,
         'title': title,
         'createdAt': article_meta.get('createdAt') or now,
         'updatedAt': article_meta.get('updatedAt') or now,

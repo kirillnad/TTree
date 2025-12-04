@@ -28,7 +28,139 @@ import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
-import { showPrompt, showConfirm } from './modal.js';
+import { showPrompt, showConfirm, showImportConflictDialog } from './modal.js';
+
+async function parseMemusExportFromFile(file) {
+  if (!file) return null;
+  let text;
+  try {
+    text = await file.text();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to read HTML file', error);
+    return null;
+  }
+  const markerIdx = text.indexOf('id="memus-export"');
+  const altIdx = markerIdx === -1 ? text.indexOf("id='memus-export'") : markerIdx;
+  if (altIdx === -1) return null;
+  const scriptOpen = text.lastIndexOf('<script', altIdx);
+  const scriptClose = text.indexOf('</script>', altIdx);
+  if (scriptOpen === -1 || scriptClose === -1) return null;
+  const contentStart = text.indexOf('>', scriptOpen) + 1;
+  if (contentStart === 0 || contentStart > scriptClose) return null;
+  const rawJson = text.slice(contentStart, scriptClose).trim();
+  if (!rawJson) return null;
+  try {
+    const payload = JSON.parse(rawJson);
+    if (!payload || typeof payload !== 'object') return null;
+    if (payload.source !== 'memus' || Number(payload.version || 0) !== 1) return null;
+    return payload;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to parse memus-export JSON', error);
+    return null;
+  }
+}
+
+async function checkArticleExists(articleId) {
+  if (!articleId) return { exists: false, article: null };
+  try {
+    const res = await fetch(`/api/articles/${encodeURIComponent(articleId)}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (res.status === 404) {
+      return { exists: false, article: null };
+    }
+    if (!res.ok) {
+      const details = await res.json().catch(() => null);
+      const message = (details && details.detail) || `Ошибка проверки статьи (status ${res.status})`;
+      throw new Error(message);
+    }
+    const article = await res.json();
+    return { exists: true, article };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to check article existence', error);
+    throw error;
+  }
+}
+
+function buildVersionPrefixFromFile(file) {
+  const ts = typeof file.lastModified === 'number' && file.lastModified > 0 ? file.lastModified : Date.now();
+  const dt = new Date(ts);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `ver_${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}_${pad(
+    dt.getHours(),
+  )}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
+}
+
+async function importHtmlWithConflicts(file, conflictState, { allowApplyToAll } = { allowApplyToAll: false }) {
+  if (!file) return null;
+  const payload = await parseMemusExportFromFile(file);
+  const articleMeta = payload && payload.article;
+  const sourceId = (articleMeta && articleMeta.id) || '';
+  const importedTitle = (articleMeta && articleMeta.title) || file.name || 'Импортированная статья';
+  const importedCreatedAt = (articleMeta && articleMeta.createdAt) || null;
+  const importedUpdatedAt = (articleMeta && articleMeta.updatedAt) || null;
+
+  let existsInfo = { exists: false, article: null };
+  if (sourceId) {
+    existsInfo = await checkArticleExists(sourceId).catch((error) => {
+      showPersistentToast(error.message || 'Не удалось проверить наличие статьи');
+      throw error;
+    });
+  }
+
+  if (!existsInfo.exists || !sourceId) {
+    // Просто создаём новую статью.
+    return importArticleFromHtml(file);
+  }
+
+  // Есть конфликт по UUID.
+  let decision = conflictState && conflictState.decision;
+  let applyToAll = conflictState && conflictState.applyToAll;
+
+  if (!decision || !applyToAll) {
+    const dialog = await showImportConflictDialog({
+      title: 'Страница уже существует',
+      message: 'Что сделать с существующей страницей при восстановлении?',
+      existingTitle: existsInfo.article && existsInfo.article.title,
+      importedTitle,
+      existingCreatedAt: existsInfo.article && existsInfo.article.createdAt,
+      existingUpdatedAt: existsInfo.article && existsInfo.article.updatedAt,
+      importedCreatedAt,
+      importedUpdatedAt,
+      allowApplyToAll,
+    });
+    if (!dialog || !dialog.action) {
+      // Отмена.
+      return null;
+    }
+    decision = dialog.action;
+    applyToAll = Boolean(dialog.applyToAll);
+    if (conflictState) {
+      conflictState.decision = decision;
+      conflictState.applyToAll = applyToAll;
+    }
+  }
+
+  if (decision === 'keep') {
+    // Оставляем существующую статью — ничего не импортируем.
+    return null;
+  }
+
+  if (decision === 'overwrite') {
+    return importArticleFromHtml(file, { mode: 'overwrite' });
+  }
+
+  if (decision === 'copy') {
+    const versionPrefix = buildVersionPrefixFromFile(file);
+    return importArticleFromHtml(file, { mode: 'copy', versionPrefix });
+  }
+
+  return null;
+}
 
 function handleViewKey(event) {
   if (!state.article) return;
@@ -418,13 +550,26 @@ export function attachEvents() {
       event.stopPropagation();
       closeListMenu();
       try {
-        showToast('Готовим резервную копию (ZIP)...');
+        showPersistentToast('Готовим резервную копию (ZIP)...');
         const resp = await fetch('/api/export/html-zip', { method: 'GET' });
         if (!resp.ok) {
+          hideToast();
           showToast('Не удалось создать резервную копию');
           return;
         }
+        // Может прийти пустой ответ (нет статей или ошибка на сервере).
+        // Сначала проверяем статус 204 / длину тела.
+        if (resp.status === 204) {
+          hideToast();
+          showToast('Нет страниц для резервной копии');
+          return;
+        }
         const blob = await resp.blob();
+        if (!blob || blob.size === 0) {
+          hideToast();
+          showToast('Нет данных для резервной копии (пустой архив)');
+          return;
+        }
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         const disposition = resp.headers.get('Content-Disposition') || '';
@@ -437,11 +582,14 @@ export function attachEvents() {
         link.download = filename;
         link.rel = 'noopener';
         document.body.appendChild(link);
+        // Считаем, что загрузка начинается в момент клика по ссылке.
+        hideToast();
         link.click();
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 0);
         showToast('Резервная копия загружена');
       } catch (error) {
+        hideToast();
         showToast(error.message || 'Не удалось создать резервную копию');
       }
     });
@@ -460,7 +608,10 @@ export function attachEvents() {
           if (!file) return;
           try {
             showPersistentToast('Загружаем и обрабатываем HTML...');
-            const article = await importArticleFromHtml(file);
+            const conflictState = { decision: null, applyToAll: false };
+            const article = await importHtmlWithConflicts(file, conflictState, {
+              allowApplyToAll: false,
+            });
             hideToast();
             if (article && article.id) {
               navigate(routing.article(article.id));
@@ -534,6 +685,54 @@ export function attachEvents() {
         input.click();
       } catch (error) {
         showToast(error.message || 'Не удалось запустить импорт Markdown');
+      }
+    });
+  }
+  if (refs.importBackupFolderBtn) {
+    refs.importBackupFolderBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeListMenu();
+      try {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.webkitdirectory = true;
+        input.multiple = true;
+        input.addEventListener('change', async () => {
+          const files = Array.from(input.files || []);
+          const htmlFiles = files.filter((f) => f.name && f.name.toLowerCase().endsWith('.html'));
+          if (!htmlFiles.length) {
+            showToast('В выбранной папке нет HTML‑файлов Memus');
+            return;
+          }
+          const conflictState = { decision: null, applyToAll: false };
+          let importedCount = 0;
+          showPersistentToast(`Импортируем из резервной копии... (0 / ${htmlFiles.length})`);
+          // Последовательно, чтобы не заспамить сервер.
+          // eslint-disable-next-line no-restricted-syntax
+          for (const file of htmlFiles) {
+            // eslint-disable-next-line no-await-in-loop
+            const article = await importHtmlWithConflicts(file, conflictState, {
+              allowApplyToAll: true,
+            });
+            if (article && article.id) {
+              importedCount += 1;
+            }
+            showPersistentToast(
+              `Импортируем из резервной копии... (${importedCount} / ${htmlFiles.length})`,
+            );
+          }
+          hideToast();
+          if (importedCount > 0) {
+            showToast(`Импортировано страниц из резервной копии: ${importedCount}`);
+            // Обновляем список статей.
+            navigate(routing.list);
+          } else {
+            showToast('Импорт из резервной копии завершился без результата');
+          }
+        });
+        input.click();
+      } catch (error) {
+        showToast(error.message || 'Не удалось запустить импорт из резервной копии');
       }
     });
   }

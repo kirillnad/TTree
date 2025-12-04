@@ -63,6 +63,7 @@ export const refs = {
   importArticleBtn: document.getElementById('importArticleBtn'),
   importMarkdownBtn: document.getElementById('importMarkdownBtn'),
   importLogseqBtn: document.getElementById('importLogseqBtn'),
+  importBackupFolderBtn: document.getElementById('importBackupFolderBtn'),
   articleUndoBtn: document.getElementById('articleUndoBtn'),
   articleRedoBtn: document.getElementById('articleRedoBtn'),
   mergeBlocksBtn: document.getElementById('mergeBlocksBtn'),

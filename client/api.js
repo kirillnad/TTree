@@ -171,9 +171,15 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
   });
 }
 
-export function importArticleFromHtml(file) {
+export function importArticleFromHtml(file, options = {}) {
   const formData = new FormData();
   formData.append('file', file);
+  if (options.mode) {
+    formData.append('mode', options.mode);
+  }
+  if (options.versionPrefix) {
+    formData.append('versionPrefix', options.versionPrefix);
+  }
   return fetch('/api/import/html', {
     method: 'POST',
     credentials: 'include',

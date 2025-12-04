@@ -48,7 +48,7 @@ function buildModal({ title, message, confirmText, cancelText, renderBody }) {
   }
 
   const footer = document.createElement('div');
-  footer.className = 'modal-footer';
+  footer.className = 'modal-footer modal-footer--stacked';
   const cancelBtn = document.createElement('button');
   cancelBtn.type = 'button';
   cancelBtn.className = 'ghost';
@@ -530,6 +530,175 @@ export function showPasswordWithHintPrompt(options = {}) {
       } else {
         card.focus({ preventScroll: true });
       }
+    });
+  });
+}
+
+export function showImportConflictDialog(options = {}) {
+  const root = ensureRoot();
+  const {
+    title,
+    message,
+    existingTitle,
+    importedTitle,
+    existingCreatedAt,
+    existingUpdatedAt,
+    importedCreatedAt,
+    importedUpdatedAt,
+    allowApplyToAll = true,
+  } = options || {};
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  card.tabIndex = -1;
+
+  const header = document.createElement('div');
+  header.className = 'modal-header';
+  const heading = document.createElement('h3');
+  heading.textContent = title || 'Конфликт при восстановлении';
+  header.appendChild(heading);
+
+  const body = document.createElement('div');
+  body.className = 'modal-body';
+
+  if (message) {
+    const msg = document.createElement('p');
+    msg.className = 'modal-body__text';
+    msg.textContent = message;
+    body.appendChild(msg);
+  }
+
+  if (existingTitle || importedTitle) {
+    const info = document.createElement('p');
+    info.className = 'modal-body__text';
+    info.innerHTML = [
+      existingTitle ? `<strong>В базе:</strong> ${existingTitle}` : '',
+      importedTitle ? `<strong>Из файла:</strong> ${importedTitle}` : '',
+    ]
+      .filter(Boolean)
+      .join('<br />');
+    body.appendChild(info);
+  }
+
+  if (existingCreatedAt || existingUpdatedAt || importedCreatedAt || importedUpdatedAt) {
+    const fmt = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString();
+    };
+    const dates = document.createElement('p');
+    dates.className = 'modal-body__text';
+    const parts = [];
+    if (existingCreatedAt || existingUpdatedAt) {
+      const created = existingCreatedAt ? fmt(existingCreatedAt) : '—';
+      const updated = existingUpdatedAt ? fmt(existingUpdatedAt) : '—';
+      parts.push(
+        `<strong>В базе:</strong> создана ${created}, обновлена ${updated}`,
+      );
+    }
+    if (importedCreatedAt || importedUpdatedAt) {
+      const created = importedCreatedAt ? fmt(importedCreatedAt) : '—';
+      const updated = importedUpdatedAt ? fmt(importedUpdatedAt) : '—';
+      parts.push(
+        `<strong>Из файла:</strong> создана ${created}, обновлена ${updated}`,
+      );
+    }
+    dates.innerHTML = parts.join('<br />');
+    body.appendChild(dates);
+  }
+
+  let applyToAllCheckbox = null;
+  if (allowApplyToAll) {
+    const label = document.createElement('label');
+    label.className = 'modal-label';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.style.marginRight = '0.5rem';
+    label.appendChild(checkbox);
+    label.appendChild(
+      document.createTextNode('Применять это решение ко всем конфликтам'),
+    );
+    applyToAllCheckbox = checkbox;
+    body.appendChild(label);
+  }
+
+  const footer = document.createElement('div');
+  footer.className = 'modal-footer modal-footer--stacked';
+
+  const keepBtn = document.createElement('button');
+  keepBtn.type = 'button';
+  keepBtn.className = 'ghost';
+  keepBtn.textContent = 'Оставить существующую';
+
+  const overwriteBtn = document.createElement('button');
+  overwriteBtn.type = 'button';
+  overwriteBtn.className = 'primary danger-btn';
+  overwriteBtn.textContent = 'Перезаписать';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'ghost';
+  copyBtn.textContent = 'Создать копию';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'ghost';
+  cancelBtn.textContent = 'Отмена';
+
+  footer.appendChild(keepBtn);
+  footer.appendChild(overwriteBtn);
+  footer.appendChild(copyBtn);
+  footer.appendChild(cancelBtn);
+
+  card.appendChild(header);
+  card.appendChild(body);
+  card.appendChild(footer);
+  overlay.appendChild(card);
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (action) => {
+    if (resolved) return;
+    resolved = true;
+    const applyToAll = Boolean(applyToAllCheckbox && applyToAllCheckbox.checked);
+    cleanup();
+    resolvePromise({ action, applyToAll });
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    keepBtn.addEventListener('click', () => resolveResult('keep'));
+    overwriteBtn.addEventListener('click', () => resolveResult('overwrite'));
+    copyBtn.addEventListener('click', () => resolveResult('copy'));
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
     });
   });
 }

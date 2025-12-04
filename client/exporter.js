@@ -258,11 +258,15 @@ async function inlineAssets(html) {
         const blob = await fetchResource(src);
         try {
           const webpUrl = await convertImageToWebp(blob);
+          // Сохраняем исходный путь до uploads, чтобы при импорте можно было
+          // переиспользовать существующий файл, а не создавать дубликат.
+          img.setAttribute('data-original-src', src);
           img.setAttribute('src', webpUrl);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.warn('WebP convert failed, fallback to base64', error);
           const dataUrl = await blobToDataUrl(blob);
+          img.setAttribute('data-original-src', src);
           img.setAttribute('src', dataUrl);
         }
       } catch (error) {
@@ -287,6 +291,8 @@ async function inlineAssets(html) {
       try {
         const blob = await fetchResource(href);
         const dataUrl = await blobToDataUrl(blob);
+        // Аналогично картинкам: помечаем исходный путь для дедупликации при импорте.
+        anchor.setAttribute('data-original-href', href);
         anchor.setAttribute('href', dataUrl);
       } catch (error) {
         // eslint-disable-next-line no-console
