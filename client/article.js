@@ -143,6 +143,31 @@ async function encryptAllBlocksOnServer(article, key) {
   }
 }
 
+function dedupeBlocksById(blocks) {
+  const seen = new Set();
+  const visit = (list) => {
+    if (!Array.isArray(list)) return;
+    for (let i = 0; i < list.length; i += 1) {
+      const block = list[i];
+      if (!block || !block.id) {
+        list.splice(i, 1);
+        i -= 1;
+        continue;
+      }
+      if (seen.has(block.id)) {
+        list.splice(i, 1);
+        i -= 1;
+        continue;
+      }
+      seen.add(block.id);
+      if (Array.isArray(block.children) && block.children.length) {
+        visit(block.children);
+      }
+    }
+  };
+  visit(blocks);
+}
+
 async function renderBlocks(blocks, container, depth = 1) {
   for (const block of blocks) {
     const blockEl = document.createElement('div');
@@ -1260,6 +1285,11 @@ export async function loadListView() {
 export function renderArticle() {
   const article = state.article;
   if (!article) return;
+  if (Array.isArray(article.blocks)) {
+    // Страхуемся от дубликатов блоков с одинаковым id,
+    // которые могли появиться из-за локальных оптимистичных операций.
+    dedupeBlocksById(article.blocks);
+  }
   renderSidebarArticleList();
   const rootBlocks = article.id === 'inbox' ? [...(article.blocks || [])].reverse() : article.blocks;
 
@@ -1342,7 +1372,7 @@ export function renderArticle() {
 
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
     applyPendingPreviewMarkup();
-    if (state.scrollTargetBlockId) {
+    if (state.scrollTargetBlockId && state.mode === 'view') {
       const targetId = state.scrollTargetBlockId;
       requestAnimationFrame(() => {
         const target = document.querySelector(`.block[data-block-id="${targetId}"]`);
@@ -1370,6 +1400,11 @@ export function renderArticle() {
     // При открытии блока на редактирование не принудительно "центрируем" его,
     // чтобы не было резкого автоскролла.
     focusEditingBlock();
+    // В режиме редактирования возвращаем прокрутку списка блоков туда,
+    // где она была до входа в edit, чтобы Enter не прокручивал страницу.
+    if (state.mode === 'edit' && typeof state.editingScrollTop === 'number' && refs.blocksContainer) {
+      refs.blocksContainer.scrollTop = state.editingScrollTop;
+    }
   });
 }
 

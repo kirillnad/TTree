@@ -39,6 +39,9 @@ async function maybeEncryptBlockPayloadForCurrentArticle(blockPayload) {
 
 export async function startEditing() {
   if (!state.currentBlockId) return;
+  // Запоминаем текущую прокрутку списка блоков, чтобы
+  // вход в режим редактирования не «подскакивал» страницу.
+  state.editingScrollTop = refs.blocksContainer ? refs.blocksContainer.scrollTop : null;
   state.mode = 'edit';
   // При входе в режим редактирования не должно быть автоскролла
   // по старому scrollTargetBlockId.
@@ -62,34 +65,37 @@ export async function saveEditing() {
 
   const trimmedNew = (newText || '').trim();
   if (!trimmedNew) {
+    // Пустой блок: сразу выходим из режима редактирования и оптимистично
+    // убираем его из локального дерева, а сетевой DELETE выполняем в фоне.
+    const fallbackId = findFallbackBlockId(editedBlockId);
+    const locatedForDelete = findBlock(editedBlockId);
+    if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = locatedForDelete.siblings || state.article.blocks;
+      const index =
+        locatedForDelete.index ?? siblings.findIndex((b) => b && b.id === editedBlockId);
+      if (index >= 0) {
+        siblings.splice(index, 1);
+      }
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.mode = 'view';
+    state.editingBlockId = null;
+    state.editingInitialText = '';
+    state.currentBlockId = fallbackId;
+    state.scrollTargetBlockId = fallbackId;
+    renderArticle();
+
+    (async () => {
     try {
-      const fallbackId = findFallbackBlockId(editedBlockId);
-      const locatedForDelete = findBlock(editedBlockId);
       const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${editedBlockId}`, {
         method: 'DELETE',
       });
-      // Оптимистично удаляем блок из локального дерева без полной перезагрузки статьи.
-      if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
-        const siblings = locatedForDelete.siblings || state.article.blocks;
-        const index =
-          locatedForDelete.index ?? siblings.findIndex((b) => b && b.id === editedBlockId);
-        if (index >= 0) {
-          siblings.splice(index, 1);
-        }
-        if (state.article.updatedAt) {
-          try {
-            state.article.updatedAt = new Date().toISOString();
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-      state.mode = 'view';
-      state.editingBlockId = null;
-      state.editingInitialText = '';
-      state.currentBlockId = fallbackId;
-      state.scrollTargetBlockId = fallbackId;
-      renderArticle();
       if (result?.block) {
         const snapshot = cloneBlockSnapshot(result.block);
         pushUndoEntry({
@@ -106,8 +112,15 @@ export async function saveEditing() {
       }
       showToast('Пустой блок удалён');
     } catch (error) {
-      showToast(error.message || 'Не удалось удалить пустой блок');
+      showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
+      try {
+        await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
+        renderArticle();
+      } catch {
+        /* ignore reload error */
+      }
     }
+    })();
     return;
   }
   // Если после очистки HTML содержимое не изменилось, ничего не сохраняем.
@@ -121,44 +134,54 @@ export async function saveEditing() {
     await rerenderSingleBlock(editedBlockId);
     return;
   }
-  try {
-    const payloadText = await maybeEncryptTextForCurrentArticle(newText);
-    const updatedBlock = await apiRequest(
-      `/api/articles/${state.articleId}/blocks/${state.editingBlockId}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ text: payloadText }),
-      },
-    );
-    if (previousText !== newText) {
-      pushUndoEntry({
-        type: 'text',
-        blockId: editedBlockId,
-        historyEntryId: updatedBlock?.historyEntryId || null,
-      });
-    }
-    // Обновляем текст блока в локальном состоянии, чтобы не перезагружать всю статью.
-    if (located && state.article && Array.isArray(state.article.blocks)) {
-      located.block.text = newText;
-      if (state.article.updatedAt) {
-        try {
-          state.article.updatedAt = new Date().toISOString();
-        } catch {
-          /* ignore */
-        }
+  // Непустой и изменившийся текст: меняем локальное состояние и UI сразу,
+  // а PATCH на сервер отправляем в фоне.
+  if (located && state.article && Array.isArray(state.article.blocks)) {
+    located.block.text = newText;
+    if (state.article.updatedAt) {
+      try {
+        state.article.updatedAt = new Date().toISOString();
+      } catch {
+        /* ignore */
       }
     }
-    state.mode = 'view';
-    state.editingBlockId = null;
-    state.editingInitialText = '';
-    state.pendingEditBlockId = null;
-    state.currentBlockId = editedBlockId;
-    state.scrollTargetBlockId = editedBlockId;
-    await rerenderSingleBlock(editedBlockId);
-    showToast('Блок обновлён');
-  } catch (error) {
-    showToast(error.message);
   }
+  state.mode = 'view';
+  state.editingBlockId = null;
+  state.editingInitialText = '';
+  state.pendingEditBlockId = null;
+  state.currentBlockId = editedBlockId;
+  state.scrollTargetBlockId = editedBlockId;
+  await rerenderSingleBlock(editedBlockId);
+
+  (async () => {
+    try {
+      const payloadText = await maybeEncryptTextForCurrentArticle(newText);
+      const updatedBlock = await apiRequest(
+        `/api/articles/${state.articleId}/blocks/${editedBlockId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ text: payloadText }),
+        },
+      );
+      if (previousText !== newText) {
+        pushUndoEntry({
+          type: 'text',
+          blockId: editedBlockId,
+          historyEntryId: updatedBlock?.historyEntryId || null,
+        });
+      }
+      showToast('Блок обновлён');
+    } catch (error) {
+      showToast(error.message || 'Не удалось сохранить блок, обновляем страницу');
+      try {
+        await loadArticle(state.articleId, { desiredBlockId: editedBlockId });
+        renderArticle();
+      } catch {
+        /* ignore reload error */
+      }
+    }
+  })();
 }
 
 export function cancelEditing() {

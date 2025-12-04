@@ -40,6 +40,8 @@ export const state = {
   // Очередь асинхронных перемещений блоков вверх/вниз.
   moveQueue: [],
   isMoveQueueProcessing: false,
+  // Позиция прокрутки списка блоков перед входом в редактирование.
+  editingScrollTop: null,
   // Предпочтительная позиция каретки при входе в режим редактирования блока: 'start' | 'end'.
   editingCaretPosition: 'start',
 };
