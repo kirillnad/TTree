@@ -48,7 +48,9 @@ export async function startEditing() {
   state.scrollTargetBlockId = null;
   state.editingBlockId = state.currentBlockId;
   state.editingInitialText = findBlock(state.currentBlockId)?.block.text || '';
-  renderArticle();
+  // Перерисовываем только текущий блок в режиме редактирования,
+  // без полной перерисовки всей статьи.
+  await rerenderSingleBlock(state.currentBlockId);
 }
 
 export async function saveEditing() {
@@ -184,8 +186,8 @@ export async function saveEditing() {
   })();
 }
 
-export function cancelEditing() {
-  if (state.mode !== 'edit') return;
+export async function cancelEditing() {
+  if (state.mode !== 'edit' || !state.editingBlockId) return;
   const blockId = state.editingBlockId;
   const blockEl = document.querySelector(
     `.block[data-block-id="${blockId}"] .block-text[contenteditable="true"]`,
@@ -198,32 +200,39 @@ export function cancelEditing() {
   state.editingBlockId = null;
   state.editingInitialText = '';
 
-  (async () => {
-    if (shouldDelete) {
-      const fallbackId = findFallbackBlockId(blockId);
+  if (shouldDelete) {
+    // Пустой блок при Esc: сразу удаляем его локально и перерисовываем
+    // только затронутый участок дерева, а сетевой DELETE выполняем в фоне.
+    const fallbackId = findFallbackBlockId(blockId);
+    const locatedForDelete = findBlock(blockId);
+    if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = locatedForDelete.siblings || state.article.blocks;
+      const index = locatedForDelete.index ?? siblings.findIndex((b) => b && b.id === blockId);
+      if (index >= 0) {
+        siblings.splice(index, 1);
+      }
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.currentBlockId = fallbackId;
+    state.scrollTargetBlockId = fallbackId;
+    const parentIdForRerender = locatedForDelete?.parent?.id || null;
+    if (parentIdForRerender) {
+      await rerenderSingleBlock(parentIdForRerender);
+    } else {
+      renderArticle();
+    }
+
+    (async () => {
       try {
-        // Оптимистично удаляем блок из локального дерева без полной перезагрузки статьи.
-        const located = findBlock(blockId);
         const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
           method: 'DELETE',
         });
-        if (located && state.article && Array.isArray(state.article.blocks)) {
-          const siblings = located.siblings || state.article.blocks;
-          const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
-          if (index >= 0) {
-            siblings.splice(index, 1);
-          }
-          if (state.article.updatedAt) {
-            try {
-              state.article.updatedAt = new Date().toISOString();
-            } catch {
-              /* ignore */
-            }
-          }
-        }
-        state.currentBlockId = fallbackId;
-        state.scrollTargetBlockId = fallbackId;
-        renderArticle();
         // Для undo используем тот же формат, что и deleteCurrentBlock.
         if (result?.block) {
           const snapshot = cloneBlockSnapshot(result.block);
@@ -240,13 +249,22 @@ export function cancelEditing() {
           });
         }
       } catch (error) {
-        showToast(error.message || 'Не удалось удалить пустой блок');
-        renderArticle();
+        showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
+        try {
+          await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
+          renderArticle();
+        } catch {
+          /* ignore */
+        }
       }
-    } else {
-      renderArticle();
-    }
-  })();
+    })();
+    return;
+  }
+
+  // Непустой блок: просто выходим из режима редактирования и
+  // перерисовываем только этот блок, не трогая остальные.
+  state.currentBlockId = blockId;
+  await rerenderSingleBlock(blockId);
 }
 
 export async function splitEditingBlockAtCaret() {
@@ -329,7 +347,15 @@ export async function splitEditingBlockAtCaret() {
     state.currentBlockId = newBlockId;
     state.scrollTargetBlockId = newBlockId;
     state.editingCaretPosition = 'start';
-    renderArticle();
+    // Частичная перерисовка:
+    // - если есть родитель, достаточно перерисовать его поддерево,
+    // - если блок корневой — пока откатываемся к полному рендеру.
+    const parentIdForRerender = located?.parent?.id || null;
+    if (parentIdForRerender) {
+      await rerenderSingleBlock(parentIdForRerender);
+    } else {
+      renderArticle();
+    }
     if (previousSnapshot) {
       pushUndoEntry({
         type: 'text',
@@ -350,46 +376,34 @@ export async function createSibling(direction) {
   }
   const anchorBlockId = state.currentBlockId;
   try {
-    const data = await apiRequest(
-      `/api/articles/${state.articleId}/blocks/${state.currentBlockId}/siblings`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ direction }),
-      },
-    );
-    const newBlock = data?.block;
-    if (!newBlock || !newBlock.id) {
-      showToast('Не удалось создать новый блок');
+    const located = findBlock(anchorBlockId);
+    if (!located) {
+      showToast('Не удалось найти текущий блок');
       return;
     }
-
-    const parentId = data.parentId || null;
-    const insertIndexFromServer = typeof data.index === 'number' ? data.index : null;
-
-    // Вставляем новый блок в локальное дерево без полной перезагрузки статьи.
-    let siblingsArray = null;
-    if (parentId) {
-      const parentLocated = findBlock(parentId);
-      const parentBlock = parentLocated?.block || null;
-      if (parentBlock) {
-        if (!Array.isArray(parentBlock.children)) {
-          parentBlock.children = [];
-        }
-        siblingsArray = parentBlock.children;
-      }
-    } else {
-      siblingsArray = state.article.blocks;
-    }
-
+    const parentId = located.parent?.id || null;
+    let siblingsArray = located.siblings || state.article.blocks;
     if (!Array.isArray(siblingsArray)) {
       siblingsArray = state.article.blocks;
     }
-
-    const insertIndex =
-      insertIndexFromServer !== null && insertIndexFromServer >= 0 && insertIndexFromServer <= siblingsArray.length
-        ? insertIndexFromServer
-        : siblingsArray.length;
-    const localBlock = cloneBlockSnapshot(newBlock) || newBlock;
+    let baseIndex =
+      typeof located.index === 'number'
+        ? located.index
+        : siblingsArray.findIndex((b) => b && b.id === anchorBlockId);
+    if (baseIndex < 0) {
+      baseIndex = siblingsArray.length;
+    }
+    const insertIndex = direction === 'before' ? baseIndex : baseIndex + 1;
+    const newBlockId =
+      (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : `block-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+    const localBlock = {
+      id: newBlockId,
+      text: '',
+      children: [],
+      collapsed: false,
+    };
     siblingsArray.splice(insertIndex, 0, localBlock);
 
     if (state.article.updatedAt) {
@@ -400,7 +414,6 @@ export async function createSibling(direction) {
       }
     }
 
-    const newBlockId = newBlock.id;
     state.mode = 'edit';
     state.editingBlockId = newBlockId;
     state.editingInitialText = '';
@@ -415,18 +428,49 @@ export async function createSibling(direction) {
       renderArticle();
     }
 
-    const snapshot = cloneBlockSnapshot(newBlock);
-    pushUndoEntry({
-      type: 'structure',
-      action: {
-        kind: 'create',
-        parentId: parentId,
-        index: insertIndexFromServer,
-        blockId: newBlockId,
-        block: snapshot,
-        fallbackId: anchorBlockId,
-      },
-    });
+    // Сетевую часть выполняем в фоне: сервер получает уже готовый payload
+    // с тем же id, что и локальный блок.
+    (async () => {
+      try {
+        const payload = {
+          id: newBlockId,
+          text: '',
+          children: [],
+          collapsed: false,
+        };
+        const data = await apiRequest(
+          `/api/articles/${state.articleId}/blocks/${anchorBlockId}/siblings`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ direction, payload }),
+          },
+        );
+        const created = data?.block;
+        if (!created || !created.id) {
+          throw new Error('Не удалось создать новый блок');
+        }
+        const snapshot = cloneBlockSnapshot(created);
+        pushUndoEntry({
+          type: 'structure',
+          action: {
+            kind: 'create',
+            parentId: data.parentId || parentId || null,
+            index: typeof data.index === 'number' ? data.index : null,
+            blockId: created.id,
+            block: snapshot,
+            fallbackId: anchorBlockId,
+          },
+        });
+      } catch (error) {
+        showToast(error.message || 'Не удалось создать новый блок, обновляем страницу');
+        try {
+          await loadArticle(state.articleId, { desiredBlockId: anchorBlockId });
+          renderArticle();
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
   } catch (error) {
     showToast(error.message);
   }
@@ -467,7 +511,12 @@ export async function deleteCurrentBlock() {
     }
     state.currentBlockId = fallbackId;
     state.scrollTargetBlockId = fallbackId;
-    renderArticle();
+    const parentIdForRerender = located?.parent?.id || null;
+    if (parentIdForRerender) {
+      await rerenderSingleBlock(parentIdForRerender);
+    } else {
+      renderArticle();
+    }
     if (result?.block) {
       const snapshot = cloneBlockSnapshot(result.block);
       pushUndoEntry({
@@ -510,6 +559,7 @@ export async function insertParsedMarkdownBlocks(parsedBlocks = []) {
   try {
     let anchorId = state.currentBlockId;
     let lastInsertedId = null;
+     let lastParentId = null;
     for (const parsed of parsedBlocks) {
       const payload = buildBlockPayloadFromParsed(parsed);
       if (!payload) {
@@ -518,21 +568,66 @@ export async function insertParsedMarkdownBlocks(parsedBlocks = []) {
       }
       // eslint-disable-next-line no-await-in-loop
       const encryptedPayload = await maybeEncryptBlockPayloadForCurrentArticle(payload);
+      // eslint-disable-next-line no-await-in-loop
       const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${anchorId}/siblings`, {
         method: 'POST',
         body: JSON.stringify({ direction: 'after', payload: encryptedPayload }),
       });
-      if (result?.block?.id) {
-        anchorId = result.block.id;
-        lastInsertedId = result.block.id;
+      const inserted = result?.block;
+      if (inserted && inserted.id) {
+        anchorId = inserted.id;
+        lastInsertedId = inserted.id;
+        lastParentId = result.parentId || null;
+
+        // Оптимистично вставляем новый блок в локальное дерево статьи,
+        // чтобы не перезагружать всю статью.
+        if (state.article && Array.isArray(state.article.blocks)) {
+          let siblingsArray = null;
+          if (lastParentId) {
+            const parentLocated = findBlock(lastParentId);
+            const parentBlock = parentLocated?.block || null;
+            if (parentBlock) {
+              if (!Array.isArray(parentBlock.children)) {
+                parentBlock.children = [];
+              }
+              siblingsArray = parentBlock.children;
+            }
+          } else {
+            siblingsArray = state.article.blocks;
+          }
+          if (!Array.isArray(siblingsArray)) {
+            siblingsArray = state.article.blocks;
+          }
+          const insertIndexFromServer = typeof result.index === 'number' ? result.index : null;
+          const insertIndex =
+            insertIndexFromServer !== null &&
+            insertIndexFromServer >= 0 &&
+            insertIndexFromServer <= siblingsArray.length
+              ? insertIndexFromServer
+              : siblingsArray.length;
+          const localBlock = cloneBlockSnapshot(inserted) || inserted;
+          siblingsArray.splice(insertIndex, 0, localBlock);
+          if (state.article.updatedAt) {
+            try {
+              state.article.updatedAt = new Date().toISOString();
+            } catch {
+              /* ignore */
+            }
+          }
+        }
       }
     }
     if (!lastInsertedId) {
       showToast('Не удалось добавить ни одного блока');
       return;
     }
-    await loadArticle(state.articleId, { desiredBlockId: lastInsertedId });
-    renderArticle();
+    state.currentBlockId = lastInsertedId;
+    state.scrollTargetBlockId = lastInsertedId;
+    if (lastParentId) {
+      await rerenderSingleBlock(lastParentId);
+    } else {
+      renderArticle();
+    }
     showToast('Блоки добавлены из Markdown');
   } finally {
     setPasteProgress(false);

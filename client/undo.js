@@ -5,7 +5,7 @@ import { loadArticle } from './article.js';
 import { renderArticle, rerenderSingleBlock, reorderDomBlock } from './article.js';
 import { findBlock, setCurrentBlock, ensureBlockVisible, flattenVisible } from './block.js';
 import { logDebug, textareaToTextContent, extractImagesFromHtml } from './utils.js';
-import { encryptBlockTree } from './encryption.js';
+import { encryptBlockTree, decryptString, isEncryptedText } from './encryption.js';
 
 function diffTextSegments(currentText = '', nextText = '') {
   const a = Array.from(currentText);
@@ -389,11 +389,43 @@ async function undoTextChange(entry) {
       method: 'POST',
       body: JSON.stringify({ entryId: entry?.historyEntryId || null }),
     });
-    if (!result?.blockId) return null;
-    await loadArticle(state.articleId, { desiredBlockId: result.blockId });
-    renderArticle();
-    await focusBlock(result.blockId);
-    return result.blockId;
+    const blockId = result?.blockId;
+    if (!blockId) return null;
+
+    const located = findBlock(blockId);
+    if (!located || !state.article || !Array.isArray(state.article.blocks)) {
+      // Если локальное дерево потеряло блок — делаем жёсткий ресинк, как раньше.
+      await loadArticle(state.articleId, { desiredBlockId: blockId });
+      renderArticle();
+      return blockId;
+    }
+
+    let newText = (result.block && typeof result.block.text === 'string') ? result.block.text : '';
+    if (state.article.encrypted && state.articleEncryptionKeys?.[state.article.id] && isEncryptedText(newText)) {
+      const key = state.articleEncryptionKeys[state.article.id];
+      try {
+        newText = await decryptString(key, newText);
+      } catch (_error) {
+        newText = '';
+      }
+    }
+
+    // Обновляем только один блок в локальном дереве.
+    located.block.text = newText;
+    if (state.article.updatedAt) {
+      try {
+        state.article.updatedAt = new Date().toISOString();
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Обновляем текущий блок и визуальное выделение без полного рендера.
+    state.currentBlockId = blockId;
+    state.selectionAnchorBlockId = null;
+    state.selectedBlockIds = [];
+    await rerenderSingleBlock(blockId);
+    return blockId;
   } catch (error) {
     if (error.message !== 'Nothing to undo') {
       showToast(error.message);
@@ -409,11 +441,40 @@ async function redoTextChange(entry) {
       method: 'POST',
       body: JSON.stringify({ entryId: entry?.historyEntryId || null }),
     });
-    if (!result?.blockId) return null;
-    await loadArticle(state.articleId, { desiredBlockId: result.blockId });
-    renderArticle();
-    await focusBlock(result.blockId);
-    return result.blockId;
+    const blockId = result?.blockId;
+    if (!blockId) return null;
+
+    const located = findBlock(blockId);
+    if (!located || !state.article || !Array.isArray(state.article.blocks)) {
+      await loadArticle(state.articleId, { desiredBlockId: blockId });
+      renderArticle();
+      return blockId;
+    }
+
+    let newText = (result.block && typeof result.block.text === 'string') ? result.block.text : '';
+    if (state.article.encrypted && state.articleEncryptionKeys?.[state.article.id] && isEncryptedText(newText)) {
+      const key = state.articleEncryptionKeys[state.article.id];
+      try {
+        newText = await decryptString(key, newText);
+      } catch (_error) {
+        newText = '';
+      }
+    }
+
+    located.block.text = newText;
+    if (state.article.updatedAt) {
+      try {
+        state.article.updatedAt = new Date().toISOString();
+      } catch {
+        /* ignore */
+      }
+    }
+
+    state.currentBlockId = blockId;
+    state.selectionAnchorBlockId = null;
+    state.selectedBlockIds = [];
+    await rerenderSingleBlock(blockId);
+    return blockId;
   } catch (error) {
     if (error.message !== 'Nothing to redo') {
       showToast(error.message);

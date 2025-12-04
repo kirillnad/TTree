@@ -2,7 +2,6 @@ import { state, isSavingTitle, setSavingTitle } from './state.js';
 import { refs } from './refs.js';
 import { apiRequest, deleteArticle } from './api.js';
 import { showToast } from './toast.js';
-import { renderArticle } from './article.js';
 import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
 import { navigate, routing } from './routing.js';
@@ -26,7 +25,15 @@ export function startTitleEditingMode() {
   }
   state.isEditingTitle = true;
   refs.articleTitleInput.value = state.article.title || '';
-  renderArticle();
+  if (refs.articleTitle) {
+    refs.articleTitle.classList.add('hidden');
+  }
+  if (refs.articleTitleInput) {
+    refs.articleTitleInput.classList.remove('hidden');
+  }
+  if (refs.editTitleBtn) {
+    refs.editTitleBtn.classList.add('hidden');
+  }
   focusTitleInput();
 }
 
@@ -42,7 +49,17 @@ function cancelTitleEditingMode() {
   if (refs.articleTitleInput && state.article) {
     refs.articleTitleInput.value = state.article.title || '';
   }
-  renderArticle();
+  const titleText = state.article?.title || 'Без названия';
+  if (refs.articleTitle) {
+    refs.articleTitle.textContent = titleText;
+    refs.articleTitle.classList.remove('hidden');
+  }
+  if (refs.articleTitleInput) {
+    refs.articleTitleInput.classList.add('hidden');
+  }
+  if (refs.editTitleBtn) {
+    refs.editTitleBtn.classList.remove('hidden');
+  }
 }
 
 function updateSearchTitlesCache(article) {
@@ -64,7 +81,16 @@ async function saveTitleEditingMode() {
   const currentTitle = (state.article.title || '').trim();
   if (newTitle === currentTitle) {
     state.isEditingTitle = false;
-    renderArticle();
+    if (refs.articleTitle) {
+      refs.articleTitle.textContent = currentTitle || 'Без названия';
+      refs.articleTitle.classList.remove('hidden');
+    }
+    if (refs.articleTitleInput) {
+      refs.articleTitleInput.classList.add('hidden');
+    }
+    if (refs.editTitleBtn) {
+      refs.editTitleBtn.classList.remove('hidden');
+    }
     return;
   }
   if (isSavingTitle) return;
@@ -78,7 +104,18 @@ async function saveTitleEditingMode() {
     state.article = { ...state.article, title: updatedArticle.title, updatedAt: updatedArticle.updatedAt };
     upsertArticleIndex(updatedArticle);
     state.isEditingTitle = false;
-    renderArticle();
+    const titleText = state.article.title || 'Без названия';
+    if (refs.articleTitle) {
+      refs.articleTitle.textContent = titleText;
+      refs.articleTitle.classList.remove('hidden');
+    }
+    if (refs.articleTitleInput) {
+      refs.articleTitleInput.classList.add('hidden');
+      refs.articleTitleInput.value = titleText;
+    }
+    if (refs.editTitleBtn) {
+      refs.editTitleBtn.classList.remove('hidden');
+    }
     updateSearchTitlesCache(updatedArticle);
     showToast('Title saved');
   } catch (error) {

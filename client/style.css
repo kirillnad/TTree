@@ -954,6 +954,12 @@ button:hover {
   border-color: #3794ff;
 }
 
+.block.block--selected-root-ancestor {
+  border: 1px solid #d4ddf0;
+  border-radius: 8px;
+  padding: 0.15rem 0.15rem 0.25rem;
+}
+
 .block.editing > .block-surface {
   background: transparent;
   position: relative;
@@ -1863,8 +1869,8 @@ body.block-dnd-active {
   left: 50%;
   width: 6px;
   height: 6px;
-  border-right: 2px solid #9ca3af;
-  border-bottom: 2px solid #9ca3af;
+  border-right: 1px solid #9ca3af;
+  border-bottom: 1px solid #9ca3af;
   transform-origin: center center;
   transform: translate(-50%, -50%) rotate(-135deg);
 }

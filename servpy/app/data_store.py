@@ -852,6 +852,28 @@ def _update_article_links_for_block(
 
 def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # Оптимизированный вариант, который не перезаписывает всю статью
+    # 1) Быстрый путь: меняется только collapsed-флаг — не трогаем текст/историю/FTS.
+    if 'collapsed' in attrs and 'text' not in attrs:
+        now = iso_now()
+        collapsed_val = bool(attrs['collapsed'])
+        with CONN:
+            updated = CONN.execute(
+                'UPDATE blocks SET collapsed = ?, updated_at = ? WHERE id = ? AND article_id = ?',
+                (int(collapsed_val), now, block_id, article_id),
+            )
+            # updated.rowcount может быть недоступен в обёртке, поэтому перепроверяем наличие блока отдельно.
+            row = CONN.execute(
+                'SELECT 1 FROM blocks WHERE id = ? AND article_id = ?',
+                (block_id, article_id),
+            ).fetchone()
+            if not row:
+                raise BlockNotFound(f'Блок с ID {block_id} не найден.')
+            CONN.execute(
+                'UPDATE articles SET updated_at = ? WHERE id = ?',
+                (now, article_id),
+            )
+        return {'id': block_id, 'collapsed': collapsed_val, 'updatedAt': now}
+
     if 'text' in attrs or 'collapsed' in attrs:
         now = iso_now()
         history_entry = None
@@ -963,9 +985,13 @@ def insert_block(article_id: str, target_block_id: str, direction: str, payload:
     new_block = clone_block(payload or create_default_block())
     inserted = _insert_block_tree(article_id, new_block, target['parent_id'], insertion, now)
     with CONN:
-        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
-        # Новый блок мог содержать ссылки — обновляем связи статьи.
-        _rebuild_article_links_for_article_id(article_id)
+      CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+      # Если блок создаётся с готовым содержимым (payload) и в нём уже есть
+      # текст или дети, он может содержать ссылки — пересчитываем связи.
+      # Пустые/по умолчанию блоки (Ctrl+↑/↓, быстрые заметки и т.п.)
+      # не требуют полного пересчёта article_links.
+      if payload is not None and (payload.get('text') or payload.get('children')):
+          _rebuild_article_links_for_article_id(article_id)
     return {'block': inserted, 'parentId': target['parent_id'], 'index': insertion}
 
 

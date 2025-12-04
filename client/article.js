@@ -42,6 +42,51 @@ function setCurrentArticleKey(key) {
   }
 }
 
+export function updateArticleHeaderUi() {
+  const article = state.article;
+  if (!article) return;
+  const titleText = article.title || 'Без названия';
+  if (refs.articleTitle) {
+    refs.articleTitle.textContent = titleText;
+    refs.articleTitle.classList.toggle('article-title--encrypted', Boolean(article.encrypted));
+    refs.articleTitle.classList.toggle('hidden', state.isEditingTitle);
+  }
+  if (refs.articleTitleInput) {
+    if (!state.isEditingTitle) {
+      refs.articleTitleInput.value = titleText;
+    }
+    refs.articleTitleInput.classList.toggle('hidden', !state.isEditingTitle);
+  }
+  if (refs.editTitleBtn) {
+    refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
+  }
+  if (refs.articleFavoriteBtn) {
+    const favs = new Set(state.favoriteArticles || []);
+    const isFav = favs.has(article.id);
+    refs.articleFavoriteBtn.textContent = isFav ? '★' : '☆';
+    refs.articleFavoriteBtn.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
+  }
+  if (refs.articlePublicLinkBtn) {
+    const hasPublic = Boolean(article.publicSlug);
+    refs.articlePublicLinkBtn.classList.toggle('hidden', !hasPublic);
+    if (hasPublic) {
+      refs.articlePublicLinkBtn.title = 'Скопировать публичную ссылку';
+    }
+  }
+  if (refs.deleteArticleBtn) {
+    refs.deleteArticleBtn.classList.toggle('hidden', article.id === 'inbox');
+  }
+  if (refs.articleEncryptionBtn) {
+    refs.articleEncryptionBtn.textContent = article.encrypted ? 'Сменить пароль' : 'Зашифровать';
+  }
+  if (refs.articleEncryptionRemoveBtn) {
+    refs.articleEncryptionRemoveBtn.classList.toggle('hidden', !article.encrypted);
+  }
+  if (refs.updatedAt && article.updatedAt) {
+    refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
+  }
+}
+
 async function ensureArticleDecrypted(article) {
   if (!article || !article.encrypted) {
     if (article) {
@@ -166,6 +211,24 @@ function dedupeBlocksById(blocks) {
     }
   };
   visit(blocks);
+}
+
+function cleanupDomBlockDuplicates() {
+  if (!refs.blocksContainer) return;
+  const seen = new Set();
+  const blocks = refs.blocksContainer.querySelectorAll('.block[data-block-id]');
+  blocks.forEach((el) => {
+    const id = el.getAttribute('data-block-id');
+    if (!id) return;
+    if (seen.has(id)) {
+      const parent = el.parentNode;
+      if (parent) {
+        parent.removeChild(el);
+      }
+    } else {
+      seen.add(id);
+    }
+  });
 }
 
 async function renderBlocks(blocks, container, depth = 1) {
@@ -558,7 +621,7 @@ export async function toggleArticleEncryption() {
       article.updatedAt = updated?.updatedAt || article.updatedAt;
       setCurrentArticleKey(key);
       upsertArticleIndex(updated);
-      renderArticle();
+      updateArticleHeaderUi();
       showToast('Пароль обновлён');
       logDebug('toggleArticleEncryption: password changed', {
         id: article.id,
@@ -607,7 +670,7 @@ export async function toggleArticleEncryption() {
     article.updatedAt = updated?.updatedAt || article.updatedAt;
     setCurrentArticleKey(key);
     upsertArticleIndex(updated);
-    renderArticle();
+    updateArticleHeaderUi();
     showToast('Страница зашифрована');
     logDebug('toggleArticleEncryption: enabled', {
       id: article.id,
@@ -680,7 +743,7 @@ export async function removeArticleEncryption() {
     article.updatedAt = updated?.updatedAt || article.updatedAt;
     setCurrentArticleKey(null);
     upsertArticleIndex(updated);
-    renderArticle();
+    updateArticleHeaderUi();
     showToast('Шифрование страницы отключено');
     logDebug('removeArticleEncryption: disabled', {
       id: article.id,
@@ -1293,42 +1356,7 @@ export function renderArticle() {
   renderSidebarArticleList();
   const rootBlocks = article.id === 'inbox' ? [...(article.blocks || [])].reverse() : article.blocks;
 
-  const titleText = article.title || 'Без названия';
-  refs.articleTitle.textContent = titleText;
-  refs.articleTitle.classList.toggle('article-title--encrypted', Boolean(article.encrypted));
-  if (!state.isEditingTitle && refs.articleTitleInput) {
-    refs.articleTitleInput.value = titleText;
-  }
-  refs.articleTitle.classList.toggle('hidden', state.isEditingTitle);
-  if (refs.articleTitleInput) {
-    refs.articleTitleInput.classList.toggle('hidden', !state.isEditingTitle);
-  }
-  if (refs.editTitleBtn) {
-    refs.editTitleBtn.classList.toggle('hidden', state.isEditingTitle);
-  }
-  if (refs.articleFavoriteBtn) {
-    const favs = new Set(state.favoriteArticles || []);
-    const isFav = favs.has(article.id);
-    refs.articleFavoriteBtn.textContent = isFav ? '★' : '☆';
-    refs.articleFavoriteBtn.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
-  }
-  if (refs.articlePublicLinkBtn) {
-    const hasPublic = Boolean(article.publicSlug);
-    refs.articlePublicLinkBtn.classList.toggle('hidden', !hasPublic);
-    if (hasPublic) {
-      refs.articlePublicLinkBtn.title = 'Скопировать публичную ссылку';
-    }
-  }
-  if (refs.deleteArticleBtn) {
-    refs.deleteArticleBtn.classList.toggle('hidden', article.id === 'inbox');
-  }
-  if (refs.articleEncryptionBtn) {
-    refs.articleEncryptionBtn.textContent = article.encrypted ? 'Сменить пароль' : 'Зашифровать';
-  }
-  if (refs.articleEncryptionRemoveBtn) {
-    refs.articleEncryptionRemoveBtn.classList.toggle('hidden', !article.encrypted);
-  }
-  refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
+  updateArticleHeaderUi();
   refs.blocksContainer.innerHTML = '';
   updateDragModeUi();
   clearDragLayer();
@@ -1371,6 +1399,7 @@ export function renderArticle() {
   };
 
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
+    cleanupDomBlockDuplicates();
     applyPendingPreviewMarkup();
     if (state.scrollTargetBlockId && state.mode === 'view') {
       const targetId = state.scrollTargetBlockId;

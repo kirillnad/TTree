@@ -1,7 +1,7 @@
 ﻿import { state } from './state.js';
 import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from './api.js';
 import { showToast } from './toast.js';
-import { renderArticle } from './article.js';
+import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
 import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js';
 import { fetchArticlesIndex } from './api.js';
@@ -37,6 +37,39 @@ export function setCurrentBlock(blockId) {
   setCurrentBlockInternal(blockId, { preserveSelection: false });
 }
 
+function updateSelectionUi({ scrollIntoView = false } = {}) {
+  const selectedIds = new Set(Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : []);
+  if (state.currentBlockId) {
+    selectedIds.add(state.currentBlockId);
+  }
+  const blockEls = document.querySelectorAll('.block[data-block-id]');
+  blockEls.forEach((el) => {
+    const id = el.getAttribute('data-block-id');
+    const shouldSelect = id && selectedIds.has(id);
+    el.classList.toggle('selected', Boolean(shouldSelect));
+    el.classList.remove('block--selected-root-ancestor');
+  });
+
+  // Подсветка корневого родителя для вложенного текущего блока.
+  if (state.currentBlockId && state.article && Array.isArray(state.article.blocks)) {
+    const located = findBlock(state.currentBlockId);
+    const ancestors = located?.ancestors || [];
+    const rootTargetId = ancestors.length > 0 ? ancestors[0]?.id : located?.block?.id;
+    if (rootTargetId) {
+      const rootEl = document.querySelector(`.block[data-block-id="${rootTargetId}"]`);
+      if (rootEl) {
+        rootEl.classList.add('block--selected-root-ancestor');
+      }
+    }
+  }
+  if (scrollIntoView && state.mode === 'view' && state.currentBlockId) {
+    const currentEl = document.querySelector(`.block[data-block-id="${state.currentBlockId}"]`);
+    if (currentEl) {
+      currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
 export function moveSelection(offset) {
   if (!state.article) return;
   const ordered = flattenVisible(state.article.blocks);
@@ -64,7 +97,7 @@ function setCurrentBlockInternal(blockId, options = {}) {
     state.selectionAnchorBlockId = null;
     state.selectedBlockIds = [];
   }
-  renderArticle();
+  updateSelectionUi({ scrollIntoView: state.mode === 'view' });
 }
 
 export function extendSelection(offset) {
@@ -97,7 +130,7 @@ export function extendSelection(offset) {
   if (state.mode === 'view') {
     state.scrollTargetBlockId = state.currentBlockId;
   }
-  renderArticle();
+  updateSelectionUi({ scrollIntoView: state.mode === 'view' });
 }
 
 export function isSeparatorNode(node) {
@@ -456,7 +489,11 @@ export async function setCollapseState(blockId, collapsed) {
   if (!located || located.block.collapsed === collapsed) return;
 
   located.block.collapsed = collapsed;
-  renderArticle(); // Optimistic update
+  // Оптимистично обновляем только этот блок и его поддерево,
+  // без полного пересчёта всей статьи, затем заново обновляем
+  // UI выделения (в т.ч. рамку корневого родителя).
+  await rerenderSingleBlock(blockId);
+  updateSelectionUi({ scrollIntoView: false });
 
   try {
     const response = await apiRequest(`/api/articles/${state.articleId}/collapse`, {
@@ -465,12 +502,15 @@ export async function setCollapseState(blockId, collapsed) {
     });
     if (response?.updatedAt) {
       state.article.updatedAt = response.updatedAt;
-      renderArticle();
+      // Обновляем только метаданные статьи, без полного рендера.
     }
   } catch (error) {
-    located.block.collapsed = !collapsed; // Revert on error
-    renderArticle();
-    showToast(error.message);
+    // В случае ошибки откатываем локальное состояние и
+    // снова перерисовываем только затронутый блок.
+    located.block.collapsed = !collapsed;
+    await rerenderSingleBlock(blockId);
+    updateSelectionUi({ scrollIntoView: false });
+    showToast(error.message || 'Не удалось изменить состояние блока');
   }
 }
 
