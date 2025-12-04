@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Справка по Memus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body.help-page {
+        margin: 0;
+        padding: 1.5rem 1rem 2rem;
+        background: #eef2f8;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      .help-shell {
+        max-width: 960px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+        padding: 1.5rem 1.75rem 2rem;
+      }
+      .help-shell h1 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        font-size: 1.6rem;
+      }
+      .help-shell h2 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 1.2rem;
+      }
+      .help-shell p {
+        margin-top: 0.35rem;
+        margin-bottom: 0.35rem;
+        line-height: 1.5;
+      }
+      .help-shell ul {
+        padding-left: 1.1rem;
+      }
+      .help-shell li {
+        margin-bottom: 0.25rem;
+      }
+      .help-note {
+        margin-top: 1rem;
+        padding: 0.75rem 0.9rem;
+        border-radius: 8px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body class="help-page">
+    <main class="help-shell" aria-label="Справка по Memus">
+      <h1>Справка по Memus</h1>
+      <p>
+        Это базовая страница справки. Здесь можно кратко описать, как работать с Memus,
+        как создавать и редактировать страницы, использовать граф и резервные копии.
+      </p>
+
+      <h2>Навигация по страницам</h2>
+      <ul>
+        <li><strong>Список статей</strong> — слева в боковой панели и в центральном списке.</li>
+        <li><strong>Быстрые заметки</strong> — кнопка «Быстрые заметки» в сайдбаре.</li>
+        <li><strong>Граф</strong> — кнопка «Граф» внизу боковой панели.</li>
+      </ul>
+
+      <h2>Работа с блоками</h2>
+      <ul>
+        <li><strong>Enter</strong> — начать редактирование выделенного блока.</li>
+        <li><strong>Ctrl+Enter</strong> — сохранить и выйти из редактирования.</li>
+        <li><strong>Ctrl+Z / Ctrl+Y</strong> — отмена / повтор.</li>
+        <li><strong>Ctrl+Shift+↑/↓</strong> — переместить блок вверх/вниз в своей ветке.</li>
+        <li><strong>Ctrl+→ / Ctrl+←</strong> — вложить / поднять уровень блока.</li>
+      </ul>
+
+      <h2>Резервное копирование</h2>
+      <ul>
+        <li>
+          В меню списка статей (<strong>…</strong> в заголовке «Список статей») есть пункт
+          «Резервная копия (ZIP)» — он сохраняет ZIP с HTML‑страницами.
+        </li>
+        <li>
+          Для восстановления ZIP можно распаковать в папку и использовать пункт
+          «Импорт из резервной копии (папка)».
+        </li>
+      </ul>
+
+      <div class="help-note">
+        <strong>Как обновить эту страницу?</strong><br />
+        Файл справки находится по пути <code>client/help.html</code> в репозитории.
+        Вы можете свободно отредактировать его содержимое, добавить скриншоты, подробные инструкции и ссылки.
+      </div>
+    </main>
+  </body>
+  </html>
+

@@ -815,7 +815,16 @@ export function attachEvents() {
     refs.articleTitleInput.addEventListener('blur', handleTitleInputBlur);
   }
   if (refs.hintToggleBtn) {
-    refs.hintToggleBtn.addEventListener('click', toggleHintPopover);
+    refs.hintToggleBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const url = '/help.html';
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // Если браузер заблокировал новое окно — показываем старый поповер.
+        toggleHintPopover(event);
+      }
+    });
   }
   if (refs.sidebarToggle) {
     refs.sidebarToggle.addEventListener('click', toggleSidebarCollapsed);
