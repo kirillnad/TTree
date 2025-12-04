@@ -111,6 +111,10 @@ GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or ''
 GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI') or 'https://memus.pro/api/auth/google/callback'
 USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
 
+# Шаблонный файл справки, который можно использовать
+# как исходник для первой статьи нового пользователя.
+HELP_TEMPLATE_PATH = CLIENT_DIR / 'help.html'
+
 # Состояние фоновых задач импорта Logseq (в памяти процесса).
 LOGSEQ_IMPORT_TASKS: dict[str, dict[str, Any]] = {}
 
@@ -124,6 +128,12 @@ if os.environ.get('SERVPY_REBUILD_INDEXES_ON_STARTUP') == '1':
     rebuild_search_indexes()
 # Гарантируем наличие суперпользователя kirill.
 ensure_superuser('kirill', 'zZ141400', 'kirill')
+try:
+    admin_user = get_user_by_username('kirill')
+    if admin_user:
+        ensure_help_article_for_user(admin_user.id)
+except Exception as exc:  # noqa: BLE001
+    logger.error('Failed to ensure help article for superuser kirill: %r', exc)
 
 app = FastAPI()
 app.add_middleware(
@@ -200,6 +210,79 @@ def _rewrite_internal_links_for_public(html_text: str) -> str:
         return f'<a {before_attrs}href="{href}"{after_attrs}>{inner_html}</a>'
 
     return _INTERNAL_ARTICLE_LINK_RE.sub(_replace, html_text or '')
+
+
+def ensure_help_article_for_user(author_id: str) -> None:
+    """
+    Гарантирует, что у пользователя есть хотя бы одна статья.
+    Если статей ещё нет, создаёт «Memus - Руководство пользователя»
+    на основе client/help.html (экспорт Memus с блоком memus-export).
+    """
+    if not author_id:
+        return
+    try:
+        row = CONN.execute(
+            'SELECT 1 FROM articles WHERE deleted_at IS NULL AND author_id = ? LIMIT 1',
+            (author_id,),
+        ).fetchone()
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to check articles for user %s: %r', author_id, exc)
+        return
+    if row:
+        # У пользователя уже есть хотя бы одна статья — ничего не делаем.
+        return
+
+    try:
+        html_text = HELP_TEMPLATE_PATH.read_text(encoding='utf-8')
+    except OSError as exc:  # noqa: BLE001
+        logger.error('Failed to read help template %s: %r', HELP_TEMPLATE_PATH, exc)
+        return
+
+    try:
+        payload = _parse_memus_export_payload(html_text)
+    except ValueError as exc:  # noqa: BLE001
+        logger.error('Failed to parse memus-export from help.html: %r', exc)
+        return
+
+    article_meta = payload.get('article') or {}
+    blocks_meta = payload.get('blocks') or []
+
+    def build_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for meta in blocks or []:
+            children_meta = meta.get('children') or []
+            children = build_blocks(children_meta)
+            result.append(
+                {
+                    'id': str(uuid4()),
+                    'text': meta.get('text') or '',
+                    'collapsed': bool(meta.get('collapsed')),
+                    'children': children,
+                }
+            )
+        return result
+
+    now = datetime.utcnow().isoformat()
+    new_article_id = str(uuid4())
+    title_raw = (article_meta.get('title') or 'Memus - Руководство пользователя').strip()
+    title = title_raw or 'Memus - Руководство пользователя'
+
+    article = {
+        'id': new_article_id,
+        'title': title,
+        'createdAt': article_meta.get('createdAt') or now,
+        'updatedAt': article_meta.get('updatedAt') or now,
+        'deletedAt': None,
+        'blocks': build_blocks(blocks_meta),
+        'history': [],
+        'redoHistory': [],
+        'authorId': author_id,
+    }
+    try:
+        save_article(article)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to create default help article for user %s: %r', author_id, exc)
+        return
 
 
 def _collect_plain_text_from_blocks(blocks: list[dict[str, Any]] | None) -> list[str]:
@@ -1793,6 +1876,13 @@ def google_callback(request: Request):
         random_pwd = os.urandom(16).hex()
         user = create_user(username, random_pwd, name or username, is_superuser=False)
 
+    # Для нового (или только что найденного) пользователя гарантируем
+    # наличие стартовой статьи «Руководство пользователя».
+    try:
+        ensure_help_article_for_user(user.id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to ensure help article after Google auth for %s: %r', user.id, exc)
+
     # Создаём сессию и редиректим в SPA.
     sid = create_session(user.id)
     redirect = RedirectResponse(url='/', status_code=302)
@@ -1835,6 +1925,10 @@ def legacy_register(payload: dict[str, Any], response: Response):  # pragma: no 
     if existing:
         raise HTTPException(status_code=400, detail='Username already taken')
     user = create_user(username, password, display_name)
+    try:
+        ensure_help_article_for_user(user.id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to ensure help article after legacy register for %s: %r', user.id, exc)
     sid = create_session(user.id)
     set_session_cookie(response, sid)
     return {

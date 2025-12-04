@@ -2,9 +2,11 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <title>Иерархические заметки</title>
+    <title>Memus - ваши мысли и идеи</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/style.css" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#111827" />
   </head>
   <body>
     <div id="authOverlay" class="auth-overlay">
@@ -127,8 +129,14 @@
             </button>
           </div>
           <div class="sidebar-footer">
-            <span id="lastChangeLabel">Последнее изменение:&nbsp;</span>
-            <span id="lastChangeValue"></span>
+            <button
+              id="installAppBtn"
+              class="ghost small hidden"
+              type="button"
+              title="Установить Memus как приложение"
+            >
+              Установить приложение
+            </button>
             <div class="sidebar-user">
               <span id="currentUserLabel" class="sidebar-user__name"></span>
               <button id="logoutBtn" class="ghost small sidebar-user__logout" type="button">Выйти</button>

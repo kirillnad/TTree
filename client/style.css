@@ -115,6 +115,9 @@ html {
   text-align: center;
   padding-top: 4px;
   opacity: 0.8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .sidebar.collapsed {

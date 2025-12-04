@@ -48340,3 +48340,806 @@ INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274a
 INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
 INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
 INFO:     142.252.8.147:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /routing.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /changelog.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /users.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /toast.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /search.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sidebar.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /encryption.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /markdown.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     31.173.80.9:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=a14d0147b838701bbbcc1e6bd8132657&code=4%2F0Ab32j91BfDUySBagXfgdn0O-Pol4uAZ9ZuX6Qc57anhZQKBikLE3zP61Ewc6kWV6pRiqtw&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=a14d0147b838701bbbcc1e6bd8132657&code=4%2F0ATX87lP-GwiBn8BRQZ7gIacZFDmbuG_P_mLSkA_0ev9jvU_xHXs272cADCXrUosylWWRXA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 400 Bad Request
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /uploads/e0705e9f30a7567e4e969e4a5500e194/images/2025/12/1764829286225-1f754823.webp HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "PATCH /api/articles/3da957d7-74a9-41b8-8368-782274ad1973/collapse HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /help.html HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /help.html HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     5.45.207.34:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=cc47681d0ea6a896a4d900da86747579&code=4%2F0Ab32j93uhenFgT3AkXZM0fpTuMqZ2Zatv5XGgrVOzvmWlnsGK3ZTyrdK2OjQ0Xwor8U46w&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /index.html HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     172.64.192.4:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     172.71.144.49:0 - "GET /wordpress/wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     172.68.194.146:0 - "GET /wp-admin/setup-config.php HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sw.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /index.html HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET / HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [341101]
+[start_servpy] warning: pg_ctl or data dir not found, skipping postgres start
+INFO:     Started server process [343382]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4500 (Press CTRL+C to quit)
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sw.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/551cb907-c6c1-4c0a-bc74-21984a555c1a HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 401 Unauthorized
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=ca854da5d675e4369913d62b721884c7&code=4%2F0ATX87lPuapLScqa7BEAyQ5C2eYnurlmZVdh073z4KTDGyNnAC1OkMAQN1YMN0WJQxUjZKQ&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /icons/icon-512.png HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET / HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     172.253.234.209:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     172.253.234.209:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /.well-known/assetlinks.json HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /uploads/e0705e9f30a7567e4e969e4a5500e194/images/2025/12/1764829286225-1f754823.webp HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-512.png HTTP/1.0" 200 OK
+INFO:     216.108.237.50:0 - "POST /hello.world?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input HTTP/1.0" 405 Method Not Allowed
+INFO:     216.108.237.50:0 - "POST /?%ADd+allow_url_include%3d1+%ADd+auto_prepend_file%3dphp://input HTTP/1.0" 405 Method Not Allowed
+INFO:     216.108.237.50:0 - "GET /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /vendor/phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /vendor/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /vendor/phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /vendor/phpunit/phpunit/LICENSE/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /vendor/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /lib/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /lib/phpunit/phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /lib/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /lib/phpunit/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /admin/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /index.php?s=/index/\think\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.0" 404 Not Found
+INFO:     216.108.237.50:0 - "GET /public/index.php?s=/index/\think\app/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     216.108.237.50:0 - "GET /index.php?lang=../../../../../../../../usr/local/lib/php/pearcmd&+config-create+/&/<?echo(md5("hi"));?>+/tmp/index1.php HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 304 Not Modified
+INFO:     216.108.237.50:0 - "GET /index.php?lang=../../../../../../../../tmp/index1 HTTP/1.0" 404 Not Found
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     216.108.237.50:0 - "GET /containers/json HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /icons/icon-512.png HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles/3da957d7-74a9-41b8-8368-782274ad1973 HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET / HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     142.252.8.147:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles/7cbef0cd-e017-49fc-9305-3c2063e7e724 HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=ca854da5d675e4369913d62b721884c7&code=4%2F0ATX87lPtKLFTL7Qus99eh-drjBYqfPvvzRAeNL2KIIfUl8OUSlEGm--VJsUOflroBsnCbg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 400 Bad Request
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     20.65.168.78:0 - "GET /autodiscover/autodiscover.json?@zdi/Powershell HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sw.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /app.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /routing.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /events.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /users.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /graph.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /tables.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /auth.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /changelog.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /refs.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /state.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /toast.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /article.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /modal.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /undo.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /search.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /title.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /sidebar.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /utils.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /exporter.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /encryption.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /markdown.js HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 401 Unauthorized
+INFO:     31.173.80.9:0 - "GET /favicon.ico HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-512.png HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /.well-known/assetlinks.json HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET /api/auth/google/login HTTP/1.0" 307 Temporary Redirect
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=96dc1a64e1ded59b716c28db1f304e90&code=4%2F0Ab32j91zTacKzqrkJL-WHOI7k6zp_R_dme00ZnqzbGxbOtH_crDimZd-FNKBUHfzHDAI2g&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 302 Found
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=96dc1a64e1ded59b716c28db1f304e90&code=4%2F0Ab32j91zTacKzqrkJL-WHOI7k6zp_R_dme00ZnqzbGxbOtH_crDimZd-FNKBUHfzHDAI2g&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 400 Bad Request
+INFO:     31.173.80.9:0 - "GET /api/auth/google/callback?state=96dc1a64e1ded59b716c28db1f304e90&code=4%2F0Ab32j91zTacKzqrkJL-WHOI7k6zp_R_dme00ZnqzbGxbOtH_crDimZd-FNKBUHfzHDAI2g&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none HTTP/1.0" 400 Bad Request
+INFO:     167.172.255.56:0 - "GET /wp-login.php HTTP/1.0" 404 Not Found
+INFO:     31.173.80.9:0 - "GET / HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /style.css HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /block.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /actions.js HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /icons/icon-192.png HTTP/1.0" 304 Not Modified
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /manifest.webmanifest HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/auth/me HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/changelog HTTP/1.0" 200 OK
+INFO:     31.173.80.9:0 - "GET /api/articles HTTP/1.0" 200 OK
+INFO:     103.198.133.13:0 - "GET /wp-login.php HTTP/1.0" 404 Not Found

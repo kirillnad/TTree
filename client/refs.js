@@ -74,4 +74,5 @@ export const refs = {
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),
   dragModeToggleBtn: document.getElementById('dragModeToggleBtn'),
   listSidebarBtn: document.getElementById('listSidebarBtn'),
+  installAppBtn: document.getElementById('installAppBtn'),
 };

@@ -1336,8 +1336,7 @@ export async function loadListView() {
       const deleted = await ensureDeletedArticlesIndexLoaded();
       renderMainArticleList(deleted);
     } else {
-      const articles = await fetchArticlesIndex();
-      upsertArticleIndex(articles);
+      const articles = await ensureArticlesIndexLoaded();
       renderMainArticleList(articles);
     }
   } catch (error) {
