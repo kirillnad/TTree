@@ -769,33 +769,9 @@ export function attachRichContentHandlers(element, blockId) {
     }
   });
 
-  element.addEventListener('keydown', (event) => {
-    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    if (event.code === 'PageDown' || event.code === 'PageUp') {
-      event.preventDefault();
-      const distance = element.clientHeight || 0;
-      const delta = event.code === 'PageDown' ? distance : -distance;
-      const maxScroll = element.scrollHeight - element.clientHeight;
-      if (maxScroll > 0) {
-        element.scrollTop = Math.min(Math.max(element.scrollTop + delta, 0), maxScroll);
-      }
-    }
-  });
-
-  element.addEventListener('wheel', (event) => {
-    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    // РџСЂРѕРєСЂСѓС‡РёРІР°РµРј С‚РѕР»СЊРєРѕ РІРЅСѓС‚СЂРё Р±Р»РѕРєР°, РЅРµ С†РµРїР»СЏСЏ РєРѕРЅС‚РµР№РЅРµСЂ СЃС‚Р°С‚СЊРё
-    const maxScroll = element.scrollHeight - element.clientHeight;
-    if (maxScroll <= 0) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const next = Math.min(Math.max(element.scrollTop + event.deltaY, 0), maxScroll);
-    element.scrollTop = next;
-  });
+  // Не перехватываем PageUp/PageDown и колесо мыши в режиме редактирования,
+  // чтобы прокручивался весь список блоков (контейнер статьи), а не отдельный блок.
+  // События прокрутки обрабатываются ближайшим прокручиваемым контейнером (blocksContainer).
 }
 
 let richContextMenu = null;

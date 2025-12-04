@@ -181,6 +181,8 @@ export async function splitEditingBlockAtCaret() {
     });
     state.pendingEditBlockId = newBlockId;
     state.scrollTargetBlockId = newBlockId;
+    // После разбиения блока курсор должен оказаться в начале нового блока.
+    state.editingCaretPosition = 'start';
     await loadArticle(state.articleId, { desiredBlockId: newBlockId, editBlockId: newBlockId });
     renderArticle();
     if (previousSnapshot) {

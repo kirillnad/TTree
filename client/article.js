@@ -13,7 +13,7 @@ import {
   setCurrentBlock,
 } from './block.js';
 import { applyPendingPreviewMarkup } from './undo.js';
-import { placeCaretAtEnd, logDebug } from './utils.js';
+import { placeCaretAtEnd, placeCaretAtStart, logDebug } from './utils.js';
 import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
@@ -966,6 +966,9 @@ export function renderArticle() {
 
   const focusEditingBlock = () => {
     if (state.mode !== 'edit' || !state.editingBlockId) return;
+    // Для сценариев, где требуется установить каретку в начало (split блока),
+    // позиционирование выполняется в requestAnimationFrame ниже.
+    if (state.editingCaretPosition === 'start') return;
     const editable = refs.blocksContainer?.querySelector(
       `.block[data-block-id="${state.editingBlockId}"] .block-text[contenteditable="true"]`,
     );
@@ -1061,7 +1064,12 @@ export function renderArticle() {
           // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
           document.execCommand('defaultParagraphSeparator', false, 'p');
           body.focus();
-          placeCaretAtEnd(body);
+          if (state.editingCaretPosition === 'start') {
+            body.scrollTop = 0;
+            placeCaretAtStart(body);
+          } else {
+            placeCaretAtEnd(body);
+          }
         });
       } else {
         body.setAttribute('contenteditable', 'false');
@@ -1136,7 +1144,12 @@ export function renderArticle() {
             if (editable.contains(event.target)) return;
             event.stopPropagation();
             editable.focus();
-            placeCaretAtEnd(editable);
+            if (state.editingCaretPosition === 'start') {
+              editable.scrollTop = 0;
+              placeCaretAtStart(editable);
+            } else {
+              placeCaretAtEnd(editable);
+            }
           });
         }
       }
@@ -1225,7 +1238,12 @@ export function renderArticle() {
           const editable = target.querySelector('.block-text[contenteditable="true"]');
           if (editable && state.mode === 'edit' && state.editingBlockId === targetId) {
             editable.focus({ preventScroll: true });
-            placeCaretAtEnd(editable);
+            if (state.editingCaretPosition === 'start') {
+              editable.scrollTop = 0;
+              placeCaretAtStart(editable);
+            } else {
+              placeCaretAtEnd(editable);
+            }
           } else {
             target.setAttribute('tabindex', '-1');
             target.focus({ preventScroll: true });
@@ -1233,6 +1251,7 @@ export function renderArticle() {
         }
         state.currentBlockId = targetId;
         state.scrollTargetBlockId = null;
+        state.editingCaretPosition = 'end';
       });
     }
     ensureEditingBlockVisible();

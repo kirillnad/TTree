@@ -33,6 +33,8 @@ export const state = {
   articleEncryptionKeys: {},
   // Процесс объединения блоков (чтобы избежать повторных кликов).
   isMergingBlocks: false,
+  // Предпочтительная позиция каретки при входе в режим редактирования блока: 'start' | 'end'.
+  editingCaretPosition: 'end',
 };
 
 export let isSavingTitle = false;

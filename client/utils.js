@@ -47,6 +47,17 @@ export function placeCaretAtEnd(element) {
   selection.addRange(range);
 }
 
+export function placeCaretAtStart(element) {
+  if (!element || !element.isConnected) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export function textareaToTextContent(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
