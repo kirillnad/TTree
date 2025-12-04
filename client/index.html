@@ -10,8 +10,8 @@
     <div id="authOverlay" class="auth-overlay">
       <div class="auth-card">
         <h1 class="auth-title">Memus.pro</h1>
-        <p class="auth-subtitle">Войдите через Google, чтобы открыть свои заметки</p>
-        <button id="authGoogleLoginBtn" type="button" class="auth-submit auth-google-btn">
+        <p id="authSubtitle" class="auth-subtitle">Загружаем ваши заметки…</p>
+        <button id="authGoogleLoginBtn" type="button" class="auth-submit auth-google-btn hidden">
           <span class="auth-google-icon" aria-hidden="true">
             <svg
               viewBox="0.99 0.99 18.01 18.01"
@@ -254,6 +254,9 @@
                   title="Переключить режим перетаскивания блоков"
                 >
                   ⇅<span class="toolbar-label"> Перетаскивание</span>
+                </button>
+                <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
+                  ⇤<span class="toolbar-label"> Объединить</span>
                 </button>
                 <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
                   Новый блок

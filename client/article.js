@@ -508,6 +508,78 @@ function registerBlockDragSource(element, blockId, { allowInteractive = false } 
   });
 }
 
+export async function mergeAllBlocksIntoFirst() {
+  if (state.isMergingBlocks) {
+    return;
+  }
+  if (!state.article || !Array.isArray(state.article.blocks) || !state.article.blocks.length) {
+    showToast('Нет блоков для объединения');
+    return;
+  }
+
+  const selectedIds = Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : [];
+  if (!selectedIds.length) {
+    showToast('Выберите блоки (Shift+↑/↓), которые нужно объединить');
+    return;
+  }
+
+  // Сортируем выбранные блоки в порядке видимости на экране.
+  const ordered = flattenVisible(state.article.blocks);
+  const selectedOrdered = ordered.filter((b) => selectedIds.includes(b.id));
+
+  if (selectedOrdered.length < 2) {
+    showToast('Для объединения нужно выбрать как минимум два блока');
+    return;
+  }
+
+  const firstBlock = selectedOrdered[0];
+  const restBlocks = selectedOrdered.slice(1);
+
+  const pieces = [];
+  if (firstBlock.text) pieces.push(firstBlock.text);
+  restBlocks.forEach((b) => {
+    if (!b.text) return;
+    pieces.push(b.text);
+  });
+  const mergedHtml = pieces.join('');
+
+  state.isMergingBlocks = true;
+  if (refs.mergeBlocksBtn) {
+    refs.mergeBlocksBtn.disabled = true;
+  }
+  showToast('Объединяем выбранные блоки...');
+
+  try {
+    // Обновляем текст первого блока.
+    await apiRequest(`/api/articles/${state.articleId}/blocks/${firstBlock.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ text: mergedHtml }),
+    });
+
+    // Удаляем остальные выбранные блоки (их поддеревья удалятся каскадно).
+    // eslint-disable-next-line no-restricted-syntax
+    for (const blk of restBlocks) {
+      // eslint-disable-next-line no-await-in-loop
+      await apiRequest(`/api/articles/${state.articleId}/blocks/${blk.id}`, {
+        method: 'DELETE',
+      });
+    }
+
+    // Перезагружаем статью и сразу перерисовываем, чтобы пользователь
+    // мгновенно увидел результат без обновления страницы.
+    await loadArticle(state.articleId, { resetUndoStacks: false });
+    renderArticle();
+    showToast('Блоки объединены в один');
+  } catch (error) {
+    showToast(error.message || 'Не удалось объединить блоки');
+  } finally {
+    state.isMergingBlocks = false;
+    if (refs.mergeBlocksBtn) {
+      refs.mergeBlocksBtn.disabled = false;
+    }
+  }
+}
+
 function updateDragModeUi() {
   const hasArticle = Boolean(state.article);
   const toggleBtn = refs.dragModeToggleBtn;

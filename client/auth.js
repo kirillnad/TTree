@@ -28,6 +28,14 @@ function setAuthError(message) {
 function setAuthMode(mode) {
   // Режим логина сейчас только через Google — переключать вкладки и формы не нужно.
   setAuthError('');
+  if (mode === 'login') {
+    if (refs.authSubtitle) {
+      refs.authSubtitle.textContent = 'Войдите через Google, чтобы открыть свои заметки';
+    }
+    if (refs.authGoogleLoginBtn) {
+      refs.authGoogleLoginBtn.classList.remove('hidden');
+    }
+  }
 }
 
 function applyUserToUi(user) {
@@ -76,6 +84,14 @@ export function initAuth(callback) {
 
 export async function bootstrapAuth() {
   try {
+    // При старте нейтральный текст — «загружаем заметки», а не призыв логиниться.
+    if (refs.authSubtitle) {
+      refs.authSubtitle.textContent = 'Загружаем ваши заметки…';
+    }
+    if (refs.authGoogleLoginBtn) {
+      refs.authGoogleLoginBtn.classList.add('hidden');
+    }
+
     const user = await fetchCurrentUser();
     if (user) {
       applyUserToUi(user);

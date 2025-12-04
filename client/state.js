@@ -31,6 +31,8 @@ export const state = {
   favoriteArticles: [],
   isDragModeEnabled: false,
   articleEncryptionKeys: {},
+  // Процесс объединения блоков (чтобы избежать повторных кликов).
+  isMergingBlocks: false,
 };
 
 export let isSavingTitle = false;

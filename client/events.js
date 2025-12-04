@@ -23,7 +23,7 @@ import {
   setSidebarMobileOpen,
   setSidebarCollapsed,
 } from './sidebar.js';
-import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle } from './article.js';
+import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml } from './exporter.js';
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
@@ -661,6 +661,12 @@ export function attachEvents() {
         return;
       }
       createSibling('after');
+    });
+  }
+  if (refs.mergeBlocksBtn) {
+    refs.mergeBlocksBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await mergeAllBlocksIntoFirst();
     });
   }
   if (refs.articlesTabBtn) {
