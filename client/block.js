@@ -633,38 +633,28 @@ async function insertImageFromFile(element, file) {
   }
 }
 
+let attachmentUploadNoticeShown = false;
+
 async function insertAttachmentFromFile(element, file) {
   if (!state.articleId) {
-    showToast('РќРµ РІС‹Р±СЂР°РЅР° СЃС‚Р°С‚СЊСЏ РґР»СЏ Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»Р°');
+    showToast('Не выбрана статья для вставки файла');
     return;
   }
-  logDebug('attachment: start upload', { name: file?.name, type: file?.type, size: file?.size, articleId: state.articleId });
-  const tempId = `att-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  insertHtmlAtCaret(element, `<span class="attachment-upload" data-temp-id="${tempId}">Р—Р°РіСЂСѓР·РєР° ${escapeHtml(file?.name || '')}вЂ¦</span>`);
-  const placeholder = element.querySelector(`.attachment-upload[data-temp-id="${tempId}"]`);
-  try {
-    const meta = await uploadAttachmentFileWithProgress(state.articleId, file, (percent) => {
-      if (placeholder) placeholder.textContent = `Р—Р°РіСЂСѓР·РєР° ${file?.name || ''}вЂ¦ ${percent}%`;
-    });
-    logDebug('attachment: uploaded', meta);
-    const safeUrl = escapeHtml(meta?.url || meta?.storedPath || '');
-    const safeName = escapeHtml(meta?.originalName || file.name || 'file');
-    const linkHtml = `<a href="${safeUrl}" class="attachment-link" target="_blank" rel="noopener noreferrer" download="${safeName}">${safeName}</a>`;
-    if (placeholder) {
-      placeholder.outerHTML = linkHtml;
-    } else {
-      insertHtmlAtCaret(element, linkHtml);
-    }
-    logDebug('attachment: inserted into DOM', {
-      html: element.innerHTML.slice(0, 200),
-    });
-  } catch (error) {
-    logDebug('attachment: upload failed', error);
-    if (placeholder) {
-      placeholder.textContent = `РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё: ${error.message}`;
-      placeholder.classList.add('attachment-upload--error');
-    }
-    showToast(error.message);
+  logDebug('attachment: blocked upload', {
+    name: file?.name,
+    type: file?.type,
+    size: file?.size,
+    articleId: state.articleId,
+  });
+  if (!attachmentUploadNoticeShown) {
+    attachmentUploadNoticeShown = true;
+    showToast(
+      'Файлы (PDF, DOCX и т.п.) больше не загружаются в Memus. ' +
+        'Сохраните их на Яндекс.Диске или Google Drive и вставьте сюда ссылку.',
+    );
+    setTimeout(() => {
+      attachmentUploadNoticeShown = false;
+    }, 8000);
   }
 }
 

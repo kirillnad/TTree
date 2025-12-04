@@ -202,18 +202,41 @@ def _rewrite_internal_links_for_public(html_text: str) -> str:
 
 def _import_image_from_data_url(data_url: str, current_user: User) -> str:
     """
-    Сохраняет картинку из data: URL в uploads так же, как upload_file,
-    но без перекодирования через Pillow. Возвращает относительный URL /uploads/...
+    Сохраняет картинку из data: URL в uploads так же, как upload_file:
+    конвертирует её в WebP с качеством 75. Возвращает относительный URL /uploads/...
     """
     raw, mime_type = _decode_data_url(data_url)
     now = datetime.utcnow()
     user_root = UPLOADS_DIR / current_user.id / 'images'
     target_dir = user_root / str(now.year) / f"{now.month:02}"
     target_dir.mkdir(parents=True, exist_ok=True)
-    ext = mimetypes.guess_extension(mime_type) or ''
-    filename = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{ext}"
+    # По умолчанию сохраняем в WebP.
+    filename = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}.webp"
     dest = target_dir / filename
-    dest.write_bytes(raw)
+
+    buffer = BytesIO(raw)
+    try:
+        img = Image.open(buffer)
+        max_width = 1920
+        if img.width > max_width:
+            new_height = int(img.height * max_width / img.width)
+            img = img.resize((max_width, max(new_height, 1)), Image.Resampling.LANCZOS)
+
+        if img.mode in ('RGBA', 'LA', 'P'):
+            img = img.convert('RGBA')
+        else:
+            img = img.convert('RGB')
+
+        out_buf = BytesIO()
+        img.save(out_buf, 'WEBP', quality=75, method=6)
+        out_bytes = out_buf.getvalue()
+        dest.write_bytes(out_bytes)
+    except Exception:
+        # Если Pillow не смог прочитать — сохраняем как есть с исходным расширением.
+        ext = mimetypes.guess_extension(mime_type) or ''
+        fallback_name = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{ext}"
+        dest = target_dir / fallback_name
+        dest.write_bytes(raw)
     rel = dest.relative_to(UPLOADS_DIR).as_posix()
     return f"/uploads/{rel}"
 
@@ -1947,7 +1970,8 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
         img = img.convert('RGB')
 
     out_buf = BytesIO()
-    img.save(out_buf, 'WEBP', quality=85, method=6)
+    # Все загружаемые изображения конвертируем в WebP с качеством 75.
+    img.save(out_buf, 'WEBP', quality=75, method=6)
     out_bytes = out_buf.getvalue()
 
     async with aiofiles.open(dest, 'wb') as out_file:
