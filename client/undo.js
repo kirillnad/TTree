@@ -279,11 +279,33 @@ async function executeStructureAction(action, options = {}) {
       return { success: false };
     }
     try {
+      // Для undo/redo удаления используем уже существующую структуру restore/create,
+      // поэтому здесь достаточно повторно применить deleteCurrentBlock-подобную логику:
       payload = await apiRequest(`/api/articles/${state.articleId}/blocks/${targetId}`, {
         method: 'DELETE',
       });
-      await loadArticle(state.articleId, { desiredBlockId: action.fallbackId || payload?.parentId });
-      renderArticle();
+      // Локально удаляем блок из дерева статьи.
+      const located = findBlock(targetId);
+      if (located && state.article && Array.isArray(state.article.blocks)) {
+        const siblings = located.siblings || state.article.blocks;
+        const index = located.index ?? siblings.findIndex((b) => b.id === targetId);
+        if (index >= 0) {
+          siblings.splice(index, 1);
+        }
+        if (state.article.updatedAt) {
+          try {
+            state.article.updatedAt = new Date().toISOString();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      const desiredId = action.fallbackId || payload?.parentId || null;
+      if (desiredId) {
+        await focusBlock(desiredId);
+      } else {
+        renderArticle();
+      }
       success = true;
     } catch (error) {
       showToast(error.message);
@@ -309,8 +331,41 @@ async function executeStructureAction(action, options = {}) {
           block: blockPayload,
         }),
       });
-      await loadArticle(state.articleId, { desiredBlockId: payload.block?.id });
-      renderArticle();
+      // Локально вставляем восстановленный блок в дерево статьи.
+      const inserted = payload?.block;
+      const parentId = payload?.parentId || action.parentId || null;
+      if (inserted && state.article && Array.isArray(state.article.blocks)) {
+        const clone = cloneBlockSnapshot(inserted) || inserted;
+        if (!parentId) {
+          const roots = state.article.blocks;
+          const idx =
+            typeof payload.index === 'number' && payload.index >= 0 && payload.index <= roots.length
+              ? payload.index
+              : roots.length;
+          roots.splice(idx, 0, clone);
+        } else {
+          const parentLocated = findBlock(parentId);
+          const parentBlock = parentLocated?.block || null;
+          if (parentBlock) {
+            if (!Array.isArray(parentBlock.children)) {
+              parentBlock.children = [];
+            }
+            const kids = parentBlock.children;
+            const idx =
+              typeof payload.index === 'number' && payload.index >= 0 && payload.index <= kids.length
+                ? payload.index
+                : kids.length;
+            kids.splice(idx, 0, clone);
+          }
+        }
+        if (state.article.updatedAt) {
+          try {
+            state.article.updatedAt = new Date().toISOString();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       success = true;
     } catch (error) {
       showToast(error.message);
@@ -495,9 +550,67 @@ export function clearPendingTextPreview({ restoreDom = true } = {}) {
 
 export async function moveBlock(blockId, direction, options = {}) {
   if (!blockId || !['up', 'down'].includes(direction)) return false;
-  const { skipRecord = false } = options;
+  const { skipRecord = false, internal = false } = options;
+  if (!internal) {
+    if (state.isMovingBlock) return false;
+    state.isMovingBlock = true;
+  }
   try {
     const located = findBlock(blockId);
+
+    // Особый случай: пытаемся поднять самый верхний дочерний блок.
+    // Вместо "ошибки" трактуем это как выход на уровень родителя
+    // (outdent + один шаг вверх, чтобы встать рядом с братом родителя).
+    if (direction === 'up' && located && located.parent) {
+      const siblings = located.siblings || state.article?.blocks || [];
+      const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
+      if (index === 0) {
+        const parentId = located.parent.id;
+        // 1) Выносим блок на уровень выше.
+        const outdented = await outdentBlock(blockId, { skipRecord: true, keepEditing: false });
+        if (!outdented) {
+          return false;
+        }
+        // 2) После outdent блок стоит сразу после родителя — поднимаем его
+        // на одну позицию вверх, чтобы оказаться рядом с "братом родителя".
+        const movedUp = await moveBlock(blockId, 'up', { skipRecord: true, internal: true });
+        // Если по какой‑то причине поднять нельзя (родитель был первым),
+        // просто считаем операцию успешной после outdent.
+        if (!movedUp) {
+          state.currentBlockId = blockId;
+          renderArticle();
+          if (!skipRecord) {
+            pushUndoEntry({ type: 'structure', action: { kind: 'outdent', blockId } });
+          }
+          return true;
+        }
+        state.currentBlockId = blockId;
+        renderArticle();
+        if (!skipRecord) {
+          pushUndoEntry({
+            type: 'structure',
+            action: { kind: 'moveUpThroughParent', blockId, parentId },
+          });
+        }
+        return true;
+      }
+    }
+
+    // Не пытаемся двигать блок за пределы доступного списка соседей:
+    // - вверх, если он уже первый;
+    // - вниз, если он уже последний.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = located.siblings || state.article.blocks;
+      const index = located.index ?? siblings.findIndex((b) => b.id === blockId);
+      if (index >= 0) {
+        const isFirst = index === 0;
+        const isLast = index === siblings.length - 1;
+        if ((direction === 'up' && isFirst) || (direction === 'down' && isLast)) {
+          return false;
+        }
+      }
+    }
+
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move`, {
       method: 'POST',
       body: JSON.stringify({ direction }),
@@ -530,6 +643,10 @@ export async function moveBlock(blockId, direction, options = {}) {
   } catch (error) {
     showToast(error.message);
     return false;
+  } finally {
+    if (!internal) {
+      state.isMovingBlock = false;
+    }
   }
 }
 
@@ -651,6 +768,10 @@ export async function indentBlock(blockId, options = {}) {
   if (!blockId) return false;
   const { skipRecord = false, keepEditing = false } = options;
   try {
+    if (!options.internal) {
+      if (state.isMovingBlock) return false;
+      state.isMovingBlock = true;
+    }
     if (keepEditing) {
       state.pendingEditBlockId = blockId;
       state.scrollTargetBlockId = blockId;
@@ -694,6 +815,10 @@ export async function indentBlock(blockId, options = {}) {
   } catch (error) {
     showToast(error.message);
     return false;
+  } finally {
+    if (!options.internal) {
+      state.isMovingBlock = false;
+    }
   }
 }
 
@@ -705,6 +830,10 @@ export async function outdentBlock(blockId, options = {}) {
   if (!blockId) return false;
   const { skipRecord = false, keepEditing = false } = options;
   try {
+    if (!options.internal) {
+      if (state.isMovingBlock) return false;
+      state.isMovingBlock = true;
+    }
     if (keepEditing) {
       state.pendingEditBlockId = blockId;
       state.scrollTargetBlockId = blockId;
@@ -755,6 +884,10 @@ export async function outdentBlock(blockId, options = {}) {
   } catch (error) {
     showToast(error.message);
     return false;
+  } finally {
+    if (!options.internal) {
+      state.isMovingBlock = false;
+    }
   }
 }
 

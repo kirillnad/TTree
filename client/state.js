@@ -33,6 +33,10 @@ export const state = {
   articleEncryptionKeys: {},
   // Процесс объединения блоков (чтобы избежать повторных кликов).
   isMergingBlocks: false,
+  // Структурная операция над блоками (move/indent/outdent), чтобы не запускать несколько сразу.
+  isMovingBlock: false,
+  // Удаление блока (чтобы не слали несколько DELETE подряд).
+  isDeletingBlock: false,
   // Предпочтительная позиция каретки при входе в режим редактирования блока: 'start' | 'end'.
   editingCaretPosition: 'start',
 };

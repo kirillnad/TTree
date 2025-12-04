@@ -282,12 +282,35 @@ export async function deleteCurrentBlock() {
     showToast('Нельзя удалять последний блок');
     return;
   }
+  if (state.isDeletingBlock) {
+    // Удаление уже в процессе — игнорируем повторное нажатие.
+    return;
+  }
+  state.isDeletingBlock = true;
   const fallbackId = findFallbackBlockId(state.currentBlockId);
   try {
+    const targetId = state.currentBlockId;
+    const located = findBlock(targetId);
     const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}`, {
       method: 'DELETE',
     });
-    await loadArticle(state.articleId, { desiredBlockId: fallbackId });
+    // Оптимистично удаляем блок из локального дерева, без полной перезагрузки статьи.
+    if (located && state.article && Array.isArray(state.article.blocks)) {
+      const siblings = located.siblings || state.article.blocks;
+      const index = located.index ?? siblings.findIndex((b) => b.id === targetId);
+      if (index >= 0) {
+        siblings.splice(index, 1);
+      }
+      if (state.article.updatedAt) {
+        try {
+          state.article.updatedAt = new Date().toISOString();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    state.currentBlockId = fallbackId;
+    state.scrollTargetBlockId = fallbackId;
     renderArticle();
     if (result?.block) {
       const snapshot = cloneBlockSnapshot(result.block);
@@ -305,6 +328,8 @@ export async function deleteCurrentBlock() {
     }
   } catch (error) {
     showToast(error.message);
+  } finally {
+    state.isDeletingBlock = false;
   }
 }
 
