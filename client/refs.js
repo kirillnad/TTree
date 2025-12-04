@@ -59,6 +59,7 @@ export const refs = {
   articleEncryptionRemoveBtn: document.getElementById('articleEncryptionRemoveBtn'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
+  exportAllHtmlZipBtn: document.getElementById('exportAllHtmlZipBtn'),
   importArticleBtn: document.getElementById('importArticleBtn'),
   importMarkdownBtn: document.getElementById('importMarkdownBtn'),
   importLogseqBtn: document.getElementById('importLogseqBtn'),

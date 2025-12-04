@@ -163,6 +163,8 @@ _INTERNAL_ARTICLE_LINK_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+EXPORT_DESCRIPTION_LIMIT = 160
+
 
 def _rewrite_internal_links_for_public(html_text: str) -> str:
     """
@@ -198,6 +200,113 @@ def _rewrite_internal_links_for_public(html_text: str) -> str:
         return f'<a {before_attrs}href="{href}"{after_attrs}>{inner_html}</a>'
 
     return _INTERNAL_ARTICLE_LINK_RE.sub(_replace, html_text or '')
+
+
+def _collect_plain_text_from_blocks(blocks: list[dict[str, Any]] | None) -> list[str]:
+    """
+    Собирает простой текст из дерева блоков статьи:
+    - вычищает HTML-теги;
+    - схлопывает повторяющиеся пробелы.
+    Используется для описания и wordCount в экспортируемых HTML.
+    """
+    result: list[str] = []
+
+    def _walk(nodes: list[dict[str, Any]] | None) -> None:
+        if not nodes:
+            return
+        for blk in nodes:
+            if not isinstance(blk, dict):
+                continue
+            raw = blk.get('text') or ''
+            if raw:
+                # Грубое удаление тегов + unescape, этого достаточно для описания.
+                plain = re.sub(r'<[^>]+>', ' ', raw)
+                plain = html_mod.unescape(plain)
+                plain = ' '.join(plain.split())
+                if plain:
+                    result.append(plain)
+            children = blk.get('children') or []
+            if children:
+                _walk(children)
+
+    _walk(blocks or [])
+    return result
+
+
+def _build_export_description(plain_text: str | None) -> str:
+    """
+    Строит короткое описание статьи (meta description) по первым символам текста.
+    """
+    if not plain_text:
+        return ''
+    snippet = ' '.join(plain_text.split())
+    if len(snippet) <= EXPORT_DESCRIPTION_LIMIT:
+        return snippet
+    return f'{snippet[:EXPORT_DESCRIPTION_LIMIT].rstrip()}…'
+
+
+def _serialize_blocks_for_export(blocks: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """
+    Приводит дерево блоков к тому же формату, который использует клиентский exporter.js
+    в buildExportPayload: id/text/collapsed/children.
+    """
+    if not blocks:
+        return []
+    result: list[dict[str, Any]] = []
+    for blk in blocks:
+        if not isinstance(blk, dict):
+            continue
+        children = blk.get('children') or []
+        result.append(
+            {
+                'id': blk.get('id'),
+                'text': blk.get('text') or '',
+                'collapsed': bool(blk.get('collapsed')),
+                'children': _serialize_blocks_for_export(children),
+            },
+        )
+    return result
+
+
+def _build_export_payload_for_article(article: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Формирует JSON-снапшот memus-export в формате, совместимом с client/exporter.js.
+    Этот блок попадает в <script type="application/json" id="memus-export">...</script>.
+    """
+    if not article:
+        return {
+            'version': 1,
+            'source': 'memus',
+            'article': None,
+            'blocks': [],
+        }
+
+    article_id = article.get('id') or ''
+    author_id = article.get('authorId') or ''
+    # inbox в базе имеет вид inbox-<userId>, в экспорте достаточно флажка.
+    is_inbox = article_id == 'inbox' or (
+        isinstance(article_id, str)
+        and isinstance(author_id, str)
+        and article_id == f'inbox-{author_id}'
+    )
+
+    meta = {
+        'id': article_id,
+        'title': article.get('title') or '',
+        'createdAt': article.get('createdAt') or None,
+        'updatedAt': article.get('updatedAt') or None,
+        'deletedAt': article.get('deletedAt') or None,
+        'isInbox': bool(is_inbox),
+        'encrypted': bool(article.get('encrypted')),
+        'encryptionHint': article.get('encryptionHint') or None,
+    }
+
+    return {
+        'version': 1,
+        'source': 'memus',
+        'article': meta,
+        'blocks': _serialize_blocks_for_export(article.get('blocks') or []),
+    }
 
 
 def _import_image_from_data_url(data_url: str, current_user: User) -> str:
@@ -1164,6 +1273,304 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     return html
 
 
+def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str = 'ru') -> str:
+    """
+    Собирает полноценный HTML-документ для резервной копии одной статьи:
+    - структура блоков и стили такие же, как у клиентского экспорта;
+    - внутрь помещается JSON-снапшот memus-export, совместимый с импортом /api/import/html;
+    - внутренние ссылки остаются как есть (без переписывания под /p/<slug>).
+    """
+    title_raw = article.get('title') or 'Без названия'
+    title = html_mod.escape(title_raw)
+    updated_raw = article.get('updatedAt') or ''
+    created_raw = article.get('createdAt') or updated_raw or ''
+
+    # Текст и статистика для description/JSON-LD.
+    plain_parts = _collect_plain_text_from_blocks(article.get('blocks') or [])
+    plain_text = ' '.join(plain_parts).strip()
+    word_count = len(plain_text.split()) if plain_text else 0
+    description = _build_export_description(plain_text) or title_raw
+
+    # Человеко-читаемая дата обновления для заголовка.
+    try:
+        updated_label = (
+            datetime.fromisoformat(updated_raw).strftime('%Y-%m-%d %H:%M:%S')
+            if updated_raw
+            else ''
+        )
+    except Exception:  # noqa: BLE001
+        updated_label = updated_raw or ''
+
+    blocks = article.get('blocks') or []
+    blocks_html = ''.join(_render_public_block(b) for b in blocks)
+    header = f"""
+    <div class="panel-header article-header">
+      <div class="title-block">
+        <div class="title-row">
+          <h1 class="export-title">{title}</h1>
+        </div>
+        {f'<p class="meta">Обновлено: {html_mod.escape(updated_label)}</p>' if updated_label else ''}
+      </div>
+    </div>
+    """
+    body_inner = f"""
+    <div class="export-shell" aria-label="Экспорт статьи">
+      <main class="content export-content">
+        <section class="panel export-panel" aria-label="Статья">
+          {header}
+          <div id="exportBlocksRoot" class="blocks" role="tree">
+            {blocks_html}
+          </div>
+        </section>
+      </main>
+    </div>
+    """
+
+    # Те же базовые стили, что и в публичной версии / клиентском экспорте.
+    extra_css = """
+    body.export-page {
+      margin: 0;
+      background: #eef2f8;
+      overflow: auto;
+      height: auto;
+    }
+    .export-shell {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: #eef2f8;
+    }
+    .export-content {
+      padding: 1.5rem 1rem 2rem;
+      width: 100%;
+      max-width: 960px;
+    }
+    .export-panel {
+      min-height: auto;
+      height: auto;
+    }
+    .block-children.collapsed {
+      display: none;
+    }
+    .block {
+      cursor: default;
+    }
+    .export-title {
+      margin: 0;
+    }
+    """
+
+    # JSON-LD, как в client/exporter.js.
+    json_ld = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        'headline': title_raw,
+        'description': description,
+        'dateModified': updated_raw or '',
+        'datePublished': created_raw or '',
+        'wordCount': word_count,
+        'inLanguage': lang or 'ru',
+    }
+
+    export_payload = _build_export_payload_for_article(article)
+
+    interactions_script = """
+    <script>
+(function() {
+  var root = document.getElementById('exportBlocksRoot');
+  if (!root) return;
+  var collapseIcon = { open: '▾', closed: '▸' };
+  var firstBlock = root.querySelector('.block');
+  var currentId = firstBlock ? firstBlock.getAttribute('data-block-id') : null;
+
+  function getParentBlock(block) {
+    if (!block || !block.parentElement) return null;
+    return block.parentElement.closest('.block');
+  }
+
+  function updateBlockView(block, collapsed) {
+    block.dataset.collapsed = collapsed ? 'true' : 'false';
+    var body = block.querySelector('.block-body');
+    var noTitle = block.classList.contains('block--no-title');
+    if (body && !noTitle) {
+      body.classList.toggle('collapsed', collapsed);
+    }
+    var children = block.querySelector('.block-children');
+    if (children) children.classList.toggle('collapsed', collapsed);
+    var btn = block.querySelector('.collapse-btn');
+    if (btn) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.textContent = collapsed ? collapseIcon.closed : collapseIcon.open;
+    }
+  }
+
+  function collectVisible() {
+    var result = [];
+    function walk(container) {
+      var children = container.children;
+      for (var i = 0; i < children.length; i += 1) {
+        var node = children[i];
+        if (!node.classList || !node.classList.contains('block')) continue;
+        result.push(node);
+        var isCollapsed = node.dataset.collapsed === 'true';
+        var kids = node.querySelector('.block-children');
+        if (!isCollapsed && kids) walk(kids);
+      }
+    }
+    walk(root);
+    return result;
+  }
+
+  function setCurrent(block) {
+    if (!block) return;
+    currentId = block.getAttribute('data-block-id') || null;
+    Array.prototype.forEach.call(
+      root.querySelectorAll('.block.selected'),
+      function(el) { el.classList.remove('selected'); }
+    );
+    block.classList.add('selected');
+    block.focus({ preventScroll: false });
+  }
+
+  function toggleBlock(block, desired) {
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    var next = typeof desired === 'boolean' ? desired : !collapsed;
+    updateBlockView(block, next);
+  }
+
+  function moveSelection(offset) {
+    if (!currentId) {
+      var first = root.querySelector('.block');
+      if (first) setCurrent(first);
+      return;
+    }
+    var ordered = collectVisible();
+    var index = -1;
+    for (var i = 0; i < ordered.length; i += 1) {
+      if (ordered[i].getAttribute('data-block-id') === currentId) {
+        index = i;
+        break;
+      }
+    }
+    if (index === -1) return;
+    var next = ordered[index + offset];
+    if (next) setCurrent(next);
+  }
+
+  function handleArrowLeft() {
+    if (!currentId) return;
+    var block = root.querySelector('.block[data-block-id="' + currentId + '"]');
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    if (!collapsed) {
+      toggleBlock(block, true);
+      return;
+    }
+    var parent = getParentBlock(block);
+    if (parent) setCurrent(parent);
+  }
+
+  function handleArrowRight() {
+    if (!currentId) return;
+    var block = root.querySelector('.block[data-block-id="' + currentId + '"]');
+    if (!block) return;
+    var collapsed = block.dataset.collapsed === 'true';
+    var firstChild = block.querySelector('.block-children .block');
+    if (collapsed) {
+      toggleBlock(block, false);
+      if (firstChild) setCurrent(firstChild);
+      return;
+    }
+    if (firstChild) {
+      setCurrent(firstChild);
+    }
+  }
+
+  root.addEventListener('click', function(event) {
+    var btn = event.target.closest('.collapse-btn');
+    if (btn) {
+      var targetId = btn.getAttribute('data-block-id');
+      var block = root.querySelector('.block[data-block-id="' + targetId + '"]');
+      toggleBlock(block);
+      setCurrent(block);
+      return;
+    }
+    var block = event.target.closest('.block');
+    if (block) {
+      setCurrent(block);
+    }
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', ' '].indexOf(event.code) !== -1) {
+      event.preventDefault();
+    } else {
+      return;
+    }
+    if (event.code === 'ArrowDown') {
+      moveSelection(1);
+      return;
+    }
+    if (event.code === 'ArrowUp') {
+      moveSelection(-1);
+      return;
+    }
+    if (event.code === 'ArrowLeft') {
+      handleArrowLeft();
+      return;
+    }
+    if (event.code === 'ArrowRight') {
+      handleArrowRight();
+      return;
+    }
+    if (event.code === 'Enter' || event.code === 'Space' || event.code === ' ') {
+      if (!currentId) return;
+      var block = root.querySelector('.block[data-block-id="' + currentId + '"]');
+      toggleBlock(block);
+    }
+  });
+
+  if (firstBlock) setCurrent(firstBlock);
+})();
+    </script>
+    """
+
+    lang_safe = html_mod.escape(lang or 'ru')
+    description_safe = html_mod.escape(description or title_raw)
+
+    return f"""<!doctype html>
+<html lang="{lang_safe}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content="{description_safe}" />
+    <meta name="x-memus-export" content="memus;v=1" />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="{title}" />
+    <meta property="og:description" content="{description_safe}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+{css_text}
+{extra_css}
+    </style>
+    <script type="application/ld+json">
+{json.dumps(json_ld, ensure_ascii=False, indent=2)}
+    </script>
+  </head>
+  <body class="export-page">
+    <script type="application/json" id="memus-export">
+{json.dumps(export_payload, ensure_ascii=False, indent=2)}
+    </script>
+    {body_inner}
+    {interactions_script}
+  </body>
+</html>
+"""
+
+
 def _present_article(article: dict[str, Any] | None, requested_id: str) -> dict[str, Any]:
     """
     Нормализует JSON статьи перед отдачей клиенту.
@@ -2015,6 +2422,49 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
     stored_path = f'/uploads/{current_user.id}/attachments/{real_article_id}/{filename}'
     attachment = create_attachment(real_article_id, stored_path, file.filename or filename, content_type or '', size)
     return attachment
+
+
+@app.get('/api/export/html-zip')
+def export_all_articles_html_zip(current_user: User = Depends(get_current_user)):
+    """
+    Формирует ZIP-архив со всеми статьями пользователя в виде HTML-файлов.
+    Каждый HTML:
+    - содержит структуру блоков и стили, похожие на основной интерфейс;
+    - включает JSON-снапшот memus-export, совместимый с /api/import/html.
+    """
+    articles = [article for article in get_articles(current_user.id) if article]
+    try:
+        css_text = (CLIENT_DIR / 'style.css').read_text(encoding='utf-8')
+    except OSError:
+        css_text = ''
+
+    buf = BytesIO()
+    used_names: dict[str, int] = {}
+    with zipfile.ZipFile(buf, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+        for article in articles:
+            raw_title = (article.get('title') or '').strip() or 'article'
+            # Мягкая санитаризация: убираем только заведомо «опасные» символы файловой системы.
+            base = re.sub(r'[\\\\/:*?"<>|]+', '', raw_title).strip() or 'article'
+            base = base[:80]
+            filename = f'{base}.html'
+            # Гарантируем уникальность имён в ZIP.
+            if filename in used_names:
+                used_names[filename] += 1
+                stem, ext = os.path.splitext(filename)
+                suffix = used_names[filename]
+                filename = f'{stem} ({suffix}){ext}'
+            else:
+                used_names[filename] = 1
+            html = _build_backup_article_html(article, css_text, lang='ru')
+            zf.writestr(filename, html.encode('utf-8'))
+
+    buf.seek(0)
+    ts = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+    zip_name = f'memus-backup-{ts}.zip'
+    headers = {
+        'Content-Disposition': f'attachment; filename="{zip_name}"',
+    }
+    return Response(content=buf.getvalue(), media_type='application/zip', headers=headers)
 
 
 @app.post('/api/import/html')

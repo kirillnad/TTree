@@ -413,6 +413,39 @@ export function attachEvents() {
       exportCurrentArticleAsHtml();
     });
   }
+  if (refs.exportAllHtmlZipBtn) {
+    refs.exportAllHtmlZipBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeListMenu();
+      try {
+        showToast('Готовим резервную копию (ZIP)...');
+        const resp = await fetch('/api/export/html-zip', { method: 'GET' });
+        if (!resp.ok) {
+          showToast('Не удалось создать резервную копию');
+          return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const disposition = resp.headers.get('Content-Disposition') || '';
+        let filename = 'memus-backup.zip';
+        const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        showToast('Резервная копия загружена');
+      } catch (error) {
+        showToast(error.message || 'Не удалось создать резервную копию');
+      }
+    });
+  }
   if (refs.importArticleBtn) {
     refs.importArticleBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
