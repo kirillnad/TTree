@@ -1397,7 +1397,9 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     </style>
   </head>
   <body class="export-page">
-    {body_inner}
+    <div class="page">
+      {body_inner}
+    </div>
     {interactions_script}
   </body>
 </html>
@@ -1693,10 +1695,12 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     </script>
   </head>
   <body class="export-page">
+    <div class="page">
     <script type="application/json" id="memus-export">
 {json.dumps(export_payload, ensure_ascii=False, indent=2)}
     </script>
     {body_inner}
+    </div>
     {interactions_script}
   </body>
 </html>

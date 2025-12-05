@@ -502,10 +502,12 @@ ${JSON.stringify(jsonLd, null, 2)}
   </script>
 </head>
 <body class="export-page">
+<div class="page">
 <script type="application/json" id="memus-export">
 ${JSON.stringify(exportPayload || null, null, 2)}
 </script>
 ${contentHtml}
+</div>
 <script>
 (() => {
   const root = document.getElementById('exportBlocksRoot');

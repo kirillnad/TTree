@@ -14,25 +14,23 @@
   box-sizing: border-box;
 }
 
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: #1f2933;
+  caret-color: #111827;
+}
+
 .app-shell {
   min-height: 100vh;
   height: 100vh;
   display: flex;
   overflow: hidden;
-  background: transparent !important;
+  background: transparent;
 }
 
 .mobile-only {
   display: none;
-}
-
-body {
-  margin: 0;
-  background: transparent !important;
-  overflow: hidden;
-  height: 100vh;
-  color: #222222;
-  caret-color: #222222;
 }
 
 .hidden {
@@ -508,27 +506,27 @@ html {
 
 main.content {
   flex: 1;
-  /* padding: 0 1rem 1rem; */
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: transparent !important;
+  background: transparent;
 }
 
 .panel {
-  background: transparent;
-  border-radius: 0;
-  padding: 1.1rem 1.25rem;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 32px 28px 40px;
   border: none;
   width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
+  max-width: 900px;
+  margin: 32px auto 0px;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.1);
 }
 
 .panel-header {
@@ -2037,13 +2035,13 @@ body.block-dnd-active {
   transform: translateX(-100%);
 }
 main.content {
-  /* padding: 0.5rem 0.75rem; */
 }
 .panel {
-  padding: 0.35rem 0.5rem;
+  padding: 20px 16px 32px;
   max-width: 100%;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 0;
+  box-shadow: none;
 }
 .blocks {
   padding: 0;
@@ -2084,13 +2082,13 @@ main.content {
     display: none;
   }
   main.content {
-    /* padding: 0 1.25rem 1.25rem; */
   }
   .panel {
-    padding: 1.1rem 1.25rem;
-    max-width: 960px;
-    margin: 0 auto;
-    border-radius: 16px;
+    padding: 32px 28px 40px;
+    max-width: 900px;
+    margin: 32px auto 0px;
+    border-radius: 14px;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.1);
   }
   .blocks {
     /* gap: 0.35rem; */
@@ -2140,12 +2138,11 @@ main.content {
     display: inline-flex;
   }
   .content {
-    /* padding: 0.5rem 0.75rem; */
     width: 100%;
     overflow-x: hidden;
   }
   .panel {
-    padding: 0.35rem 0.5rem;
+    padding: 20px 16px 32px;
   }
   .blocks {
     padding: 0;
@@ -2201,5 +2198,232 @@ ul {
   padding: 0;
   margin: 0;
   padding-left: 1.5rem;
+}
 
+/* Базовая типографика страницы и экспортированного HTML */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body.export-page {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #1f2933;
+  background: #f5f7fa;
+  overflow: auto;
+  height: auto;
+}
+
+/* Центрированный «лист» документа */
+.page {
+  max-width: 900px;
+  margin: 32px auto 0px;
+  padding: 32px 28px 40px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.1);
+}
+
+/* Заголовки */
+h1,
+h2,
+h3,
+h4 {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #111827;
+  margin-top: 1.8em;
+  margin-bottom: 0.4em;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 0.75em;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 1.4rem;
+  padding-left: 0.5em;
+}
+
+h3 {
+  font-size: 1.15rem;
+  color: #111827;
+}
+
+h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: none;
+}
+
+/* Абзацы и текст */
+body.export-page p {
+  margin: 0 0 0;
+  max-width: 72ch;
+}
+
+body.export-page p + p {
+  margin-top: 0.2em;
+}
+
+body.export-page strong {
+  font-weight: 600;
+  color: #111827;
+}
+
+body.export-page em {
+  font-style: italic;
+}
+
+/* Списки (в руководстве их много) */
+body.export-page ul,
+body.export-page ol {
+  margin: 0.4em 0 0.8em 1.5em;
+  padding: 0;
+}
+
+body.export-page li + li {
+  margin-top: 0.2em;
+}
+
+/* Таблицы (сравнения, как про блоки vs обычный текст) */
+body.export-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+body.export-page th,
+body.export-page td {
+  padding: 0.55em 0.7em;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+body.export-page thead tr {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+body.export-page tbody tr:nth-child(odd) {
+  background: #fafbff;
+}
+
+body.export-page tbody tr:nth-child(even) {
+  background: #ffffff;
+}
+
+/* Горячие клавиши и код */
+body.export-page code,
+body.export-page kbd {
+  font-family: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 0.88em;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  border: 1px solid #e5e7eb;
+}
+
+body.export-page kbd {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+}
+
+body.export-page pre {
+  background: #0b1120;
+  color: #e5e7eb;
+  padding: 0.85em 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+/* Ссылки */
+body.export-page a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+body.export-page a:hover {
+  text-decoration: underline;
+}
+
+/* Внутренние заметки / подсказки */
+.note {
+  margin: 1em 0;
+  padding: 0.9em 1em;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.warning {
+  margin: 1em 0;
+  padding: 0.9em 1em;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+/* Визуальные разделители */
+body.export-page hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.8em 0;
+}
+
+/* Мелкий вторичный текст */
+body.export-page .meta,
+body.export-page .muted {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Внутри блоков оставляем компактный текст как в ORI_ux:
+   отступы абзацев задаются только line-height, без margin. */
+body.export-page .block-text p {
+  line-height: 1.5;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Адаптивность для экспортированной страницы */
+@media (max-width: 768px) {
+  body.export-page {
+    background: #ffffff;
+  }
+
+  .page {
+    margin: 0;
+    max-width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    padding: 20px 16px 32px;
+    box-shadow: none;
+  }
+
+  body.export-page h1 {
+    font-size: 1.6rem;
+  }
+
+  body.export-page h2 {
+    font-size: 1.25rem;
+  }
+
+  body.export-page h3 {
+    font-size: 1.05rem;
+  }
 }
