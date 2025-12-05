@@ -1,0 +1,3042 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Memus - Руководство пользователя</title>
+  <meta name="description" content="Зачем нужен Memus?Memus — это ваша личная база знаний. Место, где вы можете хранить всё, что вы когда-то узнали или о чём подумали. КонцепцияЛичная база знаний…" />
+  <meta name="x-memus-export" content="memus;v=1" />
+  <meta name="robots" content="index,follow" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Memus - Руководство пользователя" />
+  <meta property="og:description" content="Зачем нужен Memus?Memus — это ваша личная база знаний. Место, где вы можете хранить всё, что вы когда-то узнали или о чём подумали. КонцепцияЛичная база знаний…" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <style>
+:root {
+  --font-default: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto,
+    'Inter', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  font-family: var(--font-default);
+  font-size: 15px;
+  font-weight: 300;
+  color: #222222;
+  background: transparent !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.app-shell {
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+.mobile-only {
+  display: none;
+}
+
+body {
+  margin: 0;
+  background: transparent !important;
+  overflow: hidden;
+  height: 100vh;
+  color: #222222;
+  caret-color: #222222;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Sidebar styles locked: do not change without explicit request */
+/* Scrollbars (hidden, but scroll via wheel/trackpad still works) */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+html {
+  height: 100%;
+  background: transparent;
+}
+
+
+.search-results {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 15px 35px rgba(15, 30, 40, 0.2);
+  border: 1px solid #e5e7eb;
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.search-results.hidden {
+  display: none;
+}
+
+.search-result-empty {
+  padding: 0.75rem 1rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.search-result-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.sidebar {
+  width: 280px;
+  background: #252526;
+  color: #d4d4d4;
+  padding: 0.5rem 0.7rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: none;
+  position: relative;
+  transition: width 0.25s ease, padding 0.25s ease;
+  overflow: visible;
+  box-sizing: border-box;
+  border-right: 1px solid #3c3c3c;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  font-size: 10px;
+  text-align: center;
+  padding-top: 4px;
+  opacity: 0.8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+  padding: 1rem 0.85rem;
+}
+
+.sidebar.collapsed .sidebar-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .hint-control {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  height: 100%;
+  align-items: stretch;
+  padding-top: 1.2rem;
+  margin-top: 1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.sidebar-header {
+  position: absolute;
+  top: 0.2rem;
+  left: 1.1rem;
+  right: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0 1rem 0 1rem;
+  align-items: center;
+  pointer-events: none;
+}
+
+.app-logo {
+  margin: 0;
+  pointer-events: auto;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #e5e5e5;
+}
+
+/* убираем наложение подзаголовка */
+.sidebar-caption {
+  display: none;
+}
+
+.hint-control {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #c5c5c5;
+  pointer-events: auto;
+}
+
+.sidebar-caption {
+  color: rgba(212, 212, 212, 0.65);
+  margin: 0;
+  font-size: 12px;
+}
+
+.sidebar-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.sidebar-section + .sidebar-section {
+  margin-top: 0.4rem;
+}
+
+.quick-notes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+.quick-notes-row .round {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: #c5c5c5;
+  font-size: 0.85rem;
+}
+
+.sidebar-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #c5c5c5;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  line-height: 1;
+  z-index: 1300;
+  pointer-events: auto;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  right: 0.9rem;
+}
+
+.search-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-sizing: border-box;
+}
+
+#searchInput {
+  width: 100%;
+  border-radius: 3px;
+  border: 1px solid #3c3c3c;
+  padding: 0.3rem 0.5rem;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  font-size: 0.88rem;
+  transition: border 0.15s ease;
+  box-sizing: border-box;
+}
+
+#quickNoteAddBtn {
+  height: 32px;
+  padding: 0 0.7rem;
+  border-radius: 4px;
+  border: 1px solid #3c3c3c;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+#searchInput:focus {
+  border-color: #3794ff;
+  outline: none;
+}
+
+#searchInput::placeholder {
+  color: #8c8c8c;
+}
+
+.sidebar-articles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.sidebar-articles__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #d4d4d4;
+  margin-bottom: 0.12rem;
+  font-size: 0.95rem;
+}
+.sidebar-articles__header button,
+#quickNoteAddBtn {
+  height: 22px;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #3c3c3c;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.2;
+  min-width: 78px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.sidebar-articles__header button:hover,
+#quickNoteAddBtn:hover {
+  color: #e0e0e0;
+}
+
+.sidebar-articles__filter input {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid #3c3c3c;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  padding: 0.55rem 0.9rem;
+  box-sizing: border-box;
+}
+
+.sidebar-article-list {
+  list-style: none;
+  padding: 0;
+  padding-top: 0.3rem;
+  margin: 0;
+  max-height: 44vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sidebar-article-item button {
+  width: 100%;
+  text-align: left;
+  border-radius: 4px;
+  padding: 0.22rem 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(212, 212, 212, 0.95);
+  font-size: 0.9rem !important;
+  line-height: 1.2;
+  transition: border 0.2s ease, background 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.sidebar-article-item button:hover {
+  border-color: #3c3c3c;
+  background: #2a2d2e;
+}
+
+.sidebar-article-item button.active {
+  border-color: #3794ff;
+  background: #094771;
+  color: #ffffff;
+  box-shadow: none;
+}
+.sidebar-article-item .label {
+  display: inline-block;
+  margin-left: 0.35rem;
+  color: #0ea5e9;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.star-btn {
+  border: none;
+  background: transparent;
+  color: #c5c5c5;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  line-height: 1;
+}
+.star-btn.active {
+  color: #facc15;
+}
+.star-btn:hover {
+  color: #facc15;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+.sidebar-actions button {
+  height: 32px;
+  padding: 0 0.7rem;
+  border-radius: 4px;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  border-color: #3c3c3c;
+}
+
+.sidebar button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.95rem;
+  border-radius: 5px;
+  border: 1px solid #3c3c3c;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.sidebar button.ghost {
+  border-color: #3c3c3c;
+  color: #d4d4d4;
+  background: #2d2d2d;
+  border-radius: 5px;
+}
+
+.sidebar button.primary {
+  background: transparent;
+  color: #c5c5c5;
+  box-shadow: none;
+  border: 1px solid #3c3c3c;
+  border-radius: 5px;
+}
+
+.search-result-item:hover {
+  background: #f5f7fb;
+}
+
+.search-result-item__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+.search-result-item__badge {
+  display: inline-block;
+  background: #111c2c;
+  color: #f8fafc;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.search-result-item__title {
+  font-weight: 600;
+  color: #111827;
+}
+
+.search-result-item__snippet {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.search-result-item mark {
+  background: #fde68a;
+  color: #92400e;
+  padding: 0 0.15rem;
+  border-radius: 3px;
+}
+
+main.content {
+  flex: 1;
+  /* padding: 0 1rem 1rem; */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+.panel {
+  background: transparent;
+  border-radius: 0;
+  padding: 1.1rem 1.25rem;
+  border: none;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.article-header {
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Article view overrides: compact sticky header like VS Code topbar */
+#articleView.panel {
+  padding: 0;
+  margin-top: 0;
+  border-radius: 0;
+}
+
+#articleView .panel-header.article-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: #f9fafb;
+  border-bottom: 1px solid #dcdcdc;
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0;
+}
+
+#articleView .title-row h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.article-title--encrypted {
+  color: #0f766e;
+}
+
+.article-title--encrypted::before {
+  content: '🔒';
+  display: inline-block;
+  margin-right: 0.3rem;
+}
+
+#articleView .title-block .meta {
+  color: #6a6a6a;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.list-header {
+  justify-content: flex-start;
+}
+.list-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.list-tabs button {
+  padding: 0.25rem 0.6rem;
+}
+.list-tabs .active {
+  background: #0ea5e9;
+  color: #ffffff;
+  border-color: #0ea5e9;
+}
+
+.list-header-actions {
+  margin-left: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+#articleList,
+#blocksContainer {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  overscroll-behavior: contain;
+}
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-surface,
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-content,
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-text {
+  cursor: grab;
+  touch-action: none;
+}
+.block-dnd-active #blocksContainer .block:not(.editing) .block-surface,
+.block-dnd-active #blocksContainer .block:not(.editing) .block-content,
+.block-dnd-active #blocksContainer .block:not(.editing) .block-text {
+  cursor: grabbing;
+}
+
+.title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.title-row h2 {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.title-block .meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
+}
+
+.header-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.article-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  position: relative;
+}
+
+.article-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.article-toolbar .ghost.small {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+}
+
+#articleToolbar #articleNewBlockBtn {
+  margin-left: auto;
+}
+
+.article-toolbar .toolbar-label {
+  white-space: nowrap;
+}
+
+.public-link-button {
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.public-link-button:hover {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+@media (max-width: 767px) {
+  .article-toolbar .toolbar-label {
+    display: none;
+  }
+}
+.drag-mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #cdd5df;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.drag-mode-toggle-btn.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #ffffff;
+}
+.drag-mode-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.article-menu {
+  position: absolute;
+  right: 0;
+  top: 115%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+  min-width: 190px;
+  padding: 0.35rem;
+  z-index: 25;
+}
+.article-menu.hidden {
+  display: none;
+}
+.article-menu .menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+}
+.article-menu .menu-item:hover {
+  background: #e8f3ff;
+}
+.article-menu .menu-item.danger {
+  color: #b91c1c;
+}
+
+#articleTitleInput {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  width: 100%;
+}
+
+.hint-toggle-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hint-toggle-btn.active {
+  background: #e8f3ff;
+  border-color: #3794ff;
+  color: #1d4ed8;
+}
+
+.hint-popover {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: auto;
+  left: 0;
+  width: min(380px, 80vw);
+  z-index: 10;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e1e1e1;
+  box-shadow: 0 20px 45px rgba(15, 30, 40, 0.18);
+}
+
+.hint-popover .hint {
+  margin: 0;
+}
+
+.ghost.small {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.panel.hidden {
+  display: none;
+}
+
+.meta {
+  color: #6b7280;
+  margin: 0.25rem 0 0;
+}
+
+button {
+  border: 1px solid #c7c7c7;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: #f5f5f5;
+  color: #111827;
+  transition: background 0.2s ease;
+}
+
+button.primary {
+  background: #0e639c;
+  border-color: #3794ff;
+  color: white;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid #d1d5db;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+#articleList {
+  list-style: none;
+  padding: 0;
+  padding-top: 2px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#articleList li {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease;
+}
+
+#articleList li:hover {
+  border-color: #3794ff;
+  transform: translateY(-2px);
+}
+
+.hint {
+  border-radius: 12px;
+  background: #e8f3ff;
+  padding: 1rem 1.25rem;
+  color: #1d4ed8;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  /* gap: 0.35rem; */
+  position: relative;
+}
+
+.block {
+  display: grid;
+  grid-template-areas:
+    'surface'
+    'children';
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+  align-items: stretch;
+  position: relative;
+  box-sizing: border-box;
+  /* gap: 0.15rem; */
+}
+
+/* Выравниваем высоту корневых блоков: у всех одинаковый бордер и паддинги,
+   у выделенного меняем только цвет бордера, чтобы вёрстка не "прыгала". */
+.blocks > .block {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.15rem 0.15rem 0.25rem;
+}
+
+.block:focus {
+  outline: none;
+}
+
+.block .block-surface {
+  grid-area: surface;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'collapse content drag';
+  align-items: flex-start;
+  /* column-gap: 0.5rem; */
+  padding: 0.05rem 0;
+  border-radius: 0;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+  /* gap: 0.35rem; */
+}
+
+.block .block-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0.3rem;
+  grid-area: content;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  border-radius: 6px;
+  /* background: #f7f7f7; */
+  /* border: 1px solid #e0e0e0; */
+  box-sizing: border-box;
+}
+.block.editing .block-content {
+  background: #ffffff;
+  border: 1px solid #3794ff;
+}
+
+.block:focus > .block-surface {
+  outline: #3794ff;
+  /* outline-offset: 2px; */
+}
+
+
+
+.block.selected.block--no-title > .block-surface {
+  box-shadow: none;
+}
+
+.block.selected[data-collapsed='true'] > .block-surface {
+  box-shadow: none;
+}
+
+.block.selected:not(.editing) > .block-surface .block-content {
+  background: #e8f3ff;
+  border-color: #3794ff;
+}
+
+.blocks > .block.block--selected-root-ancestor {
+  border-color: #d4ddf0;
+}
+
+.block.editing > .block-surface {
+  background: transparent;
+  position: relative;
+}
+
+.block.editing > .block-surface > .block-header {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.block-text {
+  flex: 1;
+  min-height: 1.5rem;
+  margin-top: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  overscroll-behavior: contain;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  /* padding-left: 3rem; */
+  /* padding-right: 0.5rem; */
+  box-sizing: border-box;
+  transition: background-color 0.15s ease;
+}
+.block-text.block-body {
+  margin-top: 0.3rem;
+}
+.block-text p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.block-header p,
+.block-title p {
+  margin: 0;
+  padding: 0;
+}
+
+.block-text.block-body.block-body--no-title {
+  margin-top: 0;
+  min-width: 100%;
+}
+
+.block-text[contenteditable='true'] {
+  outline: none;
+  overflow: visible;
+  max-height: none;
+}
+
+.memus-table {
+  border-collapse: collapse;
+  width: 100% !important;
+  max-width: 100%;
+  table-layout: fixed;
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+}
+
+.memus-table thead tr {
+  background: #f3f4f6;
+}
+
+.memus-table th,
+.memus-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.25rem 0.4rem;
+  text-align: left;
+  vertical-align: top;
+  min-width: 3ch;
+}
+
+.memus-table tbody tr:nth-child(odd) {
+  background: #f9fafb;
+}
+
+.memus-table tbody tr:hover {
+  background: #eef2ff;
+}
+
+.block-text[contenteditable='true'] .memus-table {
+  overflow: visible;
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.table-toolbar {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.1rem 0.2rem;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  z-index: 2000;
+}
+
+.table-toolbar button,
+.table-toolbar-btn {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid #4b5563;
+  background: transparent;
+  color: #f9fafb;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.table-col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 5;
+  /* Небольшой визуальный индикатор, чтобы было за что "схватиться" */
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(31, 41, 55, 0.45),
+    transparent
+  );
+}
+
+.block.editing > .block-surface > .block-text {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+}
+
+.block.editing > .block-surface > .block-text.block-body--no-title {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.block.block--no-title > .block-surface .block-content > .block-header {
+  display: contents;
+  margin: 0;
+  padding: 0;
+}
+
+.block-header.block-header--no-title {
+  display: contents;
+}
+
+.block.editing .block-content > .block-header {
+  display: block;
+  margin: 0 0 0.2rem 0;
+  padding: 0;
+}
+
+.block.block--no-title > .block-surface .block-title-spacer {
+  display: none;
+}
+
+.block.block--no-title > .block-surface .block-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.block.block--no-title > .block-surface .block-content {
+  grid-area: content;
+}
+
+.block .block-surface > .collapse-btn {
+  grid-area: collapse;
+  justify-self: start;
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+
+.block .block-surface > .block-add-btn {
+  grid-area: drag;
+  justify-self: end;
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+
+.block.block--no-title > .block-surface {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'collapse content drag';
+  align-items: flex-start;
+  /* column-gap: 0.5rem; */
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+}
+
+.block.block--no-title > .block-surface > .collapse-btn {
+  grid-area: collapse;
+}
+
+.block.block--no-title > .block-surface > .block-add-btn {
+  grid-area: drag;
+}
+
+.block.block--no-title > .block-surface .block-text {
+  align-self: flex-start;
+  margin-top: 0;
+}
+
+.block.block--no-title > .block-surface .collapse-btn,
+.block.block--no-title > .block-surface .block-add-btn {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+  margin-left: 0.3rem;
+}
+
+.block.editing.block--no-title > .block-surface .block-content {
+  padding-left: 0.4rem;
+  padding-top: 0.25rem;
+}
+
+.block-text img {
+  max-width: 100%;
+  max-height: 15rem;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  margin: 0.4rem 0;
+  box-shadow: 0 6px 18px rgba(15, 30, 40, 0.1);
+}
+.block-text .attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #111827;
+  text-decoration: none;
+}
+.block-text .attachment-link:hover {
+  border-color: #818cf8;
+  text-decoration: underline;
+}
+.block-text .attachment-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-style: italic;
+}
+.block-text .attachment-upload--error {
+  border-color: #ef4444;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+.rich-context-menu {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.4rem 0.45rem;
+  max-width: min(360px, 96vw);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 30, 40, 0.16);
+}
+.rich-context-menu.hidden {
+  display: none;
+}
+.rich-context-menu__col {
+  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.rich-context-menu__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+}
+.rich-context-menu button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+  cursor: pointer;
+  line-height: 1.1;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
+}
+.rich-context-menu__icon-btn {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.rich-context-menu button:hover {
+  border-color: #3794ff;
+  background: #e8f3ff;
+  transform: translateY(-1px);
+}
+
+.rich-context-menu .divider {
+  display: none;
+}
+.article-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.article-link:hover {
+  color: #1d4ed8;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+}
+.modal-overlay--hide {
+  opacity: 0;
+  pointer-events: none;
+}
+.modal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  width: min(420px, 92vw);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.image-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-modal__card {
+  outline: none;
+}
+.image-modal__img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+}
+.modal-header h3 {
+  margin: 0;
+}
+.modal-body {
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.modal-body__text {
+  margin: 0;
+  color: inherit;
+}
+.modal-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+.modal-input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid #d0d0d0;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.modal-input:focus {
+  outline: none;
+  border-color: #3794ff;
+  box-shadow: 0 0 0 4px rgba(55, 148, 255, 0.1);
+}
+.modal-suggestions {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.modal-suggestions.hidden {
+  display: none;
+}
+.modal-suggestion {
+  text-align: left;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.modal-suggestion:hover {
+  border-color: #3794ff;
+  background: #e8f3ff;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.modal-footer.modal-footer--stacked {
+  flex-direction: column !important;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.modal-footer.modal-footer--stacked > button {
+  width: 100%;
+}
+
+/* Заголовки блоков по уровням вложенности */
+h1.block-title,
+h2.block-title,
+h3.block-title,
+h4.block-title,
+h5.block-title,
+h6.block-title {
+  margin: 0;
+  padding: 0;
+  font-weight: 450;
+  color: #111827;
+  line-height: 1.3;
+  transition: background-color 0.15s ease;
+}
+
+h1.block-title {
+  font-size: 1.15rem;
+}
+
+h2.block-title {
+  font-size: 1.05rem;
+}
+
+h3.block-title {
+  font-size: 1rem;
+}
+
+h4.block-title {
+  font-size: 0.95rem;
+}
+
+h5.block-title,
+h6.block-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4b5563;
+}
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.95));
+  z-index: 3000;
+}
+
+.auth-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  width: min(420px, 92vw);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.auth-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.auth-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 0.12rem;
+  margin-top: 0.4rem;
+}
+
+.auth-tab {
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.auth-tab.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.auth-field input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid #d0d0d0;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.auth-field input:focus {
+  outline: none;
+  border-color: #3794ff;
+  box-shadow: 0 0 0 3px rgba(55, 148, 255, 0.28);
+}
+
+.auth-submit {
+  margin-top: 0.4rem;
+  width: 100%;
+}
+
+.auth-google-btn {
+  background: #ffffff;
+  color: #1f2933;
+  border-radius: 999px;
+  border: 1px solid #d0d0d0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.auth-google-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.auth-google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.auth-google-label {
+  white-space: nowrap;
+}
+
+.auth-error {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.sidebar-user {
+  margin-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.sidebar-user__name {
+  max-width: 120px;
+  font-size: 0.8rem;
+  color: #d4d4d4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-user__logout {
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.users-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.users-list-item__info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.users-list-item__badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #f9fafb;
+  letter-spacing: 0.05em;
+}
+
+.users-list-item__delete {
+  font-size: 0.8rem;
+}
+
+.block-title__placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.graph-container {
+  flex: 1;
+  min-height: 0;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  overflow: hidden;
+  position: relative;
+}
+
+#graphCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.graph-tooltip {
+  padding: 0.2rem 0.4rem;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  max-width: 260px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.4);
+  pointer-events: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.block-body.collapsed {
+  display: none;
+}
+
+.block-children {
+  grid-area: children;
+  position: relative;
+  margin-left: 0.6rem;
+  width: calc(100% - 0.6rem);
+  /* padding-left: 1.25rem; */
+  border-left: 1px solid #d8d8d8;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* gap: 0.35rem; */
+  /* margin-top: 0.35rem; */
+  padding-left: 0.5rem;
+}
+
+.block-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  /* margin-bottom: 0.35rem; */
+  justify-content: space-between;
+  width: 100%;
+}
+
+.block-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.block-header + .block-text {
+  margin-top: 0.3rem;
+  width: 100%;
+}
+
+.block-header .move-block-btn {
+  margin-left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
+
+.block-add-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  box-sizing: border-box;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* border-radius: 8px;
+  border: 1px solid transparent; */
+  background: transparent;
+  color: #7a7a7a;
+  cursor: pointer;
+  align-self: flex-start;
+  margin: 0.3rem 0 0 0.3rem;
+}
+.block-add-btn.block-edit-save-btn {
+  margin-top: 0.4rem;
+}
+.block.editing > .block-surface .block-add-btn.block-edit-save-btn {
+  align-self: flex-end;
+  margin-top: auto;
+  margin-bottom: 0.3rem;
+}
+.block > .block-surface:hover .block-add-btn {
+  color: #333333;
+  /* border-color: #e2e8f0; */
+}
+
+.block-edit-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+margin: 0.5rem 0 0.1rem;
+}
+
+.block.editing .block-edit-actions .ghost.small {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.block-drop-line {
+  position: fixed;
+  height: 4px;
+  background: #3794ff;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(55, 148, 255, 0.35);
+  z-index: 1500;
+  pointer-events: none;
+}
+.block-drop-line.hidden {
+  display: none;
+}
+.drag-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.drag-layer__handle {
+  position: absolute;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+.block-drag-preview {
+  position: fixed;
+  z-index: 1600;
+  padding: 0.45rem 0.7rem;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  font-size: 0.9rem;
+  max-width: min(320px, 80vw);
+  opacity: 0.95;
+}
+.block.drop-inside-target > .block-surface {
+  background: #e8f3ff;
+  outline: 2px dashed #3794ff;
+}
+body.block-dnd-active {
+  user-select: none;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.collapse-btn {
+  border-radius: 6px;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: #777777;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.collapse-btn--placeholder {
+  border: none;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+.collapse-btn--placeholder::before,
+.collapse-btn--placeholder::after {
+  display: none;
+}
+
+.block-edit-cancel-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  box-sizing: border-box;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #7a7a7a;
+  cursor: pointer;
+  grid-area: collapse;
+  justify-self: start;
+}
+.block.editing > .block-surface .block-edit-cancel-btn {
+  align-self: flex-end;
+  margin-top: auto;
+  margin-bottom: 0.3rem;
+  margin-right: 0.3rem;
+}
+
+.collapse-btn {
+  position: relative;
+}
+
+.collapse-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid #9ca3af;
+  border-bottom: 1px solid #9ca3af;
+  transform-origin: center center;
+  transform: translate(-50%, -50%) rotate(-135deg);
+}
+
+/* Свёрнутый блок: "галочка" вниз */
+.collapse-btn[aria-expanded='false']::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.collapse-btn.block-edit-cancel-btn::before {
+  display: none;
+}
+
+.collapse-btn.block-edit-cancel-btn::after {
+  display: none;
+}
+
+.collapse-btn.block-edit-cancel-btn {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 0.75rem 1.25rem;
+  background: #111827;
+  color: white;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.hidden {
+  display: none;
+}
+.diff-inline {
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: #f8fafc;
+}
+
+.diff-inline__content {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diff-inline__segment {
+  padding: 0.05rem 0.1rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.diff-inline__segment--added {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.diff-inline__segment--removed {
+  background: #fee2e2;
+  color: #b91c1c;
+  text-decoration: line-through;
+}
+
+.diff-inline__hint {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.diff-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.diff-image-card {
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  padding: 0.5rem;
+  width: 120px;
+  text-align: center;
+  background: white;
+}
+
+.diff-image-card--added {
+  border-color: #4ade80;
+  background: #ecfdf5;
+}
+
+.diff-image-card--removed {
+  border-color: #f87171;
+  background: #fef2f2;
+}
+
+.diff-image-card__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.diff-image-card img {
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* Mobile-first layout (по умолчанию мобильный вид) */
+.app-shell {
+  flex-direction: column;
+}
+.sidebar {
+  position: fixed;
+  inset: 0;
+  max-width: 360px;
+  width: 90vw;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: none;
+  z-index: 1200;
+}
+.sidebar.mobile-open {
+  transform: translateX(0);
+}
+
+.mobile-only {
+  display: inline-flex;
+}
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1100;
+  display: none;
+}
+.sidebar-backdrop.hidden {
+  display: none;
+}
+.sidebar.collapsed {
+  transform: translateX(-100%);
+}
+main.content {
+  /* padding: 0.5rem 0.75rem; */
+}
+.panel {
+  padding: 0.35rem 0.5rem;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 12px;
+}
+.blocks {
+  padding: 0;
+  /* gap: 0.35rem; */
+}
+.block .block-surface {
+  /* padding: 0.25rem 0.4rem; */
+}
+.block-header {
+  gap: 0.35rem;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    flex-direction: row;
+    height: 100vh;
+  }
+.sidebar {
+    position: relative;
+    width: 280px;
+    max-width: 280px;
+    transform: none;
+    box-shadow: 0 20px 45px rgba(10, 15, 30, 0.35);
+  }
+  .sidebar.collapsed {
+    width: 60px;
+    padding: 1rem 0.85rem;
+    transform: none;
+  }
+  .sidebar-backdrop {
+    display: none !important;
+  }
+  .sidebar-toggle,
+  .hint-control {
+    display: flex;
+  }
+  .mobile-only {
+    display: none;
+  }
+  main.content {
+    /* padding: 0 1.25rem 1.25rem; */
+  }
+  .panel {
+    padding: 1.1rem 1.25rem;
+    max-width: 960px;
+    margin: 0 auto;
+    border-radius: 16px;
+  }
+  .blocks {
+    /* gap: 0.35rem; */
+  }
+  .block .block-surface {
+    /* padding: 0.45rem 0.6rem; */
+  }
+  .block-header {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+  }
+  .app-shell {
+    flex-direction: column;
+    height: auto;
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0;
+    max-width: 360px;
+    width: 90vw;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    z-index: 1200;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1100;
+    display: block;
+  }
+  .sidebar-backdrop.hidden {
+    display: none;
+  }
+  .sidebar-toggle,
+  .hint-control {
+    display: inline-flex;
+  }
+  .content {
+    /* padding: 0.5rem 0.75rem; */
+    width: 100%;
+    overflow-x: hidden;
+  }
+  .panel {
+    padding: 0.35rem 0.5rem;
+  }
+  .blocks {
+    padding: 0;
+    /* gap: 0.35rem; */
+  }
+  .block .block-surface {
+    /* padding: 0.25rem 0.4rem; */
+  }
+  .block-header {
+    gap: 0.35rem;
+  }
+  .block .collapse-btn {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    margin-top: 0.3rem;
+    margin-left: 0rem;
+  }
+  .block .block-add-btn {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    margin-top: 0.3rem;
+  }
+  .block-edit-actions {
+    margin: 0.5rem 0 0.1rem;
+  }
+  .article-header .title-row {
+    gap: 0.4rem;
+  }
+  .mobile-only {
+    display: inline-flex;
+  }
+  /* В мобильном режиме скроллим body, а не внутренние контейнеры,
+     чтобы sticky-заголовок статьи оставался на месте. */
+  .app-shell,
+  main.content,
+  .panel {
+    overflow: visible;
+  }
+  /* В мобильном режиме прокручиваем всю страницу,
+     а не внутренние списки, чтобы sticky-заголовок статьи оставался на месте. */
+  #articleList,
+  #blocksContainer {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+}
+
+ul {
+  padding: 0;
+  margin: 0;
+  padding-left: 1.5rem;
+
+}
+
+
+    body.export-page {
+      margin: 0;
+      background: #eef2f8;
+      overflow: auto;
+      height: auto;
+    }
+    .export-shell {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: #eef2f8;
+    }
+    .export-content {
+      padding: 1.5rem 1rem 2rem;
+      width: 100%;
+      max-width: 960px;
+    }
+    .export-panel {
+      min-height: auto;
+      height: auto;
+    }
+    .block-children.collapsed {
+      display: none;
+    }
+    .block {
+      cursor: default;
+    }
+    .export-title {
+      margin: 0;
+    }
+  
+  </style>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Memus - Руководство пользователя",
+  "description": "Зачем нужен Memus?Memus — это ваша личная база знаний. Место, где вы можете хранить всё, что вы когда-то узнали или о чём подумали. КонцепцияЛичная база знаний…",
+  "dateModified": "2025-12-05T20:27:54.116598",
+  "datePublished": "2025-12-04T07:19:57.770051",
+  "wordCount": 2504,
+  "inLanguage": "ru"
+}
+  </script>
+
+<style>
+  /* Базовая типографика страницы */
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, "Noto Sans", sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #1f2933;
+    background: #f5f7fa;
+  }
+
+  /* Центрированный «лист» документа */
+  .page {
+    max-width: 820px;
+    margin: 32px auto 40px;
+    padding: 32px 28px 40px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.10);
+  }
+
+  /* Заголовки */
+  h1, h2, h3, h4 {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, "Noto Sans", sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #111827;
+    margin-top: 1.8em;
+    margin-bottom: 0.4em;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-top: 0;
+    margin-bottom: 0.75em;
+    letter-spacing: -0.01em;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+    border-left: 3px solid #3b82f6;
+    padding-left: 0.5em;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    color: #111827;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    text-transform: none;
+  }
+
+  /* Абзацы и текст */
+  p {
+    margin: 0 0 0.7em;
+    max-width: 72ch;
+  }
+
+  p + p {
+    margin-top: 0.2em;
+  }
+
+  strong {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  /* Списки (в руководстве их много) */
+  ul, ol {
+    margin: 0.4em 0 0.8em 1.5em;
+    padding: 0;
+  }
+
+  li + li {
+    margin-top: 0.20em;
+  }
+
+  /* Таблицы (сравнения, как про блоки vs обычный текст) */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.1em 0;
+    font-size: 0.95rem;
+  }
+
+  th, td {
+    padding: 0.55em 0.7em;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead tr {
+    background: #f3f4f6;
+    font-weight: 600;
+  }
+
+  tbody tr:nth-child(odd) {
+    background: #fafbff;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #ffffff;
+  }
+
+  /* Горячие клавиши и код */
+  code, kbd {
+    font-family: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 0.88em;
+    background: #f3f4f6;
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    border: 1px solid #e5e7eb;
+  }
+
+  kbd {
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+  }
+
+  pre {
+    background: #0b1120;
+    color: #e5e7eb;
+    padding: 0.85em 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.9em;
+  }
+
+  /* Ссылки */
+  a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* Внутренние заметки / подсказки */
+  .note {
+    margin: 1em 0;
+    padding: 0.9em 1em;
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  .warning {
+    margin: 1em 0;
+    padding: 0.9em 1em;
+    border-radius: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+  }
+
+  /* Визуальные разделители */
+  hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 1.8em 0;
+  }
+
+  /* Мелкий вторичный текст */
+  .meta, .muted {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    body {
+      background: #ffffff;
+    }
+
+    .page {
+      margin: 0;
+      max-width: 100%;
+      min-height: 100vh;
+      border-radius: 0;
+      padding: 20px 16px 32px;
+      box-shadow: none;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+    }
+  }
+</style>
+
+</head>
+<body class="export-page">
+  <div class="page">
+<script type="application/json" id="memus-export">
+{
+  "version": 1,
+  "source": "memus",
+  "article": {
+    "id": "3da957d7-74a9-41b8-8368-782274ad1973",
+    "title": "Memus - Руководство пользователя",
+    "createdAt": "2025-12-04T07:19:57.770051",
+    "updatedAt": "2025-12-05T20:27:54.116598",
+    "deletedAt": null,
+    "isInbox": false,
+    "encrypted": false,
+    "encryptionHint": null
+  },
+  "blocks": [
+    {
+      "id": "0ecd83ef-1d61-4407-a1e8-9c092a7d7853",
+      "text": "<p>Зачем нужен Memus?</p><p><br /></p><p>Memus — это ваша личная база знаний. Место, где вы можете хранить всё, что вы когда-то узнали или о чём подумали. </p>",
+      "collapsed": false,
+      "children": []
+    },
+    {
+      "id": "785546cf-c349-4937-a0d3-2dd35bbc1172",
+      "text": "<p>Концепция</p><p><br /></p><p>Личная база знаний - записывате сюда всё то, что не хотите забыть.</p><p>Удобно записывать, удобно искать, удобно приводить в порядок.</p>",
+      "collapsed": false,
+      "children": [
+        {
+          "id": "a294f1d9-01d6-44c1-8c48-a1b6d91a09fd",
+          "text": "<p>Статья</p><p><br /></p><p> - в неё вы собираете всё, что относится к теме статьи.</p>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "2936cecd-31da-4a2a-b9d0-1c607ac7a194",
+          "text": "<p>Блоки</p><p><br /></p><p> - статья состоит из блоков. Зачем это надо? Почему не обычный текст? </p><p><br /></p><p><br /></p><table class=\"memus-table\"><colgroup><col width=\"39.557321242486566%\" /><col width=\"47.378290977698185%\" /></colgroup><thead><tr><th>Блоки</th><th>Обычный текст</th></tr></thead><tbody><tr><td>Создают структуру. Упрощают восприятие текста и работу с ним.</td><td>Когда текста много, приходится прокручивать и искать</td></tr><tr><td>Хранение в блоках надёжно.  Блок нельзя изменить &quot;случайно&quot;. </td><td>Можно случайно удалить, вставить не туда, скорректировать не там.. </td></tr><tr><td> Блок - законченная единица информации.</td><td> В тексте потом сложно разобраться что там где. Нет структуры.</td></tr><tr><td> Блоки легко перемещать, структурировать</td><td> Нужно постоянно что-то копировать, вставлять, править форматирование, не дай бог вырезал и забыл вставить..\n</td></tr><tr><td> Первая строка блока автоматически становится его заголовком, если после неё есть пустая строка. Стиль заголовка автоматически проставляется в зависимости от вложенности.</td><td> Заголовки нужно руками форматировать. При изменении уровня абзаца заголовки сами стиль не меняют.</td></tr></tbody></table>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "4b0d1cc0-50d8-4504-a6d0-763be90f4761",
+          "text": "<p>Ссылки</p><p><br /></p><p> - в статью можно вставить ссылки на другие статьи и на внешние ресурсы. Если вы хотите приложить какие-то файлы, самый лучший способ - это создать папку на YandexDisk или GoogleDrive и там хранить все документы и видео. А в статьи вставлять ссылки на них. В чём плюс такого подхода? Это конечно безопасность, надёжность хранения, гибкость - вы имеете доступ к таким файлам не только через Memus. При клике на такую ссылку Memus сам откроет нужный файл/папку на облачном диске. Если вы укажете публичную ссылку, то когда вы поделитесь статьёй, ваши читатели смогут эти файлы тоже открыть и посмотреть. А вы всегда можете управлять правами доступа - какой контент показывать, а какой скрыть. Можете произвольно раскладывать файлы по папкам на облачном диске.. Короче, это удобно.</p>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "5166a102-4f65-4749-ae37-372ec3ee2215",
+      "text": "<p>Установка</p><p><br /></p><p>Memus можно просто открыть в браузере.</p><p>А можно установить как приложение PWA. Для этого нужно просто открыть ссылку <a href=\"https://memus.pro\" target=\"_blank\" rel=\"noopener noreferrer\">https://memus.pro</a> в &quot;родном&quot; для мобильной платформе браузере - будет выдано предложение добавить Memos на рабочий стол. </p><p>На Android  это Chrome, на iOS это Safari, на Huawei это Huawei Browser.</p><p>После этого Memus будет работать как обычное мобильное приложение.</p>",
+      "collapsed": false,
+      "children": []
+    },
+    {
+      "id": "27015276-905e-4805-aad9-b67cad94a8fe",
+      "text": "<p>Горячие клавиши</p><p><br /></p><p>Режим просмотра:</p><p><br /></p><ul><li>Навигация:<ul><li><span>↑/↓</span><span> </span>— выбрать соседний блок;</li><li><span>Enter</span><span> </span>— начать редактирование.</li></ul></li><li>Структура:<ul><li><span>Ctrl+Shift+↑/↓</span><span> </span>— переместить блок (с его детьми) вверх/вниз;</li><li><span>Ctrl+→ / Ctrl+←</span><span> </span>— вложить/поднять уровень;</li><li><span>Ctrl+Delete</span><span> </span>— удалить текущий блок (если не последний).</li></ul></li><li>Создание:<ul><li><span>Ctrl+↑</span><span> </span>— сохранить и создать блок выше (в режиме редактирования);</li><li><span>Ctrl+↓</span><span> </span>— в режиме редактирования разрезать блок по курсору.</li></ul></li><li>Мультивыделение:<ul><li><span>Shift+↑/↓</span><span> </span>— расширить или сузить диапазон выделенных блоков.</li></ul></li><li>Сворачивание:<ul><li><span>←/→</span><span> </span>— свернуть/развернуть подходящий блок (часто родительский).</li></ul></li></ul><p><br /></p><p>Режим редактирования:</p><p><br /></p><ul><li><span>Ctrl+Enter</span><span> </span>— сохранить блок и выйти в просмотр;</li><li><span>Ctrl+↓</span><span> </span>— разрезать блок по курсору (новый блок ниже, курсор в его начале);</li><li><span>Ctrl+→ / Ctrl+←</span><span> </span>— вложить/поднять блок, оставаясь в режиме редактирования;</li><li><span>Esc</span><span> </span>— отменить редактирование (пустой блок удаляется).</li></ul><p><br /></p><p>Общие:</p><p><br /></p><ul><li><span>Ctrl+Z / Ctrl+Y</span><span> </span>— отмена/повтор последнего действия;</li><li>в модальных окнах:<ul><li><span>Enter</span><span> </span>— подтвердить;</li><li><span>Esc</span><span> </span>— закрыть.</li></ul></li></ul>",
+      "collapsed": true,
+      "children": []
+    },
+    {
+      "id": "a7cec224-e0eb-40da-92ad-420d013870bb",
+      "text": "<p>Основные возможности</p>",
+      "collapsed": true,
+      "children": [
+        {
+          "id": "048a073f-e949-4c2e-87c6-d8f1d3949f56",
+          "text": "<p>Работа с любого устройства</p><p><br /></p><p>Нет никаких заморочек с синхронизацией данных.</p>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "fc23f5f6-1d1b-4861-ae96-dc3ec4725352",
+          "text": "<p>Удобное редактирование</p><p><br /></p><p> и минимум времени на форматирование - фокус на содержании</p>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "2d31bbad-9262-4c05-a24c-c6fbe55f9b1c",
+          "text": "<p>Зашифрованные статьи</p><p><br /></p><p>Задайте пароль и эта статья будет зашифрована прямо на вашем устройстве и уйдёт на сервер уже в зашифрованном виде. И никто не сможет её прочитать. Даже вы, если забудете пароль :) (Но для этого мы предусмотрели подсказку, которую вы увидите при открытии такой страницы.)</p>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3",
+          "text": "<p>Экспорт </p><p><br /></p><p>отдельных статей или полный бэкап на ваше устройство - храните все ваши записи при себе. </p><p><br /></p><p>Экспорт и бэкап сохраняют статью в формате HTML в красивом виде - вместе с изображениями и ссылками на внешние ресурсы - т.е. статьи в вашем бэкапе абсолютно так же выглядят, как на экране. Их можно размещать на своём сайте, делиться и проч. Т.е. это не какой-то машинный бэкап - это человеческий бэкап. И да, Memus из этого бэкапа умеет загружать обратно!<br /></p>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "98f46c5f-a215-4a69-a560-ed897dce7b54",
+          "text": "<p> Возможность сделать публичную ссылку на нужные статьи.</p><p><br /></p><p>Это то, чего так не хватает, когда нужно с кем-то поделиться своей информацией! С Memus всё просто - нажимаете &quot;Опубликовать&quot; и получаете внешнюю ссылку. По этой ссылке другой человек сможет просмотреть вашу статью, но не сможет её изменить.</p>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "3907f261-7d00-4841-999d-4e2e23a904ca",
+          "text": "<p>Загрузка архива статей из markdown (с вложениями)</p><p><br /></p><p>Работаете в Obsidian или Logseq? Перейдите на Memus! Он удобнее. Вы можете загрузить в Memus все ваши файлы md и даже прикрепить к ним вложения!</p>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "61c62852-e45f-431c-8666-23eed106ce0d",
+          "text": "<p>Бесконечный откат изменений</p><p><br /></p><p>В рамках каждой статьи вы можете отменить любые изменения, даже спустя много времени. При отмене Memus покажет вам разницу в текстах.</p>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "f91cabec-ac3d-4532-ba18-d40616692c22",
+      "text": "<p>Авторизация</p><p><br /></p><ul><li>При открытии memus.pro:<ul><li>сначала появляется экран с логотипом «Memus.pro» и подписью «Загружаем ваши заметки…»;</li><li>если вы не авторизованы, появляется кнопка<span> </span><strong>«Войти через Google»</strong>.</li></ul></li><li>После успешного входа:<ul><li>создаётся/используется учётная запись, связанная с Google‑аккаунтом;</li><li>внизу сайдбара показывается ваш логин и кнопка<span> </span><strong>«Выйти»</strong>.</li></ul></li></ul>",
+      "collapsed": true,
+      "children": []
+    },
+    {
+      "id": "f7c6fa12-96c6-41f7-9854-b7e5324b151f",
+      "text": "<p>Сайдбар</p>",
+      "collapsed": true,
+      "children": [
+        {
+          "id": "80a8e8d3-7f04-4862-b769-e94073969a53",
+          "text": "<p><b>кнопка x / →</b> — свернуть / показать панель;</p><p><b>кнопка ?</b> — открыть страницу справки ;</p>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "0dc206bb-b748-4652-9cd6-b68dd4020b2e",
+          "text": "<p>Быстрые заметки</p><p><br /></p><p>Если вам нужно срочно записать мысль, чтобы её не потерять и некогда думать в какую статью её положить - воспользуйтесь &quot;Быстрыми заметками&quot;. Там каждая мысль - это отдельный блок, который вы потом сможете быстро перенести в нужную статью.</p><p><br /></p><p><br /></p><ul><li><strong>«Быстрые заметки»</strong><span> </span>— открыть специальную страницу со списком быстрых заметок и возможностью раскидать их по страницам.</li><li><strong>«Новая»</strong><span> </span>— быстро создать новую заметку.</li></ul><p><br /></p><p><br /></p><p><br /></p><p>Подробнее про Inbox — см. отдельный раздел. ниже</p>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "8cc67035-b71d-4798-b0fa-8e88d8bbb84c",
+          "text": "<p>Список статей в сайдбаре</p><p><br /></p><ul><li>В списке показываются:<ul><li>все ваши статьи (кроме Inbox) или удалённые (если включён режим корзины);</li><li>рядом с названием можно видеть иконку 🌐 — у статьи включён публичный доступ;</li><li>справа от названия — кнопка звёздочки<span> </span><strong>☆/★</strong><span> </span>(избранное).</li></ul></li><li>Действия:<ul><li>клик по названию — открыть статью;</li><li>клик по звёздочке — добавить/убрать из избранного.</li></ul></li><li>Избранные статьи:<ul><li>сортируются выше остальных и отмечаются<span> </span><strong>★</strong>;</li><li>список и порядок избранных хранятся локально (в вашем браузере).</li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "56dd995c-7ac2-4bb8-8c51-8b856906f662",
+          "text": "<p>Умный поиск</p><p><br /></p><p>Ищет сначала по названиям статей, потом в блоках. Находит, даже если слова идут в ином порядке или в других падежах.</p><p><br /></p><ul><li>ищет по заголовкам статей и содержимому блоков;</li><li>результаты показываются в выпадающем списке под полем;</li><li>клик по результату переходит к нужной статье/блоку.</li></ul>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "06f2be33-66bf-4383-bd56-f3ea31918e85",
+          "text": "<p>блок быстрых заметок (Inbox);</p><li>поле поиска;</li><li>список статей (с избранным, фильтром и корзиной);</li><li>Граф всех статей</li><li>Имя пользователя и кнопка &quot;Выход&quot;</li>",
+          "collapsed": false,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "6d739252-4056-4db0-9d02-520181f3da2d",
+      "text": "<p>Быстрые заметки </p><p><br /></p><p> — это специальная страница для быстрых набросков:</p><p><br /></p><ul><li>открыть:<ul><li>кнопка<span> </span><strong>«Быстрые заметки»</strong><span> </span>в сайдбаре;</li><li>или переход к статье с id<span> </span><span>inbox</span>.</li></ul></li><li>добавить:<ul><li>кнопку<span> </span><strong>«Новая»</strong><span> </span>в блоке быстрых заметок;</li><li>создаётся новый блок в Inbox, автоматически открывается на редактирование.</li></ul></li></ul>",
+      "collapsed": true,
+      "children": [
+        {
+          "id": "dd385bf3-53a8-4350-ba77-46f831fd7406",
+          "text": "<p>Перенос блоков из Inbox в статьи:</p><p><br /></p><ul><li>В заголовке каждого блока Inbox справа есть кнопка со стрелкой<span> </span><span>↦</span>:<ul><li>нажмите её — появится диалог «Перенести в статью»;</li><li>можно:<ul><li>выбрать статью из списка подсказок;</li><li>или ввести id/название статьи (ищется по точному совпадению).</li></ul></li></ul></li><li>После подтверждения:<ul><li>блок переносится из Inbox в выбранную статью;</li><li>Inbox обновляется;</li><li>показывается сообщение «Блок перенесён».</li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44",
+      "text": "<p>Список статей</p><p><br /></p><p>Предназначена для просмотра всех статей, просмотра корзины и выполнения операций импорта/экспорта.</p>",
+      "collapsed": true,
+      "children": [
+        {
+          "id": "3b6f8025-0ce0-4aec-943b-82da283305be",
+          "text": "<p>В режиме <strong>«Статьи»</strong></p><p><br /></p><ul><li>каждая строка: название, дата последнего обновления, звёздочка избранного;</li><li>клик по строке — открыть статью;</li><li>клик по звезде — добавить/убрать из избранного.</li></ul><li></li>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "22df0528-abe6-44b8-a97c-ebe5f9e95cb8",
+          "text": "<p>В режиме <strong>«Корзина»</strong></p><p><br /></p><ul><li>показываются удалённые страницы с датой удаления;</li><li>для каждой:<ul><li><strong>«Восстановить»</strong><span> </span>— вернуть статью из корзины;</li><li><strong>«Удалить»</strong><span> </span>— удалить страницу безвозвратно.</li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "347519ca-6a31-49b0-b2d8-f2dc46796e88",
+          "text": "<p>Резервная копия всех страниц (ZIP)</p><p>В меню списка статей (<span>…</span><span> </span>над заголовком «Список статей» →<span> </span><strong>«Резервная копия (ZIP)»</strong>):</p><p><br /></p><ul><li><p>Memus собирает все ваши не‑удалённые статьи;</p></li><li><p>для каждой создаёт HTML (как при одиночном экспорте);</p></li><li><p>упаковывает в ZIP вида<span> </span><span>memus-backup-YYYYMMDD-HHMMSS.zip</span>.<br />ZIP‑бэкап:</p></li><li><p>самодостаточный — все<span> </span><span>/uploads/...</span><span> </span>инлайнены в<span> </span><span>data:</span>‑URL;</p></li><li><p>при этом сохраняются<span> </span><span>data-original-*</span><span> </span>с оригинальными путями для аккуратного восстановления.</p></li></ul><p><br /></p><ul><li>при нажатии кнопки появляется долгое сообщение «Готовим резервную копию (ZIP)…»;</li><li>сообщение закрывается только в момент, когда начинается скачивание реального файла.</li></ul>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "bacc4f30-0aca-4db6-bf3b-38a6a17583b5",
+      "text": "<p>Работа со статьёй</p>",
+      "collapsed": false,
+      "children": [
+        {
+          "id": "69dc62ce-b532-4577-ae21-10560bcb1c72",
+          "text": "<p>Заголовок статьи</p><p><br /></p><ul><ul><li>Клик по нему — изменить название статьи</li><li><p>Под заголовком: дата и время последнего обновления;</p><p><br /></p></li></ul></ul>",
+          "collapsed": true,
+          "children": [
+            {
+              "id": "5d6d7c88-94d9-4b16-bafd-06cef04fc8c5",
+              "text": "<ul><li>☆ / ★ — добавить/убрать статью из избранного;</li><li>🌐 — скопировать публичную ссылку (если статья уже сделана публичной).</li></ul>",
+              "collapsed": true,
+              "children": []
+            },
+            {
+              "id": "e932c782-7dae-4159-a42f-6ed007d6a30e",
+              "text": "<p>Меню статьи:</p><p><br /></p><p><br /></p><ul><li><strong>«Сделать публичной / приватной»</strong>:<ul><li>«Сделать публичной» — создаёт публичную ссылку на статью. </li><li>«Сделать приватной» — убирает публичный доступ.</li></ul></li><li><strong>«Экспорт в HTML»</strong><span> </span>— выгрузить статью в один HTML‑файл (см. раздел «Экспорт и резервные копии»).</li><li><strong>«Зашифровать»</strong><span> </span>/<span> </span><strong>«Сменить пароль»</strong><span> </span>— включить/сменить шифрование статьи.</li><li><strong>«Снять защиту»</strong><span> </span>— снять шифрование.</li><li><strong>«Удалить статью»</strong><span> </span>— отправить в корзину (нажатие этой кнопки на статье, которая уже в корзине,  удаляеет статью навсегда).</li></ul>",
+              "collapsed": true,
+              "children": []
+            },
+            {
+              "id": "17c009b7-4c88-46aa-956c-79a398cbcbd4",
+              "text": "<p>Экспорт, импорт и резервные копииЭкспорт одной статьи в HTML</p><p>В меню текущей статьи (<span>…</span><span> </span>→<span> </span><strong>«Экспорт в HTML»</strong>):</p><p><br /></p><ul><li>Memus создаёт один HTML‑файл, который:<ul><li>содержит ваш текст и структуру блоков;</li><li>вставляет стиль, похожий на интерфейс приложения;</li><li>встраивает изображения/вложения по возможности как data:‑URL;</li><li>при этом сохраняет данные, необходимые для корректной загрузки этой статьи обратно в Memus. </li></ul></li></ul><p><br /></p><p>Использование:</p><p><br /></p><ul><li>файл можно открыть как статичную страницу;</li><li>можно импортировать обратно через «Импорт из HTML».</li></ul>",
+              "collapsed": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "f8b15078-ef63-47c9-9ebd-88f6c01abda3",
+          "text": "<p>Меню редактирования статьи</p><p><br /></p><ul><li><strong>«↺ Отменить»</strong><span> </span>— undo (<span>Ctrl+Z</span>).</li><li><strong>«↻ Повторить»</strong><span> </span>— redo (<span>Ctrl+Y</span>).</li><li><strong>«⇅ Перетаскивание»</strong><span> </span>— включить/выключить drag‑режим блоков:<ul><li>во включённом состоянии блоки можно мышью перетаскивать выше/ниже и вкладывать друг в друга;</li><li>работает только в режиме просмотра (view), не в режиме редактирования.</li></ul></li><li><strong>«⇤ Объединить»</strong><span> </span>— объединить<span> </span><strong>выделенные блоки</strong><span> </span>в один:<ul><li>сначала выделите несколько блоков<span> </span><span>Shift+↑/↓</span>;</li><li>нажмите «Объединить»;</li><li>текст всех выбранных блоков склеится в один большой блок (первый в списке);</li><li>остальные выбранные блоки будут удалены;</li><li>результат виден сразу, без перезагрузки страницы.</li></ul></li><li><strong>«Новый блок»</strong><span> </span>— создать блок ниже текущего и сразу перейти к его редактированию.</li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "ebffbfcc-5330-4488-a252-e4a9b56cc06f",
+          "text": "<p>Работа с блоками</p>",
+          "collapsed": false,
+          "children": [
+            {
+              "id": "13cd9416-7778-4a25-be32-b856ebafcc06",
+              "text": "<p>Создать новый блок</p><p><br /></p><p>При создании страницы первый блок создаётся автоматически, в него ставится курсор и можно сразу вводить текст.</p><p><br /></p><p>В режиме просмотра:</p><p><br /></p><ul><li>Кнопка &quot;Новый блок&quot; в меню под заголовком статьи</li><li><span>Ctrl+<span>↓ - создаст новый блок под текущим блоком</span></span></li><li>Ctrl+<span>↑</span> - создаст новый блок над текущим блоком</li></ul><p><br /></p><p>В режиме редактирования блока:</p><p><br /></p><ul><li>Ctrl+↓ - создаст новый блок над текущим блоком, перенеся туда текст над курсором</li><li>Ctrl+↑ - создаст новый блок над текущим блоком, <span>перенеся туда текст под курсором</span></li></ul><p>(это позволяет быстро разбить блок на два)</p>",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "524dab06-edaf-432c-b71f-4aec527c36e7",
+              "text": "<p>Просмотр блоков\n</p><br /><p>Выбор блока:\n</p><ul><li>↑/↓ — перейти к предыдущему/следующему блоку;\n</li><li>клик по блоку — сделать его текущим;\n</li><li>двойной клик по блоку — сразу начать редактирование.\n</li></ul><br /><p>Сворачивание/разворачивание:\n</p><ul><li>слева у блока — кнопка‑стрелка клик — свернуть/развернуть потомков;\n</li><li>→ — развернуть ближайший подходящий родитель (если у текущего нет детей);\n</li><li>← — свернуть родителя и сделать его текущим.\n</li></ul>",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "8502dbf6-9b43-4c15-a981-f9a7f67fa924",
+              "text": "<p>Режим просмотра</p><p><br /></p><ul><li>Выбор блока:<ul><li><span>↑/↓</span><span> </span>— перейти к предыдущему/следующему блоку;</li><li>клик по блоку — сделать его текущим;</li><li>двойной клик по блоку — сразу начать редактирование.</li></ul></li><li>Сворачивание/разворачивание:<ul><li>слева у блока — кнопка‑стрелка (collapse‑btn):<ul><li>клик — свернуть/развернуть потомков;</li><li>пустые блоки без заголовка и детей имеют «пустую» кнопку (для выравнивания, но не кликабельную).</li></ul></li><li>клавиши:<ul><li><span>→</span><span> </span>— развернуть ближайший подходящий родитель (если у текущего нет детей);</li><li><span>←</span><span> </span>— свернуть родителя и сделать его текущим.</li></ul></li></ul></li></ul>",
+              "collapsed": false,
+              "children": []
+            },
+            {
+              "id": "9754fe79-3fd7-4057-a124-21be9351c675",
+              "text": "<p>Редактирование блока</p><p><br /></p><ul><li>Войти в редактирование:<ul><li><span>Enter</span><span> </span>на выбранном блоке;</li><li>двойной клик по тексту.</li></ul></li><li>Выйти/сохранить:<ul><li><span>Ctrl+Enter</span><span> </span>— сохранить и выйти в просмотр;</li><li>кнопка<span> </span><strong>«Сохранить»</strong><span> </span>под блоком;</li><li><span>Esc</span><span> </span>или кнопка<span> </span><strong>«Отмена»</strong><span> </span>— закрыть редактирование;</li><li>при отмене пустой блок удаляется.</li></ul></li><li>Внутри редактируемого блока:<ul><li>можно печатать обычный текст, списки, вставлять ссылки и изображения;</li><li>при редактировании блока также работает отмена изменений (Ctrl-Z)</li></ul></li></ul>",
+              "collapsed": false,
+              "children": [
+                {
+                  "id": "5893ea65-5666-4c75-8282-758ce6a56420",
+                  "text": "<p>Контекстное меню внутри блока</p><p><br /></p><p>Правый клик (или долгий тап на телефоне в режиме редактирования) внутри блока открывает контестное меню</p><p><br /></p><p>Колонка «Буфер»:</p><p><br /></p><ul><li><span>⧉</span><span> </span>— копировать выделенный фрагмент (внутренний буфер + системный буфер обмена).</li><li><span>✂</span><span> </span>— вырезать выделенный фрагмент.</li><li><span>▣</span><span> </span>— вставить содержимое<span> </span><strong>внутреннего</strong><span> </span>буфера редактора.</li><li><span>⛶</span><span> </span>— выделить весь текст блока.</li></ul><p><br /></p><p>Форматирование:</p><p><br /></p><ul><li>полужирный, курсив, подчёркивание, сброс форматирования;</li><li>маркированные/нумерованные списки, цитаты, кодовые блоки.</li></ul><p><br /></p><p>Ссылки:</p><p><br /></p><ul><li>вставить/изменить ссылку;</li><li>убрать ссылку;</li><li>вставить ссылку на другую статью.</li></ul><p><br /></p><p>Структура:</p><p><br /></p><ul><li>команда «разрезать по курсору» (эквивалент<span> </span><span>Ctrl+↓</span><span> </span>в режиме редактирования).</li></ul>",
+                  "collapsed": true,
+                  "children": []
+                },
+                {
+                  "id": "c8f6dbb0-d440-47f7-b0f5-0f1237883019",
+                  "text": "<p>Вложения и изображения</p><p><br /></p><ul><li>Поддерживаются только файлы<span> </span><span>image/*</span><span> </span>(JPEG, PNG, GIF, WebP и т.п.).</li><li>При загрузке/вставке:<ul><li>ширина при необходимости уменьшается до 1920px;</li><li>картинка перекодируется в<span> </span><strong>WebP (качество ~75)</strong>;</li><li>исходный формат не сохраняется.</li></ul></li><li>Хранение:<ul><li>по пути<span> </span><span>/uploads/{userId}/images/YYYY/MM/имя.webp</span>;</li><li>доступны только владельцу аккаунта.</li></ul></li></ul><p><br /></p><p>Вставка:</p><p><br /></p><ul><li>Вставка из буфера:</li><ul><li>просто вставьте (Ctrl+V) картинку в редактируемый блок;</li><li>или перетащите файл в блок мышью.</li></ul></ul><p><br /></p><p>Прочие файлы (PDF, DOCX и т.п.)</p><p><br /></p><ul><li>Не‑картинки<span> </span><strong>на сервер Memus не загружаются</strong>. Просто там нет столько места, чтобы хранить всё то, что пользователь может загрузить. Поэтому все внешние вложения лучше размещать в надёжном хранилище на YandexDisk или GoogleDrive, а в Memus вставлять только ссылки.</li><li>При попытке вставить не‑изображение:<ul><li>Memus показывает подсказку:<ul><li>«Файлы (PDF, DOCX и т.п.) больше не загружаются в Memus. Сохраните их на Яндекс.Диске или Google Drive и вставьте сюда ссылку».</li></ul></li></ul></li><li>Рекомендуемый способ:<ul><li>загрузить файл на Яндекс.Диск / Google Drive;</li><li>получить ссылку;</li><li>вставить ссылку в текст блока.</li></ul></li></ul>",
+                  "collapsed": true,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "b10b27af-c362-4162-beed-685cf6cf7229",
+              "text": "<p>Связи между страницами (wikilinks)</p><p><br /></p><ul><li>В тексте блоков поддерживается синтаксис<span> </span><span>[[Название страницы]]</span>.</li><li>При сохранении блока:</li><ul><li>если есть статья с таким заголовком (без учёта регистра),<br />вставка превращается в ссылку<span> </span><span>на статью</span>;</li><li>если статьи нет —<span> </span><span>[[...]]</span><span> </span>остаётся как обычный текст (ссылка не создаётся).</li></ul></ul>",
+              "collapsed": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "f838163a-ec76-4064-bfa3-46f8566efee7",
+          "text": "<p>Выстраивание структуры блоков</p>",
+          "collapsed": false,
+          "children": [
+            {
+              "id": "1fecb5df-db94-461d-84ba-d1b4838456fd",
+              "text": "<p>Изменение порядка расположения блоков и уровней вложенности</p><p><br /></p><p>Горячие клавиши в режиме просмотра:</p><p><br /></p><ul><li><span>Ctrl+Shift+↑/↓</span><span> </span>— переместить блок<span> </span><strong>вместе с его дочерними</strong><span> </span>выше/ниже.</li><li><span>Ctrl+→</span><span> </span>— сделать блок дочерним предыдущего.</li><li><span>Ctrl+←</span><span> </span>— поднять блок на уровень выше.</li><li><span>Ctrl+Delete</span><span> </span>— удалить текущий блок (если это не последний блок в статье).</li></ul>",
+              "collapsed": true,
+              "children": []
+            },
+            {
+              "id": "0df59c1e-3670-41bd-8887-42fe322db8c4",
+              "text": "<p>Перетаскивание (Drag &amp; Drop)</p><p><br /></p><p><br /></p><ul><li>Включите режим<span> </span><strong>«⇅ Перетаскивание»</strong><span> </span>в тулбаре.</li><li>Потяните блок мышью:<ul><li>верхняя часть соседнего блока — «до него»;</li><li>нижняя часть — «после него»;</li><li>середина — вложить внутрь (сделать дочерним).</li></ul></li><li>Нельзя перенести блок внутрь самого себя или своих потомков — такие цели не подсвечиваются.</li><li><span>Ctrl+Z / Ctrl+Y</span><span> </span>работают и для перетаскиваний.</li></ul>",
+              "collapsed": true,
+              "children": []
+            },
+            {
+              "id": "f10e92d2-b04f-483f-a04e-7373fa53fe09",
+              "text": "<p>Мультивыделение и объединение блоков</p><p><br /></p><p><br /></p><ul><li><span>Shift+↑/↓</span><span> </span>в режиме просмотра:<ul><li>позволяет выделить несколько подряд идущих блоков;</li></ul></li><li>Кнопка<span> </span><strong>«Объединить»</strong>:<ul><li>берёт выделенные блоки<span> </span><strong>в порядке отображения</strong>;</li><li>склеивает их HTML в один блок (первый в выделении);</li><li>остальные удаляет;</li><li>работает и для многострочных и для иерархических блоков.</li></ul></li></ul>",
+              "collapsed": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "67ca40a5-05c7-43c2-b1ae-2deac791570c",
+          "text": "<p>Шифрование статьи</p><p><br /></p><ul><li>В меню статьи (<span>…</span>) доступно:<ul><li><strong>«Зашифровать»</strong><span> </span>— включить шифрование;</li><li><strong>«Сменить пароль»</strong><span> </span>— заменить пароль и подсказку;</li><li><strong>«Снять защиту»</strong><span> </span>— сохранить статью в открытом виде.</li></ul></li></ul><p><br /></p><p>При включении шифрования:</p><p><br /></p><ul><li>вы задаёте пароль и (опционально) текстовую подсказку;</li><li>содержимое блоков статьи шифруется и в базе хранится в зашифрованном виде.</li></ul><p><br /></p><p>При открытии зашифрованной статьи:</p><p><br /></p><ul><li>показывается диалог ввода пароля;</li><li>если задана подсказка — она отображается;</li><li>после успешного ввода пароль запоминается в текущей вкладке браузера.</li></ul><p><br /></p><p>Зашифрованные статьи:</p><p><br /></p><ul><li>помечаются иконкой замка (<span>🔒</span>) в списке и в заголовке;</li><li>экспорт/импорт учитывает этот статус (но пароли не попадают в HTML).</li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "da6bb659-be22-4f16-a78a-8a190b1074be",
+          "text": "<p>История изменений и Undo/Redo</p><p><br /></p><ul><li>Почти все изменения блоков (текст, структура, dnd, объединение, разбиение и т.д.) можно отменить/повторить:<ul><li><span>Ctrl+Z</span><span> </span>— отмена;</li><li><span>Ctrl+Y</span><span> </span>— повтор.</li></ul></li><li>В тулбаре статьи есть кнопки:<ul><li><strong>«↺ Отменить»</strong>,<span> </span><strong>«↻ Повторить»</strong><span> </span>— делают то же самое.</li></ul></li><li>История текстовых изменений хранится на сервере; позиция блоков — в клиентских стеках, но восстанавливается по id‑блоков и истории операций.</li></ul>",
+          "collapsed": false,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "e4c8e589-e7f7-4fca-8263-0241fd52a7c6",
+      "text": "<p>Граф страниц</p><p><br /></p><p>Кнопка<span> </span><strong>«Граф»</strong><span> </span>в нижней части сайдбара:</p><p><br /></p><ul><li><p>открывает отдельную панель с графом всех страниц;</p></li><li><p>каждая страница — узел;</p></li><li><p>между узлами рисуются рёбра, если одна страница ссылается на другую (wikilinks<span> </span><span>[[...]]</span><span> </span>или обычные ссылки в тексте).<br />Взаимодействие:</p></li><li><p>перетаскивание узлов — менять расположение;</p></li><li><p>колесо мыши / жесты — масштабирование;</p></li><li><p>граф стремится к устойчивому виду: связанные страницы тянутся ближе друг к другу, изолированные — на периферию.</p></li></ul>",
+      "collapsed": false,
+      "children": []
+    },
+    {
+      "id": "be22b5ff-757d-4cb4-8873-80a2357d5e53",
+      "text": "<p>Возможности импорта</p>",
+      "collapsed": false,
+      "children": [
+        {
+          "id": "e1d6c371-5066-4eeb-8f3f-8980b2962085",
+          "text": "<p>Импорт из HTML</p><p><br /></p><p>В меню списка статей (<span>…</span><span> </span>→<span> </span><strong>«Импорт из HTML»</strong>):</p><p><br /></p><ul><li>выберите один файл, экспортированный из Memus.</li></ul><p><br /></p><p>Поведение при конфликте UUID:</p><p><br /></p><ul><li><p>если в HTML есть<span> </span><span>memus-export</span><span> </span>с полем<span> </span><span>article.id</span>, и такая статья уже есть:</p><ul><li><p>показывается диалог:</p><ul><li><strong>«Оставить существующую»</strong><span> </span>— пропустить импорт этой страницы;</li><li><strong>«Перезаписать»</strong><span> </span>— заменить содержимое существующей статьи;</li><li><strong>«Создать копию»</strong><span> </span>— создать новую статью, добавив к названию префикс<span> </span><span>ver_YYYYMMDD_HHMMSS</span><span> </span>(время берётся из даты модификации файла);</li><li>флажок<span> </span><strong>«Применять это решение ко всем конфликтам»</strong><span> </span>(актуально при пакетном импорте).</li></ul></li></ul></li><li><p>если статьи с таким UUID нет — создаётся новая.</p></li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "540dcae8-f229-44ae-bc2d-0610266b7c00",
+          "text": "<p>Импорт из резервной копии (папка)</p><p><br /></p><ul><li>Распакуйте скачанный ZIP в папку;</li><li>В меню списка статей (<span>…</span><span> </span>→<span> </span><strong>«Импорт из резервной копии (папка)</strong>»):<ul><li>укажите эту папку (браузер выберет все файлы внутри);</li><li>Memus найдёт все<span> </span><span>.html</span><span> </span>и импортирует их последовательно;</li><li>для каждой статьи с совпадающим UUID покажет тот же диалог конфликта (с опцией «ко всем конфликтам»).</li></ul></li><li>Отображается прогресс: «Импортируем из резервной копии... (X / N)».</li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "bcb62443-8d91-4506-8619-a6e2b38d0627",
+          "text": "<p>Импорт из Markdown</p><p><br /></p><ul><li>В меню списка статей:<ul><li>пункт<span> </span><strong>«Импорт из Markdown»</strong>.</li></ul></li><li>Поддерживается иерархия списков:<ul><li><span>-</span>,<span> </span><span>*</span>,<span> </span><span>1.</span><span> </span>и т.п. превращаются в блоки;</li><li>вложенность списка → вложенность блоков.</li></ul></li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "856bc0a9-56f5-4718-967b-a632cd3de208",
+          "text": "<p>Импорт из Obsidian/Logseq</p><p><br /></p><ul><li>Пункт<span> </span><strong>«Импорт из Obsidian/Logseq»</strong>:<ul><li>ожидает ZIP с минимум папкой<span> </span><span>pages/</span><span> </span>(опционально —<span> </span><span>assets/</span>).</li></ul></li><li>Перед импортом:<ul><li>Memus спрашивает<span> </span><strong>базовый URL для assets</strong><span> </span>(если ваши вложения лежат, например, на Netlify);</li><li>URL сохраняется в браузере.</li></ul></li><li>При обработке:<ul><li>Markdown‑страницы превращаются в статьи и блоки;</li><li>ссылки вида<span> </span><span>assets/...</span>:<ul><li>берутся либо из ZIP, либо скачиваются с указанного URL;</li><li>сохраняются в<span> </span><span>uploads/{userId}/attachments/...</span>;</li><li>при успехе ссылки в тексте переписываются на<span> </span><span>/uploads/...</span>.</li></ul></li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "0bfae8d4-f174-407f-9be9-788bc51d7f45",
+      "text": "<p>Возможности экспорта</p>",
+      "collapsed": false,
+      "children": [
+        {
+          "id": "96cad3e6-ecdf-4691-a47e-50047658a281",
+          "text": "<p>Экспорт одной статьи в HTML</p><p><br /></p><ul><li>В меню текущей статьи (<span>…</span><span> </span>рядом с заголовком) выберите<span> </span><strong>«Экспорт в HTML»</strong>.</li><li>Memus создаёт один HTML‑файл, который:<ul><li>содержит текст и структуру блоков;</li><li>включает стили, похожие на основной интерфейс;</li><li>содержит скрытый JSON‑блок<span> </span><span>memus-export</span><span> </span>со структурой статьи (для будущего импорта);</li><li>по возможности встраивает изображения и вложения как<span> </span><span>data:</span>‑URL, чтобы файл был самодостаточным.</li></ul></li><li>Файл можно:<ul><li>открыть в браузере как статичную версию заметки;</li><li>позже импортировать обратно в Memus.</li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        },
+        {
+          "id": "3d3398ad-a87a-4aba-a190-6043ce774f7a",
+          "text": "<p>Резервная копия всех страниц </p><p><br /></p><ul><li>В заголовке списка статей (<span>Список статей</span>) нажмите кнопку<span> </span><span>…</span><span> </span>и выберите<span> </span><strong>«Резервная копия (ZIP)»</strong>.</li><li>Система:<ul><li>собирает все ваши не‑удалённые статьи;</li><li>для каждой делает HTML так же, как при одиночном экспорте;</li><li>упаковывает всё в ZIP‑архив (<span>memus-backup-YYYYMMDD-HHMMSS.zip</span>).</li></ul></li><li>ZIP самодостаточен:<ul><li>все статьи сохраняются в HTML и со ссылками - т.е. ими можно полноценно пользоваться.</li><li>внутри файлов сохраняются данные, которые позволяют при необходимости загрузить эти файлы обратно в Memus.</li></ul></li></ul>",
+          "collapsed": false,
+          "children": []
+        },
+        {
+          "id": "04a18ab2-1080-4f5e-9d1e-3347c07378f5",
+          "text": "<p>Публичные ссылки</p><p><br /></p><ul><li>В меню статьи (<span>…</span>) есть пункт<span> </span><strong>«Сделать публичной»</strong>:<ul><li>создаёт публичный<span> </span><span>slug</span>;</li><li>включает доступ к статье по прямой ссылке (без авторизации в Memus).</li></ul></li><li>После включения:<ul><li>рядом с заголовком статьи отображается кнопка<span> </span><strong>🌐</strong>:<ul><li>клик по ней — копирование публичной ссылки в буфер.</li></ul></li></ul></li><li>Пункт<span> </span><strong>«Сделать приватной»</strong><span> </span>в том же меню:<ul><li>отключает публичный доступ;</li><li>ссылка перестаёт работать.</li></ul></li></ul>",
+          "collapsed": true,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+    <div class="export-shell" aria-label="Экспорт статьи">
+      <main class="content export-content">
+        <section class="panel export-panel" aria-label="Статья">
+          
+    <div class="panel-header article-header">
+      <div class="title-block">
+        <div class="title-row">
+          <h1 class="export-title">Memus - Руководство пользователя</h1>
+        </div>
+        <p class="meta">Обновлено: 05.12.2025, 20:27:54</p>
+      </div>
+    </div>
+  
+          <div id="exportBlocksRoot" class="blocks" role="tree">
+            <div class="block" data-block-id="0ecd83ef-1d61-4407-a1e8-9c092a7d7853" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="0ecd83ef-1d61-4407-a1e8-9c092a7d7853" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Зачем нужен Memus?</p></h1></div><div class="block-text block-body" data-block-body=""><p>Memus — это ваша личная база знаний. Место, где вы можете хранить всё, что вы когда-то узнали или о чём подумали. </p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="785546cf-c349-4937-a0d3-2dd35bbc1172" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="785546cf-c349-4937-a0d3-2dd35bbc1172" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Концепция</p></h1></div><div class="block-text block-body" data-block-body=""><p>Личная база знаний - записывате сюда всё то, что не хотите забыть.</p><p>Удобно записывать, удобно искать, удобно приводить в порядок.</p></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="a294f1d9-01d6-44c1-8c48-a1b6d91a09fd" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="a294f1d9-01d6-44c1-8c48-a1b6d91a09fd" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Статья</p></h2></div><div class="block-text block-body" data-block-body=""><p> - в неё вы собираете всё, что относится к теме статьи.</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="2936cecd-31da-4a2a-b9d0-1c607ac7a194" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="2936cecd-31da-4a2a-b9d0-1c607ac7a194" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Блоки</p></h2></div><div class="block-text block-body" data-block-body=""><p> - статья состоит из блоков. Зачем это надо? Почему не обычный текст? </p><p><br></p><p><br></p><table class="memus-table"><colgroup><col width="39.557321242486566%"><col width="47.378290977698185%"></colgroup><thead><tr><th>Блоки</th><th>Обычный текст</th></tr></thead><tbody><tr><td>Создают структуру. Упрощают восприятие текста и работу с ним.</td><td>Когда текста много, приходится прокручивать и искать</td></tr><tr><td>Хранение в блоках надёжно. &nbsp;Блок нельзя изменить "случайно". </td><td>Можно случайно удалить, вставить не туда, скорректировать не там..&nbsp;</td></tr><tr><td>&nbsp;Блок - законченная единица информации.</td><td>&nbsp;В тексте потом сложно разобраться что там где. Нет структуры.</td></tr><tr><td>&nbsp;Блоки легко перемещать, структурировать</td><td>&nbsp;Нужно постоянно что-то копировать, вставлять, править форматирование, не дай бог вырезал и забыл вставить..
+</td></tr><tr><td>&nbsp;Первая строка блока автоматически становится его заголовком, если после неё есть пустая строка. Стиль заголовка автоматически проставляется в зависимости от вложенности.</td><td>&nbsp;Заголовки нужно руками форматировать. При изменении уровня абзаца заголовки сами стиль не меняют.</td></tr></tbody></table></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="4b0d1cc0-50d8-4504-a6d0-763be90f4761" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="4b0d1cc0-50d8-4504-a6d0-763be90f4761" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Ссылки</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p> - в статью можно вставить ссылки на другие статьи и на внешние ресурсы. Если вы хотите приложить какие-то файлы, самый лучший способ - это создать папку на YandexDisk или GoogleDrive и там хранить все документы и видео. А в статьи вставлять ссылки на них. В чём плюс такого подхода? Это конечно безопасность, надёжность хранения, гибкость - вы имеете доступ к таким файлам не только через Memus. При клике на такую ссылку Memus сам откроет нужный файл/папку на облачном диске. Если вы укажете публичную ссылку, то когда вы поделитесь статьёй, ваши читатели смогут эти файлы тоже открыть и посмотреть. А вы всегда можете управлять правами доступа - какой контент показывать, а какой скрыть. Можете произвольно раскладывать файлы по папкам на облачном диске.. Короче, это удобно.</p></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="5166a102-4f65-4749-ae37-372ec3ee2215" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="5166a102-4f65-4749-ae37-372ec3ee2215" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Установка</p></h1></div><div class="block-text block-body" data-block-body=""><p>Memus можно просто открыть в браузере.</p><p>А можно установить как приложение PWA. Для этого нужно просто открыть ссылку <a href="https://memus.pro" target="_blank" rel="noopener noreferrer">https://memus.pro</a> в "родном" для мобильной платформе браузере - будет выдано предложение добавить Memos на рабочий стол. </p><p>На Android  это Chrome, на iOS это Safari, на Huawei это Huawei Browser.</p><p>После этого Memus будет работать как обычное мобильное приложение.</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="27015276-905e-4805-aad9-b67cad94a8fe" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="27015276-905e-4805-aad9-b67cad94a8fe" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Горячие клавиши</p></h1></div><div class="block-text block-body collapsed" data-block-body=""><p>Режим просмотра:</p><p><br></p><ul><li>Навигация:<ul><li><span>↑/↓</span><span>&nbsp;</span>— выбрать соседний блок;</li><li><span>Enter</span><span>&nbsp;</span>— начать редактирование.</li></ul></li><li>Структура:<ul><li><span>Ctrl+Shift+↑/↓</span><span>&nbsp;</span>— переместить блок (с его детьми) вверх/вниз;</li><li><span>Ctrl+→ / Ctrl+←</span><span>&nbsp;</span>— вложить/поднять уровень;</li><li><span>Ctrl+Delete</span><span>&nbsp;</span>— удалить текущий блок (если не последний).</li></ul></li><li>Создание:<ul><li><span>Ctrl+↑</span><span>&nbsp;</span>— сохранить и создать блок выше (в режиме редактирования);</li><li><span>Ctrl+↓</span><span>&nbsp;</span>— в режиме редактирования разрезать блок по курсору.</li></ul></li><li>Мультивыделение:<ul><li><span>Shift+↑/↓</span><span>&nbsp;</span>— расширить или сузить диапазон выделенных блоков.</li></ul></li><li>Сворачивание:<ul><li><span>←/→</span><span>&nbsp;</span>— свернуть/развернуть подходящий блок (часто родительский).</li></ul></li></ul><p><br></p><p>Режим редактирования:</p><p><br></p><ul><li><span>Ctrl+Enter</span><span>&nbsp;</span>— сохранить блок и выйти в просмотр;</li><li><span>Ctrl+↓</span><span>&nbsp;</span>— разрезать блок по курсору (новый блок ниже, курсор в его начале);</li><li><span>Ctrl+→ / Ctrl+←</span><span>&nbsp;</span>— вложить/поднять блок, оставаясь в режиме редактирования;</li><li><span>Esc</span><span>&nbsp;</span>— отменить редактирование (пустой блок удаляется).</li></ul><p><br></p><p>Общие:</p><p><br></p><ul><li><span>Ctrl+Z / Ctrl+Y</span><span>&nbsp;</span>— отмена/повтор последнего действия;</li><li>в модальных окнах:<ul><li><span>Enter</span><span>&nbsp;</span>— подтвердить;</li><li><span>Esc</span><span>&nbsp;</span>— закрыть.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="a7cec224-e0eb-40da-92ad-420d013870bb" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="a7cec224-e0eb-40da-92ad-420d013870bb" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Основные возможности</p></h1></div><div class="block-text block-body block-body--empty collapsed" data-block-body=""></div></div></div><div class="block-children collapsed" data-children=""><div class="block" data-block-id="048a073f-e949-4c2e-87c6-d8f1d3949f56" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="048a073f-e949-4c2e-87c6-d8f1d3949f56" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Работа с любого устройства</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p>Нет никаких заморочек с синхронизацией данных.</p></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="fc23f5f6-1d1b-4861-ae96-dc3ec4725352" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="fc23f5f6-1d1b-4861-ae96-dc3ec4725352" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Удобное редактирование</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p> и минимум времени на форматирование - фокус на содержании</p></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="2d31bbad-9262-4c05-a24c-c6fbe55f9b1c" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="2d31bbad-9262-4c05-a24c-c6fbe55f9b1c" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Зашифрованные статьи</p></h2></div><div class="block-text block-body" data-block-body=""><p>Задайте пароль и эта статья будет зашифрована прямо на вашем устройстве и уйдёт на сервер уже в зашифрованном виде. И никто не сможет её прочитать. Даже вы, если забудете пароль :) (Но для этого мы предусмотрели подсказку, которую вы увидите при открытии такой страницы.)</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="bfc6f0cf-055d-4cb2-93fb-f4e42f8021a3" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Экспорт </p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p>отдельных статей или полный бэкап на ваше устройство - храните все ваши записи при себе. </p><p><br></p><p>Экспорт и бэкап сохраняют статью в формате HTML в красивом виде - вместе с изображениями и ссылками на внешние ресурсы - т.е. статьи в вашем бэкапе абсолютно так же выглядят, как на экране. Их можно размещать на своём сайте, делиться и проч. Т.е. это не какой-то машинный бэкап - это человеческий бэкап. И да, Memus из этого бэкапа умеет загружать обратно!<br></p></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="98f46c5f-a215-4a69-a560-ed897dce7b54" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="98f46c5f-a215-4a69-a560-ed897dce7b54" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p> Возможность сделать публичную ссылку на нужные статьи.</p></h2></div><div class="block-text block-body" data-block-body=""><p>Это то, чего так не хватает, когда нужно с кем-то поделиться своей информацией! С Memus всё просто - нажимаете "Опубликовать" и получаете внешнюю ссылку. По этой ссылке другой человек сможет просмотреть вашу статью, но не сможет её изменить.</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="3907f261-7d00-4841-999d-4e2e23a904ca" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="3907f261-7d00-4841-999d-4e2e23a904ca" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Загрузка архива статей из markdown (с вложениями)</p></h2></div><div class="block-text block-body" data-block-body=""><p>Работаете в Obsidian или Logseq? Перейдите на Memus! Он удобнее. Вы можете загрузить в Memus все ваши файлы md и даже прикрепить к ним вложения!</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="61c62852-e45f-431c-8666-23eed106ce0d" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="61c62852-e45f-431c-8666-23eed106ce0d" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Бесконечный откат изменений</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p>В рамках каждой статьи вы можете отменить любые изменения, даже спустя много времени. При отмене Memus покажет вам разницу в текстах.</p></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="f91cabec-ac3d-4532-ba18-d40616692c22" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="f91cabec-ac3d-4532-ba18-d40616692c22" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Авторизация</p></h1></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>При открытии memus.pro:<ul><li>сначала появляется экран с логотипом «Memus.pro» и подписью «Загружаем ваши заметки…»;</li><li>если вы не авторизованы, появляется кнопка<span>&nbsp;</span><strong>«Войти через Google»</strong>.</li></ul></li><li>После успешного входа:<ul><li>создаётся/используется учётная запись, связанная с Google‑аккаунтом;</li><li>внизу сайдбара показывается ваш логин и кнопка<span>&nbsp;</span><strong>«Выйти»</strong>.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="f7c6fa12-96c6-41f7-9854-b7e5324b151f" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="f7c6fa12-96c6-41f7-9854-b7e5324b151f" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Сайдбар</p></h1></div><div class="block-text block-body block-body--empty collapsed" data-block-body=""></div></div></div><div class="block-children collapsed" data-children=""><div class="block block--no-title" data-block-id="80a8e8d3-7f04-4862-b769-e94073969a53" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn collapse-btn--placeholder" type="button" aria-hidden="true"></button><div class="block-content"><div class="block-text block-body block-body--no-title" data-block-body=""><p><b>кнопка x / →</b> — свернуть / показать панель;</p><p><b>кнопка&nbsp;?</b>&nbsp;— открыть страницу справки ;</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="0dc206bb-b748-4652-9cd6-b68dd4020b2e" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="0dc206bb-b748-4652-9cd6-b68dd4020b2e" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Быстрые заметки</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p>Если вам нужно срочно записать мысль, чтобы её не потерять и некогда думать в какую статью её положить - воспользуйтесь "Быстрыми заметками". Там каждая мысль - это отдельный блок, который вы потом сможете быстро перенести в нужную статью.</p><p><br></p><p><br></p><ul><li><strong>«Быстрые заметки»</strong><span>&nbsp;</span>— открыть специальную страницу со списком быстрых заметок и возможностью раскидать их по страницам.</li><li><strong>«Новая»</strong><span>&nbsp;</span>— быстро создать новую заметку.</li></ul><p><br></p><p><br></p><p><br></p><p>Подробнее про Inbox — см. отдельный раздел. ниже</p></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="8cc67035-b71d-4798-b0fa-8e88d8bbb84c" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="8cc67035-b71d-4798-b0fa-8e88d8bbb84c" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Список статей в сайдбаре</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>В списке показываются:<ul><li>все ваши статьи (кроме Inbox) или удалённые (если включён режим корзины);</li><li>рядом с названием можно видеть иконку 🌐 — у статьи включён публичный доступ;</li><li>справа от названия — кнопка звёздочки<span>&nbsp;</span><strong>☆/★</strong><span>&nbsp;</span>(избранное).</li></ul></li><li>Действия:<ul><li>клик по названию — открыть статью;</li><li>клик по звёздочке — добавить/убрать из избранного.</li></ul></li><li>Избранные статьи:<ul><li>сортируются выше остальных и отмечаются<span>&nbsp;</span><strong>★</strong>;</li><li>список и порядок избранных хранятся локально (в вашем браузере).</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="56dd995c-7ac2-4bb8-8c51-8b856906f662" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="56dd995c-7ac2-4bb8-8c51-8b856906f662" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Умный поиск</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><p>Ищет сначала по названиям статей, потом в блоках. Находит, даже если слова идут в ином порядке или в других падежах.</p><p><br></p><ul><li>ищет по заголовкам статей и содержимому блоков;</li><li>результаты показываются в выпадающем списке под полем;</li><li>клик по результату переходит к нужной статье/блоку.</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block block--no-title" data-block-id="06f2be33-66bf-4383-bd56-f3ea31918e85" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn collapse-btn--placeholder" type="button" aria-hidden="true"></button><div class="block-content"><div class="block-text block-body block-body--no-title" data-block-body=""><p>блок быстрых заметок (Inbox);</p><li>поле поиска;</li><li>список статей (с избранным, фильтром и корзиной);</li><li>Граф всех статей</li><li>Имя пользователя и кнопка "Выход"</li></div></div></div><div class="block-children" data-children=""></div></div></div></div><div class="block" data-block-id="6d739252-4056-4db0-9d02-520181f3da2d" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="6d739252-4056-4db0-9d02-520181f3da2d" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Быстрые заметки </p></h1></div><div class="block-text block-body collapsed" data-block-body=""><p> — это специальная страница для быстрых набросков:</p><p><br></p><ul><li>открыть:<ul><li>кнопка<span>&nbsp;</span><strong>«Быстрые заметки»</strong><span>&nbsp;</span>в сайдбаре;</li><li>или переход к статье с id<span>&nbsp;</span><span>inbox</span>.</li></ul></li><li>добавить:<ul><li>кнопку<span>&nbsp;</span><strong>«Новая»</strong><span>&nbsp;</span>в блоке быстрых заметок;</li><li>создаётся новый блок в Inbox, автоматически открывается на редактирование.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""><div class="block" data-block-id="dd385bf3-53a8-4350-ba77-46f831fd7406" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="dd385bf3-53a8-4350-ba77-46f831fd7406" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Перенос блоков из Inbox в статьи:</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>В заголовке каждого блока Inbox справа есть кнопка со стрелкой<span>&nbsp;</span><span>↦</span>:<ul><li>нажмите её — появится диалог «Перенести в статью»;</li><li>можно:<ul><li>выбрать статью из списка подсказок;</li><li>или ввести id/название статьи (ищется по точному совпадению).</li></ul></li></ul></li><li>После подтверждения:<ul><li>блок переносится из Inbox в выбранную статью;</li><li>Inbox обновляется;</li><li>показывается сообщение «Блок перенесён».</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="b90eb3dd-c8b6-4106-8ee8-b99e50cc0e44" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Список статей</p></h1></div><div class="block-text block-body collapsed" data-block-body=""><p>Предназначена для просмотра всех статей, просмотра корзины и выполнения операций импорта/экспорта.</p></div></div></div><div class="block-children collapsed" data-children=""><div class="block" data-block-id="3b6f8025-0ce0-4aec-943b-82da283305be" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="3b6f8025-0ce0-4aec-943b-82da283305be" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>В режиме <strong>«Статьи»</strong></p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>каждая строка: название, дата последнего обновления, звёздочка избранного;</li><li>клик по строке — открыть статью;</li><li>клик по звезде — добавить/убрать из избранного.</li></ul><li></li></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="22df0528-abe6-44b8-a97c-ebe5f9e95cb8" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="22df0528-abe6-44b8-a97c-ebe5f9e95cb8" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>В режиме <strong>«Корзина»</strong></p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>показываются удалённые страницы с датой удаления;</li><li>для каждой:<ul><li><strong>«Восстановить»</strong><span>&nbsp;</span>— вернуть статью из корзины;</li><li><strong>«Удалить»</strong><span>&nbsp;</span>— удалить страницу безвозвратно.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="347519ca-6a31-49b0-b2d8-f2dc46796e88" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="347519ca-6a31-49b0-b2d8-f2dc46796e88" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Резервная копия всех страниц (ZIP)</p><p>В меню списка статей (<span>…</span><span>&nbsp;</span>над заголовком «Список статей» →<span>&nbsp;</span><strong>«Резервная копия (ZIP)»</strong>):</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li><p>Memus собирает все ваши не‑удалённые статьи;</p></li><li><p>для каждой создаёт HTML (как при одиночном экспорте);</p></li><li><p>упаковывает в ZIP вида<span>&nbsp;</span><span>memus-backup-YYYYMMDD-HHMMSS.zip</span>.<br>ZIP‑бэкап:</p></li><li><p>самодостаточный — все<span>&nbsp;</span><span>/uploads/...</span><span>&nbsp;</span>инлайнены в<span>&nbsp;</span><span>data:</span>‑URL;</p></li><li><p>при этом сохраняются<span>&nbsp;</span><span>data-original-*</span><span>&nbsp;</span>с оригинальными путями для аккуратного восстановления.</p></li></ul><p><br></p><ul><li>при нажатии кнопки появляется долгое сообщение «Готовим резервную копию (ZIP)…»;</li><li>сообщение закрывается только в момент, когда начинается скачивание реального файла.</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="bacc4f30-0aca-4db6-bf3b-38a6a17583b5" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="bacc4f30-0aca-4db6-bf3b-38a6a17583b5" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Работа со статьёй</p></h1></div><div class="block-text block-body block-body--empty" data-block-body=""></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="69dc62ce-b532-4577-ae21-10560bcb1c72" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="69dc62ce-b532-4577-ae21-10560bcb1c72" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Заголовок статьи</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><ul><li>Клик по нему — изменить название статьи</li><li><p>Под заголовком: дата и время последнего обновления;</p><p><br></p></li></ul></ul></div></div></div><div class="block-children collapsed" data-children=""><div class="block block--no-title" data-block-id="5d6d7c88-94d9-4b16-bafd-06cef04fc8c5" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn collapse-btn--placeholder" type="button" aria-hidden="true"></button><div class="block-content"><div class="block-text block-body block-body--no-title" data-block-body=""><ul><li>☆ / ★&nbsp;— добавить/убрать статью из избранного;</li><li>🌐&nbsp;— скопировать публичную ссылку (если статья уже сделана публичной).</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="e932c782-7dae-4159-a42f-6ed007d6a30e" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="e932c782-7dae-4159-a42f-6ed007d6a30e" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Меню статьи:</p></h3></div><div class="block-text block-body collapsed" data-block-body=""><p><br></p><ul><li><strong>«Сделать публичной / приватной»</strong>:<ul><li>«Сделать публичной» — создаёт публичную ссылку на статью. </li><li>«Сделать приватной» — убирает публичный доступ.</li></ul></li><li><strong>«Экспорт в HTML»</strong><span>&nbsp;</span>— выгрузить статью в один HTML‑файл (см. раздел «Экспорт и резервные копии»).</li><li><strong>«Зашифровать»</strong><span>&nbsp;</span>/<span>&nbsp;</span><strong>«Сменить пароль»</strong><span>&nbsp;</span>— включить/сменить шифрование статьи.</li><li><strong>«Снять защиту»</strong><span>&nbsp;</span>— снять шифрование.</li><li><strong>«Удалить статью»</strong><span>&nbsp;</span>— отправить в корзину (нажатие этой кнопки на статье, которая уже в корзине,  удаляеет статью навсегда).</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="17c009b7-4c88-46aa-956c-79a398cbcbd4" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="17c009b7-4c88-46aa-956c-79a398cbcbd4" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Экспорт, импорт и резервные копииЭкспорт одной статьи в HTML</p><p>В меню текущей статьи (<span>…</span><span>&nbsp;</span>→<span>&nbsp;</span><strong>«Экспорт в HTML»</strong>):</p></h3></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>Memus создаёт один HTML‑файл, который:<ul><li>содержит ваш текст и структуру блоков;</li><li>вставляет стиль, похожий на интерфейс приложения;</li><li>встраивает изображения/вложения по возможности как&nbsp;data:‑URL;</li><li>при этом сохраняет данные, необходимые для корректной загрузки этой статьи обратно в Memus. </li></ul></li></ul><p><br></p><p>Использование:</p><p><br></p><ul><li>файл можно открыть как статичную страницу;</li><li>можно импортировать обратно через «Импорт из HTML».</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="f8b15078-ef63-47c9-9ebd-88f6c01abda3" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="f8b15078-ef63-47c9-9ebd-88f6c01abda3" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Меню редактирования статьи</p></h2></div><div class="block-text block-body" data-block-body=""><ul><li><strong>«↺ Отменить»</strong><span>&nbsp;</span>— undo (<span>Ctrl+Z</span>).</li><li><strong>«↻ Повторить»</strong><span>&nbsp;</span>— redo (<span>Ctrl+Y</span>).</li><li><strong>«⇅ Перетаскивание»</strong><span>&nbsp;</span>— включить/выключить drag‑режим блоков:<ul><li>во включённом состоянии блоки можно мышью перетаскивать выше/ниже и вкладывать друг в друга;</li><li>работает только в режиме просмотра (view), не в режиме редактирования.</li></ul></li><li><strong>«⇤ Объединить»</strong><span>&nbsp;</span>— объединить<span>&nbsp;</span><strong>выделенные блоки</strong><span>&nbsp;</span>в один:<ul><li>сначала выделите несколько блоков<span>&nbsp;</span><span>Shift+↑/↓</span>;</li><li>нажмите «Объединить»;</li><li>текст всех выбранных блоков склеится в один большой блок (первый в списке);</li><li>остальные выбранные блоки будут удалены;</li><li>результат виден сразу, без перезагрузки страницы.</li></ul></li><li><strong>«Новый блок»</strong><span>&nbsp;</span>— создать блок ниже текущего и сразу перейти к его редактированию.</li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="ebffbfcc-5330-4488-a252-e4a9b56cc06f" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="ebffbfcc-5330-4488-a252-e4a9b56cc06f" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Работа с блоками</p></h2></div><div class="block-text block-body block-body--empty" data-block-body=""></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="13cd9416-7778-4a25-be32-b856ebafcc06" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="13cd9416-7778-4a25-be32-b856ebafcc06" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Создать новый блок</p></h3></div><div class="block-text block-body" data-block-body=""><p>При создании страницы первый блок создаётся автоматически, в него ставится курсор и можно сразу вводить текст.</p><p><br></p><p>В режиме просмотра:</p><p><br></p><ul><li>Кнопка "Новый блок" в меню под заголовком статьи</li><li><span>Ctrl+<span>↓ - создаст новый блок под текущим блоком</span></span></li><li>Ctrl+<span>↑</span> - создаст новый блок над текущим блоком</li></ul><p><br></p><p>В режиме редактирования блока:</p><p><br></p><ul><li>Ctrl+↓ - создаст новый блок над текущим блоком, перенеся туда текст над курсором</li><li>Ctrl+↑ - создаст новый блок над текущим блоком, <span>перенеся туда текст под курсором</span></li></ul><p>(это позволяет быстро разбить блок на два)</p></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="524dab06-edaf-432c-b71f-4aec527c36e7" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="524dab06-edaf-432c-b71f-4aec527c36e7" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Просмотр блоков
+</p></h3></div><div class="block-text block-body" data-block-body=""><p>Выбор блока:
+</p><ul><li>↑/↓ — перейти к предыдущему/следующему блоку;
+</li><li>клик по блоку — сделать его текущим;
+</li><li>двойной клик по блоку — сразу начать редактирование.
+</li></ul><br><p>Сворачивание/разворачивание:
+</p><ul><li>слева у блока — кнопка‑стрелка клик — свернуть/развернуть потомков;
+</li><li>→ — развернуть ближайший подходящий родитель (если у текущего нет детей);
+</li><li>← — свернуть родителя и сделать его текущим.
+</li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="8502dbf6-9b43-4c15-a981-f9a7f67fa924" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="8502dbf6-9b43-4c15-a981-f9a7f67fa924" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Режим просмотра</p></h3></div><div class="block-text block-body" data-block-body=""><ul><li>Выбор блока:<ul><li><span>↑/↓</span><span>&nbsp;</span>— перейти к предыдущему/следующему блоку;</li><li>клик по блоку — сделать его текущим;</li><li>двойной клик по блоку — сразу начать редактирование.</li></ul></li><li>Сворачивание/разворачивание:<ul><li>слева у блока — кнопка‑стрелка (collapse‑btn):<ul><li>клик — свернуть/развернуть потомков;</li><li>пустые блоки без заголовка и детей имеют «пустую» кнопку (для выравнивания, но не кликабельную).</li></ul></li><li>клавиши:<ul><li><span>→</span><span>&nbsp;</span>— развернуть ближайший подходящий родитель (если у текущего нет детей);</li><li><span>←</span><span>&nbsp;</span>— свернуть родителя и сделать его текущим.</li></ul></li></ul></li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="9754fe79-3fd7-4057-a124-21be9351c675" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="9754fe79-3fd7-4057-a124-21be9351c675" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Редактирование блока</p></h3></div><div class="block-text block-body" data-block-body=""><ul><li>Войти в редактирование:<ul><li><span>Enter</span><span>&nbsp;</span>на выбранном блоке;</li><li>двойной клик по тексту.</li></ul></li><li>Выйти/сохранить:<ul><li><span>Ctrl+Enter</span><span>&nbsp;</span>— сохранить и выйти в просмотр;</li><li>кнопка<span>&nbsp;</span><strong>«Сохранить»</strong><span>&nbsp;</span>под блоком;</li><li><span>Esc</span><span>&nbsp;</span>или кнопка<span>&nbsp;</span><strong>«Отмена»</strong><span>&nbsp;</span>— закрыть редактирование;</li><li>при отмене пустой блок удаляется.</li></ul></li><li>Внутри редактируемого блока:<ul><li>можно печатать обычный текст, списки, вставлять ссылки и изображения;</li><li>при редактировании блока также работает отмена изменений (Ctrl-Z)</li></ul></li></ul></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="5893ea65-5666-4c75-8282-758ce6a56420" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="5893ea65-5666-4c75-8282-758ce6a56420" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h4 class="block-title"><p>Контекстное меню внутри блока</p></h4></div><div class="block-text block-body collapsed" data-block-body=""><p>Правый клик (или долгий тап на телефоне в режиме редактирования) внутри блока открывает контестное меню</p><p><br></p><p>Колонка «Буфер»:</p><p><br></p><ul><li><span>⧉</span><span>&nbsp;</span>— копировать выделенный фрагмент (внутренний буфер + системный буфер обмена).</li><li><span>✂</span><span>&nbsp;</span>— вырезать выделенный фрагмент.</li><li><span>▣</span><span>&nbsp;</span>— вставить содержимое<span>&nbsp;</span><strong>внутреннего</strong><span>&nbsp;</span>буфера редактора.</li><li><span>⛶</span><span>&nbsp;</span>— выделить весь текст блока.</li></ul><p><br></p><p>Форматирование:</p><p><br></p><ul><li>полужирный, курсив, подчёркивание, сброс форматирования;</li><li>маркированные/нумерованные списки, цитаты, кодовые блоки.</li></ul><p><br></p><p>Ссылки:</p><p><br></p><ul><li>вставить/изменить ссылку;</li><li>убрать ссылку;</li><li>вставить ссылку на другую статью.</li></ul><p><br></p><p>Структура:</p><p><br></p><ul><li>команда «разрезать по курсору» (эквивалент<span>&nbsp;</span><span>Ctrl+↓</span><span>&nbsp;</span>в режиме редактирования).</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="c8f6dbb0-d440-47f7-b0f5-0f1237883019" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="c8f6dbb0-d440-47f7-b0f5-0f1237883019" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h4 class="block-title"><p>Вложения и изображения</p></h4></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>Поддерживаются только файлы<span>&nbsp;</span><span>image/*</span><span>&nbsp;</span>(JPEG, PNG, GIF, WebP и т.п.).</li><li>При загрузке/вставке:<ul><li>ширина при необходимости уменьшается до 1920px;</li><li>картинка перекодируется в<span>&nbsp;</span><strong>WebP (качество ~75)</strong>;</li><li>исходный формат не сохраняется.</li></ul></li><li>Хранение:<ul><li>по пути<span>&nbsp;</span><span>/uploads/{userId}/images/YYYY/MM/имя.webp</span>;</li><li>доступны только владельцу аккаунта.</li></ul></li></ul><p><br></p><p>Вставка:</p><p><br></p><ul><li>Вставка из буфера:</li><ul><li>просто вставьте (Ctrl+V) картинку в редактируемый блок;</li><li>или перетащите файл в блок мышью.</li></ul></ul><p><br></p><p>Прочие файлы (PDF, DOCX и т.п.)</p><p><br></p><ul><li>Не‑картинки<span>&nbsp;</span><strong>на сервер Memus не загружаются</strong>. Просто там нет столько места, чтобы хранить всё то, что пользователь может загрузить. Поэтому все внешние вложения лучше размещать в надёжном хранилище на YandexDisk или GoogleDrive, а в Memus вставлять только ссылки.</li><li>При попытке вставить не‑изображение:<ul><li>Memus показывает подсказку:<ul><li>«Файлы (PDF, DOCX и т.п.) больше не загружаются в Memus. Сохраните их на Яндекс.Диске или Google Drive и вставьте сюда ссылку».</li></ul></li></ul></li><li>Рекомендуемый способ:<ul><li>загрузить файл на Яндекс.Диск / Google Drive;</li><li>получить ссылку;</li><li>вставить ссылку в текст блока.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="b10b27af-c362-4162-beed-685cf6cf7229" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="b10b27af-c362-4162-beed-685cf6cf7229" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Связи между страницами (wikilinks)</p></h3></div><div class="block-text block-body" data-block-body=""><ul><li>В тексте блоков поддерживается синтаксис<span>&nbsp;</span><span>[[Название страницы]]</span>.</li><li>При сохранении блока:</li><ul><li>если есть статья с таким заголовком (без учёта регистра),<br>вставка превращается в ссылку<span>&nbsp;</span><span>на статью</span>;</li><li>если статьи нет —<span>&nbsp;</span><span>[[...]]</span><span>&nbsp;</span>остаётся как обычный текст (ссылка не создаётся).</li></ul></ul></div></div></div><div class="block-children" data-children=""></div></div></div></div><div class="block" data-block-id="f838163a-ec76-4064-bfa3-46f8566efee7" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="f838163a-ec76-4064-bfa3-46f8566efee7" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Выстраивание структуры блоков</p></h2></div><div class="block-text block-body block-body--empty" data-block-body=""></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="1fecb5df-db94-461d-84ba-d1b4838456fd" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="1fecb5df-db94-461d-84ba-d1b4838456fd" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Изменение порядка расположения блоков и уровней вложенности</p></h3></div><div class="block-text block-body collapsed" data-block-body=""><p>Горячие клавиши в режиме просмотра:</p><p><br></p><ul><li><span>Ctrl+Shift+↑/↓</span><span>&nbsp;</span>— переместить блок<span>&nbsp;</span><strong>вместе с его дочерними</strong><span>&nbsp;</span>выше/ниже.</li><li><span>Ctrl+→</span><span>&nbsp;</span>— сделать блок дочерним предыдущего.</li><li><span>Ctrl+←</span><span>&nbsp;</span>— поднять блок на уровень выше.</li><li><span>Ctrl+Delete</span><span>&nbsp;</span>— удалить текущий блок (если это не последний блок в статье).</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="0df59c1e-3670-41bd-8887-42fe322db8c4" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="0df59c1e-3670-41bd-8887-42fe322db8c4" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Перетаскивание (Drag &amp; Drop)</p></h3></div><div class="block-text block-body collapsed" data-block-body=""><p><br></p><ul><li>Включите режим<span>&nbsp;</span><strong>«⇅ Перетаскивание»</strong><span>&nbsp;</span>в тулбаре.</li><li>Потяните блок мышью:<ul><li>верхняя часть соседнего блока — «до него»;</li><li>нижняя часть — «после него»;</li><li>середина — вложить внутрь (сделать дочерним).</li></ul></li><li>Нельзя перенести блок внутрь самого себя или своих потомков — такие цели не подсвечиваются.</li><li><span>Ctrl+Z / Ctrl+Y</span><span>&nbsp;</span>работают и для перетаскиваний.</li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="f10e92d2-b04f-483f-a04e-7373fa53fe09" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="f10e92d2-b04f-483f-a04e-7373fa53fe09" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h3 class="block-title"><p>Мультивыделение и объединение блоков</p></h3></div><div class="block-text block-body collapsed" data-block-body=""><p><br></p><ul><li><span>Shift+↑/↓</span><span>&nbsp;</span>в режиме просмотра:<ul><li>позволяет выделить несколько подряд идущих блоков;</li></ul></li><li>Кнопка<span>&nbsp;</span><strong>«Объединить»</strong>:<ul><li>берёт выделенные блоки<span>&nbsp;</span><strong>в порядке отображения</strong>;</li><li>склеивает их HTML в один блок (первый в выделении);</li><li>остальные удаляет;</li><li>работает и для многострочных и для иерархических блоков.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="67ca40a5-05c7-43c2-b1ae-2deac791570c" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="67ca40a5-05c7-43c2-b1ae-2deac791570c" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Шифрование статьи</p></h2></div><div class="block-text block-body" data-block-body=""><ul><li>В меню статьи (<span>…</span>) доступно:<ul><li><strong>«Зашифровать»</strong><span>&nbsp;</span>— включить шифрование;</li><li><strong>«Сменить пароль»</strong><span>&nbsp;</span>— заменить пароль и подсказку;</li><li><strong>«Снять защиту»</strong><span>&nbsp;</span>— сохранить статью в открытом виде.</li></ul></li></ul><p><br></p><p>При включении шифрования:</p><p><br></p><ul><li>вы задаёте пароль и (опционально) текстовую подсказку;</li><li>содержимое блоков статьи шифруется и в базе хранится в зашифрованном виде.</li></ul><p><br></p><p>При открытии зашифрованной статьи:</p><p><br></p><ul><li>показывается диалог ввода пароля;</li><li>если задана подсказка — она отображается;</li><li>после успешного ввода пароль запоминается в текущей вкладке браузера.</li></ul><p><br></p><p>Зашифрованные статьи:</p><p><br></p><ul><li>помечаются иконкой замка (<span>🔒</span>) в списке и в заголовке;</li><li>экспорт/импорт учитывает этот статус (но пароли не попадают в HTML).</li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="da6bb659-be22-4f16-a78a-8a190b1074be" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="da6bb659-be22-4f16-a78a-8a190b1074be" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>История изменений и Undo/Redo</p></h2></div><div class="block-text block-body" data-block-body=""><ul><li>Почти все изменения блоков (текст, структура, dnd, объединение, разбиение и т.д.) можно отменить/повторить:<ul><li><span>Ctrl+Z</span><span>&nbsp;</span>— отмена;</li><li><span>Ctrl+Y</span><span>&nbsp;</span>— повтор.</li></ul></li><li>В тулбаре статьи есть кнопки:<ul><li><strong>«↺ Отменить»</strong>,<span>&nbsp;</span><strong>«↻ Повторить»</strong><span>&nbsp;</span>— делают то же самое.</li></ul></li><li>История текстовых изменений хранится на сервере; позиция блоков — в клиентских стеках, но восстанавливается по id‑блоков и истории операций.</li></ul></div></div></div><div class="block-children" data-children=""></div></div></div></div><div class="block" data-block-id="e4c8e589-e7f7-4fca-8263-0241fd52a7c6" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="e4c8e589-e7f7-4fca-8263-0241fd52a7c6" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Граф страниц</p></h1></div><div class="block-text block-body" data-block-body=""><p>Кнопка<span>&nbsp;</span><strong>«Граф»</strong><span>&nbsp;</span>в нижней части сайдбара:</p><p><br></p><ul><li><p>открывает отдельную панель с графом всех страниц;</p></li><li><p>каждая страница — узел;</p></li><li><p>между узлами рисуются рёбра, если одна страница ссылается на другую (wikilinks<span>&nbsp;</span><span>[[...]]</span><span>&nbsp;</span>или обычные ссылки в тексте).<br>Взаимодействие:</p></li><li><p>перетаскивание узлов — менять расположение;</p></li><li><p>колесо мыши / жесты — масштабирование;</p></li><li><p>граф стремится к устойчивому виду: связанные страницы тянутся ближе друг к другу, изолированные — на периферию.</p></li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="be22b5ff-757d-4cb4-8873-80a2357d5e53" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="be22b5ff-757d-4cb4-8873-80a2357d5e53" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Возможности импорта</p></h1></div><div class="block-text block-body block-body--empty" data-block-body=""></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="e1d6c371-5066-4eeb-8f3f-8980b2962085" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="e1d6c371-5066-4eeb-8f3f-8980b2962085" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Импорт из HTML</p></h2></div><div class="block-text block-body" data-block-body=""><p>В меню списка статей (<span>…</span><span>&nbsp;</span>→<span>&nbsp;</span><strong>«Импорт из HTML»</strong>):</p><p><br></p><ul><li>выберите один файл, экспортированный из Memus.</li></ul><p><br></p><p>Поведение при конфликте UUID:</p><p><br></p><ul><li><p>если в HTML есть<span>&nbsp;</span><span>memus-export</span><span>&nbsp;</span>с полем<span>&nbsp;</span><span>article.id</span>, и такая статья уже есть:</p><ul><li><p>показывается диалог:</p><ul><li><strong>«Оставить существующую»</strong><span>&nbsp;</span>— пропустить импорт этой страницы;</li><li><strong>«Перезаписать»</strong><span>&nbsp;</span>— заменить содержимое существующей статьи;</li><li><strong>«Создать копию»</strong><span>&nbsp;</span>— создать новую статью, добавив к названию префикс<span>&nbsp;</span><span>ver_YYYYMMDD_HHMMSS</span><span>&nbsp;</span>(время берётся из даты модификации файла);</li><li>флажок<span>&nbsp;</span><strong>«Применять это решение ко всем конфликтам»</strong><span>&nbsp;</span>(актуально при пакетном импорте).</li></ul></li></ul></li><li><p>если статьи с таким UUID нет — создаётся новая.</p></li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="540dcae8-f229-44ae-bc2d-0610266b7c00" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="540dcae8-f229-44ae-bc2d-0610266b7c00" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Импорт из резервной копии (папка)</p></h2></div><div class="block-text block-body" data-block-body=""><ul><li>Распакуйте скачанный ZIP в папку;</li><li>В меню списка статей (<span>…</span><span>&nbsp;</span>→<span>&nbsp;</span><strong>«Импорт из резервной копии (папка)</strong>»):<ul><li>укажите эту папку (браузер выберет все файлы внутри);</li><li>Memus найдёт все<span>&nbsp;</span><span>.html</span><span>&nbsp;</span>и импортирует их последовательно;</li><li>для каждой статьи с совпадающим UUID покажет тот же диалог конфликта (с опцией «ко всем конфликтам»).</li></ul></li><li>Отображается прогресс: «Импортируем из резервной копии... (X / N)».</li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="bcb62443-8d91-4506-8619-a6e2b38d0627" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="bcb62443-8d91-4506-8619-a6e2b38d0627" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Импорт из Markdown</p></h2></div><div class="block-text block-body" data-block-body=""><ul><li>В меню списка статей:<ul><li>пункт<span>&nbsp;</span><strong>«Импорт из Markdown»</strong>.</li></ul></li><li>Поддерживается иерархия списков:<ul><li><span>-</span>,<span>&nbsp;</span><span>*</span>,<span>&nbsp;</span><span>1.</span><span>&nbsp;</span>и т.п. превращаются в блоки;</li><li>вложенность списка → вложенность блоков.</li></ul></li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="856bc0a9-56f5-4718-967b-a632cd3de208" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="856bc0a9-56f5-4718-967b-a632cd3de208" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Импорт из Obsidian/Logseq</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>Пункт<span>&nbsp;</span><strong>«Импорт из Obsidian/Logseq»</strong>:<ul><li>ожидает ZIP с минимум папкой<span>&nbsp;</span><span>pages/</span><span>&nbsp;</span>(опционально —<span>&nbsp;</span><span>assets/</span>).</li></ul></li><li>Перед импортом:<ul><li>Memus спрашивает<span>&nbsp;</span><strong>базовый URL для assets</strong><span>&nbsp;</span>(если ваши вложения лежат, например, на Netlify);</li><li>URL сохраняется в браузере.</li></ul></li><li>При обработке:<ul><li>Markdown‑страницы превращаются в статьи и блоки;</li><li>ссылки вида<span>&nbsp;</span><span>assets/...</span>:<ul><li>берутся либо из ZIP, либо скачиваются с указанного URL;</li><li>сохраняются в<span>&nbsp;</span><span>uploads/{userId}/attachments/...</span>;</li><li>при успехе ссылки в тексте переписываются на<span>&nbsp;</span><span>/uploads/...</span>.</li></ul></li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div><div class="block" data-block-id="0bfae8d4-f174-407f-9be9-788bc51d7f45" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="0bfae8d4-f174-407f-9be9-788bc51d7f45" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h1 class="block-title"><p>Возможности экспорта</p></h1></div><div class="block-text block-body block-body--empty" data-block-body=""></div></div></div><div class="block-children" data-children=""><div class="block" data-block-id="96cad3e6-ecdf-4691-a47e-50047658a281" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="96cad3e6-ecdf-4691-a47e-50047658a281" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Экспорт одной статьи в HTML</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>В меню текущей статьи (<span>…</span><span>&nbsp;</span>рядом с заголовком) выберите<span>&nbsp;</span><strong>«Экспорт в HTML»</strong>.</li><li>Memus создаёт один HTML‑файл, который:<ul><li>содержит текст и структуру блоков;</li><li>включает стили, похожие на основной интерфейс;</li><li>содержит скрытый JSON‑блок<span>&nbsp;</span><span>memus-export</span><span>&nbsp;</span>со структурой статьи (для будущего импорта);</li><li>по возможности встраивает изображения и вложения как<span>&nbsp;</span><span>data:</span>‑URL, чтобы файл был самодостаточным.</li></ul></li><li>Файл можно:<ul><li>открыть в браузере как статичную версию заметки;</li><li>позже импортировать обратно в Memus.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div><div class="block" data-block-id="3d3398ad-a87a-4aba-a190-6043ce774f7a" data-collapsed="false" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="3d3398ad-a87a-4aba-a190-6043ce774f7a" aria-expanded="true"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Резервная копия всех страниц </p></h2></div><div class="block-text block-body" data-block-body=""><ul><li>В заголовке списка статей (<span>Список статей</span>) нажмите кнопку<span>&nbsp;</span><span>…</span><span>&nbsp;</span>и выберите<span>&nbsp;</span><strong>«Резервная копия (ZIP)»</strong>.</li><li>Система:<ul><li>собирает все ваши не‑удалённые статьи;</li><li>для каждой делает HTML так же, как при одиночном экспорте;</li><li>упаковывает всё в ZIP‑архив (<span>memus-backup-YYYYMMDD-HHMMSS.zip</span>).</li></ul></li><li>ZIP самодостаточен:<ul><li>все статьи сохраняются в HTML и со ссылками - т.е. ими можно полноценно пользоваться.</li><li>внутри файлов сохраняются данные, которые позволяют при необходимости загрузить эти файлы обратно в Memus.</li></ul></li></ul></div></div></div><div class="block-children" data-children=""></div></div><div class="block" data-block-id="04a18ab2-1080-4f5e-9d1e-3347c07378f5" data-collapsed="true" tabindex="0"><div class="block-surface"><button class="collapse-btn" type="button" data-block-id="04a18ab2-1080-4f5e-9d1e-3347c07378f5" aria-expanded="false"></button><div class="block-content"><div class="block-header"><h2 class="block-title"><p>Публичные ссылки</p></h2></div><div class="block-text block-body collapsed" data-block-body=""><ul><li>В меню статьи (<span>…</span>) есть пункт<span>&nbsp;</span><strong>«Сделать публичной»</strong>:<ul><li>создаёт публичный<span>&nbsp;</span><span>slug</span>;</li><li>включает доступ к статье по прямой ссылке (без авторизации в Memus).</li></ul></li><li>После включения:<ul><li>рядом с заголовком статьи отображается кнопка<span>&nbsp;</span><strong>🌐</strong>:<ul><li>клик по ней — копирование публичной ссылки в буфер.</li></ul></li></ul></li><li>Пункт<span>&nbsp;</span><strong>«Сделать приватной»</strong><span>&nbsp;</span>в том же меню:<ul><li>отключает публичный доступ;</li><li>ссылка перестаёт работать.</li></ul></li></ul></div></div></div><div class="block-children collapsed" data-children=""></div></div></div></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  
+<script>
+(() => {
+  const root = document.getElementById('exportBlocksRoot');
+  if (!root) return;
+  const collapseIcon = { open: '▾', closed: '▸' };
+  let currentId = root.querySelector('.block')?.dataset.blockId || null;
+
+  const getParentBlock = (block) => (block?.parentElement ? block.parentElement.closest('.block') : null);
+
+  const updateBlockView = (block, collapsed) => {
+    block.dataset.collapsed = collapsed ? 'true' : 'false';
+    const body = block.querySelector('.block-body');
+    const noTitle = block.classList.contains('block--no-title');
+    if (body && !noTitle) {
+      body.classList.toggle('collapsed', collapsed);
+    }
+    const children = block.querySelector('.block-children');
+    if (children) children.classList.toggle('collapsed', collapsed);
+    const btn = block.querySelector('.collapse-btn');
+    if (btn) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.textContent = collapsed ? collapseIcon.closed : collapseIcon.open;
+    }
+  };
+
+  const collectVisible = () => {
+    const result = [];
+    const walk = (container) => {
+      const blocks = Array.from(container.children).filter((node) => node.classList?.contains('block'));
+      blocks.forEach((block) => {
+        result.push(block);
+        const isCollapsed = block.dataset.collapsed === 'true';
+        const children = block.querySelector('.block-children');
+        if (!isCollapsed && children) walk(children);
+      });
+    };
+    walk(root);
+    return result;
+  };
+
+  const setCurrent = (block) => {
+    if (!block) return;
+    currentId = block.dataset.blockId || null;
+    root.querySelectorAll('.block.selected').forEach((el) => el.classList.remove('selected'));
+    block.classList.add('selected');
+    block.focus({ preventScroll: false });
+  };
+
+  const toggleBlock = (block, desired) => {
+    if (!block) return;
+    const collapsed = block.dataset.collapsed === 'true';
+    const next = typeof desired === 'boolean' ? desired : !collapsed;
+    updateBlockView(block, next);
+  };
+
+  const moveSelection = (offset) => {
+    if (!currentId) {
+      const first = root.querySelector('.block');
+      if (first) setCurrent(first);
+      return;
+    }
+    const ordered = collectVisible();
+    const index = ordered.findIndex((b) => b.dataset.blockId === currentId);
+    if (index === -1) return;
+    const next = ordered[index + offset];
+    if (next) setCurrent(next);
+  };
+
+  const handleArrowLeft = () => {
+    if (!currentId) return;
+    const block = root.querySelector(`.block[data-block-id="${currentId}"]`);
+    if (!block) return;
+    const collapsed = block.dataset.collapsed === 'true';
+    if (!collapsed) {
+      toggleBlock(block, true);
+      return;
+    }
+    const parent = getParentBlock(block);
+    if (parent) setCurrent(parent);
+  };
+
+  const handleArrowRight = () => {
+    if (!currentId) return;
+    const block = root.querySelector(`.block[data-block-id="${currentId}"]`);
+    if (!block) return;
+    const collapsed = block.dataset.collapsed === 'true';
+    const firstChild = block.querySelector('.block-children .block');
+    if (collapsed) {
+      toggleBlock(block, false);
+      if (firstChild) setCurrent(firstChild);
+      return;
+    }
+    if (firstChild) {
+      setCurrent(firstChild);
+    }
+  };
+
+  root.addEventListener('click', (event) => {
+    const btn = event.target.closest('.collapse-btn');
+    if (btn) {
+      const targetId = btn.dataset.blockId;
+      const block = root.querySelector(`.block[data-block-id="${targetId}"]`);
+      toggleBlock(block);
+      setCurrent(block);
+      return;
+    }
+    const block = event.target.closest('.block');
+    if (block) {
+      setCurrent(block);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', ' '].includes(event.code)) {
+      event.preventDefault();
+    } else {
+      return;
+    }
+    if (event.code === 'ArrowDown') {
+      moveSelection(1);
+      return;
+    }
+    if (event.code === 'ArrowUp') {
+      moveSelection(-1);
+      return;
+    }
+    if (event.code === 'ArrowLeft') {
+      handleArrowLeft();
+      return;
+    }
+    if (event.code === 'ArrowRight') {
+      handleArrowRight();
+      return;
+    }
+    if (event.code === 'Enter' || event.code === 'Space' || event.code === ' ') {
+      if (!currentId) return;
+      const block = root.querySelector(`.block[data-block-id="${currentId}"]`);
+      toggleBlock(block);
+    }
+  });
+
+  const initial = currentId ? root.querySelector(`.block[data-block-id="${currentId}"]`) : root.querySelector('.block');
+  if (initial) setCurrent(initial);
+})();
+</script>
+  </div>
+</body>
+</html>

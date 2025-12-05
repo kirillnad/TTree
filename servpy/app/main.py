@@ -1024,7 +1024,7 @@ def _generate_public_slug() -> str:
             return candidate
 
 
-def _render_public_block(block: dict[str, Any]) -> str:
+def _render_public_block(block: dict[str, Any], heading_depth: int = 1) -> str:
     """
     Простая HTML-версия блока для публичной страницы.
     Используем ту же разметку .block / .block-surface / .block-content / .block-text,
@@ -1036,8 +1036,8 @@ def _render_public_block(block: dict[str, Any]) -> str:
     collapsed = bool(block.get('collapsed'))
     block_id = html_mod.escape(str(block.get('id') or ''))
 
-    # Грубое разбиение stored HTML на заголовок и тело по первому <p><br /></p>,
-    # как это делает buildStoredBlockHtml/extractBlockSections в клиенте.
+    # Разбиваем stored HTML на заголовок и тело по первому "пустому" абзацу,
+    # как это делает extractBlockSections в клиенте.
     title_html = ''
     body_html = raw_html
     for sep in ('<p><br /></p>', '<p><br/></p>', '<p><br></p>'):
@@ -1046,7 +1046,23 @@ def _render_public_block(block: dict[str, Any]) -> str:
             title_html = raw_html[:idx]
             body_html = raw_html[idx + len(sep) :]
             break
+
     has_title = bool(title_html.strip())
+
+    # Если у блока нет явного заголовка, но есть дети и внутри всего одна
+    # «осмысленная» строка (<p>...</p>), считаем её заголовком. Это повторяет
+    # хак из client/article.js и client/exporter.js.
+    if not has_title and has_children:
+        candidate = body_html or raw_html
+        candidate = candidate.strip()
+        m = re.fullmatch(r'\s*<p\b[^>]*>(.*?)</p>\s*', candidate, flags=re.IGNORECASE | re.DOTALL)
+        if m:
+            inner = m.group(1) or ''
+            inner_clean = re.sub(r'(&nbsp;|<br\s*/?>)', '', inner, flags=re.IGNORECASE).strip()
+            if inner_clean:
+                title_html = candidate
+                body_html = ''
+                has_title = True
 
     # Кнопка сворачивания как в экспорте: с data-block-id и aria-expanded.
     if has_children or raw_html:
@@ -1063,12 +1079,14 @@ def _render_public_block(block: dict[str, Any]) -> str:
     # Заголовок блока (если есть).
     header_html = ''
     if has_title:
+        level = max(1, min(int(heading_depth or 1), 6))
+        heading_tag = f'h{level}'
         header_html = (
             '<div class="block-header">'
             '<div class="block-header__left">'
-            '<div class="block-title" style="flex: 1 1 0%; min-width: 0px;">'
+            f'<{heading_tag} class="block-title" style="flex: 1 1 0%; min-width: 0px;">'
             f'{title_html}'
-            '</div>'
+            f'</{heading_tag}>'
             '</div>'
             '</div>'
         )
@@ -1083,7 +1101,8 @@ def _render_public_block(block: dict[str, Any]) -> str:
     content = f'<div class="block-content">{header_html}{body}</div>'
     surface = f'<div class="block-surface">{collapse_btn}{content}</div>'
 
-    children_html = ''.join(_render_public_block(child) for child in children)
+    next_heading_depth = heading_depth + 1 if has_title else heading_depth
+    children_html = ''.join(_render_public_block(child, next_heading_depth) for child in children)
     if children_html:
         children_classes = ['block-children']
         if collapsed:
@@ -1133,7 +1152,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
 
     blocks = article.get('blocks') or []
     _walk_and_rewrite(blocks)
-    blocks_html = ''.join(_render_public_block(b) for b in blocks)
+    blocks_html = ''.join(_render_public_block(b, 1) for b in blocks)
     header = f"""
     <div class="panel-header article-header">
       <div class="title-block">
@@ -1415,7 +1434,7 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
         updated_label = updated_raw or ''
 
     blocks = article.get('blocks') or []
-    blocks_html = ''.join(_render_public_block(b) for b in blocks)
+    blocks_html = ''.join(_render_public_block(b, 1) for b in blocks)
     header = f"""
     <div class="panel-header article-header">
       <div class="title-block">

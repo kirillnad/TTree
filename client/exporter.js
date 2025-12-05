@@ -158,12 +158,48 @@ function collectPlainText(blocks = []) {
   return parts.flat().filter(Boolean);
 }
 
-function renderBlock(block, depth = 1) {
-  const { titleHtml, bodyHtml } = extractBlockSections(block.text || '');
-  const hasTitle = Boolean(titleHtml);
-  const rawBody = hasTitle ? bodyHtml : block.text || '';
-  const hasBody = Boolean(rawBody && rawBody.trim());
+function renderBlock(block, headingDepth = 1) {
+  let sections = extractBlockSections(block.text || '');
+  let hasTitle = Boolean(sections.titleHtml);
   const hasChildren = Boolean(block.children?.length);
+
+  // Повторяем поведение основного интерфейса:
+  // если у блока нет явного заголовка, но есть дети и в нём
+  // всего одна «осмысленная» строка, считаем её заголовком.
+  if (!hasTitle && hasChildren && typeof document !== 'undefined') {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = sections.bodyHtml || block.text || '';
+    const meaningful = Array.from(tmp.childNodes || []).filter((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return (node.textContent || '').trim().length > 0;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.tagName === 'BR') return false;
+        if (node.tagName === 'P') {
+          const inner = (node.innerHTML || '')
+            .replace(/&nbsp;/gi, '')
+            .replace(/<br\s*\/?>/gi, '')
+            .trim();
+          return inner.length > 0;
+        }
+        return true;
+      }
+      return false;
+    });
+    if (meaningful.length === 1) {
+      const only = meaningful[0];
+      if (only.nodeType === Node.ELEMENT_NODE && only.tagName === 'P') {
+        sections = {
+          titleHtml: only.outerHTML,
+          bodyHtml: '',
+        };
+        hasTitle = true;
+      }
+    }
+  }
+
+  const rawBody = hasTitle ? sections.bodyHtml : block.text || '';
+  const hasBody = Boolean(rawBody && rawBody.trim());
   const canCollapse = hasTitle || hasChildren;
   const hasNoTitleNoChildren = !hasTitle && !hasChildren;
   const collapsed = Boolean(block.collapsed);
@@ -182,9 +218,9 @@ function renderBlock(block, depth = 1) {
   }
   let titlePart = '';
   if (hasTitle) {
-    const level = Math.min(Math.max(depth, 1), 6);
+    const level = Math.min(Math.max(headingDepth, 1), 6);
     const headingTag = `h${level}`;
-    titlePart = `<${headingTag} class="block-title">${titleHtml}</${headingTag}>`;
+    titlePart = `<${headingTag} class="block-title">${sections.titleHtml}</${headingTag}>`;
   }
   const header = titlePart
     ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
@@ -197,7 +233,8 @@ function renderBlock(block, depth = 1) {
 
   const body = `<div class="${bodyClasses.join(' ')}" data-block-body>${rawBody || ''}</div>`;
   const content = `<div class="block-content">${header}${body}</div>`;
-  const childrenHtml = (block.children || []).map((child) => renderBlock(child, depth + 1)).join('');
+  const nextHeadingDepth = hasTitle ? headingDepth + 1 : headingDepth;
+  const childrenHtml = (block.children || []).map((child) => renderBlock(child, nextHeadingDepth)).join('');
   const children = `<div class="block-children${collapsed ? ' collapsed' : ''}" data-children>${childrenHtml}</div>`;
 
   const blockClasses = ['block'];
@@ -211,7 +248,8 @@ function renderBlock(block, depth = 1) {
 
 function buildExportBodyFromBlocks(blocks = [], { title, updatedAt } = {}) {
   const safeBlocks = blocks || [];
-  const blocksHtml = safeBlocks.map(renderBlock).join('');
+  // Важно: всегда начинаем с headingDepth = 1 для каждого корневого блока.
+  const blocksHtml = safeBlocks.map((block) => renderBlock(block, 1)).join('');
   const plainParts = collectPlainText(safeBlocks);
   const plainText = plainParts.join(' ').replace(/\s+/g, ' ').trim();
   const wordCount = plainText ? plainText.split(/\s+/).length : 0;
