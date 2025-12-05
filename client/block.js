@@ -272,6 +272,13 @@ export function buildStoredBlockHtml(html = '') {
 }
 
 export function cleanupEditableHtml(html = '') {
+  const originalTemplate = document.createElement('template');
+  originalTemplate.innerHTML = html || '';
+  const originalText = (originalTemplate.content.textContent || '')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+  const originalHasAnchors = Boolean(originalTemplate.content.querySelector('a'));
+
   const template = document.createElement('template');
   template.innerHTML = html || '';
 
@@ -475,7 +482,16 @@ export function cleanupEditableHtml(html = '') {
 
   const cleaned = linkifyHtml(template.innerHTML);
   // Ensure adjacent links remain visually separated after cleanup
-  return cleaned.replace(/<\/a>\s*<a/gi, '</a> <a');
+  const normalized = cleaned.replace(/<\/a>\s*<a/gi, '</a> <a');
+
+  // Защита от «слишком агрессивной» очистки: если после всех преобразований
+  // HTML стал пустым, но в исходном содержимом был текст или ссылки —
+  // возвращаем исходный HTML как есть, чтобы не терять данные пользователя.
+  if (!normalized.trim() && (originalText || originalHasAnchors)) {
+    return html || '';
+  }
+
+  return normalized;
 }
 
 export async function toggleCollapse(blockId) {

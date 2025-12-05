@@ -1800,8 +1800,17 @@ def google_callback(request: Request):
         raise HTTPException(status_code=400, detail='Не передан code от Google')
 
     cookie_state = request.cookies.get('google_oauth_state') or ''
-    if not cookie_state or cookie_state != state:
-        raise HTTPException(status_code=400, detail='Некорректный state для Google OAuth')
+    # В идеале state из query-параметра и cookie должны совпадать.
+    # На некоторых мобильных платформах (PWA / внешние браузеры) cookie
+    # может потеряться, поэтому:
+    # - если cookie есть и он отличается от state — считаем это ошибкой;
+    # - если cookie отсутствует, но code/state пришли от Google, продолжаем,
+    #   только логируем предупреждение.
+    if cookie_state:
+        if cookie_state != state:
+            raise HTTPException(status_code=400, detail='Некорректный state для Google OAuth')
+    else:
+        logger.warning('Google OAuth callback without state cookie; continuing without CSRF check')
 
     # Обмениваем code на access_token и id_token.
     token_data = urllib.parse.urlencode(
@@ -1858,23 +1867,16 @@ def google_callback(request: Request):
     if admin_user:
         user = admin_user
     else:
-        # Для остальных всегда создаём отдельного локального пользователя для Google-логина.
-        # Если username с таким email уже существует, подберём новый (email+gN),
-        # чтобы не "склеивать" учётки, созданные через пароль и через Google.
-        base_username = email
-        username = base_username
-        existing = get_user_by_username(username)
+        # Для остальных пользователей Google-логин мапится на
+        # одного и того же локального пользователя с username == email.
+        # Если такой пользователь уже есть — переиспользуем его.
+        # Если нет — создаём нового без всяких суффиксов +g1/+g2.
+        existing = get_user_by_username(email)
         if existing:
-            suffix = 1
-            while True:
-                candidate = f'{base_username}+g{suffix}'
-                if not get_user_by_username(candidate):
-                    username = candidate
-                    break
-                suffix += 1
-
-        random_pwd = os.urandom(16).hex()
-        user = create_user(username, random_pwd, name or username, is_superuser=False)
+            user = existing
+        else:
+            random_pwd = os.urandom(16).hex()
+            user = create_user(email, random_pwd, name or email, is_superuser=False)
 
     # Для нового (или только что найденного) пользователя гарантируем
     # наличие стартовой статьи «Руководство пользователя».
@@ -3298,6 +3300,18 @@ def favicon():
 <path d="M18 18h8v20h-8zM30 18h8l8 12-8 12h-8l8-12z" fill="#fff"/>
 </svg>"""
     return Response(content=svg, media_type='image/svg+xml')
+
+
+@app.get('/manifest.webmanifest')
+def pwa_manifest():
+    """
+    Отдаёт PWA-манифест по тому же пути, что и в <link rel="manifest" href="/manifest.webmanifest">.
+    Дублируем через явный маршрут, чтобы избежать любых проблем с StaticFiles/SPA-фолбеком.
+    """
+    manifest_path = CLIENT_DIR / 'manifest.webmanifest'
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail='Manifest not found')
+    return FileResponse(manifest_path, media_type='application/manifest+json')
 
 
 @app.get('/uploads/{user_id}/{rest_of_path:path}')

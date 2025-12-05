@@ -316,6 +316,7 @@ async function executeStructureAction(action, options = {}) {
     if (!baseBlockPayload) {
       return { success: false };
     }
+    let parentIdForRerender = action.parentId || null;
     try {
       let blockPayload = baseBlockPayload;
       if (state.article && state.article.encrypted && state.articleEncryptionKey) {
@@ -334,6 +335,7 @@ async function executeStructureAction(action, options = {}) {
       // Локально вставляем восстановленный блок в дерево статьи.
       const inserted = payload?.block;
       const parentId = payload?.parentId || action.parentId || null;
+      parentIdForRerender = parentId;
       if (inserted && state.article && Array.isArray(state.article.blocks)) {
         const clone = cloneBlockSnapshot(inserted) || inserted;
         if (!parentId) {
@@ -370,6 +372,20 @@ async function executeStructureAction(action, options = {}) {
     } catch (error) {
       showToast(error.message);
       success = false;
+    }
+    // После успешного восстановления перерисовываем либо родителя, либо всю статью,
+    // чтобы новый блок сразу появился в DOM.
+    if (success && state.article && Array.isArray(state.article.blocks)) {
+      if (parentIdForRerender) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await rerenderSingleBlock(parentIdForRerender);
+        } catch {
+          renderArticle();
+        }
+      } else {
+        renderArticle();
+      }
     }
   }
   if (success) {

@@ -348,7 +348,6 @@ async function renderBlocks(blocks, container, depth = 1) {
     }
 
     body.addEventListener('click', (event) => {
-      event.stopPropagation();
       if (state.mode === 'view') setCurrentBlock(block.id);
     });
 
@@ -468,7 +467,14 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     blockEl.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (state.mode === 'view') setCurrentBlock(block.id);
+      if (state.mode !== 'view') return;
+      const interactive = event.target.closest(
+        'button, a, [contenteditable="true"], .block-edit-actions',
+      );
+      if (!interactive && (hasTitle || hasChildren)) {
+        toggleCollapse(block.id);
+      }
+      setCurrentBlock(block.id);
     });
 
     surface.addEventListener('dblclick', (event) => {

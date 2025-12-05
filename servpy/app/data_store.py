@@ -1384,9 +1384,14 @@ def undo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
     entry = history.pop(index)
     redo.append(entry)
     block_id = entry['blockId']
-    block_row = CONN.execute('SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id)).fetchone()
+    block_row = CONN.execute(
+        'SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
     if not block_row:
-        raise BlockNotFound(f'Block {block_id} not found')
+        # Блок был удалён после записи истории — текстовое undo для него
+        # больше невозможно, считаем что "нечего отменять", а не ошибка.
+        raise InvalidOperation('Nothing to undo')
     new_text = sanitize_html(entry.get('before') or '')
     plain_text = strip_html(new_text)
     lemma = build_lemma(plain_text)
@@ -1422,9 +1427,13 @@ def redo_block_text_change(article_id: str, entry_id: Optional[str] = None) -> O
     entry = redo.pop(index)
     history.append(entry)
     block_id = entry['blockId']
-    block_row = CONN.execute('SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id)).fetchone()
+    block_row = CONN.execute(
+        'SELECT block_rowid FROM blocks WHERE id = ? AND article_id = ?',
+        (block_id, article_id),
+    ).fetchone()
     if not block_row:
-        raise BlockNotFound(f'Block {block_id} not found')
+        # Соответствующий блок уже удалён — повторять нечего.
+        raise InvalidOperation('Nothing to redo')
     new_text = sanitize_html(entry.get('after') or '')
     plain_text = strip_html(new_text)
     lemma = build_lemma(plain_text)

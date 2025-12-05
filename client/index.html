@@ -2,11 +2,17 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <title>Memus - ваши мысли и идеи</title>
+    <title>Memus. Всё, что вы узнали — в одном месте. Удобно. Надёжно. Везде с вами.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#111827" />
+    <!-- iOS Safari PWA meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Memus" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   </head>
   <body>
     <div id="authOverlay" class="auth-overlay">
@@ -129,14 +135,6 @@
             </button>
           </div>
           <div class="sidebar-footer">
-            <button
-              id="installAppBtn"
-              class="ghost small hidden"
-              type="button"
-              title="Установить Memus как приложение"
-            >
-              Установить приложение
-            </button>
             <div class="sidebar-user">
               <span id="currentUserLabel" class="sidebar-user__name"></span>
               <button id="logoutBtn" class="ghost small sidebar-user__logout" type="button">Выйти</button>
@@ -274,6 +272,12 @@
                 </button>
                 <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
                   ⌗<span class="toolbar-label"> Таблица</span>
+                </button>
+                <button id="exportCurrentBlockBtn" class="ghost small" type="button" title="Экспорт текущего блока в HTML">
+                  ⇩<span class="toolbar-label"> Экспорт блока</span>
+                </button>
+                <button id="deleteCurrentBlockBtn" class="ghost small" type="button" title="Удалить текущий блок">
+                  ⌫<span class="toolbar-label"> Удалить блок</span>
                 </button>
                 <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
                   Новый блок

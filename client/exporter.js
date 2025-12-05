@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { extractBlockSections } from './block.js';
+import { extractBlockSections, findBlock } from './block.js';
 import { escapeHtml, htmlToPlainText } from './utils.js';
 import { showToast } from './toast.js';
 
@@ -45,6 +45,82 @@ export async function exportCurrentArticleAsHtml() {
   }
 }
 
+export async function exportCurrentBlockAsHtml(blockId) {
+  if (!state.article) {
+    showToast('Нет открытой статьи для экспорта');
+    return;
+  }
+  const targetId = blockId || state.currentBlockId;
+  if (!targetId) {
+    showToast('Не выбран блок для экспорта');
+    return;
+  }
+  const located = findBlock(targetId);
+  if (!located || !located.block) {
+    showToast('Не удалось найти выбранный блок');
+    return;
+  }
+  const rootBlock = located.block;
+
+  const { titleHtml } = extractBlockSections(rootBlock.text || '');
+  let blockTitle = '';
+  if (titleHtml) {
+    blockTitle = htmlToPlainText(titleHtml);
+  } else if (rootBlock.text) {
+    blockTitle = htmlToPlainText(rootBlock.text).slice(0, 80);
+  }
+  if (!blockTitle) {
+    blockTitle = 'Фрагмент';
+  }
+
+  const articleTitle = state.article.title || 'Без названия';
+  const exportTitle = `${blockTitle} — фрагмент из «${articleTitle}»`;
+
+  try {
+    showToast('Готовим экспорт фрагмента...');
+    const cssText = await loadCssText();
+    const { bodyHtml, plainText, wordCount } = buildExportBodyFromBlocks([rootBlock], {
+      title: blockTitle,
+      updatedAt: state.article.updatedAt || null,
+    });
+    const { html: inlinedHtml, failures } = await inlineAssets(bodyHtml);
+    const description = buildDescription(plainText);
+
+    const fragmentArticle = {
+      ...state.article,
+      // В экспортируемом фрагменте корнем становится выбранный блок.
+      blocks: [rootBlock],
+      title: exportTitle,
+    };
+    const exportPayload = buildExportPayload(fragmentArticle);
+
+    const html = buildDocument({
+      cssText,
+      contentHtml: inlinedHtml,
+      title: exportTitle,
+      description,
+      article: fragmentArticle,
+      wordCount,
+      lang: document.documentElement.lang || 'ru',
+      exportPayload,
+    });
+    triggerDownload(html, makeFileName(blockTitle || 'fragment'));
+    if (failures.length) {
+      showToast(
+        `Экспорт фрагмента завершён с предупреждениями: ${failures.length} вложений не удалось инлайнить`,
+      );
+      // eslint-disable-next-line no-console
+      console.warn('Inline failures (fragment export)', failures);
+    } else {
+      showToast('Фрагмент сохранён в HTML');
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Export fragment failed', error);
+    showToast(error.message || 'Не удалось выгрузить фрагмент в HTML');
+  }
+}
+
 async function loadCssText() {
   const response = await fetch('/style.css', { cache: 'no-cache' });
   if (!response.ok) {
@@ -82,7 +158,7 @@ function collectPlainText(blocks = []) {
   return parts.flat().filter(Boolean);
 }
 
-function renderBlock(block) {
+function renderBlock(block, depth = 1) {
   const { titleHtml, bodyHtml } = extractBlockSections(block.text || '');
   const hasTitle = Boolean(titleHtml);
   const rawBody = hasTitle ? bodyHtml : block.text || '';
@@ -104,7 +180,12 @@ function renderBlock(block) {
       }"></button>`;
     }
   }
-  const titlePart = hasTitle ? `<div class="block-title">${titleHtml}</div>` : '';
+  let titlePart = '';
+  if (hasTitle) {
+    const level = Math.min(Math.max(depth, 1), 6);
+    const headingTag = `h${level}`;
+    titlePart = `<${headingTag} class="block-title">${titleHtml}</${headingTag}>`;
+  }
   const header = titlePart
     ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
     : '';
@@ -116,7 +197,7 @@ function renderBlock(block) {
 
   const body = `<div class="${bodyClasses.join(' ')}" data-block-body>${rawBody || ''}</div>`;
   const content = `<div class="block-content">${header}${body}</div>`;
-  const childrenHtml = (block.children || []).map(renderBlock).join('');
+  const childrenHtml = (block.children || []).map((child) => renderBlock(child, depth + 1)).join('');
   const children = `<div class="block-children${collapsed ? ' collapsed' : ''}" data-children>${childrenHtml}</div>`;
 
   const blockClasses = ['block'];
@@ -128,18 +209,19 @@ function renderBlock(block) {
   return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;
 }
 
-function buildExportBody(article) {
-  const blocksHtml = (article.blocks || []).map(renderBlock).join('');
-  const plainParts = collectPlainText(article.blocks || []);
+function buildExportBodyFromBlocks(blocks = [], { title, updatedAt } = {}) {
+  const safeBlocks = blocks || [];
+  const blocksHtml = safeBlocks.map(renderBlock).join('');
+  const plainParts = collectPlainText(safeBlocks);
   const plainText = plainParts.join(' ').replace(/\s+/g, ' ').trim();
   const wordCount = plainText ? plainText.split(/\s+/).length : 0;
-  const updatedLabel = article.updatedAt ? new Date(article.updatedAt).toLocaleString() : '';
+  const updatedLabel = updatedAt ? new Date(updatedAt).toLocaleString() : '';
 
   const header = `
     <div class="panel-header article-header">
       <div class="title-block">
         <div class="title-row">
-          <h1 class="export-title">${escapeHtml(article.title || 'Без названия')}</h1>
+          <h1 class="export-title">${escapeHtml(title || 'Без названия')}</h1>
         </div>
         ${updatedLabel ? `<p class="meta">Обновлено: ${escapeHtml(updatedLabel)}</p>` : ''}
       </div>
@@ -160,6 +242,13 @@ function buildExportBody(article) {
   `;
 
   return { bodyHtml, plainText, wordCount };
+}
+
+function buildExportBody(article) {
+  return buildExportBodyFromBlocks(article.blocks || [], {
+    title: article.title || 'Без названия',
+    updatedAt: article.updatedAt || null,
+  });
 }
 
 function buildExportPayload(article) {

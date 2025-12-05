@@ -68,11 +68,12 @@ export const refs = {
   articleRedoBtn: document.getElementById('articleRedoBtn'),
   mergeBlocksBtn: document.getElementById('mergeBlocksBtn'),
   insertTableBtn: document.getElementById('insertTableBtn'),
+  deleteCurrentBlockBtn: document.getElementById('deleteCurrentBlockBtn'),
+  exportCurrentBlockBtn: document.getElementById('exportCurrentBlockBtn'),
   articleNewBlockBtn: document.getElementById('articleNewBlockBtn'),
   pasteProgress: document.getElementById('pasteProgress'),
   mobileSidebarBtn: document.getElementById('mobileSidebarBtn'),
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),
   dragModeToggleBtn: document.getElementById('dragModeToggleBtn'),
   listSidebarBtn: document.getElementById('listSidebarBtn'),
-  installAppBtn: document.getElementById('installAppBtn'),
 };

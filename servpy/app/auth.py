@@ -148,6 +148,8 @@ def get_current_user(
 
 
 def set_session_cookie(response: Response, session_id: str) -> None:
+    max_age = int(SESSION_TTL.total_seconds())
+    expires = datetime.now(timezone.utc) + SESSION_TTL
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=session_id,
@@ -155,6 +157,8 @@ def set_session_cookie(response: Response, session_id: str) -> None:
         secure=False,
         samesite='lax',
         path='/',
+        max_age=max_age,
+        expires=expires,
     )
 
 

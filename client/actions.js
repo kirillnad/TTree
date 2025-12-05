@@ -491,6 +491,7 @@ export async function deleteCurrentBlock() {
   try {
     const targetId = state.currentBlockId;
     const located = findBlock(targetId);
+    const snapshotBeforeDelete = located?.block ? cloneBlockSnapshot(located.block) : null;
     const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${state.currentBlockId}`, {
       method: 'DELETE',
     });
@@ -517,16 +518,15 @@ export async function deleteCurrentBlock() {
     } else {
       renderArticle();
     }
-    if (result?.block) {
-      const snapshot = cloneBlockSnapshot(result.block);
+    if (snapshotBeforeDelete && snapshotBeforeDelete.id) {
       pushUndoEntry({
         type: 'structure',
         action: {
           kind: 'delete',
-          parentId: result.parentId || null,
-          index: result.index ?? null,
-          block: snapshot,
-          blockId: snapshot?.id,
+          parentId: located?.parent?.id || null,
+          index: located?.index ?? null,
+          block: snapshotBeforeDelete,
+          blockId: snapshotBeforeDelete.id,
           fallbackId,
         },
       });

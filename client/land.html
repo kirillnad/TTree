@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
+    <title>Memus.pro — Личная база знаний</title>
+    <meta name="description" content="Memus.pro — современная платформа для хранения знаний. Всё, что вы узнали, в одном месте. Удобно, надёжно, везде с вами.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #0a1628 0%, #1e3a5f 50%, #2563eb 100%);
+            color: white;
+            padding: 80px 20px 120px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-text .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-text h1 {
+            font-size: 52px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 24px;
+        }
+
+        .hero-text p {
+            font-size: 20px;
+            opacity: 0.9;
+            margin-bottom: 40px;
+            line-height: 1.7;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #1e3a5f;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .logo-display {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(14, 165, 233, 0.4));
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 60px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-display .logo-icon {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 120px;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 20px 60px rgba(14, 165, 233, 0.4);
+            position: relative;
+        }
+
+        .logo-display .logo-icon::before {
+            content: 'M';
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .logo-display .logo-text {
+            font-size: 48px;
+            font-weight: 700;
+            margin-top: 30px;
+            color: white;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .device-note {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* Section Styles */
+        section {
+            padding: 100px 20px;
+        }
+
+        .section-light {
+            background: #f8fafc;
+        }
+
+        .section-white {
+            background: white;
+        }
+
+        h2 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #0f172a;
+        }
+
+        .section-subtitle {
+            font-size: 20px;
+            color: #475569;
+            margin-bottom: 60px;
+            max-width: 800px;
+        }
+
+        /* Chaos to Order Section */
+        .chaos-order {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            margin-bottom: 60px;
+        }
+
+        .chaos-image, .order-image {
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .chaos-image {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .order-image {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 40px;
+        }
+
+        .feature-list li {
+            padding: 20px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 18px;
+            color: #334155;
+            line-height: 1.7;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: "✓";
+            color: #2563eb;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 20px;
+        }
+
+        /* Security Section */
+        .security-content {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .security-image {
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 64px;
+        }
+
+        .security-features {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .security-item {
+            margin-bottom: 32px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .security-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .security-item h3 {
+            font-size: 20px;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .security-item p {
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        /* People Section */
+        .people-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .people-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .people-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .people-card-image {
+            width: 100%;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            color: white;
+        }
+
+        .people-card:nth-child(1) .people-card-image {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .people-card:nth-child(2) .people-card-image {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .people-card:nth-child(3) .people-card-image {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .people-card:nth-child(4) .people-card-image {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .people-card-content {
+            padding: 24px;
+        }
+
+        .people-card h3 {
+            font-size: 20px;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .people-card p {
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* Advanced Features */
+        .advanced-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .advanced-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .advanced-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .advanced-card h3 {
+            font-size: 24px;
+            color: #0f172a;
+            margin-bottom: 16px;
+        }
+
+        .advanced-card p {
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+            color: white;
+            text-align: center;
+            padding: 100px 20px;
+        }
+
+        .cta-section h2 {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 24px;
+        }
+
+        .cta-section p {
+            font-size: 22px;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            background: #0f172a;
+            color: white;
+            padding: 60px 20px 40px;
+            text-align: center;
+        }
+
+        footer p {
+            opacity: 0.7;
+            margin-bottom: 20px;
+        }
+
+        footer a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-content,
+            .chaos-order,
+            .security-content,
+            .advanced-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .people-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero-text h1 {
+                font-size: 38px;
+            }
+
+            h2 {
+                font-size: 32px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .people-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-text h1 {
+                font-size: 32px;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .logo-display {
+                padding: 40px 20px;
+            }
+
+            .logo-display .logo-icon {
+                width: 150px;
+                height: 150px;
+                font-size: 90px;
+            }
+
+            .logo-display .logo-text {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <div class="badge">Личная база знаний</div>
+                    <h1>Memus.pro — место, где ваши знания перестают теряться</h1>
+                    <p>Храните конспекты, идеи, ссылки и материалы в одном месте, а не в десяти разных сервисах. Всё работает на компьютере, телефоне и планшете — даже без интернета.</p>
+                    <div class="cta-buttons">
+                        <a href="https://memus.pro" class="btn btn-primary">Открыть в браузере</a>
+                        <a href="https://memus.pro" class="btn btn-secondary">Установить как приложение</a>
+                    </div>
+                    <p class="device-note">Работает на Android, iOS и Huawei</p>
+                </div>
+                <div class="hero-image">
+                    <div class="logo-display">
+                        <div class="logo-icon"></div>
+                        <div class="logo-text">memus.pro</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Chaos to Order Section -->
+    <section class="section-light">
+        <div class="container">
+            <h2>Ваш хаос → понятная система</h2>
+            <p class="section-subtitle">Memus собирает всё, что вы узнаёте, в одну личную базу. Структура из маленьких блоков-мыслей: их удобно двигать, связывать, и никогда не страшно что-то испортить.</p>
+            
+            <div class="chaos-order">
+                <div class="chaos-image">
+                    📚 📝 🗒️<br>Хаос стикеров<br>и заметок
+                </div>
+                <div class="order-image">
+                    ✨ 🎯<br>Организованная<br>система знаний
+                </div>
+            </div>
+
+            <ul class="feature-list">
+                <li><strong>Быстрые заметки в Inbox</strong> — не думаете о структуре, просто записываете, а разберёте позже</li>
+                <li><strong>Связи между заметками</strong> — превращают разрозненные записи в живую карту ваших знаний</li>
+                <li><strong>Умный поиск</strong> — находит нужное даже по неточному запросу, не нужно помнить точную формулировку</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Security Section -->
+    <section class="section-white">
+        <div class="container">
+            <h2>Безопасно и под полным контролем</h2>
+            <p class="section-subtitle">Личные записи можно защитить паролем. Данные шифруются прямо на вашем устройстве и уходят на сервер уже в защищённом виде.</p>
+            
+            <div class="security-content">
+                <div class="security-image">
+                    🔐
+                </div>
+                <div class="security-features">
+                    <div class="security-item">
+                        <h3>🔐 Приватность</h3>
+                        <p>Записи под паролем и сквозным шифрованием — для дневников, личных планов и чувствительных рабочих заметок</p>
+                    </div>
+                    <div class="security-item">
+                        <h3>💾 Полный экспорт</h3>
+                        <p>Забирайте свои данные в виде красивого HTML, делайте ZIP-бэкап или переносите базу в другие инструменты</p>
+                    </div>
+                    <div class="security-item">
+                        <h3>📥 Импорт</h3>
+                        <p>Из Obsidian, Logseq и Markdown — старые заметки не пропадают, а переезжают с вами</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- People Section -->
+    <section class="section-light">
+        <div class="container">
+            <h2>Для людей, а не только для гиков</h2>
+            <p class="section-subtitle">Memus помогает любому, кто работает с информацией и хочет держать голову в порядке</p>
+            
+            <div class="people-grid">
+                <div class="people-card">
+                    <div class="people-card-image">🎓</div>
+                    <div class="people-card-content">
+                        <h3>Студенты и исследователи</h3>
+                        <p>Конспекты, статьи и кусочки лекций складываются в ясную картину, а не в папку "Разное (ещё разобрать)"</p>
+                    </div>
+                </div>
+
+                <div class="people-card">
+                    <div class="people-card-image">💻</div>
+                    <div class="people-card-content">
+                        <h3>Разработчики</h3>
+                        <p>Код-сниппеты, инструкции, архитектурные заметки и ссылки на тикеты живут в одной системе</p>
+                    </div>
+                </div>
+
+                <div class="people-card">
+                    <div class="people-card-image">✍️</div>
+                    <div class="people-card-content">
+                        <h3>Писатели и авторы</h3>
+                        <p>Проекты, герои, наброски сцен и идеи не тонут в мессенджерах</p>
+                    </div>
+                </div>
+
+                <div class="people-card">
+                    <div class="people-card-image">📊</div>
+                    <div class="people-card-content">
+                        <h3>Менеджеры</h3>
+                        <p>Созвоны, решения, планы и процессы больше не теряются в бесконечных чатах</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Advanced Features -->
+    <section class="section-white">
+        <div class="container">
+            <h2>Фишки для продвинутых — без сложных слов</h2>
+            <p class="section-subtitle">Даже если вы не «технарь», вы выигрываете от возможностей, которые просто работают за кулисами</p>
+            
+            <div class="advanced-grid">
+                <div class="advanced-card">
+                    <h3>🕸️ Граф связей</h3>
+                    <p>Показывает, как темы и идеи переплетены между собой — прямо как в вашей голове</p>
+                </div>
+
+                <div class="advanced-card">
+                    <h3>🖱️ Перетаскивание блоков</h3>
+                    <p>Можно перетаскивать блоки мышкой, быстро перестраивая структуру заметок, списков и проектов</p>
+                </div>
+
+                <div class="advanced-card">
+                    <h3>☁️ Облачные диски</h3>
+                    <p>Поддержка Яндекс.Диска и Google Drive. Добавляйте картинки, которые автоматически сжимаются и быстро грузятся</p>
+                </div>
+
+                <div class="advanced-card">
+                    <h3>⌨️ Горячие клавиши</h3>
+                    <p>Для тех, кто любит скорость — навигация и редактирование почти без мышки</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Memus.pro — перестаньте терять знания</h2>
+            <p>Начните их собирать. Всё работает в браузере — без установки, без сложностей.</p>
+            <div class="cta-buttons" style="justify-content: center;">
+                <a href="https://memus.pro" class="btn btn-primary">Открыть Memus.pro</a>
+            </div>
+            <p style="margin-top: 24px; font-size: 1.1rem; opacity: 0.9; max-width: 600px; margin-left: auto; margin-right: auto;">
+                Сервис работает на условиях Donationware. Оплата — по вашему желанию, как знак вашей признательности. Если мы видим, что вам сервис нравится, мы будем с удовольствием его улучшать! ;-)
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Memus.pro — Ваша личная база знаний</p>
+            <p><a href="https://memus.pro">memus.pro</a></p>
+        </div>
+    </footer>
+</body>
+</html>

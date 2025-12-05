@@ -32,7 +32,7 @@ import {
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
-import { exportCurrentArticleAsHtml } from './exporter.js';
+import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js';
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
@@ -556,6 +556,12 @@ export function attachEvents() {
       exportCurrentArticleAsHtml();
     });
   }
+  if (refs.exportCurrentBlockBtn) {
+    refs.exportCurrentBlockBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await exportCurrentBlockAsHtml();
+    });
+  }
   if (refs.exportAllHtmlZipBtn) {
     refs.exportAllHtmlZipBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
@@ -905,6 +911,12 @@ export function attachEvents() {
       handleRedoAction();
     });
   }
+  if (refs.deleteCurrentBlockBtn) {
+    refs.deleteCurrentBlockBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await deleteCurrentBlock();
+    });
+  }
   if (refs.articleNewBlockBtn) {
     refs.articleNewBlockBtn.addEventListener('click', (event) => {
       event.preventDefault();
@@ -978,6 +990,9 @@ export function attachEvents() {
       if (target.closest('.table-toolbar')) return;
       if (target.closest('.rich-context-menu')) return;
       if (target.closest('#articleToolbar')) return;
+      // Не автосохраняем при клике внутри модальных окон (showPrompt/showLinkPrompt и т.п.),
+      // чтобы не терять ввод при выборе статьи, вставке ссылки и прочих диалогах.
+      if (target.closest('.modal-overlay')) return;
       const blockEl = document.querySelector(
         `.block[data-block-id="${state.editingBlockId}"]`,
       );
