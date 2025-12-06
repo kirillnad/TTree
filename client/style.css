@@ -3,7 +3,7 @@
     'Inter', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
   font-family: var(--font-default);
   font-size: 15px;
-  font-weight: 300;
+  font-weight: 400;
   color: #222222;
   background: transparent !important;
 }
@@ -1009,7 +1009,7 @@ button.icon-button.small {
   margin-top: 0;
   padding: 0;
   white-space: pre-wrap;
-  line-height: 1.5;
+  line-height: 1.6;
   overscroll-behavior: contain;
   word-wrap: break-word;
   overflow-wrap: anywhere;
@@ -1024,7 +1024,7 @@ button.icon-button.small {
 }
 .block-text p {
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 1em;
 }
 .block-header p,
 .block-title p {
@@ -1043,34 +1043,105 @@ button.icon-button.small {
   max-height: none;
 }
 
+/* Типографика внутри блоков — как в test/typo.html */
+.block-text h1,
+.block-text h2,
+.block-text h3 {
+  color: #333333;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.block-text h1 {
+  font-size: 2em;
+}
+.block-text h2 {
+  font-size: 1.5em;
+}
+.block-text h3 {
+  font-size: 1.2em;
+}
+.block-text h4,
+.block-text h5,
+.block-text h6 {
+  color: #333333;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+
+.block-text code {
+  background: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+.block-text pre {
+  background: #f4f4f4;
+  padding: 15px;
+  border-radius: 5px;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  line-height: 1.4;
+  margin: 1em 0;
+}
+
+.block-text blockquote {
+  border-left: 4px solid #dddddd;
+  margin: 1em 0;
+  padding-left: 20px;
+  color: #666666;
+  font-style: italic;
+}
+
+.block-text ul,
+.block-text ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.block-text li + li {
+  margin-top: 0.5em;
+}
+
+.block-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.block-text th,
+.block-text td {
+  border: 1px solid #dddddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.block-text th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+/* Таблица внутри блоков — та же типографика, что в test/typo.html */
 .memus-table {
   border-collapse: collapse;
   width: 100% !important;
   max-width: 100%;
-  table-layout: fixed;
-  margin: 0.3rem 0;
-  font-size: 0.9rem;
-}
-
-.memus-table thead tr {
-  background: #f3f4f6;
+  margin: 1em 0;
+  font-size: 0.95rem;
 }
 
 .memus-table th,
 .memus-table td {
-  border: 1px solid #e5e7eb;
-  padding: 0.25rem 0.4rem;
+  border: 1px solid #dddddd;
+  padding: 8px 12px;
   text-align: left;
   vertical-align: top;
   min-width: 3ch;
 }
 
-.memus-table tbody tr:nth-child(odd) {
-  background: #f9fafb;
-}
-
-.memus-table tbody tr:hover {
-  background: #eef2ff;
+.memus-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
 }
 
 .block-text[contenteditable='true'] .memus-table {
@@ -1436,7 +1507,7 @@ h5.block-title,
 h6.block-title {
   margin: 0;
   padding: 0;
-  font-weight: 450;
+  font-weight: 300;
   color: #111827;
   line-height: 1.3;
   transition: background-color 0.15s ease;
@@ -2303,11 +2374,11 @@ body {
 }
 
 body.export-page {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 16px;
-  line-height: 1.7;
-  color: #1f2933;
-  background: #f5f7fa;
+  line-height: 1.6;
+  color: #333333;
+  background: #ffffff;
   overflow: auto;
   height: auto;
 }
@@ -2327,29 +2398,26 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 700;
-  line-height: 1.2;
-  color: #111827;
-  margin-top: 1.8em;
-  margin-bottom: 0.4em;
+  line-height: 1.3;
+  color: #333333;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 2em;
   margin-top: 0;
-  margin-bottom: 0.75em;
-  letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: 1.4rem;
-  padding-left: 0.5em;
+  font-size: 1.5em;
 }
 
 h3 {
-  font-size: 1.15rem;
-  color: #111827;
+  font-size: 1.2em;
+  color: #333333;
 }
 
 h4 {
@@ -2361,12 +2429,7 @@ h4 {
 
 /* Абзацы и текст */
 body.export-page p {
-  margin: 0 0 0;
-  max-width: 72ch;
-}
-
-body.export-page p + p {
-  margin-top: 0.2em;
+  margin: 0 0 1em;
 }
 
 body.export-page strong {
@@ -2381,53 +2444,44 @@ body.export-page em {
 /* Списки (в руководстве их много) */
 body.export-page ul,
 body.export-page ol {
-  margin: 0.4em 0 0.8em 1.5em;
-  padding: 0;
+  margin: 1em 0;
+  padding-left: 2em;
 }
 
 body.export-page li + li {
-  margin-top: 0.2em;
+  margin-top: 0.5em;
 }
 
 /* Таблицы (сравнения, как про блоки vs обычный текст) */
 body.export-page table {
   width: 100%;
   border-collapse: collapse;
-  margin: 0;
+  margin: 1em 0;
   font-size: 0.95rem;
 }
 
 body.export-page th,
 body.export-page td {
-  padding: 0.55em 0.7em;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  border: 1px solid #dddddd;
   text-align: left;
   vertical-align: top;
 }
 
 body.export-page thead tr {
-  background: #f3f4f6;
-  font-weight: 600;
-}
-
-body.export-page tbody tr:nth-child(odd) {
-  background: #fafbff;
-}
-
-body.export-page tbody tr:nth-child(even) {
-  background: #ffffff;
+  background-color: #f5f5f5;
+  font-weight: bold;
 }
 
 /* Горячие клавиши и код */
 body.export-page code,
 body.export-page kbd {
-  font-family: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
-  font-size: 0.88em;
-  background: #f3f4f6;
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
-  border: 1px solid #e5e7eb;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95em;
+  background: #f4f4f4;
+  border-radius: 3px;
+  padding: 2px 4px;
+  border: none;
 }
 
 body.export-page kbd {
@@ -2436,12 +2490,23 @@ body.export-page kbd {
 }
 
 body.export-page pre {
-  background: #0b1120;
-  color: #e5e7eb;
-  padding: 0.85em 1em;
-  border-radius: 8px;
+  background: #f4f4f4;
+  color: #333333;
+  padding: 15px;
+  border-radius: 5px;
   overflow-x: auto;
-  font-size: 0.9em;
+  font-size: 0.95em;
+  font-family: 'Courier New', monospace;
+  line-height: 1.4;
+  margin: 1em 0;
+}
+
+body.export-page blockquote {
+  border-left: 4px solid #dddddd;
+  margin: 1em 0;
+  padding-left: 20px;
+  color: #666666;
+  font-style: italic;
 }
 
 /* Ссылки */

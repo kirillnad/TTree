@@ -405,12 +405,26 @@ export function cleanupEditableHtml(html = '') {
   };
   wrapTextNodes(template.content);
 
-  // РїСЂРёРІРѕРґРёРј Рє С‡РёСЃС‚С‹Рј <p>, РіР°СЂР°РЅС‚РёСЂСѓРµРј РїСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё РєР°Рє <p><br/></p>
+  // Приводим к чистым <p> и удаляем по‑настоящему пустые абзацы (<p></p>),
+  // но не трогаем абзацы с явным переносом строки (<p><br></p>),
+  // кроме специально оставленного пустого абзаца сразу после таблицы memus-table.
   template.content.querySelectorAll('p').forEach((p) => {
     const inner = (p.innerHTML || '').replace(/&nbsp;/g, '').trim();
-    if (!inner || inner === '<br>' || inner === '<br/>') {
-      p.innerHTML = '';
-      p.appendChild(document.createElement('br'));
+    if (!inner) {
+      const prev = p.previousSibling;
+      const isAfterMemusTable =
+        prev &&
+        prev.nodeType === Node.ELEMENT_NODE &&
+        prev.tagName === 'TABLE' &&
+        prev.classList &&
+        prev.classList.contains('memus-table');
+      if (isAfterMemusTable) {
+        // Нормализуем к <p><br/></p>, чтобы caret под таблицей работал как раньше.
+        p.innerHTML = '';
+        p.appendChild(document.createElement('br'));
+      } else if (p.parentNode) {
+        p.parentNode.removeChild(p);
+      }
     }
   });
 
