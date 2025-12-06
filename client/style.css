@@ -342,6 +342,10 @@ html {
   justify-content: center;
   text-align: center;
 }
+.sidebar-graph-btn {
+  min-width: 32px;
+  padding: 0;
+}
 .sidebar-articles__header button:hover,
 #quickNoteAddBtn:hover {
   color: #e0e0e0;
