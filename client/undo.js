@@ -299,13 +299,21 @@ async function executeStructureAction(action, options = {}) {
             /* ignore */
           }
         }
+        if (payload?.block && payload.block.id) {
+          const { pushLocalBlockTrashEntry } = await import('./article.js');
+          const snapshot = payload.block;
+          pushLocalBlockTrashEntry(
+            snapshot,
+            located.parent?.id || null,
+            located.index ?? index,
+          );
+        }
       }
       const desiredId = action.fallbackId || payload?.parentId || null;
       if (desiredId) {
         await focusBlock(desiredId);
-      } else {
-        renderArticle();
       }
+      renderArticle();
       success = true;
     } catch (error) {
       showToast(error.message);

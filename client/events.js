@@ -36,7 +36,8 @@ import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
-import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal } from './modal.js';
+import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js';
+import { loadArticle } from './article.js';
 
 async function parseMemusExportFromFile(file) {
   if (!file) return null;
@@ -908,6 +909,48 @@ export function attachEvents() {
     refs.deleteCurrentBlockBtn.addEventListener('click', async (event) => {
       event.preventDefault();
       await deleteCurrentBlock();
+    });
+  }
+  if (refs.articleBlockTrashBtn) {
+    refs.articleBlockTrashBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      if (!state.article || !state.articleId) {
+        showToast('Сначала откройте статью');
+        return;
+      }
+      const list = Array.isArray(state.article.blockTrash) ? state.article.blockTrash : [];
+      if (!list.length) {
+        showToast('Корзина блоков пуста');
+        return;
+      }
+      try {
+        const picked = await showBlockTrashPicker({ items: list });
+        if (!picked) return;
+        const articleId = state.articleId;
+        if (picked.action === 'clear') {
+          await apiRequest(`/api/articles/${articleId}/blocks/trash/clear`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+          });
+          if (state.article) {
+            state.article.blockTrash = [];
+          }
+          showToast('Корзина блоков очищена');
+          return;
+        }
+        if (!picked.id) return;
+        const res = await apiRequest(`/api/articles/${articleId}/blocks/trash/restore`, {
+          method: 'POST',
+          body: JSON.stringify({ id: picked.id }),
+        });
+        const restoredId = (res && res.block && res.block.id) || res.blockId || picked.id;
+        const article = await loadArticle(articleId, { desiredBlockId: restoredId || null, resetUndoStacks: true });
+        state.article = article;
+        renderArticle();
+        showToast('Блок восстановлен из корзины');
+      } catch (error) {
+        showToast(error.message || 'Не удалось восстановить блок из корзины');
+      }
     });
   }
   if (refs.articleNewBlockBtn) {

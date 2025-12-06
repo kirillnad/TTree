@@ -67,6 +67,7 @@ from .data_store import (
     redo_block_text_change,
     restore_article,
     restore_block,
+    restore_block_from_trash,
     search_blocks,
     search_everything,
     move_block_to_article,
@@ -85,6 +86,8 @@ from .data_store import (
     delete_user_with_data,
     _expand_wikilinks,
     build_article_from_row,
+    delete_block_permanent,
+    clear_block_trash,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -2444,6 +2447,39 @@ def remove_block(article_id: str, block_id: str, current_user: User = Depends(ge
     return result # result может быть None, если декоратор не нашел статью
 
 
+@app.delete('/api/articles/{article_id}/blocks/{block_id}/permanent')
+def remove_block_permanent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Жёсткое удаление блока без помещения в корзину блоков статьи (blockTrash).
+    Используется для пустых «мимолётных» блоков, которые никогда не содержали текста.
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
+    try:
+        result = delete_block_permanent(real_article_id, block_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not result:
+        raise HTTPException(status_code=404, detail='Статья или блок не найдены')
+    return result
+
+
+@app.post('/api/articles/{article_id}/blocks/trash/clear')
+def clear_blocks_trash(article_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Очищает корзину блоков для статьи (blockTrash).
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
+    try:
+        result = clear_block_trash(real_article_id)
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return result
+
+
 @app.post('/api/articles/{article_id}/blocks/{block_id}/move')
 def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
@@ -3270,6 +3306,23 @@ def post_restore(article_id: str, payload: dict[str, Any], current_user: User = 
     index = payload.get('index')
     try:
         return restore_block(article_id, parent_id, index, block)
+    except (ArticleNotFound, BlockNotFound) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except InvalidOperation as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post('/api/articles/{article_id}/blocks/trash/restore')
+def post_restore_from_trash(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
+    block_id = payload.get('id') or payload.get('blockId')
+    if not block_id:
+        raise HTTPException(status_code=400, detail='Missing block id')
+    try:
+        result = restore_block_from_trash(real_article_id, block_id)
+        return result
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:

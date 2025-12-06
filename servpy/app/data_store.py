@@ -391,6 +391,7 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'publicSlug': row.get('public_slug'),
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
+        'blockTrash': deserialize_history(row.get('block_trash')),
         'encrypted': encrypted_flag,
         'encryptionSalt': row.get('encryption_salt'),
         'encryptionVerifier': row.get('encryption_verifier'),
@@ -502,6 +503,7 @@ def normalize_article(article: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     article.setdefault('blocks', [])
     article.setdefault('history', [])
     article.setdefault('redoHistory', [])
+    article.setdefault('blockTrash', [])
     return article
 
 
@@ -559,7 +561,7 @@ def save_article(article: Dict[str, Any]) -> None:
             CONN.execute(
                 '''
                 UPDATE articles
-                SET title = ?, updated_at = ?, history = ?, redo_history = ?, public_slug = ?
+                SET title = ?, updated_at = ?, history = ?, redo_history = ?, block_trash = ?, public_slug = ?
                 WHERE id = ?
                 ''',
                 (
@@ -567,6 +569,7 @@ def save_article(article: Dict[str, Any]) -> None:
                     now,
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
+                    serialize_history(normalized['blockTrash']),
                     public_slug,
                     normalized['id'],
                 ),
@@ -574,8 +577,8 @@ def save_article(article: Dict[str, Any]) -> None:
         else:
             CONN.execute(
                 '''
-                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, author_id, public_slug)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, block_trash, author_id, public_slug)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     normalized['id'],
@@ -584,6 +587,7 @@ def save_article(article: Dict[str, Any]) -> None:
                     now,
                     serialize_history(normalized['history']),
                     serialize_history(normalized['redoHistory']),
+                    serialize_history(normalized['blockTrash']),
                     author_id,
                     public_slug,
                 ),
@@ -649,6 +653,7 @@ def get_or_create_user_inbox(author_id: str) -> Dict[str, Any]:
         'blocks': [create_default_block()],
         'history': [],
         'redoHistory': [],
+        'blockTrash': [],
         'authorId': author_id,
     }
     save_article(article)
@@ -665,6 +670,7 @@ def create_article(title: Optional[str] = None, author_id: Optional[str] = None)
         'blocks': [create_default_block()],
         'history': [],
         'redoHistory': [],
+        'blockTrash': [],
         'authorId': author_id,
     }
     save_article(article)
@@ -1016,6 +1022,21 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
     now = iso_now()
     clause, params = _parent_clause(parent_id)
     with CONN:
+        # Обновляем корзину блоков статьи.
+        trash = list(article.get('blockTrash') or [])
+        trash.append(
+            {
+                'id': removed.get('id'),
+                'block': removed,
+                'parentId': parent_id,
+                'index': index,
+                'deletedAt': now,
+            },
+        )
+        CONN.execute(
+            'UPDATE articles SET block_trash = ? , updated_at = ? WHERE id = ?',
+            (serialize_history(trash), now, article_id),
+        )
         rowids = [
             row['block_rowid']
             for row in CONN.execute(
@@ -1038,7 +1059,6 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
             f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',
             (article_id, *params, target_row['position']),
         )
-        CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
         # После удаления блока пересчитываем связи для статьи.
         _rebuild_article_links_for_article_id(article_id)
     return {
@@ -1047,6 +1067,77 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
         'index': index,
         'block': removed,
     }
+
+
+def delete_block_permanent(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
+  """
+  Удаляет блок без помещения в корзину блоков статьи (blockTrash).
+  Используется для «мимолётных» пустых блоков, которые никогда не содержали текста.
+  """
+  article = get_article(article_id)
+  if not article:
+      raise ArticleNotFound(f'Article {article_id} not found')
+  if count_blocks(article['blocks']) <= 1:
+      raise ValueError('Need to keep at least one block')
+  located = find_block_recursive(article['blocks'], block_id)
+  if not located:
+      raise BlockNotFound(f'Block {block_id} not found')
+  target_row = CONN.execute(
+      'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',
+      (block_id, article_id),
+  ).fetchone()
+  if not target_row:
+      raise BlockNotFound(f'Block {block_id} not found')
+  removed = clone_block(located['block'])
+  parent_id = located['parent']['id'] if located['parent'] else None
+  index = located['index']
+  now = iso_now()
+  clause, params = _parent_clause(parent_id)
+  with CONN:
+      rowids = [
+          row['block_rowid']
+          for row in CONN.execute(
+              '''
+              WITH RECURSIVE subtree(id) AS (
+                  SELECT id FROM blocks WHERE id = ? AND article_id = ?
+                  UNION ALL
+                  SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
+              )
+              SELECT block_rowid FROM blocks WHERE article_id = ? AND id IN (SELECT id FROM subtree)
+              ''',
+              (block_id, article_id, article_id),
+          ).fetchall()
+      ]
+      if rowids:
+          placeholders = ','.join('?' for _ in rowids)
+          CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', tuple(rowids))
+      CONN.execute('DELETE FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id))
+      CONN.execute(
+          f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',
+          (article_id, *params, target_row['position']),
+      )
+      CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (now, article_id))
+      _rebuild_article_links_for_article_id(article_id)
+  return {
+      'removedBlockId': block_id,
+      'parentId': parent_id,
+      'index': index,
+      'block': removed,
+  }
+
+
+def clear_block_trash(article_id: str) -> Dict[str, Any]:
+    article = get_article(article_id)
+    if not article:
+        raise ArticleNotFound(f'Article {article_id} not found')
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET block_trash = ?, updated_at = ? WHERE id = ?',
+            (serialize_history([]), now, article_id),
+        )
+    article['blockTrash'] = []
+    return {'trash': []}
 
 
 def move_block(article_id: str, block_id: str, direction: str) -> Optional[Dict[str, Any]]:
@@ -1162,6 +1253,54 @@ def restore_block(article_id: str, parent_id: Optional[str], index: Optional[int
         # Восстановленный блок мог содержать ссылки.
         _rebuild_article_links_for_article_id(article_id)
     return {'block': inserted, 'parentId': parent_id or None, 'index': insertion}
+
+
+def restore_block_from_trash(article_id: str, trashed_block_id: str) -> Optional[Dict[str, Any]]:
+  article = get_article(article_id)
+  if not article:
+      raise ArticleNotFound(f'Article {article_id} not found')
+  trash_list = list(article.get('blockTrash') or [])
+  entry_index = None
+  entry = None
+  for idx, item in enumerate(trash_list):
+      if not isinstance(item, dict):
+          continue
+      item_id = item.get('id') or (item.get('block') or {}).get('id')
+      if item_id == trashed_block_id:
+          entry_index = idx
+          entry = item
+          break
+  if entry_index is None or not entry:
+      raise InvalidOperation('Block not found in trash')
+
+  payload = entry.get('block') or {}
+  if not payload.get('id'):
+      payload['id'] = trashed_block_id
+
+  parent_id = entry.get('parentId')
+  index = entry.get('index')
+
+  # Пытаемся восстановить на исходное место; при ошибке — в корень.
+  try:
+      result = restore_block(article_id, parent_id, index, payload)
+  except (BlockNotFound, InvalidOperation):
+      result = restore_block(article_id, None, None, payload)
+
+  if not result or not result.get('block'):
+      raise InvalidOperation('Failed to restore block from trash')
+
+  # Обновляем корзину статьи.
+  new_trash = [item for i, item in enumerate(trash_list) if i != entry_index]
+  now = iso_now()
+  with CONN:
+      CONN.execute(
+          'UPDATE articles SET block_trash = ?, updated_at = ? WHERE id = ?',
+          (serialize_history(new_trash), now, article_id),
+      )
+
+  result['blockId'] = result.get('block', {}).get('id')
+  result['trash'] = new_trash
+  return result
 
 
 def move_block_to_parent(
@@ -1316,6 +1455,12 @@ def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict
             # Для SQLite это сохранится как 0/1, для Postgres — как true/false.
             params.append(desired)
             article['encrypted'] = desired
+            # При включении шифрования очищаем корзину блоков, чтобы
+            # в ней не оставались незашифрованные данные.
+            if desired and article.get('blockTrash'):
+                updates.append('block_trash = ?')
+                params.append(serialize_history([]))
+                article['blockTrash'] = []
 
     if 'encryptionSalt' in attrs:
         if salt != article.get('encryptionSalt'):

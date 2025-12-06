@@ -21,6 +21,7 @@ def _init_sqlite_schema():
             updated_at TEXT NOT NULL,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
+            block_trash TEXT NOT NULL DEFAULT '[]',
             deleted_at TEXT,
             author_id TEXT,
             is_encrypted INTEGER NOT NULL DEFAULT 0,
@@ -109,6 +110,8 @@ def _init_sqlite_schema():
     if 'public_slug' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN public_slug TEXT")
         execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug)")
+    if 'block_trash' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]'")
 
     # Миграция article_links для добавления block_id и нового первичного ключа.
     link_columns = execute("PRAGMA table_info(article_links)").fetchall()
@@ -194,6 +197,7 @@ def _init_postgres_schema():
             updated_at TEXT NOT NULL,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
+            block_trash TEXT NOT NULL DEFAULT '[]',
             deleted_at TEXT,
             author_id TEXT,
             is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -344,6 +348,13 @@ def _init_postgres_schema():
             ) THEN
                 ALTER TABLE articles ADD COLUMN public_slug TEXT;
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug);
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'block_trash'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]';
             END IF;
 
             -- article_links.block_id и обновлённый первичный ключ

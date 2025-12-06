@@ -3,7 +3,7 @@ import { apiRequest } from './api.js';
 import { refs } from './refs.js';
 import { showToast } from './toast.js';
 import { loadArticle } from './article.js';
-import { renderArticle, rerenderSingleBlock } from './article.js';
+import { renderArticle, rerenderSingleBlock, removeDomBlockById, pushLocalBlockTrashEntry } from './article.js';
 import { pushUndoEntry, cloneBlockSnapshot } from './undo.js';
 import { findBlock, countBlocks, findFallbackBlockId } from './block.js';
 import { buildBlockPayloadFromParsed, parseMarkdownBlocksInput, looksLikeMarkdownBlocks } from './markdown.js';
@@ -71,6 +71,8 @@ export async function saveEditing() {
     // убираем его из локального дерева, а сетевой DELETE выполняем в фоне.
     const fallbackId = findFallbackBlockId(editedBlockId);
     const locatedForDelete = findBlock(editedBlockId);
+    const isEphemeralNew =
+      Boolean(locatedForDelete?.block && locatedForDelete.block.__isNew);
     if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
       const siblings = locatedForDelete.siblings || state.article.blocks;
       const index =
@@ -85,43 +87,55 @@ export async function saveEditing() {
           /* ignore */
         }
       }
+      if (!isEphemeralNew) {
+        const snapshot = cloneBlockSnapshot(locatedForDelete.block);
+        pushLocalBlockTrashEntry(
+          snapshot,
+          locatedForDelete.parent?.id || null,
+          locatedForDelete.index ?? null,
+        );
+      }
     }
     state.mode = 'view';
     state.editingBlockId = null;
     state.editingInitialText = '';
     state.currentBlockId = fallbackId;
     state.scrollTargetBlockId = fallbackId;
+    removeDomBlockById(editedBlockId);
     renderArticle();
 
     (async () => {
-    try {
-      const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${editedBlockId}`, {
-        method: 'DELETE',
-      });
-      if (result?.block) {
-        const snapshot = cloneBlockSnapshot(result.block);
-        pushUndoEntry({
-          type: 'structure',
-          action: {
-            kind: 'delete',
-            parentId: result.parentId || null,
-            index: result.index ?? null,
-            block: snapshot,
-            blockId: snapshot?.id,
-            fallbackId,
-          },
-        });
-      }
-      showToast('Пустой блок удалён');
-    } catch (error) {
-      showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
       try {
-        await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
-        renderArticle();
-      } catch {
-        /* ignore reload error */
+        const url = isEphemeralNew
+          ? `/api/articles/${state.articleId}/blocks/${editedBlockId}/permanent`
+          : `/api/articles/${state.articleId}/blocks/${editedBlockId}`;
+        const result = await apiRequest(url, {
+          method: 'DELETE',
+        });
+        if (!isEphemeralNew && result?.block) {
+          const snapshot = cloneBlockSnapshot(result.block);
+          pushUndoEntry({
+            type: 'structure',
+            action: {
+              kind: 'delete',
+              parentId: result.parentId || null,
+              index: result.index ?? null,
+              block: snapshot,
+              blockId: snapshot?.id,
+              fallbackId,
+            },
+          });
+        }
+        showToast('Пустой блок удалён');
+      } catch (error) {
+        showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
+        try {
+          await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
+          renderArticle();
+        } catch {
+          /* ignore reload error */
+        }
       }
-    }
     })();
     return;
   }
@@ -167,11 +181,21 @@ export async function saveEditing() {
         },
       );
       if (previousText !== newText) {
-        pushUndoEntry({
-          type: 'text',
-          blockId: editedBlockId,
-          historyEntryId: updatedBlock?.historyEntryId || null,
-        });
+        const isNewBlock = Boolean(located?.block && located.block.__isNew);
+        if (isNewBlock) {
+          // Первое сохранение только что созданного блока считаем частью создания,
+          // чтобы Ctrl+Z удалял такой блок целиком (через структурный undo),
+          // а не лишь очищал его текст.
+          // Флаг используем только один раз.
+          // eslint-disable-next-line no-param-reassign
+          delete located.block.__isNew;
+        } else {
+          pushUndoEntry({
+            type: 'text',
+            blockId: editedBlockId,
+            historyEntryId: updatedBlock?.historyEntryId || null,
+          });
+        }
       }
       showToast('Блок обновлён');
     } catch (error) {
@@ -205,6 +229,8 @@ export async function cancelEditing() {
     // только затронутый участок дерева, а сетевой DELETE выполняем в фоне.
     const fallbackId = findFallbackBlockId(blockId);
     const locatedForDelete = findBlock(blockId);
+    const isEphemeralNew =
+      Boolean(locatedForDelete?.block && locatedForDelete.block.__isNew);
     if (locatedForDelete && state.article && Array.isArray(state.article.blocks)) {
       const siblings = locatedForDelete.siblings || state.article.blocks;
       const index = locatedForDelete.index ?? siblings.findIndex((b) => b && b.id === blockId);
@@ -221,6 +247,7 @@ export async function cancelEditing() {
     }
     state.currentBlockId = fallbackId;
     state.scrollTargetBlockId = fallbackId;
+    removeDomBlockById(blockId);
     const parentIdForRerender = locatedForDelete?.parent?.id || null;
     if (parentIdForRerender) {
       await rerenderSingleBlock(parentIdForRerender);
@@ -230,11 +257,13 @@ export async function cancelEditing() {
 
     (async () => {
       try {
-        const result = await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}`, {
+        const url = isEphemeralNew
+          ? `/api/articles/${state.articleId}/blocks/${blockId}/permanent`
+          : `/api/articles/${state.articleId}/blocks/${blockId}`;
+        const result = await apiRequest(url, {
           method: 'DELETE',
         });
-        // Для undo используем тот же формат, что и deleteCurrentBlock.
-        if (result?.block) {
+        if (!isEphemeralNew && result?.block) {
           const snapshot = cloneBlockSnapshot(result.block);
           pushUndoEntry({
             type: 'structure',
@@ -403,6 +432,7 @@ export async function createSibling(direction) {
       text: '',
       children: [],
       collapsed: false,
+      __isNew: true,
     };
     siblingsArray.splice(insertIndex, 0, localBlock);
 
@@ -509,7 +539,15 @@ export async function deleteCurrentBlock() {
           /* ignore */
         }
       }
+      if (snapshotBeforeDelete && snapshotBeforeDelete.id) {
+        pushLocalBlockTrashEntry(
+          snapshotBeforeDelete,
+          located.parent?.id || null,
+          located.index ?? index,
+        );
+      }
     }
+    removeDomBlockById(targetId);
     state.currentBlockId = fallbackId;
     state.scrollTargetBlockId = fallbackId;
     const parentIdForRerender = located?.parent?.id || null;

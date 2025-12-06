@@ -1,3 +1,5 @@
+import { htmlToLines } from './utils.js';
+
 const modalRootId = 'modal-root';
 
 function ensureRoot() {
@@ -634,6 +636,96 @@ export function showPasswordWithHintPrompt(options = {}) {
       } else {
         card.focus({ preventScroll: true });
       }
+    });
+  });
+}
+
+export function showBlockTrashPicker(options = {}) {
+  const root = ensureRoot();
+  const items = Array.isArray(options.items) ? options.items : [];
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    title: options.title || 'Корзина блоков',
+    renderBody: () => {
+      const container = document.createElement('div');
+      if (!items.length) {
+        const p = document.createElement('p');
+        p.className = 'modal-body__text';
+        p.textContent = 'Корзина блоков пуста';
+        container.appendChild(p);
+        return container;
+      }
+      const list = document.createElement('div');
+      list.className = 'block-trash-list';
+      items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'block-trash-item';
+        const textHtml = (item.block && item.block.text) || '';
+        const lines = htmlToLines(textHtml);
+        const title = document.createElement('div');
+        title.className = 'block-trash-item__title';
+        title.textContent = lines[0] || '(пустой блок)';
+        const meta = document.createElement('div');
+        meta.className = 'block-trash-item__meta';
+        const deletedAt = item.deletedAt ? new Date(item.deletedAt).toLocaleString() : '';
+        meta.textContent = deletedAt || '';
+        const left = document.createElement('div');
+        left.className = 'block-trash-item__info';
+        left.appendChild(title);
+        if (deletedAt) left.appendChild(meta);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'primary';
+        btn.textContent = 'Восстановить';
+        btn.addEventListener('click', () => {
+          resolveResult(item);
+        });
+        row.appendChild(left);
+        row.appendChild(btn);
+        list.appendChild(row);
+      });
+      container.appendChild(list);
+      return container;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value || null);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('hidden');
+    confirmBtn.textContent = 'Очистить корзину';
+    confirmBtn.classList.add('danger-btn');
+    cancelBtn.textContent = 'Закрыть';
+    confirmBtn.addEventListener('click', () => resolveResult({ action: 'clear' }));
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
     });
   });
 }

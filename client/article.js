@@ -231,6 +231,60 @@ function cleanupDomBlockDuplicates() {
   });
 }
 
+export function pushLocalBlockTrashEntry(block, parentId, index, deletedAtIso) {
+  if (!state.article || !block || !block.id) return;
+  const list = Array.isArray(state.article.blockTrash) ? state.article.blockTrash : [];
+  const deletedAt = deletedAtIso || new Date().toISOString();
+  list.push({
+    id: block.id,
+    block,
+    parentId: parentId || null,
+    index: typeof index === 'number' ? index : null,
+    deletedAt,
+  });
+  state.article.blockTrash = list;
+}
+
+export function removeDomBlockById(blockId) {
+  if (!blockId || !refs.blocksContainer) return;
+  const blocks = refs.blocksContainer.querySelectorAll(
+    `.block[data-block-id="${blockId}"]`,
+  );
+  blocks.forEach((blockEl) => {
+    const container = blockEl.parentElement;
+    if (!container) return;
+    let cursor = blockEl.nextElementSibling;
+    if (cursor && cursor.classList.contains('block-children')) {
+      const extra = cursor;
+      cursor = cursor.nextElementSibling;
+      if (extra.parentNode === container) {
+        container.removeChild(extra);
+      }
+    }
+    if (blockEl.parentNode === container) {
+      container.removeChild(blockEl);
+    }
+  });
+}
+
+function cleanupOrphanDomBlocks() {
+  if (!refs.blocksContainer) return;
+  if (!state.article || !Array.isArray(state.article.blocks)) return;
+  const visible = flattenVisible(state.article.blocks);
+  const allowed = new Set(visible.map((b) => b.id));
+  const blocks = refs.blocksContainer.querySelectorAll('.block[data-block-id]');
+  blocks.forEach((el) => {
+    const id = el.getAttribute('data-block-id');
+    if (!id) return;
+    if (!allowed.has(id)) {
+      const parent = el.parentNode;
+      if (parent) {
+        parent.removeChild(el);
+      }
+    }
+  });
+}
+
 async function renderBlocks(blocks, container, depth = 1) {
   for (const block of blocks) {
     const blockEl = document.createElement('div');
@@ -573,6 +627,8 @@ export async function rerenderSingleBlock(blockId) {
   newNodes.forEach((node) => {
     container.insertBefore(node, insertBefore);
   });
+  cleanupDomBlockDuplicates();
+  cleanupOrphanDomBlocks();
 }
 
 export async function toggleArticleEncryption() {
@@ -1404,6 +1460,7 @@ export function renderArticle() {
   };
 
   renderBlocks(rootBlocks, refs.blocksContainer).then(() => {
+    cleanupOrphanDomBlocks();
     cleanupDomBlockDuplicates();
     applyPendingPreviewMarkup();
     if (state.scrollTargetBlockId && state.mode === 'view') {
