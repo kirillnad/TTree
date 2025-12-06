@@ -982,10 +982,16 @@ button.icon-button.small {
   box-shadow: none;
 }
 
-.block.selected:not(.editing) > .block-surface .block-content {
+.block.selected:not(.editing) > .block-surface {
+  border-left: 3px solid #3794ff;
+  /* border-right: 3px solid #3794ff; */
+}
+
+
+/* .block.selected:not(.editing) > .block-surface .block-content {
   background: #e8f3ff;
   border-color: #3794ff;
-}
+} */
 
 .blocks > .block.block--selected-root-ancestor {
   border-color: #d4ddf0;
@@ -1095,7 +1101,7 @@ button.icon-button.small {
 
 .block-text ul,
 .block-text ol {
-  margin: 1em 0;
+  margin: 0;
   padding-left: 2em;
 }
 
