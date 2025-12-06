@@ -88,6 +88,7 @@ from .data_store import (
     build_article_from_row,
     delete_block_permanent,
     clear_block_trash,
+    upsert_yandex_tokens,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -112,6 +113,9 @@ logger = logging.getLogger('uvicorn.error')
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID') or ''
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET') or ''
 GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI') or 'https://memus.pro/api/auth/google/callback'
+YANDEX_CLIENT_ID = os.environ.get('YANDEX_CLIENT_ID') or ''
+YANDEX_CLIENT_SECRET = os.environ.get('YANDEX_CLIENT_SECRET') or ''
+YANDEX_REDIRECT_URI = os.environ.get('YANDEX_REDIRECT_URI') or 'https://memus.pro/auth/yandex/callback'
 USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
 
 # Шаблонный файл справки, который можно использовать
@@ -1920,6 +1924,158 @@ def google_callback(request: Request):
     return redirect
 
 
+@app.get('/api/auth/yandex/login')
+def yandex_login(request: Request):
+    """
+    Запускает OAuth-авторизацию через Яндекс ID:
+    редиректит пользователя на oauth.yandex.ru/authorize.
+    """
+    if not YANDEX_CLIENT_ID or not YANDEX_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail='Yandex OAuth не настроен')
+
+    state = os.urandom(16).hex()
+    params = {
+        'response_type': 'code',
+        'client_id': YANDEX_CLIENT_ID,
+        'redirect_uri': YANDEX_REDIRECT_URI,
+        # Сейчас запрашиваем только email, без доступа к Диску.
+        # Интеграцию с Диском через cloud_api:disk.app_folder сделаем
+        # отдельным шагом, чтобы не получать лишние права.
+        'scope': 'login:email',
+        'state': state,
+    }
+    response = RedirectResponse(
+        url='https://oauth.yandex.ru/authorize?' + urllib.parse.urlencode(params),
+    )
+    response.set_cookie(
+        key='yandex_oauth_state',
+        value=state,
+        httponly=True,
+        secure=False,
+        samesite='lax',
+        path='/',
+    )
+    return response
+
+
+@app.get('/auth/yandex/callback')
+def yandex_callback(request: Request):
+    """
+    Обрабатывает колбек от Яндекса:
+    - проверяет state;
+    - обменивает code на токены;
+    - получает email/uid пользователя;
+    - находит/создаёт пользователя и создаёт сессию;
+    - сохраняет access_token Яндекса, чтобы позже работать с Диском;
+    - редиректит в SPA.
+    """
+    if not YANDEX_CLIENT_ID or not YANDEX_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail='Yandex OAuth не настроен')
+
+    params = dict(request.query_params)
+    error = params.get('error')
+    if error:
+      logger.warning('Yandex OAuth error: %s', error)
+      raise HTTPException(status_code=400, detail=f'Ошибка Yandex OAuth: {error}')
+
+    code = params.get('code') or ''
+    state = params.get('state') or ''
+    if not code:
+        raise HTTPException(status_code=400, detail='Не передан code от Яндекса')
+
+    cookie_state = request.cookies.get('yandex_oauth_state') or ''
+    if cookie_state:
+        if cookie_state != state:
+            raise HTTPException(status_code=400, detail='Некорректный state для Yandex OAuth')
+    else:
+        logger.warning('Yandex OAuth callback без state cookie; продолжаем без CSRF-проверки')
+
+    token_data = urllib.parse.urlencode(
+        {
+            'grant_type': 'authorization_code',
+            'code': code,
+            'client_id': YANDEX_CLIENT_ID,
+            'client_secret': YANDEX_CLIENT_SECRET,
+        },
+    ).encode('utf-8')
+    try:
+        token_req = urllib.request.Request(
+            'https://oauth.yandex.ru/token',
+            data=token_data,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        with urllib.request.urlopen(token_req, timeout=10) as resp:
+            token_info = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to exchange Yandex code for token: %s', exc)
+        raise HTTPException(status_code=502, detail='Не удалось связаться с Яндексом (token)')
+
+    access_token = token_info.get('access_token')
+    if not access_token:
+        raise HTTPException(status_code=400, detail='Яндекс не вернул access_token')
+    refresh_token = token_info.get('refresh_token') or None
+    expires_in = token_info.get('expires_in')
+
+    expires_at = None
+    if expires_in:
+        try:
+            expires_at = (datetime.utcnow() + timedelta(seconds=int(expires_in))).isoformat()
+        except Exception:  # noqa: BLE001
+            expires_at = None
+
+    # Профиль пользователя Яндекса.
+    try:
+        user_req = urllib.request.Request(
+            'https://login.yandex.ru/info?format=json',
+            headers={'Authorization': f'OAuth {access_token}'},
+        )
+        with urllib.request.urlopen(user_req, timeout=10) as resp:
+            user_info = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to fetch Yandex userinfo: %s', exc)
+        raise HTTPException(status_code=502, detail='Не удалось получить профиль Яндекса')
+
+    email = (user_info.get('default_email') or '').strip().lower()
+    uid = str(user_info.get('id') or '') or ''
+    if not email and not uid:
+        raise HTTPException(status_code=400, detail='Яндекс не вернул идентификатор пользователя')
+
+    # Для администратора: логиним существующего пользователя "kirill"
+    # по Яндекс-аккаунту с email kirillnad@yandex.ru.
+    admin_user: User | None = None
+    if email == 'kirillnad@yandex.ru':
+        try:
+            admin_user = get_user_by_username('kirill')
+        except Exception:  # noqa: BLE001
+            admin_user = None
+
+    if admin_user:
+        user = admin_user
+    else:
+        # Используем email, если он есть, иначе стабильный uid.
+        username = email or f'yandex:{uid}'
+        display_name = (user_info.get('real_name') or username) or None
+
+        existing = get_user_by_username(username)
+        if existing:
+            user = existing
+        else:
+            random_pwd = os.urandom(16).hex()
+            user = create_user(username, random_pwd, display_name, is_superuser=False)
+
+    # Сохраняем токены Яндекса для этого пользователя (для дальнейшей работы с Диском).
+    upsert_yandex_tokens(user.id, access_token, refresh_token, expires_at)
+
+    try:
+        ensure_help_article_for_user(user.id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to ensure help article after Yandex auth for %s: %r', user.id, exc)
+
+    sid = create_session(user.id)
+    redirect = RedirectResponse(url='/', status_code=302)
+    set_session_cookie(redirect, sid)
+    redirect.delete_cookie('yandex_oauth_state', path='/')
+    return redirect
 @app.middleware('http')
 async def spa_fallback_middleware(request: Request, call_next):
     """

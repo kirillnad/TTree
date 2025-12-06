@@ -82,6 +82,17 @@ def _init_sqlite_schema():
         CREATE INDEX IF NOT EXISTS idx_article_links_to
         ON article_links(to_id)
         ''',
+        '''
+        CREATE TABLE IF NOT EXISTS user_yandex_tokens (
+            user_id TEXT PRIMARY KEY,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TEXT,
+            disk_root TEXT NOT NULL DEFAULT 'disk:/Memus',
+            initialized INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        ''',
     ]
 
     for stmt in statements:
@@ -287,6 +298,16 @@ def _init_postgres_schema():
         '''
         CREATE INDEX IF NOT EXISTS idx_article_links_to
         ON article_links(to_id)
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS user_yandex_tokens (
+            user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TEXT,
+            disk_root TEXT NOT NULL DEFAULT 'disk:/Memus',
+            initialized BOOLEAN NOT NULL DEFAULT FALSE
+        )
         ''',
     ]
 

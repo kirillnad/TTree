@@ -163,6 +163,69 @@ def with_article(func):
     return wrapper
 
 
+def get_yandex_tokens(user_id: str) -> Optional[Dict[str, Any]]:
+    if not user_id:
+        return None
+    row = CONN.execute(
+        'SELECT user_id, access_token, refresh_token, expires_at, disk_root, initialized '
+        'FROM user_yandex_tokens WHERE user_id = ?',
+        (user_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        'userId': row['user_id'],
+        'accessToken': row['access_token'],
+        'refreshToken': row.get('refresh_token'),
+        'expiresAt': row.get('expires_at'),
+        'diskRoot': row.get('disk_root') or 'disk:/Memus',
+        'initialized': bool(row.get('initialized')),
+    }
+
+
+def upsert_yandex_tokens(
+    user_id: str,
+    access_token: str,
+    refresh_token: Optional[str] = None,
+    expires_at: Optional[str] = None,
+    disk_root: str = 'disk:/Memus',
+) -> None:
+    if not user_id or not access_token:
+        return
+    existing = CONN.execute(
+        'SELECT user_id FROM user_yandex_tokens WHERE user_id = ?',
+        (user_id,),
+    ).fetchone()
+    if existing:
+        CONN.execute(
+            '''
+            UPDATE user_yandex_tokens
+            SET access_token = ?, refresh_token = ?, expires_at = ?, disk_root = ?
+            WHERE user_id = ?
+            ''',
+            (access_token, refresh_token, expires_at, disk_root, user_id),
+        )
+    else:
+        if IS_POSTGRES:
+            # В PostgreSQL initialized — BOOLEAN, поэтому используем FALSE.
+            CONN.execute(
+                '''
+                INSERT INTO user_yandex_tokens (user_id, access_token, refresh_token, expires_at, disk_root, initialized)
+                VALUES (?, ?, ?, ?, ?, FALSE)
+                ''',
+                (user_id, access_token, refresh_token, expires_at, disk_root),
+            )
+        else:
+            # В SQLite initialized хранится как INTEGER 0/1.
+            CONN.execute(
+                '''
+                INSERT INTO user_yandex_tokens (user_id, access_token, refresh_token, expires_at, disk_root, initialized)
+                VALUES (?, ?, ?, ?, ?, 0)
+                ''',
+                (user_id, access_token, refresh_token, expires_at, disk_root),
+            )
+
+
 def _extract_article_ids_from_html(html_text: str) -> set[str]:
     """
     Извлекает ID статей из HTML‑фрагмента по href="/article/<id>".

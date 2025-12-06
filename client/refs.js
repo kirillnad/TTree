@@ -12,6 +12,7 @@ export const refs = {
   authError: document.getElementById('authError'),
   authSubtitle: document.getElementById('authSubtitle'),
   authGoogleLoginBtn: document.getElementById('authGoogleLoginBtn'),
+  authYandexLoginBtn: document.getElementById('authYandexLoginBtn'),
   currentUserLabel: document.getElementById('currentUserLabel'),
   logoutBtn: document.getElementById('logoutBtn'),
   userMenuBtn: document.getElementById('userMenuBtn'),

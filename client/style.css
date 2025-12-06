@@ -1636,7 +1636,8 @@ h6.block-title {
   width: 100%;
 }
 
-.auth-google-btn {
+.auth-google-btn,
+.auth-yandex-btn {
   background: #ffffff;
   color: #1f2933;
   border-radius: 999px;
@@ -1647,7 +1648,8 @@ h6.block-title {
   gap: 0.5rem;
 }
 
-.auth-google-btn:hover {
+.auth-google-btn:hover,
+.auth-yandex-btn:hover {
   background: #f3f4f6;
   border-color: #9ca3af;
 }
@@ -1661,6 +1663,24 @@ h6.block-title {
 }
 
 .auth-google-label {
+  white-space: nowrap;
+}
+
+.auth-yandex-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fc3f1d;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.auth-yandex-label {
   white-space: nowrap;
 }
 

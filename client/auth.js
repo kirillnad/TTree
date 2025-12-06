@@ -30,10 +30,13 @@ function setAuthMode(mode) {
   setAuthError('');
   if (mode === 'login') {
     if (refs.authSubtitle) {
-      refs.authSubtitle.textContent = 'Войдите через Google, чтобы открыть свои заметки';
+      refs.authSubtitle.textContent = 'Войдите, чтобы открыть свои заметки';
     }
     if (refs.authGoogleLoginBtn) {
       refs.authGoogleLoginBtn.classList.remove('hidden');
+    }
+    if (refs.authYandexLoginBtn) {
+      refs.authYandexLoginBtn.classList.remove('hidden');
     }
   }
 }
@@ -80,6 +83,12 @@ export function initAuth(callback) {
     });
   }
 
+  if (refs.authYandexLoginBtn) {
+    refs.authYandexLoginBtn.addEventListener('click', () => {
+      window.location.href = '/api/auth/yandex/login';
+    });
+  }
+
 }
 
 export async function bootstrapAuth() {
@@ -90,6 +99,9 @@ export async function bootstrapAuth() {
     }
     if (refs.authGoogleLoginBtn) {
       refs.authGoogleLoginBtn.classList.add('hidden');
+    }
+    if (refs.authYandexLoginBtn) {
+      refs.authYandexLoginBtn.classList.add('hidden');
     }
 
     const user = await fetchCurrentUser();

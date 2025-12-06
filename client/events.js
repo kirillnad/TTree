@@ -873,8 +873,17 @@ export function attachEvents() {
       'click',
       (event) => {
         if (!state.isSidebarMobileOpen) return;
-        const btn = event.target.closest('button');
+        const target = event.target;
+        const btn = target.closest('button');
         if (!btn) return;
+        // Не закрываем мобильный сайдбар при клике по меню пользователя
+        // и по самому попапу аккаунта.
+        if (
+          (refs.userMenuBtn && btn === refs.userMenuBtn) ||
+          (refs.userMenu && refs.userMenu.contains(target))
+        ) {
+          return;
+        }
         closeSidebarMobile();
       },
       true,
