@@ -43,9 +43,9 @@ function applyUserToUi(user) {
   if (refs.currentUserLabel) {
     refs.currentUserLabel.textContent = user?.displayName || user?.username || '';
   }
-  if (refs.usersBtn) {
+  if (refs.openUsersViewBtn) {
     const isSuperuser = !!(user && user.isSuperuser);
-    refs.usersBtn.classList.toggle('hidden', !isSuperuser);
+    refs.openUsersViewBtn.classList.toggle('hidden', !isSuperuser);
   }
 }
 

@@ -110,12 +110,14 @@ html {
 
 .sidebar-footer {
   font-size: 10px;
-  text-align: center;
+  text-align: left;
   padding-top: 4px;
-  opacity: 0.8;
+  padding-bottom: 4px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   gap: 0.25rem;
+  margin-top: auto;
 }
 
 .sidebar.collapsed {
@@ -550,7 +552,7 @@ main.content {
 
 /* Article view overrides: compact sticky header like VS Code topbar */
 #articleView.panel {
-  padding: 0;
+  padding: 0 0.3rem;
   margin-top: 0;
   border-radius: 0;
 }
@@ -1591,27 +1593,64 @@ h6.block-title {
   color: #b91c1c;
 }
 
-.sidebar-user {
-  margin-top: 0.3rem;
-  display: flex;
+.sidebar-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
-.sidebar-user__name {
-  max-width: 120px;
+.sidebar-user-avatar__icon {
+  pointer-events: none;
+}
+
+.sidebar-user-menu {
+  display: flex;
+  flex-direction: column;
+  right: 0.5rem;
+  left: auto;
+  top: auto;
+  bottom: 2.5rem;
+}
+
+.sidebar-user-menu__item {
+  padding: 0.35rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #111827;
+}
+
+.sidebar-user-menu__name {
   font-size: 0.8rem;
-  color: #d4d4d4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
+  color: #111827;
+  text-align: left;
 }
 
-.sidebar-user__logout {
-  border-radius: 999px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.78rem;
+.sidebar-user-menu-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-user-menu .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #111827;
+}
+
+.sidebar-user-menu-label {
+  flex: 1;
+  text-align: left;
 }
 
 .users-list {

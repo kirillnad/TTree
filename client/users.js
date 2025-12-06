@@ -82,8 +82,8 @@ export async function openUsersPage(adminPassword) {
 }
 
 export function initUsersPanel() {
-  if (refs.usersBtn) {
-    refs.usersBtn.addEventListener('click', async () => {
+  if (refs.openUsersViewBtn) {
+    refs.openUsersViewBtn.addEventListener('click', async () => {
       let password = '';
       try {
         password = await showPrompt({

@@ -920,6 +920,20 @@ export function attachEvents() {
   if (refs.trashTabBtn) {
     refs.trashTabBtn.addEventListener('click', () => setTrashMode(true));
   }
+  if (refs.userMenuBtn && refs.userMenu) {
+    refs.userMenuBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = !refs.userMenu.classList.contains('hidden');
+      if (isOpen) {
+        refs.userMenu.classList.add('hidden');
+        refs.userMenuBtn.setAttribute('aria-expanded', 'false');
+      } else {
+        refs.userMenu.classList.remove('hidden');
+        refs.userMenuBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  }
   // Автосохранение блока при клике вне него в режиме редактирования.
   let isAutoSaving = false;
   document.addEventListener(
@@ -970,6 +984,18 @@ export function attachEvents() {
       !(refs.articleMenuBtn && refs.articleMenuBtn.contains(event.target))
     ) {
       closeArticleMenu();
+    }
+    if (refs.userMenu && refs.userMenuBtn) {
+      const target = event.target;
+      if (
+        refs.userMenu.classList.contains('hidden') ||
+        refs.userMenu.contains(target) ||
+        refs.userMenuBtn.contains(target)
+      ) {
+        return;
+      }
+      refs.userMenu.classList.add('hidden');
+      refs.userMenuBtn.setAttribute('aria-expanded', 'false');
     }
   });
 }
