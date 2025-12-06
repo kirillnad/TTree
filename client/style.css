@@ -842,6 +842,24 @@ button:hover {
   opacity: 0.9;
 }
 
+button.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+button.icon-button.small {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
 #articleList {
   list-style: none;
   padding: 0;

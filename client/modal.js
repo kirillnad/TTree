@@ -283,6 +283,110 @@ export function showPrompt(options = {}) {
   });
 }
 
+export function showPublicLinkModal(options = {}) {
+  const root = ensureRoot();
+  let inputRef = null;
+  const urlValue = options.url || '';
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    title: options.title || 'Публичная ссылка',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      const label = document.createElement('label');
+      label.className = 'modal-label';
+      label.textContent = options.label || 'Просмотр по ссылке';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'modal-input';
+      input.value = urlValue;
+      input.readOnly = true;
+      input.autocomplete = 'off';
+      label.appendChild(input);
+      inputRef = input;
+      fragment.appendChild(label);
+      return fragment;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = () => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult();
+    }
+  };
+
+  const copyToClipboard = () => {
+    const value = (inputRef && inputRef.value) || urlValue;
+    if (!value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).catch(() => {});
+    } else {
+      const tmp = document.createElement('textarea');
+      tmp.value = value;
+      tmp.setAttribute('readonly', '');
+      tmp.style.position = 'absolute';
+      tmp.style.left = '-9999px';
+      document.body.appendChild(tmp);
+      tmp.select();
+      try {
+        document.execCommand('copy');
+      } catch (_) {
+        // ignore
+      }
+      document.body.removeChild(tmp);
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('danger-btn');
+    confirmBtn.textContent = '⧉ Скопировать ссылку';
+    confirmBtn.setAttribute('aria-label', options.copyLabel || 'Скопировать ссылку');
+    // Кнопка «Закрыть» в этом диалоге не нужна.
+    cancelBtn.classList.add('hidden');
+
+    confirmBtn.addEventListener('click', () => {
+      copyToClipboard();
+      resolveResult();
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult();
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    if (inputRef) {
+      inputRef.addEventListener('focus', () => {
+        inputRef.select();
+      });
+    }
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      if (inputRef) {
+        inputRef.focus({ preventScroll: true });
+        inputRef.select();
+      } else {
+        card.focus({ preventScroll: true });
+      }
+    });
+  });
+}
+
 export function showLinkPrompt(options = {}) {
   const root = ensureRoot();
   let textInput = null;

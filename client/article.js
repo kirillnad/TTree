@@ -24,7 +24,7 @@ import { deriveKeyFromPassword, decryptArticleBlocks, checkEncryptionVerifier, c
 function updatePublicToggleLabel() {
   if (!refs.articlePublicToggleBtn) return;
   const slug = state.article?.publicSlug || null;
-  refs.articlePublicToggleBtn.textContent = slug ? 'Сделать приватной' : 'Сделать публичной';
+  refs.articlePublicToggleBtn.textContent = slug ? 'Отменить доступ по ссылке' : 'Дать доступ по ссылке';
 }
 
 function getCurrentArticleKey() {

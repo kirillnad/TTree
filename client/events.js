@@ -36,7 +36,7 @@ import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter
 import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
-import { showPrompt, showConfirm, showImportConflictDialog } from './modal.js';
+import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal } from './modal.js';
 
 async function parseMemusExportFromFile(file) {
   if (!file) return null;
@@ -445,48 +445,15 @@ export function attachEvents() {
     });
   }
   if (refs.articlePublicLinkBtn) {
-    // Диагностика: проверяем, что ссылка найдена и хендлер навешан.
-    // eslint-disable-next-line no-console
-    console.log('[memus] articlePublicLinkBtn найден', refs.articlePublicLinkBtn);
-    refs.articlePublicLinkBtn.addEventListener('click', (event) => {
+    refs.articlePublicLinkBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
-      // eslint-disable-next-line no-console
-      console.log('[memus] articlePublicLinkBtn click', {
-        articleId: state.article && state.article.id,
-        publicSlug: state.article && state.article.publicSlug,
-      });
       if (!state.article || !state.article.publicSlug) {
-        showToast('Эта страница ещё не опубликована');
+        showToast('Сделайте страницу публичной, чтобы получить ссылку');
         return;
       }
       const slug = state.article.publicSlug;
       const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`;
-      // Открываем вкладку синхронно, чтобы не блокировал браузер.
-      window.open(url, '_blank', 'noopener,noreferrer');
-      // Копирование ссылки — асинхронно, но уже после открытия вкладки.
-      (async () => {
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(url);
-          } else {
-            const tmp = document.createElement('textarea');
-            tmp.value = url;
-            tmp.setAttribute('readonly', '');
-            tmp.style.position = 'absolute';
-            tmp.style.left = '-9999px';
-            document.body.appendChild(tmp);
-            tmp.select();
-            const ok = document.execCommand('copy');
-            document.body.removeChild(tmp);
-            if (!ok) {
-              throw new Error('copy command failed');
-            }
-          }
-          showToast('Публичная ссылка скопирована');
-        } catch (error) {
-          showToast(error.message || 'Не удалось скопировать ссылку');
-        }
-      })();
+      await showPublicLinkModal({ url });
     });
   }
   if (refs.articlePublicToggleBtn) {
@@ -510,37 +477,14 @@ export function attachEvents() {
         const slug = updated.publicSlug || null;
         state.article = { ...state.article, publicSlug: slug };
         if (refs.articlePublicToggleBtn) {
-          refs.articlePublicToggleBtn.textContent = slug ? 'Сделать приватной' : 'Сделать публичной';
+          refs.articlePublicToggleBtn.textContent = slug ? 'Отменить доступ по ссылке' : 'Дать доступ по ссылке';
         }
         // Обновляем только хедер (иконка 🌐, updatedAt и т.п.),
         // без полной перерисовки списка блоков.
         updateArticleHeaderUi();
         if (makePublic && slug) {
           const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`;
-          try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              await navigator.clipboard.writeText(url);
-            } else {
-              // Fallback через временное текстовое поле.
-              const tmp = document.createElement('textarea');
-              tmp.value = url;
-              tmp.setAttribute('readonly', '');
-              tmp.style.position = 'absolute';
-              tmp.style.left = '-9999px';
-              document.body.appendChild(tmp);
-              tmp.select();
-              try {
-                document.execCommand('copy');
-              } catch (_) {
-                // ignore
-              }
-              document.body.removeChild(tmp);
-            }
-          } catch (_) {
-            // игнорируем ошибки буфера обмена
-          }
-          window.open(url, '_blank', 'noopener,noreferrer');
-          showToast('Публичная ссылка скопирована');
+          await showPublicLinkModal({ url });
         } else if (!makePublic) {
           showToast('Публичный доступ к странице выключен');
         }
