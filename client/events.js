@@ -257,9 +257,14 @@ function handleViewKey(event) {
       extendSelection(1);
       return;
     }
-    event.preventDefault();
-    moveSelection(1);
-    return;
+    if (!event.ctrlKey && !event.shiftKey) {
+      event.preventDefault();
+      const scrolled = scrollCurrentBlockStep('down');
+      if (!scrolled) {
+        moveSelection(1);
+      }
+      return;
+    }
   }
   if (event.code === 'ArrowUp') {
     if (!event.ctrlKey && event.shiftKey) {
@@ -267,9 +272,14 @@ function handleViewKey(event) {
       extendSelection(-1);
       return;
     }
-    event.preventDefault();
-    moveSelection(-1);
-    return;
+    if (!event.ctrlKey && !event.shiftKey) {
+      event.preventDefault();
+      const scrolled = scrollCurrentBlockStep('up');
+      if (!scrolled) {
+        moveSelection(-1);
+      }
+      return;
+    }
   }
   if (event.code === 'ArrowLeft') {
     event.preventDefault();
@@ -294,6 +304,45 @@ function handleViewKey(event) {
     event.preventDefault();
     startEditing();
   }
+}
+
+function scrollCurrentBlockStep(direction) {
+  if (!state.currentBlockId) return false;
+  const el =
+    document.querySelector(`.block[data-block-id="${state.currentBlockId}"] > .block-surface`) ||
+    document.querySelector(`.block[data-block-id="${state.currentBlockId}"]`);
+  if (!el) return false;
+  const container = refs.blocksContainer || document.scrollingElement || document.documentElement;
+  if (!container) return false;
+  const containerRect = container.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  const margin = 24;
+  const visibleHeight = containerRect.height - margin * 2;
+  if (visibleHeight <= 0) return false;
+  if (rect.height <= visibleHeight) {
+    return false;
+  }
+  if (direction === 'down') {
+    const bottomLimit = containerRect.bottom - margin;
+    const fullyVisible = rect.bottom <= bottomLimit;
+    if (fullyVisible) return false;
+    const delta = rect.bottom - bottomLimit;
+    const baseStep = Math.min(Math.max(delta, 40), 160);
+    const step = Math.max(24, Math.round(baseStep / 3));
+    container.scrollBy({ top: step, behavior: 'smooth' });
+    return true;
+  }
+  if (direction === 'up') {
+    const topLimit = containerRect.top + margin;
+    const fullyVisible = rect.top >= topLimit;
+    if (fullyVisible) return false;
+    const delta = topLimit - rect.top;
+    const baseStep = Math.min(Math.max(delta, 40), 160);
+    const step = Math.max(24, Math.round(baseStep / 3));
+    container.scrollBy({ top: -step, behavior: 'smooth' });
+    return true;
+  }
+  return false;
 }
 
 function handleEditKey(event) {
