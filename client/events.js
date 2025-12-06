@@ -229,12 +229,14 @@ function handleViewKey(event) {
   }
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
-    createSibling('after');
+    const direction = state.articleId === 'inbox' ? 'before' : 'after';
+    createSibling(direction);
     return;
   }
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowUp') {
     event.preventDefault();
-    createSibling('before');
+    const direction = state.articleId === 'inbox' ? 'after' : 'before';
+    createSibling(direction);
     return;
   }
   if (event.ctrlKey && event.code === 'Delete') {
@@ -262,7 +264,8 @@ function handleViewKey(event) {
       event.preventDefault();
       const scrolled = scrollCurrentBlockStep('down');
       if (!scrolled) {
-        moveSelection(1);
+        const delta = state.articleId === 'inbox' ? -1 : 1;
+        moveSelection(delta);
       }
       return;
     }
@@ -277,7 +280,8 @@ function handleViewKey(event) {
       event.preventDefault();
       const scrolled = scrollCurrentBlockStep('up');
       if (!scrolled) {
-        moveSelection(-1);
+        const delta = state.articleId === 'inbox' ? 1 : -1;
+        moveSelection(delta);
       }
       return;
     }

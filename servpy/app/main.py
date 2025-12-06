@@ -2765,7 +2765,9 @@ async def import_article_from_html(
             original_id = str(meta.get('id') or '')
             new_id = str(uuid4())
             try:
-                text_html = _process_block_html_for_import(text, original_id, current_user, new_article_id)
+                # Привязываем обработку вложений и ссылок к целевой статье,
+                # которую мы фактически создаём при импорте.
+                text_html = _process_block_html_for_import(text, original_id, current_user, target_article_id)
             except Exception:
                 text_html = meta.get('text') or ''
             if not text_html:
@@ -2797,7 +2799,7 @@ async def import_article_from_html(
     }
 
     save_article(article)
-    created = get_article(new_article_id, current_user.id)
+    created = get_article(target_article_id, current_user.id)
     if not created:
         raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
     return created

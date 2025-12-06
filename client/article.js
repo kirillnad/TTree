@@ -438,20 +438,6 @@ async function renderBlocks(blocks, container, depth = 1) {
         spacer.style.minWidth = '0';
         headerLeft.appendChild(spacer);
       }
-
-      if (state.articleId === 'inbox') {
-        const moveBtn = document.createElement('button');
-        moveBtn.type = 'button';
-        moveBtn.className = 'ghost small move-block-btn';
-        moveBtn.innerHTML = '&#10140;';
-        moveBtn.title = 'Перенести блок в другую статью';
-        moveBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          moveBlockFromInbox(block.id);
-        });
-        headerLeft.appendChild(moveBtn);
-      }
-
       header.appendChild(headerLeft);
     }
 
@@ -462,6 +448,22 @@ async function renderBlocks(blocks, container, depth = 1) {
     const shouldRenderBody = isEditingThisBlock || !hasTitle || Boolean(bodyHtml);
     if (shouldRenderBody) {
       content.appendChild(body);
+    }
+
+    if (state.articleId === 'inbox' && !isEditingThisBlock) {
+      const footer = document.createElement('div');
+      footer.className = 'block-footer';
+      const moveBtn = document.createElement('button');
+      moveBtn.type = 'button';
+      moveBtn.className = 'ghost small move-block-btn';
+      moveBtn.innerHTML = '&#10140;';
+      moveBtn.title = 'Перенести блок в другую статью';
+      moveBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        moveBlockFromInbox(block.id);
+      });
+      footer.appendChild(moveBtn);
+      content.appendChild(footer);
     }
 
     surface.appendChild(content);

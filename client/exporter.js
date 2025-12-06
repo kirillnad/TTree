@@ -460,7 +460,7 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
       background: #eef2f8;
     }
     .export-content {
-      padding: 1.5rem 1rem 2rem;
+      padding: 1rem;
       width: 100%;
       max-width: 960px;
     }
@@ -616,6 +616,10 @@ ${contentHtml}
     }
     const block = event.target.closest('.block');
     if (block) {
+      const isInteractive = event.target.closest('a, button, input, textarea, select');
+      if (!isInteractive) {
+        toggleBlock(block);
+      }
       setCurrent(block);
     }
   });
