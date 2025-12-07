@@ -526,17 +526,16 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     blockEl.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (state.mode !== 'view') return;
       const interactive = event.target.closest(
         'button, a, [contenteditable="true"], .block-edit-actions',
       );
       const headerEl = blockEl.querySelector('.block-header');
       const bodyEl = blockEl.querySelector('.block-text.block-body');
       const hasHeader = Boolean(headerEl);
-      const bodyHasNoTitle = bodyEl?.classList.contains('block-body--no-title');
+      const headerHasTitle = Boolean(headerEl && !headerEl.classList.contains('block-header--no-title'));
       const clickedInHeader = hasHeader && headerEl.contains(event.target);
       const clickedInBody = bodyEl && bodyEl.contains(event.target);
-      const hasLogicalTitle = Boolean(hasHeader && !bodyHasNoTitle);
+      const hasLogicalTitle = headerHasTitle;
       const isAlreadyCurrent = state.currentBlockId === block.id;
 
       let shouldToggle = false;

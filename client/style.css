@@ -565,6 +565,20 @@ main.content {
   border-radius: 0;
 }
 
+@media (max-width: 640px) {
+  #articleHeader.panel-header.article-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+  }
+
+  #articleView.panel {
+    padding-top: 3.4rem;
+  }
+}
+
 #articleHeader .title-row h2 {
   font-size: 1rem;
   font-weight: 600;
@@ -927,7 +941,7 @@ button.icon-button.small {
 /* Выравниваем высоту корневых блоков: у всех одинаковый бордер и паддинги,
    у выделенного меняем только цвет бордера, чтобы вёрстка не "прыгала". */
 .blocks > .block {
-  border: 1px solid transparent;
+  /* border: 1px solid transparent; */
   border-radius: 8px;
   padding: 0.15rem 0.15rem 0.25rem;
   border-color: #d4ddf0;
@@ -1524,7 +1538,7 @@ h6.block-title {
 /* Заголовки */
 h1.block-title {
   font-size: 1.35em;
-  /* border-bottom: 2px solid rgb(235, 237, 240); */
+  border-bottom: 2px solid rgb(235, 237, 240);
 
 }
 
