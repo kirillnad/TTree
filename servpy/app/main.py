@@ -1190,7 +1190,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     # Берём тот же extraCss, что и экспорт HTML в exporter.js
     extra_css = """
     body.export-page {
-      margin: 0;
+      margin: 0.1rem;
       background: #eef2f8;
       overflow: auto;
       height: auto;
@@ -1202,7 +1202,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
       background: #eef2f8;
     }
     .export-content {
-      padding: 1.5rem 1rem 2rem;
+      
       width: 100%;
       max-width: 960px;
     }
@@ -1218,6 +1218,18 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     }
     .export-title {
       margin: 0;
+    }
+    @media (max-width: 800px) {
+      body.export-page .page {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      body.export-page .export-content {
+        padding: 0;
+      }
     }
     """
 
@@ -1341,7 +1353,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
   }
 
   root.addEventListener('click', function(event) {
-    var unpublished = event.target.closest('a[data-unpublished="1"]');
+    var unpublished = event.target.closest('a[data-unpublished=\"1\"]');
     if (unpublished) {
       event.preventDefault();
       alert('Эта страница пока не опубликована');
@@ -1357,6 +1369,24 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     }
     var block = event.target.closest('.block');
     if (block) {
+      var header = block.querySelector('.block-header');
+      var body = block.querySelector('.block-text.block-body');
+      var bodyHasNoTitle = body && body.classList.contains('block-body--no-title');
+      var clickedInHeader = header && header.contains(event.target);
+      var clickedInBody = body && body.contains(event.target);
+      var hasLogicalTitle = !!(header && !bodyHasNoTitle);
+      var isInteractive = event.target.closest('a, button, input, textarea, select');
+      var shouldToggle = false;
+      if (hasLogicalTitle && clickedInHeader) {
+        // Для заголовка всегда разрешаем сворачивание, даже если внутри есть ссылка.
+        shouldToggle = true;
+      } else if (!hasLogicalTitle && clickedInBody && !isInteractive) {
+        // Для блоков без заголовка кликаем по телу, но не по интерактивным элементам.
+        shouldToggle = true;
+      }
+      if (shouldToggle) {
+        toggleBlock(block);
+      }
       setCurrent(block);
     }
   });
@@ -1401,6 +1431,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     <meta charset="utf-8" />
     <title>{title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <style>
 {css_text}
 {extra_css}
@@ -1473,7 +1504,7 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     # Те же базовые стили, что и в публичной версии / клиентском экспорте.
     extra_css = """
     body.export-page {
-      margin: 0;
+      margin: 0.1rem;
       background: #eef2f8;
       overflow: auto;
       height: auto;
@@ -1501,6 +1532,18 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     }
     .export-title {
       margin: 0;
+    }
+    @media (max-width: 800px) {
+      body.export-page .page {
+        margin: 0.1rem;
+        padding: 0;
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      body.export-page .export-content {
+        padding: 0.1rem;
+      }
     }
     """
 
@@ -1635,13 +1678,31 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     var btn = event.target.closest('.collapse-btn');
     if (btn) {
       var targetId = btn.getAttribute('data-block-id');
-      var block = root.querySelector('.block[data-block-id="' + targetId + '"]');
+      var block = root.querySelector('.block[data-block-id=\"' + targetId + '\"]');
       toggleBlock(block);
       setCurrent(block);
       return;
     }
     var block = event.target.closest('.block');
     if (block) {
+      var isInteractive = event.target.closest('a, button, input, textarea, select');
+      if (!isInteractive) {
+        var header = block.querySelector('.block-header');
+        var body = block.querySelector('.block-text.block-body');
+        var bodyHasNoTitle = body && body.classList.contains('block-body--no-title');
+        var clickedInHeader = header && header.contains(event.target);
+        var clickedInBody = body && body.contains(event.target);
+        var hasLogicalTitle = !!(header && !bodyHasNoTitle);
+        var shouldToggle = false;
+        if (hasLogicalTitle && clickedInHeader) {
+          shouldToggle = true;
+        } else if (!hasLogicalTitle && clickedInBody) {
+          shouldToggle = true;
+        }
+        if (shouldToggle) {
+          toggleBlock(block);
+        }
+      }
       setCurrent(block);
     }
   });
@@ -1696,6 +1757,7 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     <meta property="og:title" content="{title}" />
     <meta property="og:description" content="{description_safe}" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <style>
 {css_text}
 {extra_css}

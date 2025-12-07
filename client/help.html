@@ -572,10 +572,7 @@ main.content {
   border-radius: 0;
 }
 
-#articleView .panel-header.article-header {
-  position: sticky;
-  top: 0;
-  z-index: 15;
+#articleHeader.panel-header.article-header {
   background: #f9fafb;
   border-bottom: 1px solid #dcdcdc;
   margin-bottom: 0.4rem;
@@ -1893,7 +1890,7 @@ h6.block-title {
 }
 
 .block-header + .block-text {
-  margin-top: 0.3rem;
+  margin-top: 1rem;
   width: 100%;
 }
 
@@ -2338,6 +2335,21 @@ main.content {
   .panel {
     padding: 20px 16px 32px;
   }
+  /* В экспортируемых / публичных HTML на мобильном убираем внешние поля и тень вокруг панели. */
+  body.export-page .page {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  body.export-page .panel.export-panel {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .blocks {
     padding: 0;
     /* gap: 0.35rem; */
@@ -2371,20 +2383,6 @@ main.content {
   }
   .mobile-only {
     display: inline-flex;
-  }
-  /* В мобильном режиме скроллим body, а не внутренние контейнеры,
-     чтобы sticky-заголовок статьи оставался на месте. */
-  .app-shell,
-  main.content,
-  .panel {
-    overflow: visible;
-  }
-  /* В мобильном режиме прокручиваем всю страницу,
-     а не внутренние списки, чтобы sticky-заголовок статьи оставался на месте. */
-  #articleList,
-  #blocksContainer {
-    overflow-y: visible;
-    padding-right: 0;
   }
 }
 

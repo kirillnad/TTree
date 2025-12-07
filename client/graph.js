@@ -330,6 +330,7 @@ export async function openGraphView() {
 
   if (refs.articleListView) refs.articleListView.classList.add('hidden');
   if (refs.articleView) refs.articleView.classList.add('hidden');
+  if (refs.articleHeader) refs.articleHeader.classList.add('hidden');
   if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.graphView.classList.remove('hidden');
 
@@ -362,6 +363,7 @@ export function initGraphView() {
     refs.graphBackBtn.addEventListener('click', () => {
       refs.graphView.classList.add('hidden');
       if (refs.articleView) refs.articleView.classList.add('hidden');
+      if (refs.articleHeader) refs.articleHeader.classList.add('hidden');
       if (refs.articleListView) refs.articleListView.classList.remove('hidden');
     });
   }

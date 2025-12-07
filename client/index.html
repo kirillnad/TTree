@@ -266,9 +266,8 @@
           <ul id="articleList"></ul>
         </section>
 
-        <section id="articleView" class="panel hidden">
-          <div class="panel-header article-header">
-            <div class="title-block">
+        <div id="articleHeader" class="panel-header article-header hidden">
+          <div class="title-block">
                 <div class="title-row">
                   <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей">☰</button>
                   <h2 id="articleTitle"></h2>
@@ -359,12 +358,13 @@
                 </button>
               </div>
             </div>
-            <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
-              <span class="inline-progress__spinner" aria-hidden="true"></span>
-              <span class="inline-progress__text">Вставляем Markdown...</span>
-            </div>
+          <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
+            <span class="inline-progress__spinner" aria-hidden="true"></span>
+            <span class="inline-progress__text">Вставляем Markdown...</span>
           </div>
+        </div>
 
+        <section id="articleView" class="panel hidden">
           <div id="blocksContainer" class="blocks"></div>
         </section>
 

@@ -482,6 +482,18 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
     .export-title {
       margin: 0;
     }
+    @media (max-width: 640px) {
+      body.export-page .page {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      body.export-page .export-content {
+        padding: 0.1rem;
+      }
+    }
   `;
 
   return `
@@ -491,6 +503,7 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
+  <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
   <meta name="description" content="${escapeHtml(description || title)}" />
   <meta name="x-memus-export" content="memus;v=1" />
   <meta name="robots" content="index,follow" />
@@ -623,7 +636,21 @@ ${contentHtml}
     if (block) {
       const isInteractive = event.target.closest('a, button, input, textarea, select');
       if (!isInteractive) {
-        toggleBlock(block);
+        const header = block.querySelector('.block-header');
+        const body = block.querySelector('.block-text.block-body');
+        const bodyHasNoTitle = body?.classList.contains('block-body--no-title');
+        const clickedInHeader = header && header.contains(event.target);
+        const clickedInBody = body && body.contains(event.target);
+        const hasLogicalTitle = Boolean(header && !bodyHasNoTitle);
+        let shouldToggle = false;
+        if (hasLogicalTitle && clickedInHeader) {
+          shouldToggle = true;
+        } else if (!hasLogicalTitle && clickedInBody) {
+          shouldToggle = true;
+        }
+        if (shouldToggle) {
+          toggleBlock(block);
+        }
       }
       setCurrent(block);
     }

@@ -2,9 +2,9 @@
   --font-default: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto,
     'Inter', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
   font-family: var(--font-default);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
-  color: #222222;
+  color: #333333;
   background: transparent !important;
 }
 
@@ -557,10 +557,7 @@ main.content {
   border-radius: 0;
 }
 
-#articleView .panel-header.article-header {
-  position: sticky;
-  top: 0;
-  z-index: 15;
+#articleHeader.panel-header.article-header {
   background: #f9fafb;
   border-bottom: 1px solid #dcdcdc;
   margin-bottom: 0.4rem;
@@ -568,7 +565,7 @@ main.content {
   border-radius: 0;
 }
 
-#articleView .title-row h2 {
+#articleHeader .title-row h2 {
   font-size: 1rem;
   font-weight: 600;
   color: #222;
@@ -584,7 +581,7 @@ main.content {
   margin-right: 0.3rem;
 }
 
-#articleView .title-block .meta {
+#articleHeader .title-block .meta {
   color: #6a6a6a;
   font-size: 0.85rem;
   margin: 0;
@@ -592,6 +589,12 @@ main.content {
 
 .list-header {
   justify-content: flex-start;
+}
+.list-header h2 {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  line-height: 1.1;
 }
 .list-tabs {
   display: inline-flex;
@@ -927,6 +930,7 @@ button.icon-button.small {
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 0.15rem 0.15rem 0.25rem;
+  border-color: #d4ddf0;
 }
 
 .block:focus {
@@ -1513,35 +1517,51 @@ h5.block-title,
 h6.block-title {
   margin: 0;
   padding: 0;
-  font-weight: 300;
-  color: #111827;
+  font-weight: 600;
   line-height: 1.3;
-  transition: background-color 0.15s ease;
 }
 
+/* Заголовки */
 h1.block-title {
-  font-size: 1.15rem;
+  font-size: 1.35em;
+  border-bottom: 2px solid rgb(235, 237, 240);
+
 }
 
 h2.block-title {
-  font-size: 1.05rem;
+  font-size: 1.25em;
+  color:rgb(46, 128, 242)
 }
 
 h3.block-title {
+  font-size: 1.1em;
+  color: rgb(229, 148, 18);
+
+}
+
+h4.block-title {
+  font-size: 1rem;
+  /* color: rgb(232, 62, 62); */
+  color: #00666691;
+}
+
+h5.block-title {
+  font-size: 0.9rem;
+}
+
+
+/* h2.block-title {
+  font-size: 1.05rem;
+} */
+
+/* h3.block-title {
   font-size: 1rem;
 }
 
 h4.block-title {
   font-size: 0.95rem;
-}
+} */
 
-h5.block-title,
-h6.block-title {
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #4b5563;
-}
 
 .auth-overlay {
   position: fixed;
@@ -1905,7 +1925,7 @@ h6.block-title {
 }
 
 .block-header + .block-text {
-  margin-top: 0.3rem;
+  margin-top: 1rem;
   width: 100%;
 }
 
@@ -2082,8 +2102,8 @@ body.block-dnd-active {
   left: 50%;
   width: 6px;
   height: 6px;
-  border-right: 1px solid #9ca3af;
-  border-bottom: 1px solid #9ca3af;
+  border-right: 1px solid #5f636b;
+  border-bottom: 1px solid #5f636b;
   transform-origin: center center;
   transform: translate(-50%, -50%) rotate(-135deg);
 }
@@ -2350,6 +2370,21 @@ main.content {
   .panel {
     padding: 20px 16px 32px;
   }
+  /* В экспортируемых / публичных HTML на мобильном убираем внешние поля и тень вокруг панели. */
+  body.export-page .page {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  body.export-page .panel.export-panel {
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .blocks {
     padding: 0;
     /* gap: 0.35rem; */
@@ -2383,20 +2418,6 @@ main.content {
   }
   .mobile-only {
     display: inline-flex;
-  }
-  /* В мобильном режиме скроллим body, а не внутренние контейнеры,
-     чтобы sticky-заголовок статьи оставался на месте. */
-  .app-shell,
-  main.content,
-  .panel {
-    overflow: visible;
-  }
-  /* В мобильном режиме прокручиваем всю страницу,
-     а не внутренние списки, чтобы sticky-заголовок статьи оставался на месте. */
-  #articleList,
-  #blocksContainer {
-    overflow-y: visible;
-    padding-right: 0;
   }
 }
 
@@ -2447,7 +2468,7 @@ h4 {
 }
 
 h1 {
-  font-size: 2em;
+  font-size: 1.5em;
   margin-top: 0;
 }
 

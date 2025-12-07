@@ -20,7 +20,8 @@ function startApp() {
   // Регистрация service worker для PWA (если поддерживается).
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
-      .register('/sw.js')
+      // Версионируем URL, чтобы гарантированно обойти старый кэшированный sw.js.
+      .register('/sw.js?v=2')
       .catch(() => {
         // Молча игнорируем ошибки регистрации — приложение продолжит работать как обычно.
       });

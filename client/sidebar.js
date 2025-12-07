@@ -56,6 +56,7 @@ export function toggleFavorite(articleId) {
 export function setViewMode(showArticle) {
   refs.articleView.classList.toggle('hidden', !showArticle);
   refs.articleListView.classList.toggle('hidden', showArticle);
+  if (refs.articleHeader) refs.articleHeader.classList.toggle('hidden', !showArticle);
   if (!showArticle) hideHintPopover();
   if (showArticle && state.isTrashView) {
     state.isTrashView = false;

@@ -27,6 +27,7 @@ export const refs = {
   graphBackBtn: document.getElementById('graphBackBtn'),
   articleListView: document.getElementById('articleListView'),
   articleView: document.getElementById('articleView'),
+  articleHeader: document.getElementById('articleHeader'),
   articleTitle: document.getElementById('articleTitle'),
   updatedAt: document.getElementById('updatedAt'),
   blocksContainer: document.getElementById('blocksContainer'),

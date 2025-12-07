@@ -528,8 +528,23 @@ async function renderBlocks(blocks, container, depth = 1) {
         'button, a, [contenteditable="true"], .block-edit-actions',
       );
       const isAlreadyCurrent = state.currentBlockId === block.id;
-      if (!interactive && (hasTitle || hasChildren) && isAlreadyCurrent) {
-        toggleCollapse(block.id);
+      if (!interactive && isAlreadyCurrent) {
+        const headerEl = blockEl.querySelector('.block-header');
+        const bodyEl = blockEl.querySelector('.block-text.block-body');
+        const hasHeader = Boolean(headerEl);
+        const bodyHasNoTitle = bodyEl?.classList.contains('block-body--no-title');
+        const clickedInHeader = hasHeader && headerEl.contains(event.target);
+        const clickedInBody = bodyEl && bodyEl.contains(event.target);
+        const hasLogicalTitle = Boolean(hasHeader && !bodyHasNoTitle);
+        let shouldToggle = false;
+        if (hasLogicalTitle && clickedInHeader) {
+          shouldToggle = true;
+        } else if (!hasLogicalTitle && clickedInBody) {
+          shouldToggle = true;
+        }
+        if (shouldToggle) {
+          toggleCollapse(block.id);
+        }
       }
       setCurrentBlock(block.id);
     });
@@ -607,6 +622,7 @@ export async function rerenderSingleBlock(blockId) {
   if (!state.article || !Array.isArray(state.article.blocks)) return;
   const located = findBlock(blockId);
   if (!located) return;
+  const depth = (Array.isArray(located.ancestors) ? located.ancestors.length : 0) + 1;
   const oldBlockEl = document.querySelector(`.block[data-block-id="${blockId}"]`);
   if (!oldBlockEl) return;
   const container = oldBlockEl.parentElement;
@@ -625,7 +641,7 @@ export async function rerenderSingleBlock(blockId) {
     }
   });
   const tmp = document.createElement('div');
-  await renderBlocks([located.block], tmp);
+  await renderBlocks([located.block], tmp, depth);
   const newNodes = Array.from(tmp.childNodes);
   newNodes.forEach((node) => {
     container.insertBefore(node, insertBefore);
@@ -1367,6 +1383,9 @@ async function handlePointerUp(event) {
 }
 
 export async function loadArticleView(id) {
+  // При открытии страницы всегда выходим из режима редактирования заголовка,
+  // чтобы заголовок не «прятался» за полем ввода, особенно на мобильных.
+  state.isEditingTitle = false;
   await ensureArticlesIndexLoaded();
   setViewMode(true);
   if (refs.usersView) refs.usersView.classList.add('hidden');
@@ -1388,6 +1407,7 @@ export async function loadListView() {
   state.article = null;
   state.articleId = null;
   state.currentBlockId = null;
+  state.isEditingTitle = false;
   state.mode = 'view';
   state.editingBlockId = null;
   state.undoStack = [];
