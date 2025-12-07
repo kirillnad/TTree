@@ -82,6 +82,7 @@ export async function exportCurrentBlockAsHtml(blockId) {
     const { bodyHtml, plainText, wordCount } = buildExportBodyFromBlocks([rootBlock], {
       title: blockTitle,
       updatedAt: state.article.updatedAt || null,
+      suppressRootTitleInBody: true,
     });
     const { html: inlinedHtml, failures } = await inlineAssets(bodyHtml);
     const description = buildDescription(plainText);
@@ -158,7 +159,8 @@ function collectPlainText(blocks = []) {
   return parts.flat().filter(Boolean);
 }
 
-function renderBlock(block, headingDepth = 1) {
+function renderBlock(block, headingDepth = 1, options = {}) {
+  const suppressTitle = Boolean(options.suppressTitle);
   let sections = extractBlockSections(block.text || '');
   let hasTitle = Boolean(sections.titleHtml);
   const hasChildren = Boolean(block.children?.length);
@@ -199,9 +201,10 @@ function renderBlock(block, headingDepth = 1) {
   }
 
   const rawBody = hasTitle ? sections.bodyHtml : block.text || '';
+  const effectiveHasTitle = hasTitle && !suppressTitle;
   const hasBody = Boolean(rawBody && rawBody.trim());
-  const canCollapse = hasTitle || hasChildren;
-  const hasNoTitleNoChildren = !hasTitle && !hasChildren;
+  const canCollapse = effectiveHasTitle || hasChildren;
+  const hasNoTitleNoChildren = !effectiveHasTitle && !hasChildren;
   const collapsed = Boolean(block.collapsed);
 
   let collapseBtn = '';
@@ -217,28 +220,28 @@ function renderBlock(block, headingDepth = 1) {
     }
   }
   let titlePart = '';
-  if (hasTitle) {
+  if (effectiveHasTitle) {
     const level = Math.min(Math.max(headingDepth, 1), 6);
     const headingTag = `h${level}`;
     titlePart = `<${headingTag} class="block-title">${sections.titleHtml}</${headingTag}>`;
   }
   const header = titlePart
-    ? `<div class="block-header${!hasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
+    ? `<div class="block-header${!effectiveHasTitle ? ' block-header--no-title' : ''}">${titlePart}</div>`
     : '';
 
   const bodyClasses = ['block-text', 'block-body'];
-  if (!hasTitle) bodyClasses.push('block-body--no-title');
+  if (!effectiveHasTitle) bodyClasses.push('block-body--no-title');
   if (!hasBody) bodyClasses.push('block-body--empty');
-  if (collapsed && hasTitle) bodyClasses.push('collapsed');
+  if (collapsed && effectiveHasTitle) bodyClasses.push('collapsed');
 
   const body = `<div class="${bodyClasses.join(' ')}" data-block-body>${rawBody || ''}</div>`;
   const content = `<div class="block-content">${header}${body}</div>`;
-  const nextHeadingDepth = hasTitle ? headingDepth + 1 : headingDepth;
+  const nextHeadingDepth = effectiveHasTitle ? headingDepth + 1 : headingDepth;
   const childrenHtml = (block.children || []).map((child) => renderBlock(child, nextHeadingDepth)).join('');
   const children = `<div class="block-children${collapsed ? ' collapsed' : ''}" data-children>${childrenHtml}</div>`;
 
   const blockClasses = ['block'];
-  if (!hasTitle) blockClasses.push('block--no-title');
+  if (!effectiveHasTitle) blockClasses.push('block--no-title');
 
   // В экспортируемом HTML не нужен интерактивный drag / add-баттон.
   const surface = `<div class="block-surface">${collapseBtn}${content}</div>`;
@@ -246,10 +249,12 @@ function renderBlock(block, headingDepth = 1) {
   return `<div class="${blockClasses.join(' ')}" data-block-id="${block.id}" data-collapsed="${collapsed ? 'true' : 'false'}" tabindex="0">${surface}${children}</div>`;
 }
 
-function buildExportBodyFromBlocks(blocks = [], { title, updatedAt } = {}) {
+function buildExportBodyFromBlocks(blocks = [], { title, updatedAt, suppressRootTitleInBody } = {}) {
   const safeBlocks = blocks || [];
   // Важно: всегда начинаем с headingDepth = 1 для каждого корневого блока.
-  const blocksHtml = safeBlocks.map((block) => renderBlock(block, 1)).join('');
+  const blocksHtml = safeBlocks
+    .map((block, index) => renderBlock(block, 1, { suppressTitle: Boolean(suppressRootTitleInBody && index === 0) }))
+    .join('');
   const plainParts = collectPlainText(safeBlocks);
   const plainText = plainParts.join(' ').replace(/\s+/g, ' ').trim();
   const wordCount = plainText ? plainText.split(/\s+/).length : 0;

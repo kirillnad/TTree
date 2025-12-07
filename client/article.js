@@ -527,7 +527,8 @@ async function renderBlocks(blocks, container, depth = 1) {
       const interactive = event.target.closest(
         'button, a, [contenteditable="true"], .block-edit-actions',
       );
-      if (!interactive && (hasTitle || hasChildren)) {
+      const isAlreadyCurrent = state.currentBlockId === block.id;
+      if (!interactive && (hasTitle || hasChildren) && isAlreadyCurrent) {
         toggleCollapse(block.id);
       }
       setCurrentBlock(block.id);

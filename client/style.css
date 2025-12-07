@@ -1577,6 +1577,13 @@ h6.block-title {
   color: #64748b;
 }
 
+.auth-storage-info {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
 .auth-tabs {
   display: inline-flex;
   gap: 0.25rem;

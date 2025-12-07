@@ -1,5 +1,5 @@
 ﻿import { state } from './state.js';
-import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress } from './api.js';
+import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js';
 import { showToast } from './toast.js';
 import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
@@ -8,6 +8,23 @@ import { fetchArticlesIndex } from './api.js';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
 import { splitEditingBlockAtCaret } from './actions.js';
+
+function resolveYandexDiskHref(rawPath = '') {
+  if (!rawPath) return '';
+  if (rawPath.startsWith('app:/')) {
+    const name = rawPath.slice('app:/'.length);
+    const encodedName = encodeURIComponent(name);
+    const base =
+      'https://disk.yandex.ru/client/disk/%D0%9F%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F/Memus.pro';
+    return `${base}/${encodedName}`;
+  }
+  if (rawPath.startsWith('disk:/')) {
+    const rel = rawPath.slice('disk:/'.length);
+    const parts = rel.split('/').map((p) => encodeURIComponent(p));
+    return `https://disk.yandex.ru/client/disk/${parts.join('/')}`;
+  }
+  return rawPath;
+}
 
 export function flattenVisible(blocks = [], acc = []) {
   blocks.forEach((block) => {
@@ -758,21 +775,69 @@ async function insertAttachmentFromFile(element, file) {
     showToast('Не выбрана статья для вставки файла');
     return;
   }
-  logDebug('attachment: blocked upload', {
+  const token = `att-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const safeName = escapeHtml(file?.name || 'файл');
+  logDebug('attachment: uploading to Yandex Disk', {
     name: file?.name,
     type: file?.type,
     size: file?.size,
     articleId: state.articleId,
+    token,
   });
-  if (!attachmentUploadNoticeShown) {
-    attachmentUploadNoticeShown = true;
-    showToast(
-      'Файлы (PDF, DOCX и т.п.) больше не загружаются в Memus. ' +
-        'Сохраните их на Яндекс.Диске или Google Drive и вставьте сюда ссылку.',
+  // Показываем плейсхолдер сразу, чтобы было видно, что файл вставлен.
+  try {
+    clearEmptyPlaceholder(element);
+    insertHtmlAtCaret(
+      element,
+      `<a data-pending-attachment="true" data-attachment-token="${token}">${safeName} (загрузка...)</a>`,
     );
-    setTimeout(() => {
-      attachmentUploadNoticeShown = false;
-    }, 8000);
+  } catch (_) {
+    // Если не получилось вставить плейсхолдер, продолжаем без него.
+  }
+  try {
+    const attachment = await uploadFileToYandexDisk(state.articleId, file, {
+      onProgress: (percent) => {
+        logDebug('attachment upload progress', { percent, name: file?.name });
+      },
+    });
+    const finalName = escapeHtml(attachment.originalName || file.name || 'файл');
+    const rawHref = attachment.storedPath || attachment.url || '';
+    const resolvedHref = resolveYandexDiskHref(rawHref);
+    const href = escapeHtml(resolvedHref);
+    if (href) {
+      const container = element;
+      const placeholder = container.querySelector(
+        `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
+      );
+      if (placeholder) {
+        placeholder.removeAttribute('data-pending-attachment');
+        placeholder.removeAttribute('data-attachment-token');
+        placeholder.setAttribute('href', href);
+        placeholder.setAttribute('target', '_blank');
+        placeholder.setAttribute('rel', 'noopener noreferrer');
+        placeholder.textContent = finalName;
+      } else {
+        // Если плейсхолдер не нашли — просто вставляем ссылку в текущую позицию.
+        clearEmptyPlaceholder(element);
+        insertHtmlAtCaret(
+          element,
+          `<a href="${href}" target="_blank" rel="noopener noreferrer">${finalName}</a>`,
+        );
+      }
+    }
+  } catch (error) {
+    try {
+      const container = element;
+      const placeholder = container.querySelector(
+        `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
+      );
+      if (placeholder) {
+        placeholder.textContent = `${safeName} (ошибка загрузки)`;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    showToast(error.message || 'Не удалось загрузить файл на Яндекс.Диск');
   }
 }
 
@@ -841,9 +906,20 @@ export function attachRichContentHandlers(element, blockId) {
 
   element.addEventListener('click', (event) => {
     const img = event.target?.closest('img');
-    if (!img) return;
+    if (img) {
+      event.preventDefault();
+      showImagePreview(img.src, img.alt || '');
+      return;
+    }
+    const link = event.target?.closest('a[href]');
+    if (!link) return;
+    const rawHref = link.getAttribute('href') || '';
+    if (!rawHref.startsWith('app:/') && !rawHref.startsWith('disk:/')) return;
     event.preventDefault();
-    showImagePreview(img.src, img.alt || '');
+    const resolved = resolveYandexDiskHref(rawHref);
+    if (resolved) {
+      window.open(resolved, '_blank', 'noopener,noreferrer');
+    }
   });
 
   if (state.articleId === 'inbox') {

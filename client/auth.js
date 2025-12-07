@@ -30,7 +30,12 @@ function setAuthMode(mode) {
   setAuthError('');
   if (mode === 'login') {
     if (refs.authSubtitle) {
-      refs.authSubtitle.textContent = 'Войдите, чтобы открыть свои заметки';
+      refs.authSubtitle.textContent = 'Заходите, я соскучился! :)';
+    }
+     if (refs.authStorageInfo) {
+      refs.authStorageInfo.textContent =
+        'Текст и картинки хранятся на серверах Memus.pro, иные вложения сохраняются напрямую на ваш Яндекс.Диск или Google Drive и не проходят через сервер. В Memus сохраняется только ссылка на загруженный файл, которая доступна только вам.';
+      refs.authStorageInfo.classList.remove('hidden');
     }
     if (refs.authGoogleLoginBtn) {
       refs.authGoogleLoginBtn.classList.remove('hidden');

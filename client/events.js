@@ -868,6 +868,24 @@ export function attachEvents() {
       closeSidebarMobile();
     });
   }
+  if (refs.blocksContainer) {
+    refs.blocksContainer.addEventListener('click', (event) => {
+      if (state.mode !== 'view') return;
+      if (!state.article || !Array.isArray(state.article.blocks) || !state.article.blocks.length) return;
+      const target = event.target;
+      if (target.closest('.block')) return;
+      const blocks = refs.blocksContainer.querySelectorAll('.block[data-block-id]');
+      if (!blocks.length) return;
+      const lastBlockEl = blocks[blocks.length - 1];
+      const lastRect = lastBlockEl.getBoundingClientRect();
+      // Создаём новый блок, только если клик ниже последнего блока.
+      if (event.clientY <= lastRect.bottom + 4) return;
+      const lastBlockId = lastBlockEl.getAttribute('data-block-id');
+      if (!lastBlockId) return;
+      state.currentBlockId = lastBlockId;
+      createSibling('after');
+    });
+  }
   if (refs.sidebar) {
     refs.sidebar.addEventListener(
       'click',

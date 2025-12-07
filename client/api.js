@@ -171,6 +171,125 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
   });
 }
 
+export async function getYandexUploadUrl({ articleId, filename, overwrite = false, sha256 = '', size = 0 }) {
+  const payload = {
+    filename: filename || '',
+    articleId: articleId || '',
+    overwrite: Boolean(overwrite),
+    // sha256 сейчас на сервере не используется, но может пригодиться позже.
+    sha256: sha256 || '',
+    size: typeof size === 'number' ? size : 0,
+  };
+  const res = await fetch('/api/yandex/disk/upload-url', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = (data && data.detail) || `Yandex upload URL failed (status ${res.status})`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function registerYandexAttachment(articleId, { path, originalName, contentType, size }) {
+  const payload = {
+    path: path || '',
+    originalName: originalName || '',
+    contentType: contentType || '',
+    size: typeof size === 'number' ? size : 0,
+  };
+  const res = await fetch(`/api/articles/${articleId}/attachments/yandex`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message = (data && data.detail) || `Register Yandex attachment failed (status ${res.status})`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function uploadFileToYandexDisk(articleId, file, { onProgress } = {}) {
+  if (!file) throw new Error('Файл не указан');
+  let sha256 = '';
+  try {
+    if (window.crypto && window.crypto.subtle && typeof file.arrayBuffer === 'function') {
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer);
+      const bytes = new Uint8Array(hashBuffer);
+      sha256 = Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+  } catch (_) {
+    // Если не удалось посчитать хеш — просто продолжаем без него.
+    sha256 = '';
+  }
+
+  const { href, method, path, exists, same } = await getYandexUploadUrl({
+    articleId,
+    filename: file.name || 'attachment',
+    overwrite: false,
+    sha256,
+    size: file.size || 0,
+  });
+
+  // Если файл с таким именем уже есть и содержимое совпадает —
+  // не загружаем повторно, просто регистрируем вложение.
+  if (exists && same && !href) {
+    const attachment = await registerYandexAttachment(articleId, {
+      path,
+      originalName: file.name || 'attachment',
+      contentType: file.type || '',
+      size: file.size || 0,
+    });
+    return attachment;
+  }
+
+  await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method || 'PUT', href);
+    xhr.upload.onprogress = (event) => {
+      if (onProgress && event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        try {
+          onProgress(percent);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    };
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.DONE) return;
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Yandex upload failed (status ${xhr.status})`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during Yandex upload'));
+    xhr.send(file);
+  });
+
+  const attachment = await registerYandexAttachment(articleId, {
+    path,
+    originalName: file.name || 'attachment',
+    contentType: file.type || '',
+    size: file.size || 0,
+  });
+  return attachment;
+}
+
 export function importArticleFromHtml(file, options = {}) {
   const formData = new FormData();
   formData.append('file', file);

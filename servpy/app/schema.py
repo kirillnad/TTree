@@ -88,7 +88,7 @@ def _init_sqlite_schema():
             access_token TEXT NOT NULL,
             refresh_token TEXT,
             expires_at TEXT,
-            disk_root TEXT NOT NULL DEFAULT 'disk:/Memus',
+            disk_root TEXT NOT NULL DEFAULT 'app:/',
             initialized INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         )
@@ -305,7 +305,7 @@ def _init_postgres_schema():
             access_token TEXT NOT NULL,
             refresh_token TEXT,
             expires_at TEXT,
-            disk_root TEXT NOT NULL DEFAULT 'disk:/Memus',
+            disk_root TEXT NOT NULL DEFAULT 'app:/',
             initialized BOOLEAN NOT NULL DEFAULT FALSE
         )
         ''',

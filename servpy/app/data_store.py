@@ -178,7 +178,7 @@ def get_yandex_tokens(user_id: str) -> Optional[Dict[str, Any]]:
         'accessToken': row['access_token'],
         'refreshToken': row.get('refresh_token'),
         'expiresAt': row.get('expires_at'),
-        'diskRoot': row.get('disk_root') or 'disk:/Memus',
+        'diskRoot': row.get('disk_root') or 'app:/',
         'initialized': bool(row.get('initialized')),
     }
 
@@ -1664,14 +1664,22 @@ def _attachment_public_paths(article_id: str, stored_path: str) -> Tuple[str, st
     """
     Build a public storedPath (legacy, article-scoped) and a download URL.
 
-    Internally, files are stored under /uploads/<user_id>/attachments/<article_id>/<filename>,
-    but API responses historically exposed paths starting with /uploads/<article_id>/.
-    To keep compatibility with existing clients and tests, we expose:
-      - storedPath: /uploads/<article_id>/<filename>
-      - url: the actual download URL (stored_path as saved in DB)
+    Для локальных вложений:
+      - физически файлы лежат под /uploads/<user_id>/attachments/<article_id>/<filename>;
+      - наружу мы показываем storedPath: /uploads/<article_id>/<filename>,
+        а url == фактическому пути (stored_path), чтобы не ломать существующих клиентов.
+
+    Для удалённых вложений (например, Яндекс.Диск, пути вида app:/... или disk:/...):
+      - storedPath и url совпадают и равны stored_path.
     """
     if not stored_path:
         return f'/uploads/{article_id}/', ''
+
+    # Вложения на Яндекс.Диске или других внешних хранилищах.
+    if stored_path.startswith('app:/') or stored_path.startswith('disk:/'):
+        return stored_path, stored_path
+
+    # Локальные вложения в /uploads/...
     filename = stored_path.rsplit('/', 1)[-1]
     public_stored = f'/uploads/{article_id}/{filename}'
     return public_stored, stored_path
