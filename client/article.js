@@ -290,6 +290,9 @@ async function renderBlocks(blocks, container, depth = 1) {
     const blockEl = document.createElement('div');
     blockEl.className = 'block';
     blockEl.dataset.blockId = block.id;
+    if (typeof block.collapsed === 'boolean') {
+      blockEl.dataset.collapsed = block.collapsed ? 'true' : 'false';
+    }
     const isSelected =
       block.id === state.currentBlockId ||
       (Array.isArray(state.selectedBlockIds) && state.selectedBlockIds.includes(block.id));
@@ -527,24 +530,27 @@ async function renderBlocks(blocks, container, depth = 1) {
       const interactive = event.target.closest(
         'button, a, [contenteditable="true"], .block-edit-actions',
       );
+      const headerEl = blockEl.querySelector('.block-header');
+      const bodyEl = blockEl.querySelector('.block-text.block-body');
+      const hasHeader = Boolean(headerEl);
+      const bodyHasNoTitle = bodyEl?.classList.contains('block-body--no-title');
+      const clickedInHeader = hasHeader && headerEl.contains(event.target);
+      const clickedInBody = bodyEl && bodyEl.contains(event.target);
+      const hasLogicalTitle = Boolean(hasHeader && !bodyHasNoTitle);
       const isAlreadyCurrent = state.currentBlockId === block.id;
-      if (!interactive && isAlreadyCurrent) {
-        const headerEl = blockEl.querySelector('.block-header');
-        const bodyEl = blockEl.querySelector('.block-text.block-body');
-        const hasHeader = Boolean(headerEl);
-        const bodyHasNoTitle = bodyEl?.classList.contains('block-body--no-title');
-        const clickedInHeader = hasHeader && headerEl.contains(event.target);
-        const clickedInBody = bodyEl && bodyEl.contains(event.target);
-        const hasLogicalTitle = Boolean(hasHeader && !bodyHasNoTitle);
-        let shouldToggle = false;
-        if (hasLogicalTitle && clickedInHeader) {
-          shouldToggle = true;
-        } else if (!hasLogicalTitle && clickedInBody) {
-          shouldToggle = true;
-        }
-        if (shouldToggle) {
-          toggleCollapse(block.id);
-        }
+
+      let shouldToggle = false;
+      if (hasLogicalTitle && clickedInHeader) {
+        // Клик по заголовку всегда переключает collapse,
+        // даже если внутри заголовка есть ссылка или другой интерактив.
+        shouldToggle = true;
+      } else if (!hasLogicalTitle && isAlreadyCurrent && clickedInBody && !interactive) {
+        // Для блоков без заголовка collapse вешаем на тело,
+        // но только если блок уже текущий и клик не по интерактиву.
+        shouldToggle = true;
+      }
+      if (shouldToggle) {
+        toggleCollapse(block.id);
       }
       setCurrentBlock(block.id);
     });
@@ -1042,6 +1048,21 @@ export async function mergeAllBlocksIntoFirst() {
   const firstBlock = selectedOrdered[0];
   const restBlocks = selectedOrdered.slice(1);
 
+  // При объединении пользователь может выбрать как родительский блок, так и его
+  // вложенные блоки. На сервере удаление одного блока удаляет всё его поддерево,
+  // поэтому если мы попробуем отдельно удалить потомка уже удалённого родителя,
+  // сервер вернёт ошибку (BlockNotFound/500). Фильтруем такие случаи и оставляем
+  // только «верхнеуровневые» блоки среди выбранных для удаления.
+  const restIds = new Set(restBlocks.map((b) => b.id));
+  const restBlocksTopLevel = restBlocks.filter((b) => {
+    const located = findBlock(b.id, state.article?.blocks || []);
+    if (!located) {
+      // Блок уже не найден в текущем состоянии статьи — просто пропускаем.
+      return false;
+    }
+    return !located.ancestors?.some((ancestor) => restIds.has(ancestor.id));
+  });
+
   const pieces = [];
   if (firstBlock.text) pieces.push(firstBlock.text);
   restBlocks.forEach((b) => {
@@ -1065,7 +1086,7 @@ export async function mergeAllBlocksIntoFirst() {
 
     // Удаляем остальные выбранные блоки (их поддеревья удалятся каскадно).
     // eslint-disable-next-line no-restricted-syntax
-    for (const blk of restBlocks) {
+    for (const blk of restBlocksTopLevel) {
       // eslint-disable-next-line no-await-in-loop
       await apiRequest(`/api/articles/${state.articleId}/blocks/${blk.id}`, {
         method: 'DELETE',

@@ -1524,7 +1524,7 @@ h6.block-title {
 /* Заголовки */
 h1.block-title {
   font-size: 1.35em;
-  border-bottom: 2px solid rgb(235, 237, 240);
+  /* border-bottom: 2px solid rgb(235, 237, 240); */
 
 }
 
@@ -1922,6 +1922,30 @@ h4.block-title {
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+
+/* Троеточие для свёрнутых блоков
+   — сразу после последнего символа текста */
+.block[data-collapsed='true'] > .block-surface .block-title > p:last-child::after {
+  content: '…';
+  display: inline;
+  margin-left: 0.15em;
+  color: inherit;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.block[data-collapsed='true'].block--no-title > .block-surface .block-body > p:last-child::after {
+  content: '…';
+  display: inline;
+  margin-left: 0.15em;
+  color: inherit;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .block-header + .block-text {

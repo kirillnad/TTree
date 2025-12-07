@@ -2838,6 +2838,8 @@ def remove_block(article_id: str, block_id: str, current_user: User = Depends(ge
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = delete_block(real_article_id, block_id)
+    except (ArticleNotFound, BlockNotFound) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result:
@@ -2856,6 +2858,8 @@ def remove_block_permanent(article_id: str, block_id: str, current_user: User = 
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = delete_block_permanent(real_article_id, block_id)
+    except (ArticleNotFound, BlockNotFound) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result:
