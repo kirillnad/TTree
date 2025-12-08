@@ -21,7 +21,14 @@ import {
 import { moveSelection, extendSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
-import { toggleHintPopover, hideHintPopover, setTrashMode, toggleFavorite } from './sidebar.js';
+import {
+  toggleHintPopover,
+  hideHintPopover,
+  setTrashMode,
+  toggleFavorite,
+  ensureArticlesIndexLoaded,
+  renderMainArticleList,
+} from './sidebar.js';
 import {
   toggleSidebarCollapsed,
   handleArticleFilterInput,
@@ -33,7 +40,15 @@ import {
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js';
-import { apiRequest, importArticleFromHtml, importArticleFromMarkdown, importFromLogseqArchive } from './api.js';
+import {
+  apiRequest,
+  importArticleFromHtml,
+  importArticleFromMarkdown,
+  importFromLogseqArchive,
+  moveArticlePosition,
+  indentArticleApi,
+  outdentArticleApi,
+} from './api.js?v=2';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
 import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js';
@@ -311,6 +326,51 @@ function handleViewKey(event) {
   }
 }
 
+function handleArticlesListKey(event) {
+  const { code, ctrlKey, shiftKey, altKey, metaKey } = event;
+  if (altKey || metaKey) return;
+  // Управляем только, когда виден список статей.
+  if (!refs.articleListView || refs.articleListView.classList.contains('hidden')) return;
+  if (!refs.articleList || !refs.articleList.contains(document.activeElement)) return;
+  const active = document.activeElement;
+  const item = active.closest('li');
+  if (!item) return;
+  const articleId = item.dataset.articleId;
+  if (!articleId) return;
+
+  if (ctrlKey && !shiftKey && code === 'ArrowUp') {
+    event.preventDefault();
+    moveArticlePosition(articleId, 'up')
+      .then(() => ensureArticlesIndexLoaded())
+      .then((articles) => renderMainArticleList(articles))
+      .catch((error) => showToast(error.message || 'Не удалось переместить страницу'));
+    return;
+  }
+  if (ctrlKey && !shiftKey && code === 'ArrowDown') {
+    event.preventDefault();
+    moveArticlePosition(articleId, 'down')
+      .then(() => ensureArticlesIndexLoaded())
+      .then((articles) => renderMainArticleList(articles))
+      .catch((error) => showToast(error.message || 'Не удалось переместить страницу'));
+    return;
+  }
+  if (ctrlKey && !shiftKey && code === 'ArrowRight') {
+    event.preventDefault();
+    indentArticleApi(articleId)
+      .then(() => ensureArticlesIndexLoaded())
+      .then((articles) => renderMainArticleList(articles))
+      .catch((error) => showToast(error.message || 'Не удалось изменить вложенность'));
+    return;
+  }
+  if (ctrlKey && !shiftKey && code === 'ArrowLeft') {
+    event.preventDefault();
+    outdentArticleApi(articleId)
+      .then(() => ensureArticlesIndexLoaded())
+      .then((articles) => renderMainArticleList(articles))
+      .catch((error) => showToast(error.message || 'Не удалось изменить вложенность'));
+  }
+}
+
 function scrollCurrentBlockStep(direction) {
   if (!state.currentBlockId) return false;
   const el =
@@ -413,6 +473,7 @@ function closeListMenu() {
 export function attachEvents() {
   document.addEventListener('keydown', (event) => {
     if (state.mode === 'view') {
+      handleArticlesListKey(event);
       handleViewKey(event);
     } else {
       handleEditKey(event);
@@ -1070,37 +1131,6 @@ export function attachEvents() {
       }
     });
   }
-  // Автосохранение блока при клике вне него в режиме редактирования.
-  let isAutoSaving = false;
-  document.addEventListener(
-    'click',
-    (event) => {
-      if (isAutoSaving) return;
-      if (state.mode !== 'edit' || !state.editingBlockId) return;
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      // Не автосохраняем при клике по панели управления таблицей, rich-context-меню
-      // и по кнопкам articleToolbar (Undo/Redo/Таблица/Новый блок и т.п.).
-      if (target.closest('.table-toolbar')) return;
-      if (target.closest('.rich-context-menu')) return;
-      if (target.closest('#articleToolbar')) return;
-      // Не автосохраняем при клике внутри модальных окон (showPrompt/showLinkPrompt и т.п.),
-      // чтобы не терять ввод при выборе статьи, вставке ссылки и прочих диалогах.
-      if (target.closest('.modal-overlay')) return;
-      const blockEl = document.querySelector(
-        `.block[data-block-id="${state.editingBlockId}"]`,
-      );
-      if (!blockEl) return;
-      if (blockEl.contains(target)) return;
-      isAutoSaving = true;
-      Promise.resolve()
-        .then(() => saveEditing())
-        .finally(() => {
-          isAutoSaving = false;
-        });
-    },
-    true,
-  );
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
       hideSearchResults();

@@ -450,6 +450,8 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'createdAt': row['created_at'],
         'updatedAt': row['updated_at'],
         'deletedAt': row['deleted_at'],
+        'parentId': row.get('parent_id'),
+        'position': row.get('position') or 0,
         'authorId': row.get('author_id'),
         'publicSlug': row.get('public_slug'),
         'history': deserialize_history(row['history']),
@@ -465,7 +467,7 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
 
 def get_articles(author_id: str) -> List[Dict[str, Any]]:
     rows = CONN.execute(
-        'SELECT * FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY updated_at DESC',
+        'SELECT * FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY parent_id IS NOT NULL, parent_id, position, updated_at DESC',
         (author_id,),
     ).fetchall()
     return [build_article_from_row(row) for row in rows if row]
@@ -477,6 +479,218 @@ def get_deleted_articles(author_id: str) -> List[Dict[str, Any]]:
         (author_id,),
     ).fetchall()
     return [build_article_from_row(row) for row in rows if row]
+
+
+def _fetch_article_siblings(parent_id: Optional[str], author_id: str) -> list[RowMapping]:
+    if parent_id is None:
+        return CONN.execute(
+            'SELECT id, parent_id, position FROM articles WHERE deleted_at IS NULL AND author_id = ? AND parent_id IS NULL ORDER BY position',
+            (author_id,),
+        ).fetchall()
+    return CONN.execute(
+        'SELECT id, parent_id, position FROM articles WHERE deleted_at IS NULL AND author_id = ? AND parent_id = ? ORDER BY position',
+        (author_id, parent_id),
+    ).fetchall()
+
+
+def move_article_to_parent(
+    article_id: str,
+    target_parent_id: Optional[str],
+    author_id: str,
+    anchor_id: Optional[str] = None,
+    placement: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Перемещает статью в новый родитель и позицию внутри него.
+
+    Поведение похоже на move_block_to_parent:
+    - target_parent_id = None — корень;
+    - anchor_id + placement ('before'/'after'/'inside') определяют место вставки;
+    - если anchor_id не задан, статья добавляется в конец children целевого родителя.
+    """
+    rows = CONN.execute(
+        'SELECT id, parent_id, position FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY position',
+        (author_id,),
+    ).fetchall()
+    if not rows:
+        raise ArticleNotFound('Article not found')
+
+    # Собираем дерево: parent_id -> [child_ids] в порядке position.
+    children_map: dict[Optional[str], list[str]] = {}
+    for row in rows:
+        pid = row['parent_id']
+        aid = row['id']
+        children_map.setdefault(pid, []).append(aid)
+
+    all_ids = {row['id'] for row in rows}
+    if article_id not in all_ids:
+        raise ArticleNotFound('Article not found')
+    if target_parent_id is not None and target_parent_id not in all_ids:
+        raise ArticleNotFound('Target parent not found')
+
+    # Запрещаем перемещение в себя или в потомка.
+    descendants: set[str] = set()
+
+    def collect_descendants(current_id: str) -> None:
+        for child_id in children_map.get(current_id, []):
+            if child_id not in descendants:
+                descendants.add(child_id)
+                collect_descendants(child_id)
+
+    collect_descendants(article_id)
+    if target_parent_id is not None and target_parent_id in descendants.union({article_id}):
+        raise InvalidOperation('Cannot move article into itself or its descendant')
+
+    # Исходный родитель.
+    origin_parent_id: Optional[str] = None
+    for row in rows:
+        if row['id'] == article_id:
+            origin_parent_id = row['parent_id']
+            break
+
+    origin_order = list(children_map.get(origin_parent_id, []))
+    if article_id not in origin_order:
+        raise ArticleNotFound('Article not found in origin siblings')
+
+    # Базовый список потомков целевого родителя.
+    target_order = list(children_map.get(target_parent_id, []))
+    # Удаляем статью, если она там уже фигурирует.
+    target_order = [aid for aid in target_order if aid != article_id]
+
+    # Если целевой родитель тот же, работаем с origin без текущей статьи.
+    if target_parent_id == origin_parent_id:
+        target_order = [aid for aid in origin_order if aid != article_id]
+
+    insertion_index: Optional[int] = None
+    if anchor_id and anchor_id in target_order:
+        anchor_idx = target_order.index(anchor_id)
+        if placement == 'before':
+            insertion_index = anchor_idx
+        elif placement in {'after', 'inside'}:
+            insertion_index = anchor_idx + 1
+
+    if insertion_index is None:
+        insertion_index = len(target_order)
+
+    insertion_index = max(0, min(insertion_index, len(target_order)))
+    target_order.insert(insertion_index, article_id)
+
+    now = iso_now()
+    with CONN:
+        if target_parent_id != origin_parent_id:
+            # Сжимаем порядок в исходном родителе.
+            origin_compact = [aid for aid in origin_order if aid != article_id]
+            for pos, aid in enumerate(origin_compact):
+                CONN.execute(
+                    'UPDATE articles SET position = ?, updated_at = ? WHERE id = ? AND author_id = ?',
+                    (pos, now, aid, author_id),
+                )
+
+        # Выставляем порядок для целевого родителя.
+        for pos, aid in enumerate(target_order):
+            CONN.execute(
+                'UPDATE articles SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND author_id = ?',
+                (target_parent_id, pos, now, aid, author_id),
+            )
+
+    return get_article(article_id, author_id)
+
+
+def move_article(article_id: str, direction: str, author_id: str) -> Dict[str, Any]:
+    row = CONN.execute(
+        'SELECT parent_id FROM articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL',
+        (article_id, author_id),
+    ).fetchone()
+    if not row:
+        raise ArticleNotFound('Article not found')
+    parent_id = row['parent_id']
+    siblings = _fetch_article_siblings(parent_id, author_id)
+    ids = [r['id'] for r in siblings]
+    if article_id not in ids:
+        raise ArticleNotFound('Article not found')
+    idx = ids.index(article_id)
+    if direction == 'up' and idx == 0:
+        return get_article(article_id, author_id)
+    if direction == 'down' and idx == len(ids) - 1:
+        return get_article(article_id, author_id)
+    new_idx = idx - 1 if direction == 'up' else idx + 1
+    ids[idx], ids[new_idx] = ids[new_idx], ids[idx]
+    with CONN:
+        for pos, aid in enumerate(ids):
+            CONN.execute(
+                'UPDATE articles SET position = ? WHERE id = ? AND author_id = ?',
+                (pos, aid, author_id),
+            )
+    return get_article(article_id, author_id)
+
+
+def indent_article(article_id: str, author_id: str) -> Dict[str, Any]:
+    row = CONN.execute(
+        'SELECT parent_id FROM articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL',
+        (article_id, author_id),
+    ).fetchone()
+    if not row:
+        raise ArticleNotFound('Article not found')
+    parent_id = row['parent_id']
+    siblings = _fetch_article_siblings(parent_id, author_id)
+    ids = [r['id'] for r in siblings]
+    if article_id not in ids:
+        raise ArticleNotFound('Article not found')
+    idx = ids.index(article_id)
+    if idx == 0:
+        # Не во что вкладывать.
+        return get_article(article_id, author_id)
+    new_parent_id = ids[idx - 1]
+    max_pos_row = CONN.execute(
+        'SELECT MAX(position) AS maxp FROM articles WHERE parent_id = ? AND author_id = ? AND deleted_at IS NULL',
+        (new_parent_id, author_id),
+    ).fetchone()
+    new_pos = (max_pos_row['maxp'] or 0) + 1
+    now = iso_now()
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND author_id = ?',
+            (new_parent_id, new_pos, now, article_id, author_id),
+        )
+    return get_article(article_id, author_id)
+
+
+def outdent_article(article_id: str, author_id: str) -> Dict[str, Any]:
+    row = CONN.execute(
+        'SELECT parent_id FROM articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL',
+        (article_id, author_id),
+    ).fetchone()
+    if not row:
+        raise ArticleNotFound('Article not found')
+    parent_id = row['parent_id']
+    if not parent_id:
+        # Уже в корне
+        return get_article(article_id, author_id)
+
+    parent_row = CONN.execute(
+        'SELECT parent_id FROM articles WHERE id = ? AND author_id = ? AND deleted_at IS NULL',
+        (parent_id, author_id),
+    ).fetchone()
+    new_parent_id = parent_row['parent_id'] if parent_row else None
+
+    siblings = _fetch_article_siblings(new_parent_id, author_id)
+    ids = [r['id'] for r in siblings]
+    insert_after_idx = len(ids) - 1
+    if parent_id in ids:
+        insert_after_idx = ids.index(parent_id)
+    # Строим новый порядок: оставляем все, но добавим/переместим article_id после parent_id.
+    if article_id in ids:
+        ids.remove(article_id)
+    ids.insert(insert_after_idx + 1, article_id)
+
+    now = iso_now()
+    with CONN:
+        for pos, aid in enumerate(ids):
+            CONN.execute(
+                'UPDATE articles SET parent_id = ?, position = ?, updated_at = ? WHERE id = ? AND author_id = ?',
+                (new_parent_id, pos, now, aid, author_id),
+            )
+    return get_article(article_id, author_id)
 
 
 def get_article(article_id: str, author_id: Optional[str] = None, include_deleted: bool = False) -> Optional[Dict[str, Any]]:

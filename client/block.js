@@ -1,10 +1,10 @@
 ﻿import { state } from './state.js';
-import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js';
+import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js?v=2';
 import { showToast } from './toast.js';
 import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
 import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js';
-import { fetchArticlesIndex } from './api.js';
+import { fetchArticlesIndex } from './api.js?v=2';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
 import { splitEditingBlockAtCaret } from './actions.js';
@@ -12,16 +12,14 @@ import { splitEditingBlockAtCaret } from './actions.js';
 function resolveYandexDiskHref(rawPath = '') {
   if (!rawPath) return '';
   if (rawPath.startsWith('app:/')) {
-    const name = rawPath.slice('app:/'.length);
-    const encodedName = encodeURIComponent(name);
-    const base =
-      'https://disk.yandex.ru/client/disk/%D0%9F%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F/Memus.pro';
-    return `${base}/${encodedName}`;
+    // Открываем файл через наш backend, который
+    // по OAuth‑токену пользователя берёт href на скачивание у Я.Диска.
+    const encoded = encodeURIComponent(rawPath);
+    return `/api/yandex/disk/file?path=${encoded}`;
   }
   if (rawPath.startsWith('disk:/')) {
-    const rel = rawPath.slice('disk:/'.length);
-    const parts = rel.split('/').map((p) => encodeURIComponent(p));
-    return `https://disk.yandex.ru/client/disk/${parts.join('/')}`;
+    const encoded = encodeURIComponent(rawPath);
+    return `/api/yandex/disk/file?path=${encoded}`;
   }
   return rawPath;
 }
@@ -726,17 +724,25 @@ function clearEmptyPlaceholder(element) {
   }
 }
 
+function isImageLikeFile(file) {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  const name = (file.name || '').toLowerCase();
+  if (!name) return false;
+  return /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(name);
+}
+
 function collectImageFiles(items = [], fallbackFiles = []) {
   const files = [];
   Array.from(items || []).forEach((item) => {
-    if (item.kind === 'file' && item.type.startsWith('image/')) {
+    if (item.kind === 'file') {
       const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
-      if (file) files.push(file);
+      if (file && isImageLikeFile(file)) files.push(file);
     }
   });
   if (!files.length && fallbackFiles?.length) {
     Array.from(fallbackFiles).forEach((file) => {
-      if (file.type.startsWith('image/')) files.push(file);
+      if (isImageLikeFile(file)) files.push(file);
     });
   }
   return files;
@@ -745,14 +751,14 @@ function collectImageFiles(items = [], fallbackFiles = []) {
 function collectNonImageFiles(items = [], fallbackFiles = []) {
   const files = [];
   Array.from(items || []).forEach((item) => {
-    if (item.kind === 'file' && (!item.type || !item.type.startsWith('image/'))) {
+    if (item.kind === 'file') {
       const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
-      if (file) files.push(file);
+      if (file && !isImageLikeFile(file)) files.push(file);
     }
   });
   if (!files.length && fallbackFiles?.length) {
     Array.from(fallbackFiles).forEach((file) => {
-      if (!file.type || !file.type.startsWith('image/')) files.push(file);
+      if (!isImageLikeFile(file)) files.push(file);
     });
   }
   return files;
@@ -762,15 +768,61 @@ async function insertImageFromFile(element, file) {
   try {
     const { url } = await uploadImageFile(file);
     const safeName = (file.name || 'image').replace(/"/g, '&quot;');
-    insertHtmlAtCaret(element, `<img src="${url}" alt="${safeName}" draggable="false" />`);
+    // Ограничиваем размер изображения сразу при вставке, чтобы оно
+    // не «разворачивалось» на весь экран до применения стилей.
+    insertHtmlAtCaret(
+      element,
+      `<img src="${url}" alt="${safeName}" draggable="false" style="max-width:100%;max-height:15rem;object-fit:contain;display:block;margin:0.4rem 0;border-radius:12px;box-shadow:0 6px 18px rgba(15,30,40,0.1);" />`,
+    );
   } catch (error) {
-    showToast(error.message);
+    // Дополнительный лог на сервер для диагностики проблем на мобильных устройствах.
+    try {
+      fetch('/api/client/log', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'insertImageFromFileError',
+          data: {
+            message: error && error.message ? String(error.message) : String(error),
+            name: file && file.name,
+            type: file && file.type,
+            size: file && file.size,
+          },
+        }),
+      }).catch(() => {});
+    } catch (_) {
+      // ignore logging errors
+    }
+    // Параллельно показываем подробный alert на фронтенде,
+    // чтобы можно было увидеть причину прямо на мобильном.
+    try {
+      const debug = {
+        where: 'insertImageFromFile',
+        message: error && error.message ? String(error.message) : String(error),
+        status: typeof error?.status === 'number' ? error.status : null,
+        name: file && file.name,
+        type: file && file.type,
+        size: file && file.size,
+      };
+      const statusText = debug.status === null ? 'null' : String(debug.status);
+      // eslint-disable-next-line no-alert
+      window.alert(`upload failed (status ${statusText}):\\n${JSON.stringify(debug, null, 2)}`);
+    } catch (_) {
+      // ignore logging errors
+    }
+    const msg = String(error?.message || '').toLowerCase();
+    if (msg.includes('status 0') || msg.includes('network error')) {
+      showToast('Не удалось загрузить изображение (проблема с соединением). Обновите страницу и, при необходимости, войдите заново.');
+    } else {
+      showToast(error.message || 'Не удалось загрузить изображение');
+    }
   }
 }
 
 let attachmentUploadNoticeShown = false;
 
-async function insertAttachmentFromFile(element, file) {
+async function insertAttachmentFromFile(element, file, blockId) {
   if (!state.articleId) {
     showToast('Не выбрана статья для вставки файла');
     return;
@@ -805,10 +857,23 @@ async function insertAttachmentFromFile(element, file) {
     const resolvedHref = resolveYandexDiskHref(rawHref);
     const href = escapeHtml(resolvedHref);
     if (href) {
-      const container = element;
-      const placeholder = container.querySelector(
+      let container = element;
+      let placeholder = container.querySelector(
         `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
       );
+      if (blockId && (!placeholder || !container.isConnected)) {
+        const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
+        if (blockRoot) {
+          const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
+          const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
+          if (liveBody) {
+            container = liveBody;
+            placeholder = container.querySelector(
+              `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
+            );
+          }
+        }
+      }
       if (placeholder) {
         placeholder.removeAttribute('data-pending-attachment');
         placeholder.removeAttribute('data-attachment-token');
@@ -818,16 +883,26 @@ async function insertAttachmentFromFile(element, file) {
         placeholder.textContent = finalName;
       } else {
         // Если плейсхолдер не нашли — просто вставляем ссылку в текущую позицию.
-        clearEmptyPlaceholder(element);
+        clearEmptyPlaceholder(container);
         insertHtmlAtCaret(
-          element,
+          container,
           `<a href="${href}" target="_blank" rel="noopener noreferrer">${finalName}</a>`,
         );
       }
     }
   } catch (error) {
     try {
-      const container = element;
+      let container = element;
+      if (blockId && !container.isConnected) {
+        const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
+        if (blockRoot) {
+          const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
+          const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
+          if (liveBody) {
+            container = liveBody;
+          }
+        }
+      }
       const placeholder = container.querySelector(
         `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
       );
@@ -837,8 +912,22 @@ async function insertAttachmentFromFile(element, file) {
     } catch (_) {
       /* ignore */
     }
-    showToast(error.message || 'Не удалось загрузить файл на Яндекс.Диск');
+    const msg = String(error?.message || '').toLowerCase();
+    if (msg.includes('status 0') || msg.includes('network error')) {
+      showToast('Не удалось загрузить файл (проблема с соединением). Обновите страницу и, при необходимости, войдите заново.');
+    } else {
+      showToast(error.message || 'Не удалось загрузить файл на Яндекс.Диск');
+    }
   }
+}
+
+export function insertFilesIntoEditable(element, files = [], blockId) {
+  if (!element || !files || !files.length) return;
+  const list = Array.from(files);
+  const imageFiles = list.filter((file) => isImageLikeFile(file));
+  const otherFiles = list.filter((file) => file && !isImageLikeFile(file));
+  imageFiles.forEach((file) => insertImageFromFile(element, file));
+  otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
 }
 
 export function attachRichContentHandlers(element, blockId) {
@@ -857,7 +946,7 @@ export function attachRichContentHandlers(element, blockId) {
     } else if (otherFiles.length > 0) {
       event.preventDefault();
       logDebug('paste: non-image files detected', otherFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
-      otherFiles.forEach((file) => insertAttachmentFromFile(element, file));
+      otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
     } else {
       const htmlData = (event.clipboardData?.getData('text/html') || '').trim();
       event.preventDefault();
@@ -901,7 +990,7 @@ export function attachRichContentHandlers(element, blockId) {
     event.preventDefault();
     logDebug('drop: files detected', allFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
     imageFiles.forEach((file) => insertImageFromFile(element, file));
-    otherFiles.forEach((file) => insertAttachmentFromFile(element, file));
+    otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
   });
 
   element.addEventListener('click', (event) => {

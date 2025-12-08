@@ -19,6 +19,8 @@ def _init_sqlite_schema():
             title TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            parent_id TEXT,
+            position INTEGER NOT NULL DEFAULT 0,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
             block_trash TEXT NOT NULL DEFAULT '[]',
@@ -30,6 +32,10 @@ def _init_sqlite_schema():
             encryption_hint TEXT,
             public_slug TEXT UNIQUE
         )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_articles_parent_position
+        ON articles(parent_id, position)
         ''',
         '''
         CREATE TABLE IF NOT EXISTS blocks (
@@ -106,6 +112,10 @@ def _init_sqlite_schema():
 
     article_columns = execute("PRAGMA table_info(articles)").fetchall()
     col_names = {col['name'] for col in article_columns}
+    if 'parent_id' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN parent_id TEXT")
+    if 'position' not in col_names:
+        execute("ALTER TABLE articles ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
     if 'deleted_at' not in col_names:
         execute("ALTER TABLE articles ADD COLUMN deleted_at TEXT")
     if 'author_id' not in col_names:
@@ -206,6 +216,8 @@ def _init_postgres_schema():
             title TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            parent_id TEXT,
+            position INTEGER NOT NULL DEFAULT 0,
             history TEXT NOT NULL DEFAULT '[]',
             redo_history TEXT NOT NULL DEFAULT '[]',
             block_trash TEXT NOT NULL DEFAULT '[]',
@@ -217,6 +229,10 @@ def _init_postgres_schema():
             encryption_hint TEXT,
             public_slug TEXT UNIQUE
         )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_articles_parent_position
+        ON articles(parent_id, position)
         ''',
         '''
         CREATE TABLE IF NOT EXISTS blocks (
@@ -326,6 +342,20 @@ def _init_postgres_schema():
                 WHERE table_name = 'articles' AND column_name = 'author_id'
             ) THEN
                 ALTER TABLE articles ADD COLUMN author_id TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'parent_id'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN parent_id TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'position'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
             END IF;
             IF NOT EXISTS (
                 SELECT 1

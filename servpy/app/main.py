@@ -30,6 +30,7 @@ from fastapi import (
     UploadFile,
     Request,
     Response,
+    Query,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
@@ -91,6 +92,10 @@ from .data_store import (
     clear_block_trash,
     upsert_yandex_tokens,
     get_yandex_tokens,
+    move_article as move_article_ds,
+    indent_article as indent_article_ds,
+    outdent_article as outdent_article_ds,
+    move_article_to_parent,
 )
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -107,6 +112,7 @@ ALLOWED_ATTACHMENT_TYPES = {
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'text/plain',
     'text/csv',
+    'text/html',
     'application/rtf',
 }
 
@@ -2318,6 +2324,90 @@ def yandex_upload_url(payload: dict[str, Any], current_user: User = Depends(get_
         'exists': exists,
         'same': same,
     }
+
+
+@app.get('/api/yandex/disk/file')
+def yandex_open_file(path: str = Query(..., description='Путь ресурса на Яндекс.Диске (app:/ или disk:/)'), current_user: User = Depends(get_current_user)):
+    """
+    Проксирует скачивание файла с Яндекс.Диска через API.
+
+    Принимает логический путь (app:/... или disk:/...) и:
+      - по access_token текущего пользователя запрашивает href для скачивания;
+      - делает редирект на этот href.
+
+    Это позволяет открывать вложения из app‑папки без необходимости
+    угадывать URL веб‑интерфейса Диска.
+    """
+    tokens = get_yandex_tokens(current_user.id)
+    access_token = tokens.get('accessToken') if tokens else None
+    if not access_token:
+        raise HTTPException(status_code=400, detail='Интеграция с Яндекс.Диском не настроена')
+
+    disk_path = (path or '').strip()
+    if not disk_path:
+        raise HTTPException(status_code=400, detail='Не указан путь на Яндекс.Диске')
+
+    encoded = urllib.parse.quote(disk_path, safe='')
+
+    # 1. Если у ресурса уже есть публичная ссылка (пользователь делился им в интерфейсе),
+    #    просто перенаправляем на неё — так файл открывается в приложении/веб‑просмотрщике.
+    meta_url = f'https://cloud-api.yandex.net/v1/disk/resources?path={encoded}&fields=public_url'
+    public_url: str | None = None
+    try:
+        meta_req = urllib.request.Request(
+            meta_url,
+            headers={'Authorization': f'OAuth {access_token}'},
+        )
+        with urllib.request.urlopen(meta_req, timeout=10) as resp:
+            meta = json.loads(resp.read().decode('utf-8'))
+        public_url = meta.get('public_url') or None
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            raise HTTPException(status_code=404, detail='Файл на Яндекс.Диске не найден')
+        logger.error('Failed to fetch Yandex Disk resource meta: %r', exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to fetch Yandex Disk resource meta: %r', exc)
+
+    if public_url:
+        return RedirectResponse(public_url)
+
+    # 2. Публичной ссылки нет — публикуем ресурс, чтобы получить
+    #    стабильный public_url (disk.yandex.ru/d/...), который
+    #    открывается в соответствующем приложении/просмотрщике.
+    publish_url = f'https://cloud-api.yandex.net/v1/disk/resources/publish?path={encoded}'
+    try:
+        pub_req = urllib.request.Request(
+            publish_url,
+            method='PUT',
+            headers={'Authorization': f'OAuth {access_token}'},
+        )
+        with urllib.request.urlopen(pub_req, timeout=10) as resp:
+            pub_data = json.loads(resp.read().decode('utf-8'))
+        public_url = pub_data.get('public_url') or None
+    except urllib.error.HTTPError as exc:
+        logger.error('Failed to publish Yandex Disk resource: %r', exc)
+        if exc.code == 404:
+            raise HTTPException(status_code=404, detail='Файл на Яндекс.Диске не найден')
+        # Если публикация не удалась по другой причине — пробуем ещё раз прочитать мету.
+        try:
+            meta_req = urllib.request.Request(
+                meta_url,
+                headers={'Authorization': f'OAuth {access_token}'},
+            )
+            with urllib.request.urlopen(meta_req, timeout=10) as resp:
+                meta = json.loads(resp.read().decode('utf-8'))
+            public_url = meta.get('public_url') or None
+        except Exception as exc2:  # noqa: BLE001
+            logger.error('Failed to refetch Yandex Disk resource meta after publish error: %r', exc2)
+            raise HTTPException(status_code=502, detail='Не удалось опубликовать файл на Яндекс.Диске')
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Failed to publish Yandex Disk resource: %r', exc)
+        raise HTTPException(status_code=502, detail='Не удалось опубликовать файл на Яндекс.Диске')
+
+    if not public_url:
+        raise HTTPException(status_code=502, detail='Яндекс.Диск не вернул публичную ссылку')
+
+    return RedirectResponse(public_url)
 @app.middleware('http')
 async def spa_fallback_middleware(request: Request, call_next):
     """
@@ -2413,6 +2503,8 @@ def list_articles(current_user: User = Depends(get_current_user)):
             'id': article['id'],
             'title': article['title'],
             'updatedAt': article['updatedAt'],
+            'parentId': article.get('parentId'),
+            'position': article.get('position', 0),
             'publicSlug': article.get('publicSlug'),
             'encrypted': bool(article.get('encrypted', False)),
         }
@@ -2774,6 +2866,64 @@ def remove_article(article_id: str, force: bool = False, current_user: User = De
     return {'status': 'deleted' if not force else 'purged'}
 
 
+@app.post('/api/articles/{article_id}/move')
+def move_article_endpoint(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    direction = (payload.get('direction') or '').strip()
+    if direction not in {'up', 'down'}:
+        raise HTTPException(status_code=400, detail='Unknown move direction')
+    try:
+        article = move_article_ds(article_id, direction, current_user.id)
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return article
+
+
+@app.post('/api/articles/{article_id}/indent')
+def indent_article_endpoint(article_id: str, current_user: User = Depends(get_current_user)):
+    try:
+        article = indent_article_ds(article_id, current_user.id)
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return article
+
+
+@app.post('/api/articles/{article_id}/outdent')
+def outdent_article_endpoint(article_id: str, current_user: User = Depends(get_current_user)):
+    try:
+        article = outdent_article_ds(article_id, current_user.id)
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return article
+
+
+@app.post('/api/articles/{article_id}/move-tree')
+def move_article_tree_endpoint(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    """
+    Перемещает статью в дереве:
+    - parentId: новый родитель (или null для корня);
+    - anchorId + placement ('before'/'after'/'inside') — точное место вставки среди детей.
+    """
+    parent_id_raw = payload.get('parentId')
+    parent_id = parent_id_raw or None
+    anchor_id = payload.get('anchorId') or None
+    placement = (payload.get('placement') or '').strip() or None
+    if placement not in {None, 'before', 'after', 'inside'}:
+        raise HTTPException(status_code=400, detail='Unknown placement')
+    try:
+        article = move_article_to_parent(
+            article_id,
+            parent_id,
+            current_user.id,
+            anchor_id=anchor_id,
+            placement=placement,
+        )
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return article
+
+
 @app.patch('/api/articles/{article_id}')
 def patch_article(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
@@ -2969,11 +3119,29 @@ def post_restore_article(article_id: str, current_user: User = Depends(get_curre
     return _present_article(article, article_id)
 
 
+@app.post('/api/client/log')
+async def client_log(payload: dict[str, Any]):
+    """
+    Простейший приёмник клиентских отладочных логов.
+
+    Используется только временно для диагностики проблем на мобильных устройствах
+    (например, загрузки изображений), чтобы увидеть параметры запроса в server‑log.
+    """
+    kind = (payload.get('kind') or '').strip() or 'generic'
+    data = payload.get('data')
+    logger.error('[client-log] kind=%s data=%s', kind, json.dumps(data, ensure_ascii=False))
+    return {'status': 'ok'}
+
+
 
 @app.post('/api/uploads')
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
-    if not file.content_type or not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail='Ошибка формата: нужен image/*')
+    logger.error(
+        'upload_image: name=%r content_type=%r size=%r',
+        getattr(file, 'filename', None),
+        getattr(file, 'content_type', None),
+        getattr(file, 'spool_max_size', None),
+    )
     now = datetime.utcnow()
     user_root = UPLOADS_DIR / current_user.id / 'images'
     target_dir = user_root / str(now.year) / f"{now.month:02}"
@@ -2983,16 +3151,40 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 
     buffer = BytesIO()
     size = 0
-    while chunk := await file.read(1024 * 256):
-        size += len(chunk)
-        if size > 20 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail='Размер файла превышает лимит')
-        buffer.write(chunk)
+    try:
+        while chunk := await file.read(1024 * 256):
+            size += len(chunk)
+            if size > 20 * 1024 * 1024:
+                logger.warning(
+                    'upload_image: file too large, size=%d name=%r content_type=%r',
+                    size,
+                    getattr(file, 'filename', None),
+                    getattr(file, 'content_type', None),
+                )
+                raise HTTPException(status_code=400, detail='Размер файла превышает лимит')
+            buffer.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error(
+            'upload_image: error while reading upload: name=%r content_type=%r exc=%r',
+            getattr(file, 'filename', None),
+            getattr(file, 'content_type', None),
+            exc,
+        )
+        raise HTTPException(status_code=400, detail='Не удалось принять файл') from exc
     buffer.seek(0)
 
     try:
         img = Image.open(buffer)
     except Exception as exc:  # noqa: BLE001
+        logger.error(
+            'upload_image: failed to open image: name=%r content_type=%r size=%d exc=%r',
+            getattr(file, 'filename', None),
+            getattr(file, 'content_type', None),
+            size,
+            exc,
+        )
         raise HTTPException(status_code=400, detail='Не удалось прочитать изображение') from exc
 
     max_width = 1920
@@ -3014,6 +3206,13 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
         await out_file.write(out_bytes)
 
     rel = dest.relative_to(UPLOADS_DIR).as_posix()
+    logger.error(
+        'upload_image: saved url=%r name=%r orig_size=%d webp_size=%d',
+        f"/uploads/{rel}",
+        getattr(file, 'filename', None),
+        size,
+        len(out_bytes),
+    )
     return {'url': f"/uploads/{rel}"}
 
 
@@ -3028,6 +3227,12 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
     if not content_type:
         content_type = mimetypes.guess_type(file.filename or '')[0] or ''
     if not content_type or content_type not in ALLOWED_ATTACHMENT_TYPES:
+        logger.error(
+            'upload_attachment: rejected file type name=%r content_type=%r guessed=%r',
+            getattr(file, 'filename', None),
+            getattr(file, 'content_type', None),
+            content_type,
+        )
         raise HTTPException(status_code=400, detail='Недопустимый тип файла')
 
     target_dir = UPLOADS_DIR / current_user.id / 'attachments' / real_article_id
@@ -3041,11 +3246,26 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
             while chunk := await file.read(1024 * 256):
                 size += len(chunk)
                 if size > 20 * 1024 * 1024:
+                    logger.warning(
+                        'upload_attachment: file too large, size=%d name=%r content_type=%r',
+                        size,
+                        getattr(file, 'filename', None),
+                        content_type,
+                    )
                     dest.unlink(missing_ok=True)
                     raise HTTPException(status_code=400, detail='Файл слишком большой (макс 20 МБ)')
                 await out_file.write(chunk)
-    except Exception:
+    except HTTPException:
         dest.unlink(missing_ok=True)
+        raise
+    except Exception as exc:  # noqa: BLE001
+        dest.unlink(missing_ok=True)
+        logger.error(
+            'upload_attachment: error while saving file name=%r content_type=%r exc=%r',
+            getattr(file, 'filename', None),
+            content_type,
+            exc,
+        )
         raise
 
     stored_path = f'/uploads/{current_user.id}/attachments/{real_article_id}/{filename}'

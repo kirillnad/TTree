@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi, apiRequest } from './api.js';
+import { fetchArticle, fetchArticlesIndex, createArticle as createArticleApi, apiRequest } from './api.js?v=2';
 import { clearPendingTextPreview, hydrateUndoRedoFromArticle, moveBlockToParent } from './undo.js';
 import { setViewMode, upsertArticleIndex, renderMainArticleList, renderSidebarArticleList, ensureArticlesIndexLoaded, ensureDeletedArticlesIndexLoaded, setTrashMode, toggleFavorite } from './sidebar.js';
 import {
@@ -11,6 +11,7 @@ import {
   buildEditableBlockHtml,
   toggleCollapse,
   setCurrentBlock,
+  insertFilesIntoEditable,
 } from './block.js';
 import { applyPendingPreviewMarkup } from './undo.js';
 import { placeCaretAtEnd, placeCaretAtStart, logDebug } from './utils.js';
@@ -495,6 +496,31 @@ async function renderBlocks(blocks, container, depth = 1) {
       const actions = document.createElement('div');
       actions.className = 'block-edit-actions';
 
+      const attachBtn = document.createElement('button');
+      attachBtn.type = 'button';
+      attachBtn.className = 'ghost small block-attach-btn';
+      attachBtn.textContent = '📎 Файл';
+      attachBtn.title = 'Прикрепить файл или картинку';
+      attachBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const editable = blockEl.querySelector('.block-text[contenteditable="true"]');
+        if (!editable) return;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.style.display = 'none';
+        input.addEventListener('change', () => {
+          const files = Array.from(input.files || []);
+          if (files.length) {
+            insertFilesIntoEditable(editable, files, block.id);
+          }
+          input.remove();
+        });
+        document.body.appendChild(input);
+        input.click();
+      });
+
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
       saveBtn.className = 'ghost small';
@@ -515,8 +541,10 @@ async function renderBlocks(blocks, container, depth = 1) {
         cancelEditing();
       });
 
-      actions.appendChild(cancelBtn);
+      actions.appendChild(attachBtn);
       actions.appendChild(saveBtn);
+      actions.appendChild(cancelBtn);
+    
       content.appendChild(actions);
     }
 

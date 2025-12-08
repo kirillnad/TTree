@@ -90,13 +90,12 @@ html {
 }
 
 .sidebar {
-  width: 280px;
   background: #252526;
   color: #d4d4d4;
   padding: 0.5rem 0.7rem 0.6rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0;
   box-shadow: none;
   position: relative;
   transition: width 0.25s ease, padding 0.25s ease;
@@ -106,6 +105,10 @@ html {
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 500;
+}
+
+.sidebar > .sidebar-articles {
+  margin-top: 0.5rem;
 }
 
 .sidebar-footer {
@@ -144,7 +147,8 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   align-items: stretch;
   padding-top: 1.2rem;
   margin-top: 1rem;
@@ -315,6 +319,8 @@ html {
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .sidebar-articles__header {
@@ -368,11 +374,12 @@ html {
   padding: 0;
   padding-top: 0.3rem;
   margin: 0;
-  max-height: 44vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sidebar-article-item button {
@@ -426,6 +433,13 @@ html {
 }
 .star-btn:hover {
   color: #facc15;
+}
+
+.sidebar-article-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
 }
 
 .sidebar-actions {
@@ -1343,6 +1357,13 @@ button.icon-button.small {
   display: block;
   margin: 0.4rem 0;
   box-shadow: 0 6px 18px rgba(15, 30, 40, 0.1);
+}
+
+@media (max-width: 640px) {
+  .block-text img {
+    width: 100%;
+    height: auto;
+  }
 }
 .block-text .attachment-link {
   display: inline-flex;
@@ -2298,8 +2319,7 @@ body.block-dnd-active {
 .sidebar {
   position: fixed;
   inset: 0;
-  max-width: 360px;
-  width: 90vw;
+  max-width: 450px;
   transform: translateX(-100%);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   box-shadow: none;
@@ -2352,8 +2372,7 @@ main.content {
   }
 .sidebar {
     position: relative;
-    width: 280px;
-    max-width: 280px;
+    max-width: 450px;
     transform: none;
     box-shadow: 0 20px 45px rgba(10, 15, 30, 0.35);
   }
@@ -2404,8 +2423,7 @@ main.content {
   .sidebar {
     position: fixed;
     inset: 0;
-    max-width: 360px;
-    width: 90vw;
+    max-width: 450px;
     transform: translateX(-100%);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     z-index: 1200;

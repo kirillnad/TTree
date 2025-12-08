@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchCurrentUser, login, registerUser, logout } from './api.js';
+import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=2';
 import { showToast } from './toast.js';
 
 let appStarted = false;

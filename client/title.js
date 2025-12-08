@@ -1,6 +1,6 @@
 import { state, isSavingTitle, setSavingTitle } from './state.js';
 import { refs } from './refs.js';
-import { apiRequest, deleteArticle } from './api.js';
+import { apiRequest, deleteArticle } from './api.js?v=2';
 import { showToast } from './toast.js';
 import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';

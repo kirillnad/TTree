@@ -8,10 +8,77 @@ import {
   fetchDeletedArticlesIndex,
   restoreArticle as restoreArticleApi,
   deleteArticle as deleteArticleApi,
-} from './api.js';
+  moveArticleTree,
+} from './api.js?v=2';
 import { showToast } from './toast.js';
 
 const FAVORITES_KEY = 'ttree_favorites';
+
+let draggingArticleId = null;
+
+function findArticleById(id) {
+  if (!id) return null;
+  return (state.articlesIndex || []).find((a) => a.id === id) || null;
+}
+
+function handleArticleDragStart(event) {
+  const li = event.currentTarget;
+  draggingArticleId = li?.dataset?.articleId || null;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+  }
+}
+
+function handleArticleDragOver(event) {
+  if (!draggingArticleId) return;
+  if (!event.currentTarget || !event.currentTarget.dataset.articleId) return;
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+}
+
+function handleArticleDrop(event) {
+  if (!draggingArticleId) return;
+  const targetLi = event.currentTarget;
+  const targetId = targetLi?.dataset?.articleId || null;
+  if (!targetId || targetId === draggingArticleId) return;
+  event.preventDefault();
+
+  const dragged = findArticleById(draggingArticleId);
+  const target = findArticleById(targetId);
+  if (!dragged || !target) return;
+  const rect = targetLi.getBoundingClientRect();
+  const offsetY = event.clientY - rect.top;
+  const third = rect.height / 3;
+  let dropMode;
+  if (offsetY < third) dropMode = 'before';
+  else if (offsetY > rect.height - third) dropMode = 'after';
+  else dropMode = 'inside';
+
+  const parentId =
+    dropMode === 'inside' ? target.id : target.parentId || null;
+  const anchorId = dropMode === 'inside' ? null : target.id;
+
+  (async () => {
+    try {
+      await moveArticleTree(draggingArticleId, {
+        parentId,
+        anchorId,
+        placement: dropMode,
+      });
+      const articles = await fetchArticlesIndex();
+      setArticlesIndex(articles);
+      renderMainArticleList();
+    } catch (error) {
+      showToast(error.message || 'Не удалось переместить страницу');
+    }
+  })();
+}
+
+function handleArticleDragEnd() {
+  draggingArticleId = null;
+}
 
 function loadFavorites() {
   try {
@@ -66,8 +133,17 @@ export function setViewMode(showArticle) {
 
 export function setArticlesIndex(articles = []) {
   if (!state.favoriteArticles || !state.favoriteArticles.length) loadFavorites();
-  const sorted = sortArticles(Array.isArray(articles) ? articles : []);
-  state.articlesIndex = sorted;
+  const list = Array.isArray(articles) ? articles : [];
+  // Сохраняем плоский список, но с полями parentId/position.
+  state.articlesIndex = list.map((a) => ({
+    id: a.id,
+    title: a.title || 'Без названия',
+    updatedAt: a.updatedAt || new Date().toISOString(),
+    deletedAt: a.deletedAt || null,
+    publicSlug: a.publicSlug || null,
+    parentId: a.parentId || null,
+    position: typeof a.position === 'number' ? a.position : 0,
+  }));
   renderSidebarArticleList();
 }
 
@@ -90,6 +166,8 @@ export function upsertArticleIndex(article) {
     title: article.title || 'Без названия',
     updatedAt: article.updatedAt || new Date().toISOString(),
     publicSlug: article.publicSlug || null,
+    parentId: article.parentId || null,
+    position: typeof article.position === 'number' ? article.position : 0,
   };
   const idx = state.articlesIndex.findIndex((item) => item.id === summary.id);
   if (idx >= 0) {
@@ -125,45 +203,80 @@ function formatArticleDate(article) {
   return new Date(raw).toLocaleString();
 }
 
+function buildArticleTree(list = []) {
+  const byId = new Map();
+  list.forEach((a) => {
+    byId.set(a.id, { ...a, children: [] });
+  });
+  const roots = [];
+  byId.forEach((node) => {
+    const pid = node.parentId || null;
+    if (pid && byId.has(pid)) {
+      byId.get(pid).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  const sortRecursive = (nodes) => {
+    nodes.sort((a, b) => {
+      const fa = (state.favoriteArticles || []).includes(a.id);
+      const fb = (state.favoriteArticles || []).includes(b.id);
+      if (fa !== fb) return fa ? -1 : 1;
+      if (a.position !== b.position) return a.position - b.position;
+      return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+    });
+    nodes.forEach((n) => sortRecursive(n.children || []));
+  };
+  sortRecursive(roots);
+  return roots;
+}
+
 export function renderSidebarArticleList() {
   if (!refs.sidebarArticleList) return;
   refs.sidebarArticleList.innerHTML = '';
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
-  const filtered = source
-    .slice()
-    .sort((a, b) => {
-      const fa = favs.has(a.id);
-      const fb = favs.has(b.id);
-      if (fa !== fb) return fa ? -1 : 1;
-      return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
-    })
-    .filter(
-      (article) =>
-        (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
-        (!state.isTrashView ? article.id !== 'inbox' : true),
-    );
-  if (!filtered.length) {
+
+  const base = (source || []).filter(
+    (article) =>
+      (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
+      (!state.isTrashView ? article.id !== 'inbox' : true),
+  );
+  if (!base.length) {
     const empty = document.createElement('li');
     empty.className = 'sidebar-article-empty';
-    empty.textContent = state.isTrashView ? (query ? 'No deleted pages match the filter' : 'Trash is empty') : (query ? 'Нет совпадений' : 'Нет статей');
+    empty.textContent = state.isTrashView
+      ? query
+        ? 'No deleted pages match the filter'
+        : 'Trash is empty'
+      : query
+        ? 'Нет совпадений'
+        : 'Нет статей';
     refs.sidebarArticleList.appendChild(empty);
     return;
   }
-  filtered.forEach((article) => {
-    const item = document.createElement('li');
-    item.className = 'sidebar-article-item';
+
+  const tree = buildArticleTree(base);
+
+  const renderNode = (node, depth) => {
+    const li = document.createElement('li');
+    li.className = 'sidebar-article-item';
+    li.dataset.articleId = node.id;
+    li.style.paddingLeft = `${depth * 1.25}rem`;
+
+    const row = document.createElement('div');
+    row.className = 'sidebar-article-row';
+
     const button = document.createElement('button');
     button.type = 'button';
-    if (!state.isTrashView && article.id === state.articleId) button.classList.add('active');
-    const isFav = favs.has(article.id);
-    const titleText = escapeHtml(article.title || 'Без названия');
-    const publicIcon = article.publicSlug ? '🌐 ' : '';
-    button.innerHTML = `<span>${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
+    if (!state.isTrashView && node.id === state.articleId) button.classList.add('active');
+    const isFav = favs.has(node.id);
+    const titleText = escapeHtml(node.title || 'Без названия');
+    const publicIcon = node.publicSlug ? '🌐 ' : '';
+    button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
     button.addEventListener('click', () => {
-      navigate(routing.article(article.id));
-      // Автоматически закрываем сайдбар на мобильном.
+      navigate(routing.article(node.id));
       if (state.isSidebarMobileOpen) {
         setSidebarMobileOpen(false);
       }
@@ -172,12 +285,25 @@ export function renderSidebarArticleList() {
     if (star) {
       star.addEventListener('click', (event) => {
         event.stopPropagation();
-        toggleFavorite(article.id);
+        toggleFavorite(node.id);
       });
     }
-    item.appendChild(button);
-    refs.sidebarArticleList.appendChild(item);
-  });
+    row.appendChild(button);
+
+    li.appendChild(row);
+    if (!state.isTrashView) {
+      li.draggable = true;
+      li.addEventListener('dragstart', handleArticleDragStart);
+      li.addEventListener('dragover', handleArticleDragOver);
+      li.addEventListener('drop', handleArticleDrop);
+      li.addEventListener('dragend', handleArticleDragEnd);
+    }
+    refs.sidebarArticleList.appendChild(li);
+
+    (node.children || []).forEach((child) => renderNode(child, depth + 1));
+  };
+
+  tree.forEach((root) => renderNode(root, 0));
 }
 
 export function renderMainArticleList(articles = null) {
@@ -194,12 +320,6 @@ export function renderMainArticleList(articles = null) {
   }
   base
     .slice()
-    .sort((a, b) => {
-      const fa = favs.has(a.id);
-      const fb = favs.has(b.id);
-      if (fa !== fb) return fa ? -1 : 1;
-      return new Date(b.deletedAt || b.updatedAt) - new Date(a.deletedAt || a.updatedAt);
-    })
     .filter(
       (article) =>
         (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
@@ -207,6 +327,7 @@ export function renderMainArticleList(articles = null) {
     )
     .forEach((article) => {
       const item = document.createElement('li');
+      item.dataset.articleId = article.id;
       if (state.isTrashView) {
         item.innerHTML = `
       <span>
