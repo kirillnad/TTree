@@ -966,10 +966,9 @@ export function attachRichContentHandlers(element, blockId) {
   element.addEventListener('keydown', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
     if (event.key !== 'Tab') return;
-    // Таб в режиме редактирования: не уходим на другие контролы,
-    // а смещаем элементы списка (ul/ol) вправо/влево.
-    event.preventDefault();
-    event.stopPropagation();
+    // Таб в режиме редактирования: если курсор внутри элемента списка,
+    // смещаем ul/ol вправо/влево. В остальных случаях не перехватываем
+    // событие, чтобы глобальный обработчик мог, например, сохранить блок.
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
@@ -979,9 +978,11 @@ export function attachRichContentHandlers(element, blockId) {
         : range.commonAncestorContainer?.parentElement;
     const li = node?.closest?.('li');
     if (!li) {
-      // Не в элементе списка — просто блокируем переход фокуса.
+      // Не в элементе списка — даём событию подняться выше.
       return;
     }
+    event.preventDefault();
+    event.stopPropagation();
     const command = event.shiftKey ? 'outdent' : 'indent';
     document.execCommand(command, false, null);
   });

@@ -369,6 +369,19 @@ function handleEditKey(event) {
     saveEditing();
     return;
   }
+  if (
+    event.code === 'Tab' &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.metaKey
+  ) {
+    // Tab в режиме редактирования: сохраняем блок и выходим в просмотр,
+    // вместо перехода фокуса на другие элементы.
+    event.preventDefault();
+    saveEditing();
+    return;
+  }
   if (event.ctrlKey && event.code === 'ArrowRight') {
     event.preventDefault();
     indentCurrentBlock({ keepEditing: true });

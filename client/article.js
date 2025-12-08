@@ -1096,6 +1096,12 @@ export async function mergeAllBlocksIntoFirst() {
     // мгновенно увидел результат без обновления страницы.
     await loadArticle(state.articleId, { resetUndoStacks: false });
     renderArticle();
+    // Возвращаемся в режим просмотра и фокусируем объединённый блок,
+    // чтобы сразу можно было войти в редактирование без перезагрузки.
+    state.mode = 'view';
+    state.editingBlockId = null;
+    state.pendingEditBlockId = null;
+    setCurrentBlock(firstBlock.id);
     showToast('Блоки объединены в один');
   } catch (error) {
     showToast(error.message || 'Не удалось объединить блоки');
