@@ -575,7 +575,7 @@ main.content {
   }
 
   #articleView.panel {
-    padding-top: 3.4rem;
+    margin-top: 3.4rem;
   }
 }
 
@@ -698,8 +698,15 @@ main.content {
 }
 
 .article-toolbar .ghost.small {
-  font-size: 0.85rem;
-  padding: 0.2rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 32px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.2rem 0.8rem;
 }
 
 #articleToolbar #articleNewBlockBtn {
@@ -725,6 +732,17 @@ main.content {
 @media (max-width: 767px) {
   .article-toolbar .toolbar-label {
     display: none;
+  }
+  /* На мобильных кнопки тулбара выглядят как icon-button,
+     чтобы совпадать со стилем articleFavoriteBtn */
+  .article-toolbar .ghost.small {
+    min-width: 30px;
+    min-height: 30px;
+    width: 30px;
+    padding: 0;
+    border-radius: 999px;
+    justify-content: center;
+    gap: 0;
   }
 }
 .drag-mode-toggle-btn {
@@ -776,6 +794,14 @@ main.content {
 }
 .article-menu .menu-item.danger {
   color: #b91c1c;
+}
+
+.article-menu-meta {
+  margin: 0.1rem 0.15rem 0.3rem;
+  padding: 0.25rem 0.3rem 0.35rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 #articleTitleInput {
@@ -869,17 +895,18 @@ button.icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 600;
   line-height: 1;
 }
 
 button.icon-button.small {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   padding: 0;
 }
 
@@ -1537,18 +1564,18 @@ h6.block-title {
 
 /* Заголовки */
 h1.block-title {
-  font-size: 1.35em;
+  font-size: 1.25em;
   border-bottom: 2px solid rgb(235, 237, 240);
 
 }
 
 h2.block-title {
-  font-size: 1.25em;
+  font-size: 1.1em;
   color:rgb(46, 128, 242)
 }
 
 h3.block-title {
-  font-size: 1.1em;
+  font-size: 1.05 em;
   color: rgb(229, 148, 18);
 
 }
@@ -1917,7 +1944,7 @@ h4.block-title {
   box-sizing: border-box;
   /* gap: 0.35rem; */
   /* margin-top: 0.35rem; */
-  padding-left: 0.5rem;
+  /* padding-left: 0.5rem; */
 }
 
 .block-header {
