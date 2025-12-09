@@ -354,31 +354,11 @@ export function showPublicLinkModal(options = {}) {
   };
 
   const copyToClipboard = () => {
-    // DEBUG: отладка копирования ссылки
-    // eslint-disable-next-line no-alert
-    window.alert('copyToClipboard: start');
     const value = (inputRef && inputRef.value) || urlValue;
-    // eslint-disable-next-line no-alert
-    window.alert(`copyToClipboard: value="${value || ''}"`);
-    if (!value) {
-      // eslint-disable-next-line no-alert
-      window.alert('copyToClipboard: empty value, abort');
-      return;
-    }
-
-    // Всегда ставим фокус и выделяем ссылку — на мобильных это даёт
-    // пользователю возможность скопировать её вручную даже при сбое API.
-    if (inputRef) {
-      try {
-        inputRef.focus({ preventScroll: true });
-        inputRef.select();
-      } catch (_) {
-        /* ignore */
-      }
-    }
+    if (!value) return;
 
     // Сразу даём пользователю понятный сигнал и подсказку.
-    showToast('Ссылка выделена и отправлена в буфер обмена (если браузер разрешает). При необходимости скопируйте её вручную.');
+    showToast('Ссылка скопирована');
 
     // Пытаемся скопировать в буфер обмена, но не завязываемся на результат:
     // на части мобильных браузеров операции могут быть запрещены.
@@ -407,9 +387,6 @@ export function showPublicLinkModal(options = {}) {
     cancelBtn.classList.add('hidden');
 
     confirmBtn.addEventListener('click', () => {
-      // DEBUG: отладка клика по кнопке "Скопировать ссылку"
-      // eslint-disable-next-line no-alert
-      window.alert('confirmBtn: click handler');
       copyToClipboard();
       resolveResult();
     });
@@ -418,17 +395,10 @@ export function showPublicLinkModal(options = {}) {
     });
     document.addEventListener('keydown', onKeyDown);
 
-    if (inputRef) {
-      inputRef.addEventListener('focus', () => {
-        inputRef.select();
-      });
-    }
-
     root.appendChild(overlay);
     requestAnimationFrame(() => {
       if (inputRef) {
         inputRef.focus({ preventScroll: true });
-        inputRef.select();
       } else {
         card.focus({ preventScroll: true });
       }
