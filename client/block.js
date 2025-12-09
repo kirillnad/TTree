@@ -861,17 +861,76 @@ function collectNonImageFiles(items = [], fallbackFiles = []) {
   return files;
 }
 
-async function insertImageFromFile(element, file) {
+async function insertImageFromFile(element, file, blockId) {
+  const token = `img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const rawName = file && file.name ? file.name : 'image';
+  const safeName = escapeHtml(rawName).replace(/"/g, '&quot;');
+  // Показываем текстовый плейсхолдер, чтобы было видно, что идёт загрузка.
   try {
-    const { url } = await uploadImageFile(file);
-    const safeName = (file.name || 'image').replace(/"/g, '&quot;');
-    // Ограничиваем размер изображения сразу при вставке, чтобы оно
-    // не «разворачивалось» на весь экран до применения стилей.
+    clearEmptyPlaceholder(element);
     insertHtmlAtCaret(
       element,
-      `<img src="${url}" alt="${safeName}" draggable="false" style="max-width:100%;max-height:15rem;object-fit:contain;display:block;margin:0.4rem 0;border-radius:12px;box-shadow:0 6px 18px rgba(15,30,40,0.1);" />`,
+      `<span data-pending-image="true" data-image-token="${token}">${safeName} (загрузка изображения...)</span>`,
     );
+  } catch (_) {
+    // Если не получилось вставить плейсхолдер, просто продолжаем без него.
+  }
+  try {
+    const { url } = await uploadImageFile(file);
+    const finalHtml = `<img src="${url}" alt="${safeName}" draggable="false" style="max-width:100%;max-height:15rem;object-fit:contain;display:block;margin:0.4rem 0;border-radius:12px;box-shadow:0 6px 18px rgba(15,30,40,0.1);" />`;
+    let container = element;
+    let placeholder =
+      container &&
+      container.querySelector(
+        `span[data-image-token="${token}"][data-pending-image="true"]`,
+      );
+    if (blockId && (!placeholder || !container.isConnected)) {
+      const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
+      if (blockRoot) {
+        const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
+        const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
+        if (liveBody) {
+          container = liveBody;
+          placeholder = container.querySelector(
+            `span[data-image-token="${token}"][data-pending-image="true"]`,
+          );
+        }
+      }
+    }
+    if (placeholder) {
+      placeholder.removeAttribute('data-pending-image');
+      placeholder.removeAttribute('data-image-token');
+      placeholder.outerHTML = finalHtml;
+    } else if (container) {
+      clearEmptyPlaceholder(container);
+      insertHtmlAtCaret(container, finalHtml);
+    }
   } catch (error) {
+    // Обновляем плейсхолдер сообщением об ошибке, если он ещё в DOM.
+    try {
+      let container = element;
+      if (blockId && !container.isConnected) {
+        const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
+        if (blockRoot) {
+          const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
+          const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
+          if (liveBody) {
+            container = liveBody;
+          }
+        }
+      }
+      if (container) {
+        const placeholder = container.querySelector(
+          `span[data-image-token="${token}"][data-pending-image="true"]`,
+        );
+        if (placeholder) {
+          placeholder.textContent = `${rawName} (ошибка загрузки изображения)`;
+          placeholder.removeAttribute('data-pending-image');
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
     // Дополнительный лог на сервер для диагностики проблем на мобильных устройствах.
     try {
       fetch('/api/client/log', {
@@ -926,6 +985,8 @@ async function insertAttachmentFromFile(element, file, blockId) {
   }
   const token = `att-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const safeName = escapeHtml(file?.name || 'файл');
+   const displayName = file?.name || 'файл';
+   let lastProgressLabel = '';
   logDebug('attachment: uploading to Yandex Disk', {
     name: file?.name,
     type: file?.type,
@@ -945,8 +1006,40 @@ async function insertAttachmentFromFile(element, file, blockId) {
   }
   try {
     const attachment = await uploadFileToYandexDisk(state.articleId, file, {
-      onProgress: (percent) => {
+      onProgress: (rawPercent) => {
+        const percent = Math.max(0, Math.min(100, Math.round(rawPercent || 0)));
         logDebug('attachment upload progress', { percent, name: file?.name });
+        try {
+          let container = element;
+          let placeholder = container.querySelector(
+            `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
+          );
+          if (blockId && (!placeholder || !container.isConnected)) {
+            const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
+            if (blockRoot) {
+              const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
+              const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
+              if (liveBody) {
+                container = liveBody;
+                placeholder = container.querySelector(
+                  `a[data-attachment-token="${token}"][data-pending-attachment="true"]`,
+                );
+              }
+            }
+          }
+          if (placeholder) {
+            const label =
+              percent >= 100
+                ? `${displayName} (обработка...)`
+                : `${displayName} (${percent}%)`;
+            if (label !== lastProgressLabel) {
+              lastProgressLabel = label;
+              placeholder.textContent = label;
+            }
+          }
+        } catch (_) {
+          /* ignore progress UI errors */
+        }
       },
     });
     const finalName = escapeHtml(attachment.originalName || file.name || 'файл');
@@ -1023,7 +1116,7 @@ export function insertFilesIntoEditable(element, files = [], blockId) {
   const list = Array.from(files);
   const imageFiles = list.filter((file) => isImageLikeFile(file));
   const otherFiles = list.filter((file) => file && !isImageLikeFile(file));
-  imageFiles.forEach((file) => insertImageFromFile(element, file));
+  imageFiles.forEach((file) => insertImageFromFile(element, file, blockId));
   otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
 }
 
@@ -1039,7 +1132,7 @@ export function attachRichContentHandlers(element, blockId) {
     const otherFiles = collectNonImageFiles(event.clipboardData?.items);
     if (imageFiles.length > 0) {
       event.preventDefault();
-      imageFiles.forEach((file) => insertImageFromFile(element, file));
+      imageFiles.forEach((file) => insertImageFromFile(element, file, blockId));
     } else if (otherFiles.length > 0) {
       event.preventDefault();
       logDebug('paste: non-image files detected', otherFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
@@ -1086,7 +1179,7 @@ export function attachRichContentHandlers(element, blockId) {
     if (!imageFiles.length && !otherFiles.length) return;
     event.preventDefault();
     logDebug('drop: files detected', allFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
-    imageFiles.forEach((file) => insertImageFromFile(element, file));
+    imageFiles.forEach((file) => insertImageFromFile(element, file, blockId));
     otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
   });
 
