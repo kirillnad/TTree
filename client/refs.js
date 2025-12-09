@@ -85,4 +85,5 @@ export const refs = {
   listSidebarBtn: document.getElementById('listSidebarBtn'),
   sidebarQuickFilter: document.getElementById('sidebarQuickFilter'),
   sidebarQuickFilterInput: document.getElementById('sidebarQuickFilterInput'),
+  sidebarQuickFilterClear: document.getElementById('sidebarQuickFilterClear'),
 };

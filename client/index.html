@@ -151,15 +151,6 @@
               <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
             </div>
           <div class="sidebar-footer">
-            <div id="sidebarQuickFilter" class="sidebar-quick-filter hidden">
-              <input
-                id="sidebarQuickFilterInput"
-                type="text"
-                placeholder="Фильтр статей…"
-                autocomplete="off"
-                spellcheck="false"
-              />
-            </div>
             <button
               id="userMenuBtn"
               class="ghost icon-button sidebar-user-avatar"
@@ -187,6 +178,26 @@
                 />
               </svg>
             </button>
+            <div id="sidebarQuickFilter" class="sidebar-quick-filter">
+              <div class="sidebar-quick-filter-input-wrapper">
+                <input
+                  id="sidebarQuickFilterInput"
+                  type="text"
+                  placeholder="Фильтр статей…"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <button
+                  id="sidebarQuickFilterClear"
+                  type="button"
+                  class="sidebar-quick-filter-clear"
+                  aria-label="Очистить фильтр"
+                  title="Очистить фильтр"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
             <div id="userMenu" class="article-menu hidden sidebar-user-menu" role="menu">
               <div class="sidebar-user-menu__item" aria-disabled="true">
                 <span class="sidebar-user-menu-icon sidebar-user-menu-icon--user" aria-hidden="true">
@@ -297,7 +308,7 @@
                     title="Скопировать публичную ссылку"
                     aria-label="Скопировать публичную ссылку"
                   >
-                    &#xE909;
+                    &#xE12B;
                   </button>
                   <div class="article-actions">
                     <button
@@ -348,7 +359,7 @@
                   &#xE76F;<span class="toolbar-label"> Двигать</span>
                 </button>
                 <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
-                  &#xF460;<span class="toolbar-label"> Слияние</span>
+                  &#xE11C;<span class="toolbar-label"> Слияние</span>
                 </button>
                 <button
                   id="splitBlockBtn"
@@ -356,13 +367,13 @@
                   type="button"
                   title="Разделить текущий блок по курсору (Ctrl+↓)"
                 >
-                  &#xF740;<span class="toolbar-label"> Разделить</span>
+                  &#xE118;<span class="toolbar-label"> Разделить</span>
                 </button>
                 <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
                   &#xF0E2;<span class="toolbar-label"> Таблица</span>
                 </button>
                 <button id="exportCurrentBlockBtn" class="ghost small" type="button" title="Экспорт текущего блока в HTML">
-                  &#xEDE1;<span class="toolbar-label"> Экспорт</span>
+                  &#xE74E;<span class="toolbar-label"> Экспорт</span>
                 </button>
                 <button id="deleteCurrentBlockBtn" class="ghost small" type="button" title="Удалить текущий блок">
                   &#xE74D;<span class="toolbar-label"> Удалить</span>

@@ -38,6 +38,7 @@ import {
   setSidebarMobileOpen,
   setSidebarCollapsed,
   saveListCollapsedArticles,
+  ensureSidebarSelectionVisible,
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
@@ -82,12 +83,12 @@ function maybeHandleSidebarQuickFilterKey(event) {
   const wrapper = refs.sidebarQuickFilter;
 
   if (key === 'Escape') {
-    if (wrapper.classList.contains('hidden') && !state.articleFilterQuery) return false;
+    if (!state.articleFilterQuery && !input.value) return false;
     event.preventDefault();
     state.articleFilterQuery = '';
     input.value = '';
-    wrapper.classList.add('hidden');
     sidebarQuickFilterLastTypedAt = 0;
+    ensureSidebarSelectionVisible();
     renderSidebarArticleList();
     return true;
   }
@@ -98,7 +99,6 @@ function maybeHandleSidebarQuickFilterKey(event) {
   event.preventDefault();
   const now = Date.now();
   const idle = !sidebarQuickFilterLastTypedAt || now - sidebarQuickFilterLastTypedAt > 2000;
-  wrapper.classList.remove('hidden');
   // Берём уже существующее значение, если оно было.
   const base = idle ? '' : (input.value || state.articleFilterQuery || '');
   const next = base + key;
@@ -1122,6 +1122,10 @@ export function attachEvents() {
         ) {
           return;
         }
+        // Не закрываем мобильный сайдбар при клике по крестику очистки фильтра.
+        if (refs.sidebarQuickFilterClear && btn === refs.sidebarQuickFilterClear) {
+          return;
+        }
         closeSidebarMobile();
       },
       true,
@@ -1151,8 +1155,8 @@ export function attachEvents() {
         event.preventDefault();
         refs.sidebarQuickFilterInput.value = '';
         state.articleFilterQuery = '';
+         ensureSidebarSelectionVisible();
         renderSidebarArticleList();
-        if (refs.sidebarQuickFilter) refs.sidebarQuickFilter.classList.add('hidden');
         sidebarQuickFilterLastTypedAt = 0;
         return;
       }
@@ -1169,10 +1173,17 @@ export function attachEvents() {
       }
       sidebarQuickFilterLastTypedAt = now;
     });
-    refs.sidebarQuickFilterInput.addEventListener('blur', () => {
-      if (!refs.sidebarQuickFilterInput) return;
-      if (refs.sidebarQuickFilterInput.value.trim() !== '') return;
-      if (refs.sidebarQuickFilter) refs.sidebarQuickFilter.classList.add('hidden');
+  }
+  if (refs.sidebarQuickFilterClear && refs.sidebarQuickFilterInput) {
+    refs.sidebarQuickFilterClear.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      refs.sidebarQuickFilterInput.value = '';
+      state.articleFilterQuery = '';
+      sidebarQuickFilterLastTypedAt = 0;
+      ensureSidebarSelectionVisible();
+      renderSidebarArticleList();
+      refs.sidebarQuickFilterInput.focus();
     });
   }
 

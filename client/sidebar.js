@@ -19,6 +19,86 @@ const SIDEBAR_COLLAPSED_KEY = 'ttree_sidebar_collapsed';
 
 let draggingArticleId = null;
 let currentDropLi = null;
+const TOUCH_DRAG_THRESHOLD_PX = 6;
+let touchArticleDrag = null;
+
+function cancelTouchArticleDrag() {
+  if (!touchArticleDrag) return;
+  window.removeEventListener('pointermove', handleTouchArticleMove);
+  window.removeEventListener('pointerup', handleTouchArticleUp);
+  window.removeEventListener('pointercancel', handleTouchArticleUp);
+  touchArticleDrag = null;
+  clearDropIndicators();
+  window.__ttreeDraggingArticleId = null;
+}
+
+function getArticleItemFromPoint(clientX, clientY) {
+  const el = document.elementFromPoint(clientX, clientY);
+  if (!el) return null;
+  const li = el.closest('.sidebar-article-item, #articleList li');
+  if (!li || !li.dataset || !li.dataset.articleId) return null;
+  return li;
+}
+
+function beginTouchArticleDrag(event, articleId) {
+  if (!articleId) return;
+  if (touchArticleDrag) return;
+  touchArticleDrag = {
+    pointerId: event.pointerId,
+    articleId,
+    startX: event.clientX,
+    startY: event.clientY,
+    dragging: false,
+    lastTargetId: null,
+    lastDropMode: null,
+  };
+  window.__ttreeDraggingArticleId = articleId;
+  try {
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+  } catch (_error) {
+    /* ignore */
+  }
+  window.addEventListener('pointermove', handleTouchArticleMove);
+  window.addEventListener('pointerup', handleTouchArticleUp);
+  window.addEventListener('pointercancel', handleTouchArticleUp);
+}
+
+function handleTouchArticleMove(event) {
+  if (!touchArticleDrag || event.pointerId !== touchArticleDrag.pointerId) return;
+  const dx = event.clientX - touchArticleDrag.startX;
+  const dy = event.clientY - touchArticleDrag.startY;
+  if (!touchArticleDrag.dragging) {
+    if (Math.hypot(dx, dy) < TOUCH_DRAG_THRESHOLD_PX) return;
+    touchArticleDrag.dragging = true;
+  }
+  event.preventDefault();
+  const li = getArticleItemFromPoint(event.clientX, event.clientY);
+  if (!li || !li.dataset || !li.dataset.articleId || li.dataset.articleId === touchArticleDrag.articleId) {
+    clearDropIndicators();
+    touchArticleDrag.lastTargetId = null;
+    touchArticleDrag.lastDropMode = null;
+    return;
+  }
+  const rect = li.getBoundingClientRect();
+  const offsetY = event.clientY - rect.top;
+  const third = rect.height / 3;
+  let dropMode;
+  if (offsetY < third) dropMode = 'before';
+  else if (offsetY > rect.height - third) dropMode = 'after';
+  else dropMode = 'inside';
+  touchArticleDrag.lastTargetId = li.dataset.articleId;
+  touchArticleDrag.lastDropMode = dropMode;
+  setDropIndicator(li, dropMode);
+}
+
+function handleTouchArticleUp(event) {
+  if (!touchArticleDrag || event.pointerId !== touchArticleDrag.pointerId) return;
+  const session = touchArticleDrag;
+  cancelTouchArticleDrag();
+  if (!session.dragging || !session.lastTargetId || !session.lastDropMode) return;
+  if (session.lastTargetId === session.articleId) return;
+  commitArticleDrop(session.articleId, session.lastTargetId, session.lastDropMode);
+}
 
 function clearDropIndicators() {
   if (currentDropLi) {
@@ -108,6 +188,39 @@ function applyLocalArticleMove(articleId, parentId, anchorId, placement) {
   });
 }
 
+function commitArticleDrop(articleId, targetId, dropMode) {
+  if (!articleId || !targetId || !dropMode) return;
+  const dragged = findArticleById(articleId);
+  const target = findArticleById(targetId);
+  if (!dragged || !target) return;
+
+  const parentId = dropMode === 'inside' ? target.id : target.parentId || null;
+  const anchorId = dropMode === 'inside' ? null : target.id;
+
+  applyLocalArticleMove(articleId, parentId, anchorId, dropMode);
+  renderSidebarArticleList();
+  renderMainArticleList();
+
+  (async () => {
+    try {
+      await moveArticleTree(articleId, {
+        parentId,
+        anchorId,
+        placement: dropMode,
+      });
+    } catch (error) {
+      try {
+        const articles = await fetchArticlesIndex();
+        setArticlesIndex(articles);
+        renderMainArticleList();
+      } catch (_) {
+        /* ignore */
+      }
+      showToast(error.message || 'Не удалось переместить страницу');
+    }
+  })();
+}
+
 function handleArticleDragStart(event) {
   // Сначала пробуем взять id из глобальной переменной (перетаскивание из заголовка статьи).
   if (window.__ttreeDraggingArticleId) {
@@ -154,9 +267,6 @@ function handleArticleDrop(event) {
   event.preventDefault();
   clearDropIndicators();
 
-  const dragged = findArticleById(draggingArticleId);
-  const target = findArticleById(targetId);
-  if (!dragged || !target) return;
   const rect = targetLi.getBoundingClientRect();
   const offsetY = event.clientY - rect.top;
   const third = rect.height / 3;
@@ -164,35 +274,7 @@ function handleArticleDrop(event) {
   if (offsetY < third) dropMode = 'before';
   else if (offsetY > rect.height - third) dropMode = 'after';
   else dropMode = 'inside';
-
-  const parentId =
-    dropMode === 'inside' ? target.id : target.parentId || null;
-  const anchorId = dropMode === 'inside' ? null : target.id;
-
-  // Мгновенно обновляем локальное дерево статей.
-  applyLocalArticleMove(draggingArticleId, parentId, anchorId, dropMode);
-  renderSidebarArticleList();
-  renderMainArticleList();
-
-  (async () => {
-    try {
-      await moveArticleTree(draggingArticleId, {
-        parentId,
-        anchorId,
-        placement: dropMode,
-      });
-    } catch (error) {
-      // В случае ошибки — возвращаемся к серверному состоянию.
-      try {
-        const articles = await fetchArticlesIndex();
-        setArticlesIndex(articles);
-        renderMainArticleList();
-      } catch (_) {
-        /* ignore */
-      }
-      showToast(error.message || 'Не удалось переместить страницу');
-    }
-  })();
+  commitArticleDrop(draggingArticleId, targetId, dropMode);
 }
 
 function handleArticleDragEnd() {
@@ -237,6 +319,24 @@ export function saveCollapsedArticles() {
   } catch (_) {
     /* ignore */
   }
+}
+
+export function ensureSidebarSelectionVisible() {
+  const selectedId = state.sidebarSelectedArticleId || state.articleId;
+  if (!selectedId) return;
+  const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
+  if (!Array.isArray(source) || !source.length) return;
+  const byId = new Map(source.map((a) => [a.id, a]));
+  const collapsed = new Set(state.sidebarCollapsedArticleIds || []);
+  const visited = new Set();
+  let current = byId.get(selectedId) || null;
+  while (current && current.parentId && !visited.has(current.parentId)) {
+    visited.add(current.parentId);
+    collapsed.delete(current.parentId);
+    current = byId.get(current.parentId) || null;
+  }
+  state.sidebarCollapsedArticleIds = Array.from(collapsed);
+  saveCollapsedArticles();
 }
 
 function loadListCollapsedArticles() {
@@ -529,6 +629,12 @@ export function renderSidebarArticleList() {
       li.addEventListener('dragover', handleArticleDragOver);
       li.addEventListener('drop', handleArticleDrop);
       li.addEventListener('dragend', handleArticleDragEnd);
+      li.addEventListener('pointerdown', (event) => {
+        if (event.pointerType !== 'touch') return;
+        if (typeof event.button === 'number' && event.button !== 0) return;
+        if (event.target instanceof Element && event.target.closest('button')) return;
+        beginTouchArticleDrag(event, node.id);
+      });
     }
     refs.sidebarArticleList.appendChild(li);
     if (!collapsedSet.has(node.id)) {
@@ -665,6 +771,12 @@ export function renderMainArticleList(articles = null) {
       item.addEventListener('dragover', handleArticleDragOver);
       item.addEventListener('drop', handleArticleDrop);
       item.addEventListener('dragend', handleArticleDragEnd);
+      item.addEventListener('pointerdown', (event) => {
+        if (event.pointerType !== 'touch') return;
+        if (typeof event.button === 'number' && event.button !== 0) return;
+        if (event.target instanceof Element && event.target.closest('button')) return;
+        beginTouchArticleDrag(event, article.id);
+      });
     }
     if (!collapsedSet.has(article.id)) {
       (article.children || []).forEach((child) => renderItem(child, depth + 1));

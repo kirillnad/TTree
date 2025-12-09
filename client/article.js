@@ -1041,9 +1041,6 @@ function registerBlockDragSource(element, blockId, { allowInteractive = false } 
     if (!allowInteractive && isInteractiveDragTarget(event.target)) {
       return;
     }
-     if (event.pointerType === 'touch' && isDragModeOperational()) {
-       event.preventDefault();
-     }
     beginDragSession(event, blockId, element, { bypassInteractiveCheck: allowInteractive });
   });
 }
