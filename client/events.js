@@ -18,7 +18,14 @@ import {
   handleGlobalPaste,
   splitEditingBlockAtCaret,
 } from './actions.js';
-import { moveSelection, extendSelection, findCollapsibleTarget, setCollapseState, setCurrentBlock } from './block.js';
+import {
+  moveSelection,
+  extendSelection,
+  findCollapsibleTarget,
+  setCollapseState,
+  setCurrentBlock,
+  applyEditingUndoStep,
+} from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import {
@@ -537,6 +544,24 @@ function scrollCurrentBlockStep(direction) {
 }
 
 function handleEditKey(event) {
+  const code = typeof event.code === 'string' ? event.code : '';
+  const isCtrlZ = event.ctrlKey && !event.shiftKey && code === 'KeyZ';
+  const isCtrlY = event.ctrlKey && !event.shiftKey && code === 'KeyY';
+  const isCtrlShiftZ = event.ctrlKey && event.shiftKey && code === 'KeyZ';
+
+  if (isCtrlZ) {
+    if (applyEditingUndoStep(-1)) {
+      event.preventDefault();
+      return;
+    }
+  }
+  if (isCtrlY || isCtrlShiftZ) {
+    if (applyEditingUndoStep(1)) {
+      event.preventDefault();
+      return;
+    }
+  }
+
   if (event.ctrlKey && !event.shiftKey && event.code === 'ArrowDown') {
     event.preventDefault();
     splitEditingBlockAtCaret();
@@ -606,6 +631,36 @@ export function attachEvents() {
       handleEditKey(event);
     }
   });
+
+   document.addEventListener(
+     'beforeinput',
+     (event) => {
+       if (
+         event.inputType === 'historyUndo' ||
+         event.inputType === 'historyRedo'
+       ) {
+         const isEditMode =
+           state.mode === 'edit' &&
+           state.editingBlockId &&
+           event.target instanceof HTMLElement &&
+           event.target.closest('.block-text[contenteditable="true"]');
+         if (isEditMode) {
+           event.preventDefault();
+           const dir = event.inputType === 'historyUndo' ? -1 : 1;
+           applyEditingUndoStep(dir);
+           return;
+         }
+         // В режиме просмотра используем глобальный undo/redo.
+         event.preventDefault();
+         if (event.inputType === 'historyUndo') {
+           handleUndoAction();
+         } else {
+           handleRedoAction();
+         }
+       }
+     },
+     true,
+   );
 
   document.addEventListener('paste', handleGlobalPaste);
 

@@ -11,6 +11,8 @@ export const state = {
   undoStack: [],
   redoStack: [],
   pendingTextPreview: null,
+  // Локальный undo/redo для текущего редактируемого блока.
+  editingUndo: null,
   editingInitialText: '',
   searchQuery: '',
   searchResults: [],

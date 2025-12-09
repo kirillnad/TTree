@@ -371,20 +371,21 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     const body = document.createElement('div');
     body.className = 'block-text block-body';
-    const rawHtml = block.text || '';
-    const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
-    body.innerHTML = bodyHtml || '';
+  const rawHtml = block.text || '';
+  const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
+  body.innerHTML = bodyHtml || '';
     if (!hasTitle) body.classList.add('block-body--no-title');
     if (!bodyHtml) body.classList.add('block-body--empty');
     body.spellcheck = false;
     body.setAttribute('data-placeholder', 'Введите текст');
 
     if (state.mode === 'edit' && state.editingBlockId === block.id) {
-      const { buildEditableBlockHtml } = await import('./block.js');
+      const { buildEditableBlockHtml, initEditingUndoForElement } = await import('./block.js');
       body.setAttribute('contenteditable', 'true');
       body.innerHTML = rawHtml ? buildEditableBlockHtml(rawHtml) : '<br />';
       body.classList.remove('block-body--empty');
       // body.classList.remove('block-body--no-title'); // Оставляем класс для корректных стилей
+      initEditingUndoForElement(body, block.id);
       requestAnimationFrame(() => {
         // Заставляем браузер использовать <p> вместо <div> для новых строк. Это помогает с авто-ссылками.
         document.execCommand('defaultParagraphSeparator', false, 'p');

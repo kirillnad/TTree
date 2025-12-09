@@ -48,6 +48,7 @@ export async function startEditing() {
   state.scrollTargetBlockId = null;
   state.editingBlockId = state.currentBlockId;
   state.editingInitialText = findBlock(state.currentBlockId)?.block.text || '';
+  state.editingUndo = null;
   // Перерисовываем только текущий блок в режиме редактирования,
   // без полной перерисовки всей статьи.
   await rerenderSingleBlock(state.currentBlockId);
@@ -144,6 +145,7 @@ export async function saveEditing() {
     state.mode = 'view';
     state.editingBlockId = null;
     state.editingInitialText = '';
+    state.editingUndo = null;
     state.pendingEditBlockId = null;
     state.currentBlockId = editedBlockId;
     state.scrollTargetBlockId = editedBlockId;
@@ -165,6 +167,7 @@ export async function saveEditing() {
   state.mode = 'view';
   state.editingBlockId = null;
   state.editingInitialText = '';
+  state.editingUndo = null;
   state.pendingEditBlockId = null;
   state.currentBlockId = editedBlockId;
   state.scrollTargetBlockId = editedBlockId;
@@ -223,6 +226,7 @@ export async function cancelEditing() {
   state.mode = 'view';
   state.editingBlockId = null;
   state.editingInitialText = '';
+  state.editingUndo = null;
 
   if (shouldDelete) {
     // Пустой блок при Esc: сразу удаляем его локально и перерисовываем

@@ -34,6 +34,72 @@ export function flattenVisible(blocks = [], acc = []) {
   return acc;
 }
 
+const EDITING_UNDO_DEBOUNCE_MS = 400;
+
+export function initEditingUndoForElement(element, blockId) {
+  if (!element || !blockId) return;
+  state.editingUndo = {
+    blockId,
+    snapshots: [element.innerHTML],
+    index: 0,
+  };
+  let timerId = 0;
+  const scheduleSnapshot = () => {
+    if (!state.editingUndo || state.editingUndo.blockId !== blockId) return;
+    const html = element.innerHTML;
+    const { snapshots, index } = state.editingUndo;
+    if (snapshots[index] === html) return;
+    if (index < snapshots.length - 1) {
+      snapshots.splice(index + 1);
+    }
+    snapshots.push(html);
+    state.editingUndo.index = snapshots.length - 1;
+  };
+  element.addEventListener('input', () => {
+    if (!state.editingUndo || state.editingUndo.blockId !== blockId) return;
+    if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+    if (timerId) window.clearTimeout(timerId);
+    timerId = window.setTimeout(scheduleSnapshot, EDITING_UNDO_DEBOUNCE_MS);
+  });
+}
+
+export function clearEditingUndoSession() {
+  state.editingUndo = null;
+}
+
+export function applyEditingUndoStep(direction) {
+  const session = state.editingUndo;
+  if (!session || !session.blockId || !direction) return false;
+  if (state.mode !== 'edit' || state.editingBlockId !== session.blockId) return false;
+  const editable = document.querySelector(
+    `.block[data-block-id="${session.blockId}"] .block-text[contenteditable="true"]`,
+  );
+  if (!editable) return false;
+  const nextIndex = session.index + direction;
+  if (nextIndex < 0 || nextIndex >= session.snapshots.length) return false;
+  session.index = nextIndex;
+  const html = session.snapshots[nextIndex];
+  editable.innerHTML = html;
+  try {
+    editable.focus({ preventScroll: true });
+  } catch {
+    editable.focus();
+  }
+  try {
+    const sel = window.getSelection && window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(editable);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  } catch {
+    /* ignore */
+  }
+  return true;
+}
+
 export function findBlock(blockId, blocks = state.article?.blocks || [], parent = null, ancestors = []) {
   for (let i = 0; i < blocks.length; i += 1) {
     const block = blocks[i];
