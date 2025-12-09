@@ -34,7 +34,25 @@ export function flattenVisible(blocks = [], acc = []) {
   return acc;
 }
 
-const EDITING_UNDO_DEBOUNCE_MS = 400;
+const EDITING_UNDO_MAX_WORD_TAIL = 16;
+
+function shouldCreateEditingSnapshot(prevText, nextText) {
+  if (prevText === nextText) return false;
+  // Если пользователь дописывает то же слово: next начинается с prev,
+  // а хвост состоит только из букв/цифр и небольшой длины — не создаём
+  // новый шаг, чтобы Ctrl+Z откатывал слово целиком.
+  if (nextText.startsWith(prevText)) {
+    const tail = nextText.slice(prevText.length);
+    if (
+      tail.length > 0 &&
+      tail.length <= EDITING_UNDO_MAX_WORD_TAIL &&
+      /^[A-Za-zА-Яа-я0-9]+$/.test(tail)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
 
 export function initEditingUndoForElement(element, blockId) {
   if (!element || !blockId) return;
@@ -42,24 +60,37 @@ export function initEditingUndoForElement(element, blockId) {
     blockId,
     snapshots: [element.innerHTML],
     index: 0,
+    lastText: element.textContent || '',
+    lastSnapshotAt: Date.now(),
   };
-  let timerId = 0;
   const scheduleSnapshot = () => {
-    if (!state.editingUndo || state.editingUndo.blockId !== blockId) return;
+    const session = state.editingUndo;
+    if (!session || session.blockId !== blockId) return;
     const html = element.innerHTML;
-    const { snapshots, index } = state.editingUndo;
-    if (snapshots[index] === html) return;
+    const text = element.textContent || '';
+    const { snapshots, index, lastText, lastSnapshotAt } = session;
+    const now = Date.now();
+    if (!shouldCreateEditingSnapshot(lastText || '', text)) {
+      session.lastText = text;
+      return;
+    }
+    if (snapshots[index] === html) {
+      session.lastText = text;
+      session.lastSnapshotAt = now;
+      return;
+    }
     if (index < snapshots.length - 1) {
       snapshots.splice(index + 1);
     }
     snapshots.push(html);
-    state.editingUndo.index = snapshots.length - 1;
+    session.index = snapshots.length - 1;
+    session.lastText = text;
+    session.lastSnapshotAt = now;
   };
   element.addEventListener('input', () => {
     if (!state.editingUndo || state.editingUndo.blockId !== blockId) return;
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-    if (timerId) window.clearTimeout(timerId);
-    timerId = window.setTimeout(scheduleSnapshot, EDITING_UNDO_DEBOUNCE_MS);
+    scheduleSnapshot();
   });
 }
 
