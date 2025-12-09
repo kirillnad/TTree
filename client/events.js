@@ -54,7 +54,7 @@ import {
 } from './api.js?v=2';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
-import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js';
+import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js?v=2';
 import { loadArticle } from './article.js';
 
 let sidebarQuickFilterLastTypedAt = 0;

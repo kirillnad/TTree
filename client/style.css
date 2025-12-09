@@ -2379,6 +2379,7 @@ body.block-dnd-active {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 2600;
 }
 
 .toast.show {

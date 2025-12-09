@@ -3,7 +3,7 @@ import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress, uploadFi
 import { showToast } from './toast.js';
 import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
-import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js';
+import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js?v=2';
 import { fetchArticlesIndex } from './api.js?v=2';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';

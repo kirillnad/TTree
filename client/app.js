@@ -19,14 +19,17 @@ function startApp() {
   initTables();
   loadLastChangeFromChangelog();
   route(window.location.pathname);
-  // Регистрация service worker для PWA (если поддерживается).
+  // На мобильных (и вообще в браузере) больше не используем service worker,
+  // чтобы ничего не кешировалось "поверх" обычного обновления страницы.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker
-      // Версионируем URL, чтобы гарантированно обойти старый кэшированный sw.js.
-      .register('/sw.js?v=2')
-      .catch(() => {
-        // Молча игнорируем ошибки регистрации — приложение продолжит работать как обычно.
-      });
+      .getRegistrations()
+      .then((registrations) => {
+        registrations.forEach((registration) => {
+          registration.unregister().catch(() => {});
+        });
+      })
+      .catch(() => {});
   }
 }
 

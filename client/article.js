@@ -18,7 +18,7 @@ import { placeCaretAtEnd, placeCaretAtStart, logDebug } from './utils.js';
 import { attachRichContentHandlers } from './block.js';
 import { showToast } from './toast.js';
 import { navigate, routing } from './routing.js';
-import { showPrompt, showConfirm, showPasswordWithHintPrompt } from './modal.js';
+import { showPrompt, showConfirm, showPasswordWithHintPrompt } from './modal.js?v=2';
 import { startEditing, saveEditing, cancelEditing, createSibling } from './actions.js';
 import { deriveKeyFromPassword, decryptArticleBlocks, checkEncryptionVerifier, createEncryptionVerifier, encryptTextForArticle } from './encryption.js';
 

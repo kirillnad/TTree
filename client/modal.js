@@ -1,4 +1,5 @@
 import { htmlToLines } from './utils.js';
+import { showToast } from './toast.js';
 
 const modalRootId = 'modal-root';
 
@@ -332,25 +333,68 @@ export function showPublicLinkModal(options = {}) {
     }
   };
 
+  const legacyCopyUsingExecCommand = (text) => {
+    if (!text) return false;
+    const tmp = document.createElement('textarea');
+    tmp.value = text;
+    tmp.setAttribute('readonly', '');
+    tmp.style.position = 'absolute';
+    tmp.style.left = '-9999px';
+    document.body.appendChild(tmp);
+    tmp.focus();
+    tmp.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (_) {
+      ok = false;
+    }
+    document.body.removeChild(tmp);
+    return ok;
+  };
+
   const copyToClipboard = () => {
+    // DEBUG: отладка копирования ссылки
+    // eslint-disable-next-line no-alert
+    window.alert('copyToClipboard: start');
     const value = (inputRef && inputRef.value) || urlValue;
-    if (!value) return;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(value).catch(() => {});
-    } else {
-      const tmp = document.createElement('textarea');
-      tmp.value = value;
-      tmp.setAttribute('readonly', '');
-      tmp.style.position = 'absolute';
-      tmp.style.left = '-9999px';
-      document.body.appendChild(tmp);
-      tmp.select();
+    // eslint-disable-next-line no-alert
+    window.alert(`copyToClipboard: value="${value || ''}"`);
+    if (!value) {
+      // eslint-disable-next-line no-alert
+      window.alert('copyToClipboard: empty value, abort');
+      return;
+    }
+
+    // Всегда ставим фокус и выделяем ссылку — на мобильных это даёт
+    // пользователю возможность скопировать её вручную даже при сбое API.
+    if (inputRef) {
       try {
-        document.execCommand('copy');
+        inputRef.focus({ preventScroll: true });
+        inputRef.select();
       } catch (_) {
-        // ignore
+        /* ignore */
       }
-      document.body.removeChild(tmp);
+    }
+
+    // Сразу даём пользователю понятный сигнал и подсказку.
+    showToast('Ссылка выделена и отправлена в буфер обмена (если браузер разрешает). При необходимости скопируйте её вручную.');
+
+    // Пытаемся скопировать в буфер обмена, но не завязываемся на результат:
+    // на части мобильных браузеров операции могут быть запрещены.
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        const result = navigator.clipboard.writeText(value);
+        if (result && typeof result.catch === 'function') {
+          result.catch(() => {
+            legacyCopyUsingExecCommand(value);
+          });
+        }
+      } else {
+        legacyCopyUsingExecCommand(value);
+      }
+    } catch (_) {
+      legacyCopyUsingExecCommand(value);
     }
   };
 
@@ -363,6 +407,9 @@ export function showPublicLinkModal(options = {}) {
     cancelBtn.classList.add('hidden');
 
     confirmBtn.addEventListener('click', () => {
+      // DEBUG: отладка клика по кнопке "Скопировать ссылку"
+      // eslint-disable-next-line no-alert
+      window.alert('confirmBtn: click handler');
       copyToClipboard();
       resolveResult();
     });
