@@ -28,6 +28,7 @@ import {
   toggleFavorite,
   ensureArticlesIndexLoaded,
   renderMainArticleList,
+  renderSidebarArticleList,
 } from './sidebar.js';
 import {
   toggleSidebarCollapsed,
@@ -329,31 +330,63 @@ function handleViewKey(event) {
 function handleArticlesListKey(event) {
   const { code, ctrlKey, shiftKey, altKey, metaKey } = event;
   if (altKey || metaKey) return;
-  // Управляем только, когда виден список статей.
+  // Работаем в основном в режиме "Список статей":
   if (!refs.articleListView || refs.articleListView.classList.contains('hidden')) return;
-  if (!refs.articleList || !refs.articleList.contains(document.activeElement)) return;
-  const active = document.activeElement;
-  const item = active.closest('li');
-  if (!item) return;
-  const articleId = item.dataset.articleId;
+  if (!refs.articleList) return;
+
+  const container = refs.articleList;
+  const items = Array.from(container.querySelectorAll('li[data-article-id]'));
+  if (!items.length) return;
+
+  const selectedId = state.listSelectedArticleId || state.articleId;
+  const currentIndex =
+    selectedId && items.findIndex((li) => li.dataset.articleId === selectedId);
+  let idx = currentIndex != null && currentIndex >= 0 ? currentIndex : 0;
+
+  const moveSelectionBy = (delta) => {
+    if (!items.length) return;
+    idx = Math.max(0, Math.min(items.length - 1, idx + delta));
+    const li = items[idx];
+    if (!li) return;
+    const aid = li.dataset.articleId;
+    if (!aid) return;
+    state.listSelectedArticleId = aid;
+    renderMainArticleList();
+    li.scrollIntoView({ block: 'nearest' });
+  };
+
+  const getCurrentArticleId = () => {
+    if (state.listSelectedArticleId) return state.listSelectedArticleId;
+    if (state.articleId) return state.articleId;
+    const first = items[0];
+    return first ? first.dataset.articleId : null;
+  };
+
+  const articleId = getCurrentArticleId();
   if (!articleId) return;
 
-  if (ctrlKey && !shiftKey && code === 'ArrowUp') {
+  if (!ctrlKey && !shiftKey && (code === 'ArrowDown' || code === 'ArrowUp')) {
     event.preventDefault();
-    moveArticlePosition(articleId, 'up')
+    moveSelectionBy(code === 'ArrowDown' ? 1 : -1);
+    return;
+  }
+
+  if (!ctrlKey && !shiftKey && code === 'Enter') {
+    event.preventDefault();
+    state.listSelectedArticleId = articleId;
+    navigate(routing.article(articleId));
+    return;
+  }
+
+  if (ctrlKey && shiftKey && (code === 'ArrowUp' || code === 'ArrowDown')) {
+    event.preventDefault();
+    moveArticlePosition(articleId, code === 'ArrowUp' ? 'up' : 'down')
       .then(() => ensureArticlesIndexLoaded())
       .then((articles) => renderMainArticleList(articles))
       .catch((error) => showToast(error.message || 'Не удалось переместить страницу'));
     return;
   }
-  if (ctrlKey && !shiftKey && code === 'ArrowDown') {
-    event.preventDefault();
-    moveArticlePosition(articleId, 'down')
-      .then(() => ensureArticlesIndexLoaded())
-      .then((articles) => renderMainArticleList(articles))
-      .catch((error) => showToast(error.message || 'Не удалось переместить страницу'));
-    return;
-  }
+
   if (ctrlKey && !shiftKey && code === 'ArrowRight') {
     event.preventDefault();
     indentArticleApi(articleId)
@@ -368,6 +401,7 @@ function handleArticlesListKey(event) {
       .then(() => ensureArticlesIndexLoaded())
       .then((articles) => renderMainArticleList(articles))
       .catch((error) => showToast(error.message || 'Не удалось изменить вложенность'));
+    return;
   }
 }
 

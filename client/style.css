@@ -673,6 +673,10 @@ main.content {
   transform: rotate(45deg);
 }
 
+#articleList li.active-article {
+  background: #e5e7eb;
+}
+
 .list-header-actions {
   margin-left: auto;
   position: relative;
@@ -971,7 +975,7 @@ button.icon-button.small {
 }
 
 #articleList li {
-  padding: 1rem;
+  /* padding: 1rem; */
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   display: flex;
@@ -2152,6 +2156,55 @@ margin: 0.5rem 0 0.1rem;
 }
 body.block-dnd-active {
   user-select: none;
+}
+
+/* Подсказки направления вставки при DnD страниц (дерево статей). */
+.sidebar-article-item,
+#articleList li {
+  position: relative;
+}
+
+.sidebar-article-item.drop-before::before,
+#articleList li.drop-before::before {
+  content: '';
+  position: absolute;
+  left: 0.35rem;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid #3794ff; /* стрелка вверх (вставка над) */
+  pointer-events: none;
+}
+
+.sidebar-article-item.drop-after::before,
+#articleList li.drop-after::before {
+  content: '';
+  position: absolute;
+  left: 0.35rem;
+  bottom: -4px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #3794ff; /* стрелка вниз (вставка под) */
+  pointer-events: none;
+}
+
+.sidebar-article-item.drop-inside::before,
+#articleList li.drop-inside::before {
+  content: '';
+  position: absolute;
+  left: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #3794ff; /* стрелка вправо (вставка как ребёнок) */
+  pointer-events: none;
 }
 
 .sidebar-backdrop {

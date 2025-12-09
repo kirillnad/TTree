@@ -29,6 +29,9 @@ export const state = {
   isMarkdownInserting: false,
   isTrashView: false,
   favoriteArticles: [],
+  // Независимое выделение статей в сайдбаре и в списке статей.
+  sidebarSelectedArticleId: null,
+  listSelectedArticleId: null,
   collapsedArticleIds: [],
   isDragModeEnabled: false,
   articleEncryptionKeys: {},

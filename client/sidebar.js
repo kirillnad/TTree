@@ -15,6 +15,30 @@ import { showToast } from './toast.js';
 const FAVORITES_KEY = 'ttree_favorites';
 
 let draggingArticleId = null;
+let currentDropLi = null;
+
+function clearDropIndicators() {
+  if (currentDropLi) {
+    currentDropLi.classList.remove('drop-before', 'drop-after', 'drop-inside');
+    currentDropLi = null;
+  }
+}
+
+function setDropIndicator(li, dropMode) {
+  if (!li) return;
+  if (currentDropLi && currentDropLi !== li) {
+    currentDropLi.classList.remove('drop-before', 'drop-after', 'drop-inside');
+  }
+  currentDropLi = li;
+  currentDropLi.classList.remove('drop-before', 'drop-after', 'drop-inside');
+  if (dropMode === 'before') {
+    currentDropLi.classList.add('drop-before');
+  } else if (dropMode === 'after') {
+    currentDropLi.classList.add('drop-after');
+  } else if (dropMode === 'inside') {
+    currentDropLi.classList.add('drop-inside');
+  }
+}
 
 function findArticleById(id) {
   if (!id) return null;
@@ -96,6 +120,15 @@ function handleArticleDragOver(event) {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'move';
   }
+  const targetLi = event.currentTarget;
+  const rect = targetLi.getBoundingClientRect();
+  const offsetY = event.clientY - rect.top;
+  const third = rect.height / 3;
+  let dropMode;
+  if (offsetY < third) dropMode = 'before';
+  else if (offsetY > rect.height - third) dropMode = 'after';
+  else dropMode = 'inside';
+  setDropIndicator(targetLi, dropMode);
 }
 
 function handleArticleDrop(event) {
@@ -104,6 +137,7 @@ function handleArticleDrop(event) {
   const targetId = targetLi?.dataset?.articleId || null;
   if (!targetId || targetId === draggingArticleId) return;
   event.preventDefault();
+  clearDropIndicators();
 
   const dragged = findArticleById(draggingArticleId);
   const target = findArticleById(targetId);
@@ -148,6 +182,7 @@ function handleArticleDrop(event) {
 
 function handleArticleDragEnd() {
   draggingArticleId = null;
+  clearDropIndicators();
 }
 
 function loadFavorites() {
@@ -313,6 +348,7 @@ export function renderSidebarArticleList() {
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
   const collapsedSet = new Set(state.collapsedArticleIds || []);
+  const selectedId = state.sidebarSelectedArticleId || state.articleId;
 
   // Отдельно считаем наличие детей по полному списку (без фильтра),
   // чтобы иконка «есть дети» не пропадала из‑за фильтрации.
@@ -358,20 +394,26 @@ export function renderSidebarArticleList() {
 
     const button = document.createElement('button');
     button.type = 'button';
-    if (!state.isTrashView && node.id === state.articleId) button.classList.add('active');
+    if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
     const isFav = favs.has(node.id);
     const titleText = escapeHtml(node.title || 'Без названия');
     const publicIcon = node.publicSlug ? '🌐 ' : '';
     button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
     button.addEventListener('click', () => {
-      // Тогглим сворачивание/разворачивание потомков.
+      // Одинарный клик: выделяем статью и сворачиваем/разворачиваем потомков только в сайдбаре.
+      state.sidebarSelectedArticleId = node.id;
       if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
       const set = new Set(state.collapsedArticleIds);
       if (set.has(node.id)) set.delete(node.id);
       else set.add(node.id);
       state.collapsedArticleIds = Array.from(set);
       renderSidebarArticleList();
-      // И переходим к статье.
+    });
+    button.addEventListener('dblclick', (event) => {
+      // Двойной клик: открываем статью.
+      event.preventDefault();
+      event.stopPropagation();
+      state.sidebarSelectedArticleId = node.id;
       navigate(routing.article(node.id));
       if (state.isSidebarMobileOpen) {
         setSidebarMobileOpen(false);
@@ -410,7 +452,8 @@ export function renderMainArticleList(articles = null) {
   const base = Array.isArray(articles) && articles.length ? articles : (state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex);
   const favs = new Set(state.favoriteArticles || []);
   const collapsedSet = new Set(state.collapsedArticleIds || []);
-   // Наличие детей считаем по полному списку (base), не по отфильтрованному дереву.
+  const selectedId = state.listSelectedArticleId || state.articleId;
+  // Наличие детей считаем по полному списку (base), не по отфильтрованному дереву.
   const hasChildren = new Set();
   base.forEach((article) => {
     const pid = article.parentId || null;
@@ -499,17 +542,34 @@ export function renderMainArticleList(articles = null) {
         toggleFavorite(article.id);
       });
     }
+    if (article.id === selectedId) {
+      item.classList.add('active-article');
+    }
     item.addEventListener('click', () => {
-      // Тот же флаг сворачивания, что и в сайдбаре.
+      // Одинарный клик: выделяем и сворачиваем/разворачиваем потомков только в списке статей.
+      state.listSelectedArticleId = article.id;
       if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
       const set = new Set(state.collapsedArticleIds);
       if (set.has(article.id)) set.delete(article.id);
       else set.add(article.id);
       state.collapsedArticleIds = Array.from(set);
       renderMainArticleList();
+    });
+    item.addEventListener('dblclick', (event) => {
+      // Двойной клик: открываем статью.
+      event.preventDefault();
+      event.stopPropagation();
+      state.listSelectedArticleId = article.id;
       navigate(routing.article(article.id));
     });
     refs.articleList.appendChild(item);
+    if (!state.isTrashView) {
+      item.draggable = true;
+      item.addEventListener('dragstart', handleArticleDragStart);
+      item.addEventListener('dragover', handleArticleDragOver);
+      item.addEventListener('drop', handleArticleDrop);
+      item.addEventListener('dragend', handleArticleDragEnd);
+    }
     if (!collapsedSet.has(article.id)) {
       (article.children || []).forEach((child) => renderItem(child, depth + 1));
     }
