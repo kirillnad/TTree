@@ -127,6 +127,14 @@ YANDEX_REDIRECT_URI = os.environ.get('YANDEX_REDIRECT_URI') or 'https://memus.pr
 YANDEX_DISK_APP_ROOT = os.environ.get('YANDEX_DISK_APP_ROOT') or 'app:/'
 USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
 
+# Настройки телеграм‑бота для быстрых заметок.
+# TELEGRAM_BOT_TOKEN       — токен бота из BotFather (обязателен для работы бота).
+# TELEGRAM_ALLOWED_CHAT_ID — необязательный фильтр: ID чата, из которого принимаем сообщения.
+# TELEGRAM_MEMUS_USER_ID   — ID пользователя Memus, в чей инбокс складывать заметки.
+# TELEGRAM_MEMUS_USERNAME  — альтернатива по username, если ID не указан.
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN') or ''
+TELEGRAM_ALLOWED_CHAT_ID = os.environ.get('TELEGRAM_ALLOWED_CHAT_ID') or ''
+
 # Шаблонный файл справки, который можно использовать
 # как исходник для первой статьи нового пользователя.
 HELP_TEMPLATE_PATH = CLIENT_DIR / 'help.html'
@@ -226,6 +234,319 @@ def _rewrite_internal_links_for_public(html_text: str) -> str:
         return f'<a {before_attrs}href="{href}"{after_attrs}>{inner_html}</a>'
 
     return _INTERNAL_ARTICLE_LINK_RE.sub(_replace, html_text or '')
+
+
+_telegram_link_cache: dict[str, str] = {}
+
+
+def _telegram_download_file(file_id: str) -> tuple[bytes, str, str]:
+    """
+    Скачивает файл из Telegram по file_id.
+    Возвращает (raw_bytes, filename, mime_type).
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        raise RuntimeError('Telegram bot token не настроен')
+    api_base = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}'
+    try:
+        params = urllib.parse.urlencode({'file_id': file_id})
+        req = urllib.request.Request(f'{api_base}/getFile?{params}')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: getFile error for %s: %r', file_id, exc)
+        raise RuntimeError('Не удалось получить путь к файлу Telegram')
+
+    if not isinstance(data, dict) or not data.get('ok') or 'result' not in data:
+        raise RuntimeError('Telegram bot: getFile вернул некорректный ответ')
+
+    result = data['result'] or {}
+    file_path = result.get('file_path') or ''
+    if not file_path:
+        raise RuntimeError('Telegram bot: getFile не вернул file_path')
+
+    download_url = f'https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}'
+    try:
+        with urllib.request.urlopen(download_url, timeout=60) as resp:
+            raw = resp.read()
+            mime_type = resp.info().get_content_type() or 'application/octet-stream'
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: download error for %s: %r', file_path, exc)
+        raise RuntimeError('Не удалось скачать файл из Telegram')
+
+    filename = PurePosixPath(file_path).name or 'file'
+    return raw, filename, mime_type
+
+
+def _telegram_send_message(chat_id: int | str, text: str) -> None:
+    """
+    Отправляет простое текстовое сообщение в Telegram в ответ на апдейт.
+    Ошибки логируем, но не пробрасываем наружу.
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    api_url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
+    payload = {
+        'chat_id': str(chat_id),
+        'text': text,
+    }
+    try:
+        body = urllib.parse.urlencode(payload).encode('utf-8')
+        req = urllib.request.Request(
+            api_url,
+            data=body,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: sendMessage error: %r', exc)
+
+
+def _handle_telegram_message(message: dict[str, Any]) -> None:
+    """
+    Преобразует одно сообщение Telegram в быструю заметку в inbox выбранного пользователя.
+    """
+    if not message:
+        return
+    chat = message.get('chat') or {}
+    chat_id = chat.get('id')
+
+    # Простейший слой авторизации/привязки:
+    # 1) если TELEGRAM_ALLOWED_CHAT_ID задан, принимаем только этот чат;
+    # 2) дополнительно можно явно привязать chat_id к user_id через telegram_links.
+    if TELEGRAM_ALLOWED_CHAT_ID and chat_id is not None and str(chat_id) != TELEGRAM_ALLOWED_CHAT_ID:
+        return
+
+    raw_text = (message.get('text') or '').strip()
+    # Обрабатываем команду /link <token> для привязки чата к пользователю.
+    if raw_text.startswith('/link'):
+        token = ''
+        parts = raw_text.split(maxsplit=1)
+        if len(parts) > 1:
+            token = (parts[1] or '').strip()
+        if not token:
+            if chat_id is not None:
+                _telegram_send_message(
+                    chat_id,
+                    'Чтобы привязать чат к Memus, отправьте: /link <код>, который вы получили в настройках Memus.',
+                )
+            return
+        try:
+            row = CONN.execute(
+                'SELECT user_id, expires_at FROM telegram_link_tokens WHERE token = ?',
+                (token,),
+            ).fetchone()
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Telegram bot: failed to read link token: %r', exc)
+            if chat_id is not None:
+                _telegram_send_message(chat_id, 'Не удалось проверить код привязки. Попробуйте позже.')
+            return
+        if not row:
+            if chat_id is not None:
+                _telegram_send_message(chat_id, 'Код привязки недействителен или уже использован.')
+            return
+        expires_raw = row['expires_at']
+        try:
+            expires_at = datetime.fromisoformat(expires_raw)
+        except Exception:
+            expires_at = None
+        if expires_at and expires_at < datetime.utcnow():
+            # Токен просрочен.
+            with CONN:
+                CONN.execute('DELETE FROM telegram_link_tokens WHERE token = ?', (token,))
+            if chat_id is not None:
+                _telegram_send_message(chat_id, 'Срок действия этого кода истёк. Сгенерируйте новый в Memus.')
+            return
+
+        user_id = row['user_id']
+        chat_key = str(chat_id) if chat_id is not None else ''
+        now_iso = datetime.utcnow().isoformat()
+        try:
+            with CONN:
+                if IS_SQLITE:
+                    CONN.execute(
+                        '''
+                        INSERT INTO telegram_links (chat_id, user_id, created_at)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(chat_id) DO UPDATE SET user_id = excluded.user_id, created_at = excluded.created_at
+                        ''',
+                        (chat_key, user_id, now_iso),
+                    )
+                else:
+                    CONN.execute(
+                        '''
+                        INSERT INTO telegram_links (chat_id, user_id, created_at)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (chat_id) DO UPDATE SET user_id = EXCLUDED.user_id, created_at = EXCLUDED.created_at
+                        ''',
+                        (chat_key, user_id, now_iso),
+                    )
+                CONN.execute('DELETE FROM telegram_link_tokens WHERE token = ?', (token,))
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Telegram bot: failed to upsert telegram_links: %r', exc)
+            if chat_id is not None:
+                _telegram_send_message(chat_id, 'Не удалось привязать этот чат к Memus. Попробуйте позже.')
+            return
+
+        _telegram_link_cache[chat_key] = user_id
+        if chat_id is not None:
+            try:
+                user = get_user_by_id(user_id)
+                name = user.display_name or user.username if user else ''
+            except Exception:
+                name = ''
+            suffix = f' ({name})' if name else ''
+            _telegram_send_message(
+                chat_id,
+                f'Этот чат успешно привязан к вашему аккаунту Memus{suffix}. Теперь просто отправляйте сюда сообщения — они будут сохраняться в «Быстрые заметки».',
+            )
+        return
+
+    # Пытаемся найти пользователя по telegram_links.
+    memus_user: User | None = None
+    if chat_id is not None:
+        key = str(chat_id)
+        user_id = _telegram_link_cache.get(key)
+        if user_id:
+            try:
+                memus_user = get_user_by_id(user_id)
+            except Exception:  # noqa: BLE001
+                memus_user = None
+        if memus_user is None:
+            try:
+                row = CONN.execute(
+                    'SELECT user_id FROM telegram_links WHERE chat_id = ?',
+                    (key,),
+                ).fetchone()
+            except Exception:  # noqa: BLE001
+                row = None
+            if row:
+                _telegram_link_cache[key] = row['user_id']
+                try:
+                    memus_user = get_user_by_id(row['user_id'])
+                except Exception:  # noqa: BLE001
+                    memus_user = None
+
+    # Если явной привязки нет — не принимаем сообщения, только подсказываем, как привязать.
+    if memus_user is None:
+        if chat_id is not None:
+            _telegram_send_message(
+                chat_id,
+                'Этот чат ещё не привязан к вашему аккаунту Memus. В Memus сгенерируйте код привязки и отправьте сюда команду /link <код>.',
+            )
+        return
+
+    user: User = memus_user
+
+    # Берём или создаём inbox конкретного пользователя.
+    try:
+        inbox_article = get_or_create_user_inbox(user.id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: failed to get/create inbox for %s: %r', user.id, exc)
+        return
+
+    article_id = inbox_article.get('id') or ''
+    if not article_id:
+        logger.error('Telegram bot: inbox article has no id for user %s', user.id)
+        return
+
+    # Формируем HTML блока из текста и ссылок на вложения.
+    parts: list[str] = []
+    text = (message.get('text') or message.get('caption') or '').strip()
+    if text:
+        safe = html_mod.escape(text).replace('\n', '<br />')
+        parts.append(f'<p>{safe}</p>')
+
+    attachments: list[tuple[str, str]] = []
+
+    # Фото: берём последнюю (самую большую) версию.
+    photos = message.get('photo') or []
+    if isinstance(photos, list) and photos:
+        best = photos[-1]
+        file_id = best.get('file_id')
+        if file_id:
+            try:
+                raw, filename, mime_type = _telegram_download_file(file_id)
+                disk_path = _upload_bytes_to_yandex_for_user(user, filename or 'photo', raw, mime_type or 'image/jpeg')
+                create_attachment(article_id, disk_path, filename or 'Фото', mime_type or '', len(raw))
+                attachments.append((disk_path, filename or 'Фото'))
+            except Exception as exc:  # noqa: BLE001
+                logger.error('Telegram bot: failed to store photo on Yandex Disk: %r', exc)
+
+    # Документы / файлы.
+    for key in ('document', 'audio', 'voice', 'video', 'video_note'):
+        obj = message.get(key)
+        if not isinstance(obj, dict):
+            continue
+        file_id = obj.get('file_id')
+        if not file_id:
+            continue
+        try:
+            raw, filename, mime_type = _telegram_download_file(file_id)
+            disk_path = _upload_bytes_to_yandex_for_user(
+                user,
+                filename or key,
+                raw,
+                mime_type or 'application/octet-stream',
+            )
+            create_attachment(article_id, disk_path, filename or key, mime_type or '', len(raw))
+            label = filename or key
+            attachments.append((disk_path, label))
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Telegram bot: failed to store %s on Yandex Disk: %r', key, exc)
+
+    for href, label in attachments:
+        safe_href = html_mod.escape(href)
+        safe_label = html_mod.escape(label)
+        parts.append(
+            f'<p><a href="{safe_href}" target="_blank" rel="noopener noreferrer">{safe_label}</a></p>',
+        )
+
+    if not parts:
+        # На всякий случай создаём пустой блок, чтобы апдейт не потерялся.
+        parts.append('<p><br /></p>')
+
+    block_html = ''.join(parts)
+
+    # Вставляем новый блок в конец корня inbox, как быстрые заметки в UI.
+    root_blocks = inbox_article.get('blocks') or []
+    if not root_blocks:
+        # Если по какой-то причине в инбоксе нет блоков, создадим один явным UPDATE.
+        now = datetime.utcnow().isoformat()
+        new_block = {
+            'id': str(uuid4()),
+            'text': block_html,
+            'collapsed': False,
+            'children': [],
+        }
+        inbox_article['blocks'] = [new_block]
+        try:
+            save_article(inbox_article)
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Telegram bot: failed to save inbox article directly: %r', exc)
+            return
+        if chat_id is not None:
+            _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')
+        return
+
+    anchor_id = root_blocks[-1].get('id')
+    if not anchor_id:
+        logger.error('Telegram bot: last inbox block has no id for article %s', article_id)
+        return
+
+    payload = {
+        'text': block_html,
+        'collapsed': False,
+        'children': [],
+    }
+    try:
+        insert_block(article_id, anchor_id, 'after', payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: insert_block failed: %r', exc)
+        return
+
+    if chat_id is not None:
+        _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')
 
 
 def ensure_help_article_for_user(author_id: str) -> None:
@@ -1012,6 +1333,73 @@ def _strip_html_tags(html_text: str) -> str:
     return html_mod.unescape(text).strip()
 
 
+def _split_public_block_sections(raw_html: str) -> tuple[str, str]:
+    """
+    Приближённый вариант client-side extractBlockSections для публичной страницы.
+
+    Логика:
+    - ищем первый по-настоящему «пустой» <p> (содержит только <br>, &nbsp;,
+      пробелы и обёртки без текста/картинок);
+    - всё ДО него считаем заголовком, всё ПОСЛЕ — телом;
+    - если пустой абзац идёт первым, заголовка нет вообще.
+    """
+    if not raw_html:
+        return '', ''
+
+    first_empty: re.Match[str] | None = None
+    for m in re.finditer(r'<p\b[^>]*>(.*?)</p\s*>', raw_html, flags=re.IGNORECASE | re.DOTALL):
+        inner = m.group(1) or ''
+        # Абзац с картинкой никогда не считаем «пустым».
+        if re.search(r'<img\b', inner, flags=re.IGNORECASE):
+            continue
+        # Убираем явные переносы и неразрывные пробелы.
+        tmp = re.sub(r'<br\s*/?>', '', inner, flags=re.IGNORECASE)
+        tmp = re.sub(r'(&nbsp;|&#160;|\u00A0)', '', tmp, flags=re.IGNORECASE)
+        # Удаляем оставшиеся теги, оставляя только текст.
+        text_only = re.sub(r'<[^>]+>', '', tmp)
+        if text_only.strip():
+            # В абзаце есть настоящий текст — не разделитель.
+            continue
+        first_empty = m
+        break
+
+    if not first_empty:
+        # Пустых абзацев нет — весь блок считается телом, без заголовка.
+        return '', raw_html
+
+    if first_empty.start() <= 0:
+        # Первый абзац уже пустой — считаем, что заголовка нет.
+        return '', raw_html[first_empty.end() :]
+
+    # Есть содержимое до первого пустого абзаца — это и есть заголовок.
+    return raw_html[: first_empty.start()], raw_html[first_empty.end() :]
+
+
+def _title_starts_with_empty_paragraph(title_html: str) -> bool:
+    """
+    Проверяет, начинается ли HTML заголовка с «пустого» абзаца
+    (<p> с только <br>, &nbsp; и т.п.). В таком случае считаем,
+    что заголовка по сути нет (как в клиентском extractBlockSections).
+    """
+    if not title_html:
+        return False
+    m = re.match(
+        r'\s*<p\b[^>]*>(.*?)</p\s*>',
+        title_html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not m:
+        return False
+    inner = m.group(1) or ''
+    # Абзац с картинкой считаем содержательным.
+    if re.search(r'<img\b', inner, flags=re.IGNORECASE):
+        return False
+    tmp = re.sub(r'<br\s*/?>', '', inner, flags=re.IGNORECASE)
+    tmp = re.sub(r'(&nbsp;|&#160;|\u00A0)', '', tmp, flags=re.IGNORECASE)
+    text_only = re.sub(r'<[^>]+>', '', tmp)
+    return not text_only.strip()
+
+
 def _resolve_article_id_for_user(article_id: str, current_user: User) -> str:
     """
     Преобразует «публичный» идентификатор статьи из URL в фактический ID в БД.
@@ -1052,17 +1440,9 @@ def _render_public_block(block: dict[str, Any], heading_depth: int = 1) -> str:
     collapsed = bool(block.get('collapsed'))
     block_id = html_mod.escape(str(block.get('id') or ''))
 
-    # Разбиваем stored HTML на заголовок и тело по первому "пустому" абзацу,
-    # как это делает extractBlockSections в клиенте.
-    title_html = ''
-    body_html = raw_html
-    for sep in ('<p><br /></p>', '<p><br/></p>', '<p><br></p>'):
-        idx = raw_html.find(sep)
-        if idx != -1:
-            title_html = raw_html[:idx]
-            body_html = raw_html[idx + len(sep) :]
-            break
-
+    # Разбиваем stored HTML на заголовок и тело по первому по-настоящему
+    # «пустому» <p>, максимально повторяя client-side extractBlockSections.
+    title_html, body_html = _split_public_block_sections(raw_html)
     has_title = bool(title_html.strip())
 
     # Если у блока нет явного заголовка, но есть дети и внутри всего одна
@@ -1079,6 +1459,13 @@ def _render_public_block(block: dict[str, Any], heading_depth: int = 1) -> str:
                 title_html = candidate
                 body_html = ''
                 has_title = True
+
+    # Если «заголовок» сам по себе начинается с пустой строки — считаем,
+    # что это не настоящий заголовок, а просто контент блока.
+    if has_title and _title_starts_with_empty_paragraph(title_html):
+        body_html = f'{title_html}{body_html}'
+        title_html = ''
+        has_title = False
 
     # Кнопка сворачивания как в экспорте: с data-block-id и aria-expanded.
     if has_children or raw_html:
@@ -2326,6 +2713,62 @@ def yandex_upload_url(payload: dict[str, Any], current_user: User = Depends(get_
     }
 
 
+def _upload_bytes_to_yandex_for_user(user: User, filename: str, raw: bytes, mime_type: str) -> str:
+    """
+    Загружает произвольные байты в app‑папку Яндекс.Диска указанного пользователя.
+
+    Возвращает логический путь вида app:/.../<filename>, который затем можно
+    использовать в attachments.stored_path.
+    """
+    tokens = get_yandex_tokens(user.id)
+    access_token = tokens.get('accessToken') if tokens else None
+    disk_root = (tokens.get('diskRoot') if tokens else None) or YANDEX_DISK_APP_ROOT or 'app:/'
+    if not access_token:
+        raise RuntimeError('Интеграция с Яндекс.Диском не настроена для этого пользователя')
+
+    safe_base = (filename or 'attachment').strip() or 'attachment'
+    safe_base = ''.join(ch if ch not in '/\\' else '_' for ch in safe_base)
+    # Делаем имя уникальным, чтобы не было конфликтов.
+    ts = int(datetime.utcnow().timestamp() * 1000)
+    unique_name = f'{ts}-{os.urandom(4).hex()}-{safe_base}'
+
+    base = (disk_root or 'app:/').rstrip('/')
+    final_path = f'{base}/{unique_name}'
+
+    query = urllib.parse.urlencode({'path': final_path, 'overwrite': 'false'})
+    upload_url = f'https://cloud-api.yandex.net/v1/disk/resources/upload?{query}'
+    try:
+        req = urllib.request.Request(
+            upload_url,
+            headers={'Authorization': f'OAuth {access_token}'},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: failed to get Yandex upload URL for %s: %r', final_path, exc)
+        raise RuntimeError('Не удалось получить URL загрузки на Яндекс.Диск') from exc
+
+    href = data.get('href') or ''
+    method = (data.get('method') or 'PUT').upper()
+    if not href:
+        raise RuntimeError('Яндекс.Диск не вернул ссылку для загрузки')
+
+    try:
+        upload_req = urllib.request.Request(
+            href,
+            data=raw,
+            method=method,
+            headers={'Content-Type': mime_type or 'application/octet-stream'},
+        )
+        with urllib.request.urlopen(upload_req, timeout=60):
+            pass
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: failed to upload bytes to %s: %r', final_path, exc)
+        raise RuntimeError('Не удалось загрузить файл на Яндекс.Диск') from exc
+
+    return final_path
+
+
 @app.get('/api/yandex/disk/file')
 def yandex_open_file(path: str = Query(..., description='Путь ресурса на Яндекс.Диске (app:/ или disk:/)'), current_user: User = Depends(get_current_user)):
     """
@@ -3131,6 +3574,70 @@ async def client_log(payload: dict[str, Any]):
     data = payload.get('data')
     logger.error('[client-log] kind=%s data=%s', kind, json.dumps(data, ensure_ascii=False))
     return {'status': 'ok'}
+
+
+@app.post('/api/telegram/link-token')
+def telegram_create_link_token(current_user: User = Depends(get_current_user)):
+    """
+    Создаёт одноразовый токен для привязки текущего пользователя к Telegram‑чату.
+
+    Поток:
+      1) пользователь в Memus вызывает этот эндпоинт (через UI);
+      2) получает token и отправляет боту команду: /link <token>;
+      3) бот сохраняет соответствие chat_id → user_id в telegram_links.
+    """
+    # Для смысловой привязки хотим, чтобы у пользователя уже был настроен Яндекс.Диск,
+    # иначе вложения из Telegram всё равно некуда сохранять.
+    tokens = get_yandex_tokens(current_user.id)
+    if not tokens or not tokens.get('accessToken'):
+        raise HTTPException(
+            status_code=400,
+            detail='Сначала настройте интеграцию с Яндекс.Диском, затем привязывайте Telegram.',
+        )
+
+    now = datetime.utcnow()
+    # Срок действия токена, чтобы коды не висели вечно.
+    expires_at = now + timedelta(hours=1)
+    raw = os.urandom(18)
+    token = base64.urlsafe_b64encode(raw).decode('ascii').rstrip('=\n')
+    with CONN:
+        CONN.execute(
+            '''
+            INSERT INTO telegram_link_tokens (token, user_id, created_at, expires_at)
+            VALUES (?, ?, ?, ?)
+            ''',
+            (token, current_user.id, now.isoformat(), expires_at.isoformat()),
+        )
+    return {'token': token, 'expiresAt': expires_at.isoformat()}
+
+
+@app.post('/api/telegram/webhook/{token}')
+def telegram_webhook(token: str, payload: dict[str, Any]):
+    """
+    Webhook для Telegram‑бота быстрых заметок.
+
+    Ожидает JSON update от Telegram. Для простоты авторизацию делаем по токену
+    в URL: /api/telegram/webhook/<TELEGRAM_BOT_TOKEN>.
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=503, detail='Telegram bot не настроен (нет TELEGRAM_BOT_TOKEN)')
+    if token != TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=403, detail='Invalid token')
+
+    try:
+        message = (
+            payload.get('message')
+            or payload.get('edited_message')
+            or payload.get('channel_post')
+            or payload.get('edited_channel_post')
+        )
+        if message:
+            _handle_telegram_message(message)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: unhandled error: %r', exc)
+
+    # Telegram ждёт быстрый ответ, сам результат мы не используем.
+    return {'ok': True}
 
 
 

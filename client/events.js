@@ -58,6 +58,7 @@ import {
   moveArticlePosition,
   indentArticleApi,
   outdentArticleApi,
+  createTelegramLinkToken,
 } from './api.js?v=2';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
@@ -1370,6 +1371,40 @@ export function attachEvents() {
   }
   if (refs.trashTabBtn) {
     refs.trashTabBtn.addEventListener('click', () => setTrashMode(true));
+  }
+  if (refs.telegramLinkBtn) {
+    refs.telegramLinkBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        const data = await createTelegramLinkToken();
+        const token = (data && data.token) || '';
+        if (!token) {
+          showToast('Не удалось получить код привязки Telegram');
+          return;
+        }
+        const cmd = `/link ${token}`;
+        const messageLines = [
+          'Чтобы привязать этот аккаунт Memus к чату в Telegram:',
+          '',
+          '1. Откройте чат с ботом.',
+          '2. Отправьте ему эту команду:',
+          '',
+          cmd,
+        ];
+        await showPrompt({
+          title: 'Привязать Telegram',
+          message: messageLines.join('\n'),
+          defaultValue: cmd,
+          placeholder: '/link …',
+          confirmText: 'Закрыть',
+          cancelText: 'Отмена',
+          hideConfirm: true,
+        });
+      } catch (error) {
+        showToast(error.message || 'Не удалось создать код привязки Telegram');
+      }
+    });
   }
   if (refs.userMenuBtn && refs.userMenu) {
     refs.userMenuBtn.addEventListener('click', (event) => {

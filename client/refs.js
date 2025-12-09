@@ -18,6 +18,7 @@ export const refs = {
   logoutBtn: document.getElementById('logoutBtn'),
   userMenuBtn: document.getElementById('userMenuBtn'),
   userMenu: document.getElementById('userMenu'),
+  telegramLinkBtn: document.getElementById('telegramLinkBtn'),
   openUsersViewBtn: document.getElementById('openUsersViewBtn'),
   usersView: document.getElementById('usersView'),
   usersList: document.getElementById('usersList'),

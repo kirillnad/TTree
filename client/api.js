@@ -103,6 +103,10 @@ export function deleteUser(userId) {
   return apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
 }
 
+export function createTelegramLinkToken() {
+  return apiRequest('/api/telegram/link-token', { method: 'POST', body: JSON.stringify({}) });
+}
+
 export function uploadImageFile(file) {
   const formData = new FormData();
   formData.append('file', file);

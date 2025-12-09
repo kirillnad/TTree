@@ -390,6 +390,24 @@ export function cleanupEditableHtml(html = '') {
     .replace(/\u00a0/g, ' ')
     .trim();
   const originalHasAnchors = Boolean(originalTemplate.content.querySelector('a'));
+  // Запоминаем, была ли в исходном HTML ведущая «пустая» строка
+  // (первый осмысленный узел — пустой абзац/див, как в isSeparatorNode).
+  let hasLeadingEmptyLine = false;
+  {
+    const nodes = Array.from(originalTemplate.content.childNodes || []);
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i];
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (!(node.textContent || '').trim()) continue;
+        // Ненулевая текстовая нода — значит, пустой строки в начале не было.
+        break;
+      }
+      if (isSeparatorNode(node)) {
+        hasLeadingEmptyLine = true;
+      }
+      break;
+    }
+  }
 
   const template = document.createElement('template');
   template.innerHTML = html || '';
@@ -599,11 +617,41 @@ export function cleanupEditableHtml(html = '') {
     }
   });
 
-  // если нет ни одного абзаца — добавляем пустой
-  if (!template.content.querySelector('p')) {
+  const root = template.content;
+  const hasAnyParagraph = Boolean(root.querySelector('p'));
+
+  // Гарантируем наличие хотя бы одного абзаца.
+  if (!hasAnyParagraph) {
     const p = document.createElement('p');
     p.appendChild(document.createElement('br'));
-    template.content.appendChild(p);
+    root.appendChild(p);
+  } else if (hasLeadingEmptyLine) {
+    // Если в исходном блоке первая строка была пустой,
+    // восстанавливаем одну пустую строку в начале.
+    const nodesTop = Array.from(root.childNodes || []);
+    let anchor = null;
+    for (let i = 0; i < nodesTop.length; i += 1) {
+      const node = nodesTop[i];
+      if (node.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim()) {
+        // Пропускаем ведущие пробельные текстовые узлы.
+        // Они всё равно не влияют на разметку.
+        continue;
+      }
+      anchor = node;
+      break;
+    }
+    if (!anchor) {
+      // Нет видимых узлов — просто добавляем один пустой абзац.
+      const p = document.createElement('p');
+      p.appendChild(document.createElement('br'));
+      root.appendChild(p);
+    } else if (!(anchor.tagName === 'P' && isSeparatorNode(anchor))) {
+      // Если первый видимый узел уже не является пустым <p>,
+      // вставляем пустую строку перед ним.
+      const p = document.createElement('p');
+      p.appendChild(document.createElement('br'));
+      root.insertBefore(p, anchor);
+    }
   }
 
   const cleaned = linkifyHtml(template.innerHTML);

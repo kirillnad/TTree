@@ -197,6 +197,31 @@ def _init_sqlite_schema():
         ''',
     )
 
+    # Связка Telegram‑чатов с пользователями Memus.
+    execute(
+        '''
+        CREATE TABLE IF NOT EXISTS telegram_links (
+            chat_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        ''',
+    )
+
+    # Одноразовые токены для привязки Telegram‑чата к пользователю.
+    execute(
+        '''
+        CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        ''',
+    )
+
 
 def _init_postgres_schema():
     statements = [
@@ -323,6 +348,21 @@ def _init_postgres_schema():
             expires_at TEXT,
             disk_root TEXT NOT NULL DEFAULT 'app:/',
             initialized BOOLEAN NOT NULL DEFAULT FALSE
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS telegram_links (
+            chat_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
         )
         ''',
     ]

@@ -126,22 +126,15 @@ def sanitize_html(html: str | None) -> str:
 
 def _strip_empty_edges(html: str) -> str:
     """
-    Remove leading/trailing empty paragraphs or <br> that appear after editing,
-    so saved blocks do not get artificial padding that looks like a title.
+    Удаляем хвостовые пустые абзацы / <br>, появляющиеся после редактирования,
+    чтобы в конце блока не накапливались «висячие» пустые строки.
+    Лидирующие пустые строки теперь сохраняем: первая пустая строка блока
+    используется пользователем осознанно (в т.ч. на публичных страницах).
     """
     empty_p = re.compile(r'^<p>(?:\s|&nbsp;|<br\s*/?>)*</p>', re.IGNORECASE)
     empty_br = re.compile(r'^<br\s*/?>', re.IGNORECASE)
     trailing_empty_p = re.compile(r'<p>(?:\s|&nbsp;|<br\s*/?>)*</p>\s*$', re.IGNORECASE)
     trailing_empty_br = re.compile(r'<br\s*/?>\s*$', re.IGNORECASE)
-
-    # Strip leading empties
-    while True:
-        new_html = empty_p.sub('', html)
-        new_html = empty_br.sub('', new_html)
-        new_html = new_html.lstrip()
-        if new_html == html:
-            break
-        html = new_html
 
     # Strip trailing empties
     while True:
