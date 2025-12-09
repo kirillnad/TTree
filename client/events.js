@@ -371,6 +371,34 @@ function handleArticlesListKey(event) {
     return;
   }
 
+  if (!ctrlKey && !shiftKey && (code === 'ArrowLeft' || code === 'ArrowRight')) {
+    // Стрелки влево/вправо в списке статей: сворачивание/разворачивание узла.
+    // Работает только для статей, у которых есть дети.
+    const hasChild = (state.articlesIndex || []).some(
+      (a) => (a.parentId || null) === articleId,
+    );
+    if (!hasChild) return;
+    event.preventDefault();
+    if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
+    const set = new Set(state.collapsedArticleIds);
+    if (code === 'ArrowLeft') {
+      // Сворачиваем, если ещё не свёрнуто.
+      if (!set.has(articleId)) {
+        set.add(articleId);
+        state.collapsedArticleIds = Array.from(set);
+        renderMainArticleList();
+      }
+    } else if (code === 'ArrowRight') {
+      // Разворачиваем, если было свёрнуто.
+      if (set.has(articleId)) {
+        set.delete(articleId);
+        state.collapsedArticleIds = Array.from(set);
+        renderMainArticleList();
+      }
+    }
+    return;
+  }
+
   if (!ctrlKey && !shiftKey && code === 'Enter') {
     event.preventDefault();
     state.listSelectedArticleId = articleId;
@@ -563,6 +591,20 @@ export function attachEvents() {
   if (refs.articleTitle) {
     refs.articleTitle.addEventListener('dblclick', startTitleEditingMode);
     refs.articleTitle.addEventListener('click', handleTitleClick);
+    // Позволяем перетаскивать текущую статью, схватившись за заголовок.
+    refs.articleTitle.draggable = true;
+    refs.articleTitle.addEventListener('dragstart', (event) => {
+      if (!state.articleId) return;
+      // Используем общий механизм DnD статей: sidebar.js читает draggingArticleId из dataTransfer.
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', state.articleId);
+      }
+      window.__ttreeDraggingArticleId = state.articleId;
+    });
+    refs.articleTitle.addEventListener('dragend', () => {
+      window.__ttreeDraggingArticleId = null;
+    });
   }
   if (refs.articleMenuBtn) {
     refs.articleMenuBtn.addEventListener('click', toggleArticleMenu);

@@ -106,10 +106,19 @@ function applyLocalArticleMove(articleId, parentId, anchorId, placement) {
 }
 
 function handleArticleDragStart(event) {
+  // Сначала пробуем взять id из глобальной переменной (перетаскивание из заголовка статьи).
+  if (window.__ttreeDraggingArticleId) {
+    draggingArticleId = window.__ttreeDraggingArticleId;
+  } else {
+    const li = event.currentTarget;
+    draggingArticleId = li?.dataset?.articleId || null;
+  }
   const li = event.currentTarget;
-  draggingArticleId = li?.dataset?.articleId || null;
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
+    if (draggingArticleId) {
+      event.dataTransfer.setData('text/plain', draggingArticleId);
+    }
   }
 }
 
@@ -478,8 +487,7 @@ export function renderMainArticleList(articles = null) {
         item.dataset.articleId = article.id;
         item.innerHTML = `
       <span>
-        <strong>${escapeHtml(article.title)}</strong><br />
-        <small>${formatArticleDate(article)}</small>
+        <strong>${escapeHtml(article.title)}</strong>
       </span>
       <div class="row-actions">
         <button class="ghost restore-btn" data-id="${article.id}">Восстановить</button>
@@ -529,8 +537,7 @@ export function renderMainArticleList(articles = null) {
     item.style.paddingLeft = `${depth * 1.25}rem`;
     item.innerHTML = `
       <span>
-        <strong>${publicIcon}${titleText}</strong><br />
-        <small>${new Date(article.updatedAt).toLocaleString()}</small>
+        <strong>${publicIcon}${titleText}</strong>
       </span>
       <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</button>
     `;
