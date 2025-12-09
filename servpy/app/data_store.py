@@ -562,13 +562,16 @@ def move_article_to_parent(
         target_order = [aid for aid in origin_order if aid != article_id]
 
     insertion_index: Optional[int] = None
-    if anchor_id and anchor_id in target_order:
+    # Вставка «внутрь» всегда делает статью последним ребёнком,
+    # независимо от положения курсора или anchor_id.
+    if placement == 'inside':
+        insertion_index = len(target_order)
+    elif anchor_id and anchor_id in target_order:
         anchor_idx = target_order.index(anchor_id)
         if placement == 'before':
             insertion_index = anchor_idx
-        elif placement in {'after', 'inside'}:
+        elif placement == 'after':
             insertion_index = anchor_idx + 1
-
     if insertion_index is None:
         insertion_index = len(target_order)
 

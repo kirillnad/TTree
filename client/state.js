@@ -29,6 +29,7 @@ export const state = {
   isMarkdownInserting: false,
   isTrashView: false,
   favoriteArticles: [],
+  collapsedArticleIds: [],
   isDragModeEnabled: false,
   articleEncryptionKeys: {},
   // Процесс объединения блоков (чтобы избежать повторных кликов).

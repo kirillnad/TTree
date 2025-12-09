@@ -21,6 +21,66 @@ function findArticleById(id) {
   return (state.articlesIndex || []).find((a) => a.id === id) || null;
 }
 
+function getArticleSiblingsSnapshot(parentId) {
+  const pid = parentId || null;
+  return (state.articlesIndex || [])
+    .filter((a) => (a.parentId || null) === pid)
+    .sort((a, b) => {
+      if (a.position !== b.position) return a.position - b.position;
+      return new Date(a.updatedAt || 0) - new Date(b.updatedAt || 0);
+    });
+}
+
+function applyLocalArticleMove(articleId, parentId, anchorId, placement) {
+  if (!articleId) return;
+  const dragged = findArticleById(articleId);
+  if (!dragged) return;
+  const newParentId = parentId || null;
+  const oldParentId = dragged.parentId || null;
+
+  const oldSiblings = getArticleSiblingsSnapshot(oldParentId);
+  const oldWithout = oldSiblings.filter((a) => a.id !== articleId);
+
+  let baseTarget;
+  if (newParentId === oldParentId) {
+    baseTarget = oldWithout;
+  } else {
+    baseTarget = getArticleSiblingsSnapshot(newParentId);
+  }
+
+  const targetWithoutDragged = baseTarget.filter((a) => a.id !== articleId);
+
+  let insertionIndex = targetWithoutDragged.length;
+  if (anchorId && placement && placement !== 'inside') {
+    const idx = targetWithoutDragged.findIndex((a) => a.id === anchorId);
+    if (idx !== -1) {
+      insertionIndex = placement === 'before' ? idx : idx + 1;
+    }
+  }
+  if (placement === 'inside') {
+    insertionIndex = targetWithoutDragged.length;
+  }
+  if (insertionIndex < 0) insertionIndex = 0;
+  if (insertionIndex > targetWithoutDragged.length) insertionIndex = targetWithoutDragged.length;
+
+  const targetOrder = targetWithoutDragged.slice();
+  targetOrder.splice(insertionIndex, 0, dragged);
+
+  // Сначала обновляем parentId у перетаскиваемой статьи.
+  dragged.parentId = newParentId;
+
+  // Пересчитываем позиции в исходной группе (без перетаскиваемой статьи).
+  oldWithout.forEach((item, index) => {
+    item.position = index;
+  });
+
+  // Пересчитываем позиции в целевой группе.
+  targetOrder.forEach((item, index) => {
+    item.parentId = newParentId;
+    item.position = index;
+  });
+}
+
 function handleArticleDragStart(event) {
   const li = event.currentTarget;
   draggingArticleId = li?.dataset?.articleId || null;
@@ -60,6 +120,11 @@ function handleArticleDrop(event) {
     dropMode === 'inside' ? target.id : target.parentId || null;
   const anchorId = dropMode === 'inside' ? null : target.id;
 
+  // Мгновенно обновляем локальное дерево статей.
+  applyLocalArticleMove(draggingArticleId, parentId, anchorId, dropMode);
+  renderSidebarArticleList();
+  renderMainArticleList();
+
   (async () => {
     try {
       await moveArticleTree(draggingArticleId, {
@@ -67,10 +132,15 @@ function handleArticleDrop(event) {
         anchorId,
         placement: dropMode,
       });
-      const articles = await fetchArticlesIndex();
-      setArticlesIndex(articles);
-      renderMainArticleList();
     } catch (error) {
+      // В случае ошибки — возвращаемся к серверному состоянию.
+      try {
+        const articles = await fetchArticlesIndex();
+        setArticlesIndex(articles);
+        renderMainArticleList();
+      } catch (_) {
+        /* ignore */
+      }
       showToast(error.message || 'Не удалось переместить страницу');
     }
   })();
@@ -144,6 +214,11 @@ export function setArticlesIndex(articles = []) {
     parentId: a.parentId || null,
     position: typeof a.position === 'number' ? a.position : 0,
   }));
+  // Очищаем список схлопнутых узлов от несуществующих id.
+  if (Array.isArray(state.collapsedArticleIds) && state.collapsedArticleIds.length) {
+    const existing = new Set(state.articlesIndex.map((a) => a.id));
+    state.collapsedArticleIds = state.collapsedArticleIds.filter((id) => existing.has(id));
+  }
   renderSidebarArticleList();
 }
 
@@ -237,6 +312,15 @@ export function renderSidebarArticleList() {
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
+  const collapsedSet = new Set(state.collapsedArticleIds || []);
+
+  // Отдельно считаем наличие детей по полному списку (без фильтра),
+  // чтобы иконка «есть дети» не пропадала из‑за фильтрации.
+  const hasChildren = new Set();
+  (source || []).forEach((article) => {
+    const pid = article.parentId || null;
+    if (pid) hasChildren.add(pid);
+  });
 
   const base = (source || []).filter(
     (article) =>
@@ -262,6 +346,10 @@ export function renderSidebarArticleList() {
   const renderNode = (node, depth) => {
     const li = document.createElement('li');
     li.className = 'sidebar-article-item';
+    if (hasChildren.has(node.id)) {
+      li.classList.add('has-children');
+      if (collapsedSet.has(node.id)) li.classList.add('is-collapsed');
+    }
     li.dataset.articleId = node.id;
     li.style.paddingLeft = `${depth * 1.25}rem`;
 
@@ -276,6 +364,14 @@ export function renderSidebarArticleList() {
     const publicIcon = node.publicSlug ? '🌐 ' : '';
     button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
     button.addEventListener('click', () => {
+      // Тогглим сворачивание/разворачивание потомков.
+      if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
+      const set = new Set(state.collapsedArticleIds);
+      if (set.has(node.id)) set.delete(node.id);
+      else set.add(node.id);
+      state.collapsedArticleIds = Array.from(set);
+      renderSidebarArticleList();
+      // И переходим к статье.
       navigate(routing.article(node.id));
       if (state.isSidebarMobileOpen) {
         setSidebarMobileOpen(false);
@@ -299,8 +395,9 @@ export function renderSidebarArticleList() {
       li.addEventListener('dragend', handleArticleDragEnd);
     }
     refs.sidebarArticleList.appendChild(li);
-
-    (node.children || []).forEach((child) => renderNode(child, depth + 1));
+    if (!collapsedSet.has(node.id)) {
+      (node.children || []).forEach((child) => renderNode(child, depth + 1));
+    }
   };
 
   tree.forEach((root) => renderNode(root, 0));
@@ -312,23 +409,30 @@ export function renderMainArticleList(articles = null) {
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const base = Array.isArray(articles) && articles.length ? articles : (state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex);
   const favs = new Set(state.favoriteArticles || []);
+  const collapsedSet = new Set(state.collapsedArticleIds || []);
+   // Наличие детей считаем по полному списку (base), не по отфильтрованному дереву.
+  const hasChildren = new Set();
+  base.forEach((article) => {
+    const pid = article.parentId || null;
+    if (pid) hasChildren.add(pid);
+  });
   if (!base.length) {
     const empty = document.createElement('li');
     empty.textContent = state.isTrashView ? (query ? 'No deleted pages match the filter' : 'Trash is empty') : (query ? 'Ничего не найдено' : 'Список пуст.');
     refs.articleList.appendChild(empty);
     return;
   }
-  base
-    .slice()
-    .filter(
-      (article) =>
-        (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
-        (!state.isTrashView ? article.id !== 'inbox' : true),
-    )
-    .forEach((article) => {
-      const item = document.createElement('li');
-      item.dataset.articleId = article.id;
-      if (state.isTrashView) {
+  if (state.isTrashView) {
+    base
+      .slice()
+      .filter(
+        (article) =>
+          (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
+          (!state.isTrashView ? article.id !== 'inbox' : true),
+      )
+      .forEach((article) => {
+        const item = document.createElement('li');
+        item.dataset.articleId = article.id;
         item.innerHTML = `
       <span>
         <strong>${escapeHtml(article.title)}</strong><br />
@@ -355,29 +459,63 @@ export function renderMainArticleList(articles = null) {
             await deleteFromTrash(article.id);
           });
         }
-      } else {
-        const isFav = favs.has(article.id);
-        const titleText = escapeHtml(article.title || 'Без названия');
-        const publicIcon = article.publicSlug ? '🌐 ' : '';
-        item.innerHTML = `
+        refs.articleList.appendChild(item);
+      });
+    return;
+  }
+
+  const filtered = base
+    .slice()
+    .filter(
+      (article) =>
+        (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
+        article.id !== 'inbox',
+    );
+  const tree = buildArticleTree(filtered);
+
+  const renderItem = (article, depth) => {
+    const item = document.createElement('li');
+    if (hasChildren.has(article.id)) {
+      item.classList.add('has-children');
+      if (collapsedSet.has(article.id)) item.classList.add('is-collapsed');
+    }
+    item.dataset.articleId = article.id;
+    const isFav = favs.has(article.id);
+    const titleText = escapeHtml(article.title || 'Без названия');
+    const publicIcon = article.publicSlug ? '🌐 ' : '';
+    item.style.paddingLeft = `${depth * 1.25}rem`;
+    item.innerHTML = `
       <span>
         <strong>${publicIcon}${titleText}</strong><br />
         <small>${new Date(article.updatedAt).toLocaleString()}</small>
       </span>
       <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</button>
     `;
-        const star = item.querySelector('.star-btn');
-        if (star) {
-          star.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            toggleFavorite(article.id);
-          });
-        }
-        item.addEventListener('click', () => navigate(routing.article(article.id)));
-      }
-      refs.articleList.appendChild(item);
+    const star = item.querySelector('.star-btn');
+    if (star) {
+      star.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFavorite(article.id);
+      });
+    }
+    item.addEventListener('click', () => {
+      // Тот же флаг сворачивания, что и в сайдбаре.
+      if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
+      const set = new Set(state.collapsedArticleIds);
+      if (set.has(article.id)) set.delete(article.id);
+      else set.add(article.id);
+      state.collapsedArticleIds = Array.from(set);
+      renderMainArticleList();
+      navigate(routing.article(article.id));
     });
+    refs.articleList.appendChild(item);
+    if (!collapsedSet.has(article.id)) {
+      (article.children || []).forEach((child) => renderItem(child, depth + 1));
+    }
+  };
+
+  tree.forEach((root) => renderItem(root, 0));
 }
 
 async function restoreFromTrash(articleId) {
