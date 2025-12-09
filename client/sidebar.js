@@ -13,6 +13,8 @@ import {
 import { showToast } from './toast.js';
 
 const FAVORITES_KEY = 'ttree_favorites';
+const COLLAPSED_ARTICLES_KEY = 'ttree_collapsed_articles';
+const SIDEBAR_COLLAPSED_KEY = 'ttree_sidebar_collapsed';
 
 let draggingArticleId = null;
 let currentDropLi = null;
@@ -123,6 +125,9 @@ function handleArticleDragStart(event) {
 }
 
 function handleArticleDragOver(event) {
+  if (!draggingArticleId && window.__ttreeDraggingArticleId) {
+    draggingArticleId = window.__ttreeDraggingArticleId;
+  }
   if (!draggingArticleId) return;
   if (!event.currentTarget || !event.currentTarget.dataset.articleId) return;
   event.preventDefault();
@@ -212,6 +217,56 @@ function saveFavorites() {
   }
 }
 
+function loadCollapsedArticles() {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_ARTICLES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    state.collapsedArticleIds = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    state.collapsedArticleIds = [];
+  }
+}
+
+export function saveCollapsedArticles() {
+  try {
+    localStorage.setItem(
+      COLLAPSED_ARTICLES_KEY,
+      JSON.stringify(state.collapsedArticleIds || []),
+    );
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function loadSidebarCollapsed() {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    if (raw === '1') {
+      state.isSidebarCollapsed = true;
+    } else if (raw === '0') {
+      state.isSidebarCollapsed = false;
+    }
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function saveSidebarCollapsed() {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, state.isSidebarCollapsed ? '1' : '0');
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+export function initSidebarStateFromStorage() {
+  loadSidebarCollapsed();
+  loadCollapsedArticles();
+  if (refs.sidebar) {
+    setSidebarCollapsed(state.isSidebarCollapsed);
+  }
+}
+
 function sortArticles(arr = []) {
   const favs = new Set(state.favoriteArticles || []);
   return [...arr].sort((a, b) => {
@@ -262,6 +317,7 @@ export function setArticlesIndex(articles = []) {
   if (Array.isArray(state.collapsedArticleIds) && state.collapsedArticleIds.length) {
     const existing = new Set(state.articlesIndex.map((a) => a.id));
     state.collapsedArticleIds = state.collapsedArticleIds.filter((id) => existing.has(id));
+    saveCollapsedArticles();
   }
   renderSidebarArticleList();
 }
@@ -406,8 +462,8 @@ export function renderSidebarArticleList() {
     if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
     const isFav = favs.has(node.id);
     const titleText = escapeHtml(node.title || 'Без названия');
-    const publicIcon = node.publicSlug ? '🌐 ' : '';
-    button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</span>`;
+    const publicIcon = node.publicSlug ? '\uE909 ' : '';
+    button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
     button.addEventListener('click', () => {
       // Одинарный клик: выделяем статью и сворачиваем/разворачиваем потомков только в сайдбаре.
       state.sidebarSelectedArticleId = node.id;
@@ -416,6 +472,7 @@ export function renderSidebarArticleList() {
       if (set.has(node.id)) set.delete(node.id);
       else set.add(node.id);
       state.collapsedArticleIds = Array.from(set);
+       saveCollapsedArticles();
       renderSidebarArticleList();
     });
     button.addEventListener('dblclick', (event) => {
@@ -533,13 +590,13 @@ export function renderMainArticleList(articles = null) {
     item.dataset.articleId = article.id;
     const isFav = favs.has(article.id);
     const titleText = escapeHtml(article.title || 'Без названия');
-    const publicIcon = article.publicSlug ? '🌐 ' : '';
+    const publicIcon = article.publicSlug ? '\uE909 ' : '';
     item.style.paddingLeft = `${depth * 1.25}rem`;
     item.innerHTML = `
       <span>
         <strong>${publicIcon}${titleText}</strong>
       </span>
-      <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '★' : '☆'}</button>
+      <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</button>
     `;
     const star = item.querySelector('.star-btn');
     if (star) {
@@ -560,6 +617,7 @@ export function renderMainArticleList(articles = null) {
       if (set.has(article.id)) set.delete(article.id);
       else set.add(article.id);
       state.collapsedArticleIds = Array.from(set);
+      saveCollapsedArticles();
       renderMainArticleList();
     });
     item.addEventListener('dblclick', (event) => {
@@ -680,6 +738,7 @@ export function setSidebarCollapsed(collapsed) {
     refs.sidebarToggle.title = collapsed ? 'Показать панель' : 'Свернуть панель';
     refs.sidebarToggle.textContent = collapsed ? '→' : 'x';
   }
+  saveSidebarCollapsed();
   if (collapsed) {
     hideHintPopover();
     hideSearchResults();

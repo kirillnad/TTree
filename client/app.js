@@ -5,6 +5,7 @@ import { initAuth, bootstrapAuth } from './auth.js';
 import { initUsersPanel } from './users.js';
 import { initGraphView } from './graph.js';
 import { initTables } from './tables.js';
+import { initSidebarStateFromStorage } from './sidebar.js';
 
 /**
  * Инициализация приложения
@@ -12,6 +13,7 @@ import { initTables } from './tables.js';
 function startApp() {
   initRouting();
   attachEvents();
+  initSidebarStateFromStorage();
   initUsersPanel();
   initGraphView();
   initTables();

@@ -225,7 +225,7 @@
               title="Открыть боковую панель"
               aria-label="Открыть боковую панель"
             >
-              ☰
+              &#xE700;
             </button>
             <h2>Список статей</h2>
             <div class="list-tabs">
@@ -269,7 +269,7 @@
         <div id="articleHeader" class="panel-header article-header hidden">
           <div class="title-block">
                 <div class="title-row">
-                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей">☰</button>
+                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей">&#xE700;</button>
                   <h2 id="articleTitle"></h2>
                   <input id="articleTitleInput" class="hidden" type="text" />
                   <button
@@ -279,7 +279,7 @@
                     title="Добавить в избранное"
                     aria-label="Добавить в избранное"
                   >
-                    ☆
+                    &#xE734;
                   </button>
                   <button
                     id="articlePublicLinkBtn"
@@ -288,7 +288,7 @@
                     title="Скопировать публичную ссылку"
                     aria-label="Скопировать публичную ссылку"
                   >
-                    🌐
+                    &#xE909;
                   </button>
                   <div class="article-actions">
                     <button
@@ -300,7 +300,7 @@
                     aria-controls="article-menu"
                     title="Действия со статьёй"
                   >
-                    &#8942;
+                    &#xE712;
                   </button>
                   <div id="articleMenu" class="article-menu hidden" role="menu">
                     <p id="updatedAt" class="meta article-menu-meta"></p>
@@ -324,10 +324,10 @@
               </div>
               <div id="articleToolbar" class="article-toolbar">
                 <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
-                  ↺<span class="toolbar-label"> Отменить</span>
+                  &#xE7A7;<span class="toolbar-label"> Отменить</span>
                 </button>
                 <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
-                  ↻<span class="toolbar-label"> Повторить</span>
+                  &#xE7A6;<span class="toolbar-label"> Повторить</span>
                 </button>
                 <button
                   id="dragModeToggleBtn"
@@ -336,25 +336,33 @@
                   aria-pressed="false"
                   title="Переключить режим перетаскивания блоков"
                 >
-                  ⇅<span class="toolbar-label"> Двигать</span>
+                  &#xE76F;<span class="toolbar-label"> Двигать</span>
                 </button>
                 <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
-                  ⇤<span class="toolbar-label"> Слияние</span>
+                  &#xF460;<span class="toolbar-label"> Слияние</span>
+                </button>
+                <button
+                  id="splitBlockBtn"
+                  class="ghost small"
+                  type="button"
+                  title="Разделить текущий блок по курсору (Ctrl+↓)"
+                >
+                  &#xF740;<span class="toolbar-label"> Разделить</span>
                 </button>
                 <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
-                  ⌗<span class="toolbar-label"> Таблица</span>
+                  &#xF0E2;<span class="toolbar-label"> Таблица</span>
                 </button>
                 <button id="exportCurrentBlockBtn" class="ghost small" type="button" title="Экспорт текущего блока в HTML">
-                  ⇩<span class="toolbar-label"> Экспорт</span>
+                  &#xEDE1;<span class="toolbar-label"> Экспорт</span>
                 </button>
                 <button id="deleteCurrentBlockBtn" class="ghost small" type="button" title="Удалить текущий блок">
-                  ✕<span class="toolbar-label"> Удалить</span>
+                  &#xE74D;<span class="toolbar-label"> Удалить</span>
                 </button>
                 <button id="articleBlockTrashBtn" class="ghost small" type="button" title="Корзина удалённых блоков">
-                  ⤴<span class="toolbar-label"> Корзина</span>
+                  &#xE81C;<span class="toolbar-label"> Корзина</span>
                 </button>
                 <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
-                  ＋<span class="toolbar-label"> Новый</span>
+                  &#xE710;<span class="toolbar-label"> Новый</span>
                 </button>
               </div>
             </div>

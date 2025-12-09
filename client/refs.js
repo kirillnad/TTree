@@ -72,6 +72,7 @@ export const refs = {
   articleUndoBtn: document.getElementById('articleUndoBtn'),
   articleRedoBtn: document.getElementById('articleRedoBtn'),
   mergeBlocksBtn: document.getElementById('mergeBlocksBtn'),
+  splitBlockBtn: document.getElementById('splitBlockBtn'),
   insertTableBtn: document.getElementById('insertTableBtn'),
   deleteCurrentBlockBtn: document.getElementById('deleteCurrentBlockBtn'),
   exportCurrentBlockBtn: document.getElementById('exportCurrentBlockBtn'),

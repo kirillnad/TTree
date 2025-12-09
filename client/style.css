@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'SegoeIcons';
+  src: url('fonts/SegoeIcons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font-default: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto,
     'Inter', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
@@ -401,6 +409,10 @@ html {
   font-weight: 500;
 }
 
+.sidebar-article-title {
+  font-family: 'SegoeIcons', var(--font-default);
+}
+
 .sidebar-article-item.has-children > .sidebar-article-row > button::before {
   content: '';
   display: inline-block;
@@ -444,6 +456,7 @@ html {
   cursor: pointer;
   padding: 0 0.15rem;
   line-height: 1;
+  font-family: 'SegoeIcons', var(--font-default);
 }
 .sidebar-article-item button .star-btn {
   margin-left: auto;
@@ -761,6 +774,7 @@ main.content {
   font-size: 0.95rem;
   font-weight: 600;
   padding: 0.2rem 0.8rem;
+  font-family: 'SegoeIcons', var(--font-default);
 }
 
 #articleToolbar #articleNewBlockBtn {
@@ -956,6 +970,7 @@ button.icon-button {
   font-size: 1rem;
   font-weight: 600;
   line-height: 1;
+  font-family: 'SegoeIcons', var(--font-default);
 }
 
 button.icon-button.small {
@@ -2098,7 +2113,14 @@ h4.block-title {
   display: flex;
   justify-content: space-between;
   gap: 0.4rem;
-margin: 0.5rem 0 0.1rem;
+  margin: 0.5rem 0 0.1rem;
+}
+
+.block.editing .block-edit-actions {
+  position: sticky;
+  bottom: 0.25rem;
+  z-index: 10;
+  background: #ffffff;
 }
 
 .block.editing .block-edit-actions .ghost.small {

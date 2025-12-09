@@ -37,6 +37,7 @@ import {
   closeSidebarMobile,
   setSidebarMobileOpen,
   setSidebarCollapsed,
+  saveCollapsedArticles,
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
@@ -386,6 +387,7 @@ function handleArticlesListKey(event) {
       if (!set.has(articleId)) {
         set.add(articleId);
         state.collapsedArticleIds = Array.from(set);
+        saveCollapsedArticles();
         renderMainArticleList();
       }
     } else if (code === 'ArrowRight') {
@@ -393,6 +395,7 @@ function handleArticlesListKey(event) {
       if (set.has(articleId)) {
         set.delete(articleId);
         state.collapsedArticleIds = Array.from(set);
+        saveCollapsedArticles();
         renderMainArticleList();
       }
     }
@@ -1044,6 +1047,11 @@ export function attachEvents() {
         const target = event.target;
         const btn = target.closest('button');
         if (!btn) return;
+        // Не закрываем мобильный сайдбар при клике по статьям в дереве сайдбара:
+        // там одиночный клик используется только для сворачивания/разворачивания узлов.
+        if (btn.closest('.sidebar-article-item')) {
+          return;
+        }
         // Не закрываем мобильный сайдбар при клике по меню пользователя
         // и по самому попапу аккаунта.
         if (
@@ -1148,6 +1156,16 @@ export function attachEvents() {
     refs.mergeBlocksBtn.addEventListener('click', async (event) => {
       event.preventDefault();
       await mergeAllBlocksIntoFirst();
+    });
+  }
+  if (refs.splitBlockBtn) {
+    refs.splitBlockBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      if (state.mode !== 'edit' || !state.editingBlockId) {
+        showToast('Сначала включите редактирование блока');
+        return;
+      }
+      await splitEditingBlockAtCaret();
     });
   }
   if (refs.insertTableBtn) {

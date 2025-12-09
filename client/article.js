@@ -64,7 +64,7 @@ export function updateArticleHeaderUi() {
   if (refs.articleFavoriteBtn) {
     const favs = new Set(state.favoriteArticles || []);
     const isFav = favs.has(article.id);
-    refs.articleFavoriteBtn.textContent = isFav ? '★' : '☆';
+    refs.articleFavoriteBtn.textContent = isFav ? '\uE735' : '\uE734';
     refs.articleFavoriteBtn.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
   }
   if (refs.articlePublicLinkBtn) {
