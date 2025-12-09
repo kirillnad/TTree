@@ -14,6 +14,7 @@ import { showToast } from './toast.js';
 
 const FAVORITES_KEY = 'ttree_favorites';
 const COLLAPSED_ARTICLES_KEY = 'ttree_collapsed_articles';
+const LIST_COLLAPSED_ARTICLES_KEY = 'ttree_list_collapsed_articles';
 const SIDEBAR_COLLAPSED_KEY = 'ttree_sidebar_collapsed';
 
 let draggingArticleId = null;
@@ -221,9 +222,9 @@ function loadCollapsedArticles() {
   try {
     const raw = localStorage.getItem(COLLAPSED_ARTICLES_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    state.collapsedArticleIds = Array.isArray(parsed) ? parsed : [];
+    state.sidebarCollapsedArticleIds = Array.isArray(parsed) ? parsed : [];
   } catch (_) {
-    state.collapsedArticleIds = [];
+    state.sidebarCollapsedArticleIds = [];
   }
 }
 
@@ -231,7 +232,28 @@ export function saveCollapsedArticles() {
   try {
     localStorage.setItem(
       COLLAPSED_ARTICLES_KEY,
-      JSON.stringify(state.collapsedArticleIds || []),
+      JSON.stringify(state.sidebarCollapsedArticleIds || []),
+    );
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function loadListCollapsedArticles() {
+  try {
+    const raw = localStorage.getItem(LIST_COLLAPSED_ARTICLES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    state.listCollapsedArticleIds = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    state.listCollapsedArticleIds = [];
+  }
+}
+
+export function saveListCollapsedArticles() {
+  try {
+    localStorage.setItem(
+      LIST_COLLAPSED_ARTICLES_KEY,
+      JSON.stringify(state.listCollapsedArticleIds || []),
     );
   } catch (_) {
     /* ignore */
@@ -262,6 +284,7 @@ function saveSidebarCollapsed() {
 export function initSidebarStateFromStorage() {
   loadSidebarCollapsed();
   loadCollapsedArticles();
+  loadListCollapsedArticles();
   if (refs.sidebar) {
     setSidebarCollapsed(state.isSidebarCollapsed);
   }
@@ -314,10 +337,14 @@ export function setArticlesIndex(articles = []) {
     position: typeof a.position === 'number' ? a.position : 0,
   }));
   // Очищаем список схлопнутых узлов от несуществующих id.
-  if (Array.isArray(state.collapsedArticleIds) && state.collapsedArticleIds.length) {
-    const existing = new Set(state.articlesIndex.map((a) => a.id));
-    state.collapsedArticleIds = state.collapsedArticleIds.filter((id) => existing.has(id));
+  const existing = new Set(state.articlesIndex.map((a) => a.id));
+  if (Array.isArray(state.sidebarCollapsedArticleIds) && state.sidebarCollapsedArticleIds.length) {
+    state.sidebarCollapsedArticleIds = state.sidebarCollapsedArticleIds.filter((id) => existing.has(id));
     saveCollapsedArticles();
+  }
+  if (Array.isArray(state.listCollapsedArticleIds) && state.listCollapsedArticleIds.length) {
+    state.listCollapsedArticleIds = state.listCollapsedArticleIds.filter((id) => existing.has(id));
+    saveListCollapsedArticles();
   }
   renderSidebarArticleList();
 }
@@ -412,7 +439,7 @@ export function renderSidebarArticleList() {
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
-  const collapsedSet = new Set(state.collapsedArticleIds || []);
+  const collapsedSet = new Set(state.sidebarCollapsedArticleIds || []);
   const selectedId = state.sidebarSelectedArticleId || state.articleId;
 
   // Отдельно считаем наличие детей по полному списку (без фильтра),
@@ -465,14 +492,17 @@ export function renderSidebarArticleList() {
     const publicIcon = node.publicSlug ? '\uE909 ' : '';
     button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
     button.addEventListener('click', () => {
+      // Игнорируем клик, если сейчас идёт drag&drop статей,
+      // чтобы дроп не приводил к случайному сворачиванию/разворачиванию узла.
+      if (draggingArticleId || window.__ttreeDraggingArticleId) return;
       // Одинарный клик: выделяем статью и сворачиваем/разворачиваем потомков только в сайдбаре.
       state.sidebarSelectedArticleId = node.id;
-      if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
-      const set = new Set(state.collapsedArticleIds);
+      if (!state.sidebarCollapsedArticleIds) state.sidebarCollapsedArticleIds = [];
+      const set = new Set(state.sidebarCollapsedArticleIds);
       if (set.has(node.id)) set.delete(node.id);
       else set.add(node.id);
-      state.collapsedArticleIds = Array.from(set);
-       saveCollapsedArticles();
+      state.sidebarCollapsedArticleIds = Array.from(set);
+      saveCollapsedArticles();
       renderSidebarArticleList();
     });
     button.addEventListener('dblclick', (event) => {
@@ -517,7 +547,7 @@ export function renderMainArticleList(articles = null) {
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const base = Array.isArray(articles) && articles.length ? articles : (state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex);
   const favs = new Set(state.favoriteArticles || []);
-  const collapsedSet = new Set(state.collapsedArticleIds || []);
+  const collapsedSet = new Set(state.listCollapsedArticleIds || []);
   const selectedId = state.listSelectedArticleId || state.articleId;
   // Наличие детей считаем по полному списку (base), не по отфильтрованному дереву.
   const hasChildren = new Set();
@@ -610,14 +640,17 @@ export function renderMainArticleList(articles = null) {
       item.classList.add('active-article');
     }
     item.addEventListener('click', () => {
+      // Если сейчас выполняется перетаскивание статьи (drag&drop),
+      // не трогаем состояние свёрнутости при "клике" после дропа.
+      if (draggingArticleId || window.__ttreeDraggingArticleId) return;
       // Одинарный клик: выделяем и сворачиваем/разворачиваем потомков только в списке статей.
       state.listSelectedArticleId = article.id;
-      if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
-      const set = new Set(state.collapsedArticleIds);
+      if (!state.listCollapsedArticleIds) state.listCollapsedArticleIds = [];
+      const set = new Set(state.listCollapsedArticleIds);
       if (set.has(article.id)) set.delete(article.id);
       else set.add(article.id);
-      state.collapsedArticleIds = Array.from(set);
-      saveCollapsedArticles();
+      state.listCollapsedArticleIds = Array.from(set);
+      saveListCollapsedArticles();
       renderMainArticleList();
     });
     item.addEventListener('dblclick', (event) => {

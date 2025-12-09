@@ -32,7 +32,8 @@ export const state = {
   // Независимое выделение статей в сайдбаре и в списке статей.
   sidebarSelectedArticleId: null,
   listSelectedArticleId: null,
-  collapsedArticleIds: [],
+  sidebarCollapsedArticleIds: [],
+  listCollapsedArticleIds: [],
   isDragModeEnabled: false,
   articleEncryptionKeys: {},
   // Процесс объединения блоков (чтобы избежать повторных кликов).

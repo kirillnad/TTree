@@ -37,7 +37,7 @@ import {
   closeSidebarMobile,
   setSidebarMobileOpen,
   setSidebarCollapsed,
-  saveCollapsedArticles,
+  saveListCollapsedArticles,
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
@@ -380,22 +380,22 @@ function handleArticlesListKey(event) {
     );
     if (!hasChild) return;
     event.preventDefault();
-    if (!state.collapsedArticleIds) state.collapsedArticleIds = [];
-    const set = new Set(state.collapsedArticleIds);
+    if (!state.listCollapsedArticleIds) state.listCollapsedArticleIds = [];
+    const set = new Set(state.listCollapsedArticleIds);
     if (code === 'ArrowLeft') {
       // Сворачиваем, если ещё не свёрнуто.
       if (!set.has(articleId)) {
         set.add(articleId);
-        state.collapsedArticleIds = Array.from(set);
-        saveCollapsedArticles();
+        state.listCollapsedArticleIds = Array.from(set);
+        saveListCollapsedArticles();
         renderMainArticleList();
       }
     } else if (code === 'ArrowRight') {
       // Разворачиваем, если было свёрнуто.
       if (set.has(articleId)) {
         set.delete(articleId);
-        state.collapsedArticleIds = Array.from(set);
-        saveCollapsedArticles();
+        state.listCollapsedArticleIds = Array.from(set);
+        saveListCollapsedArticles();
         renderMainArticleList();
       }
     }
