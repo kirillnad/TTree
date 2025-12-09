@@ -17,19 +17,157 @@ const COLLAPSED_ARTICLES_KEY = 'ttree_collapsed_articles';
 const LIST_COLLAPSED_ARTICLES_KEY = 'ttree_list_collapsed_articles';
 const SIDEBAR_COLLAPSED_KEY = 'ttree_sidebar_collapsed';
 
+let isTouchDevice = false;
+if (typeof window !== 'undefined') {
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    isTouchDevice = true;
+  } else if ('ontouchstart' in window) {
+    isTouchDevice = true;
+  }
+}
+
 let draggingArticleId = null;
 let currentDropLi = null;
 const TOUCH_DRAG_THRESHOLD_PX = 6;
 let touchArticleDrag = null;
+// Для DnD статей на мобильных используем чистые touch‑события даже при
+// наличии Pointer Events, т.к. поведение Pointer Events на iOS нестабильно.
+const supportsPointerEvents =
+  typeof window !== 'undefined' && 'PointerEvent' in window && !isTouchDevice;
 
 function cancelTouchArticleDrag() {
   if (!touchArticleDrag) return;
+  if (touchArticleDrag.sourceEl instanceof Element) {
+    touchArticleDrag.sourceEl.classList.remove('article-dnd-source');
+  }
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.classList.remove('article-dnd-active');
+  }
   window.removeEventListener('pointermove', handleTouchArticleMove);
   window.removeEventListener('pointerup', handleTouchArticleUp);
   window.removeEventListener('pointercancel', handleTouchArticleUp);
+  window.removeEventListener('touchmove', handleLegacyTouchMove);
+  window.removeEventListener('touchend', handleLegacyTouchEnd);
+  window.removeEventListener('touchcancel', handleLegacyTouchEnd);
   touchArticleDrag = null;
   clearDropIndicators();
   window.__ttreeDraggingArticleId = null;
+}
+
+function isArticleInteractiveTarget(target) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest('.star-btn')) return true;
+  if (target.closest('.row-actions')) return true;
+  return false;
+}
+
+function beginLegacyTouchArticleDrag(event, articleId) {
+  if (!articleId) return;
+  if (touchArticleDrag) return;
+  if (!event.touches || event.touches.length !== 1) return;
+  const touch = event.touches[0];
+  const sourceEl = event.currentTarget instanceof Element ? event.currentTarget : null;
+  touchArticleDrag = {
+    pointerId: 'legacy-touch',
+    articleId,
+    startX: touch.clientX,
+    startY: touch.clientY,
+    dragging: false,
+    lastTargetId: null,
+    lastDropMode: null,
+    sourceEl,
+  };
+  window.__ttreeDraggingArticleId = articleId;
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.classList.add('article-dnd-active');
+  }
+  try {
+    const selection = window.getSelection ? window.getSelection() : null;
+    if (selection && !selection.isCollapsed) {
+      selection.removeAllRanges();
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  window.addEventListener('touchmove', handleLegacyTouchMove, { passive: false });
+  window.addEventListener('touchend', handleLegacyTouchEnd);
+  window.addEventListener('touchcancel', handleLegacyTouchEnd);
+}
+
+function handleLegacyTouchMove(event) {
+  if (!touchArticleDrag) return;
+  if (!event.touches || event.touches.length === 0) return;
+  const touch = event.touches[0];
+  handleTouchArticleMove({
+    pointerId: 'legacy-touch',
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    preventDefault: () => {
+      event.preventDefault();
+    },
+  });
+}
+
+function handleLegacyTouchEnd() {
+  if (!touchArticleDrag) return;
+  handleTouchArticleUp({ pointerId: 'legacy-touch' });
+}
+
+function attachArticleTouchDragSource(element, articleId) {
+  if (!element) return;
+  if (supportsPointerEvents) {
+    element.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') return;
+      if (typeof event.button === 'number' && event.button !== 0) return;
+      if (isArticleInteractiveTarget(event.target)) return;
+      const pointerId = event.pointerId;
+      const LONG_PRESS_MS = 350;
+      let fired = false;
+      const timeoutId = window.setTimeout(() => {
+        fired = true;
+        beginTouchArticleDrag(event, articleId);
+      }, LONG_PRESS_MS);
+
+      const cancel = (ev) => {
+        if (ev.pointerId !== pointerId) return;
+        if (!fired) {
+          window.clearTimeout(timeoutId);
+        }
+        window.removeEventListener('pointerup', cancel, true);
+        window.removeEventListener('pointercancel', cancel, true);
+      };
+
+      window.addEventListener('pointerup', cancel, true);
+      window.addEventListener('pointercancel', cancel, true);
+    });
+  } else {
+    element.addEventListener(
+      'touchstart',
+      (event) => {
+        if (!event.touches || event.touches.length !== 1) return;
+        const target = event.target;
+        if (isArticleInteractiveTarget(target)) return;
+        const LONG_PRESS_MS = 350;
+        let fired = false;
+        const timeoutId = window.setTimeout(() => {
+          fired = true;
+          beginLegacyTouchArticleDrag(event, articleId);
+        }, LONG_PRESS_MS);
+
+        const cancel = () => {
+          if (!fired) {
+            window.clearTimeout(timeoutId);
+          }
+          window.removeEventListener('touchend', cancel, true);
+          window.removeEventListener('touchcancel', cancel, true);
+        };
+
+        window.addEventListener('touchend', cancel, true);
+        window.addEventListener('touchcancel', cancel, true);
+      },
+      { passive: false },
+    );
+  }
 }
 
 function getArticleItemFromPoint(clientX, clientY) {
@@ -43,6 +181,7 @@ function getArticleItemFromPoint(clientX, clientY) {
 function beginTouchArticleDrag(event, articleId) {
   if (!articleId) return;
   if (touchArticleDrag) return;
+  const sourceEl = event.currentTarget instanceof Element ? event.currentTarget : null;
   touchArticleDrag = {
     pointerId: event.pointerId,
     articleId,
@@ -51,8 +190,20 @@ function beginTouchArticleDrag(event, articleId) {
     dragging: false,
     lastTargetId: null,
     lastDropMode: null,
+    sourceEl,
   };
   window.__ttreeDraggingArticleId = articleId;
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.classList.add('article-dnd-active');
+  }
+  try {
+    const selection = window.getSelection ? window.getSelection() : null;
+    if (selection && !selection.isCollapsed) {
+      selection.removeAllRanges();
+    }
+  } catch (_) {
+    /* ignore */
+  }
   try {
     event.currentTarget?.setPointerCapture?.(event.pointerId);
   } catch (_error) {
@@ -68,8 +219,12 @@ function handleTouchArticleMove(event) {
   const dx = event.clientX - touchArticleDrag.startX;
   const dy = event.clientY - touchArticleDrag.startY;
   if (!touchArticleDrag.dragging) {
-    if (Math.hypot(dx, dy) < TOUCH_DRAG_THRESHOLD_PX) return;
+    const distance = Math.hypot(dx, dy);
+    if (distance < TOUCH_DRAG_THRESHOLD_PX) return;
     touchArticleDrag.dragging = true;
+    if (touchArticleDrag.sourceEl instanceof Element) {
+      touchArticleDrag.sourceEl.classList.add('article-dnd-source');
+    }
   }
   event.preventDefault();
   const li = getArticleItemFromPoint(event.clientX, event.clientY);
@@ -588,7 +743,7 @@ export function renderSidebarArticleList() {
     if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
     const isFav = favs.has(node.id);
     const titleText = escapeHtml(node.title || 'Без названия');
-    const publicIcon = node.publicSlug ? '\uE909 ' : '';
+    const publicIcon = node.publicSlug ? '\uE774 ' : '';
     button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
     button.addEventListener('click', () => {
       // Игнорируем клик только если перетаскивание запущено из заголовка статьи.
@@ -624,17 +779,14 @@ export function renderSidebarArticleList() {
 
     li.appendChild(row);
     if (!state.isTrashView) {
+      // HTML5 DnD для мыши/трекпада (десктоп).
+      // На мобильных dragstart почти никогда не срабатывает, поэтому это не мешает touch‑DND.
       li.draggable = true;
       li.addEventListener('dragstart', handleArticleDragStart);
       li.addEventListener('dragover', handleArticleDragOver);
       li.addEventListener('drop', handleArticleDrop);
       li.addEventListener('dragend', handleArticleDragEnd);
-      li.addEventListener('pointerdown', (event) => {
-        if (event.pointerType !== 'touch') return;
-        if (typeof event.button === 'number' && event.button !== 0) return;
-        if (event.target instanceof Element && event.target.closest('button')) return;
-        beginTouchArticleDrag(event, node.id);
-      });
+      attachArticleTouchDragSource(li, node.id);
     }
     refs.sidebarArticleList.appendChild(li);
     if (!collapsedSet.has(node.id)) {
@@ -724,7 +876,7 @@ export function renderMainArticleList(articles = null) {
     item.dataset.articleId = article.id;
     const isFav = favs.has(article.id);
     const titleText = escapeHtml(article.title || 'Без названия');
-    const publicIcon = article.publicSlug ? '\uE909 ' : '';
+    const publicIcon = article.publicSlug ? '<span class="article-public-icon">&#xE774;</span>' : '';
     item.style.paddingLeft = `${depth * 1.25}rem`;
     item.innerHTML = `
       <span>
@@ -766,17 +918,13 @@ export function renderMainArticleList(articles = null) {
     });
     refs.articleList.appendChild(item);
     if (!state.isTrashView) {
+      // Мышиный DnD в списке статей.
       item.draggable = true;
       item.addEventListener('dragstart', handleArticleDragStart);
       item.addEventListener('dragover', handleArticleDragOver);
       item.addEventListener('drop', handleArticleDrop);
       item.addEventListener('dragend', handleArticleDragEnd);
-      item.addEventListener('pointerdown', (event) => {
-        if (event.pointerType !== 'touch') return;
-        if (typeof event.button === 'number' && event.button !== 0) return;
-        if (event.target instanceof Element && event.target.closest('button')) return;
-        beginTouchArticleDrag(event, article.id);
-      });
+      attachArticleTouchDragSource(item, article.id);
     }
     if (!collapsedSet.has(article.id)) {
       (article.children || []).forEach((child) => renderItem(child, depth + 1));

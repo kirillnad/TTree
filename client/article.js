@@ -499,7 +499,8 @@ async function renderBlocks(blocks, container, depth = 1) {
       const attachBtn = document.createElement('button');
       attachBtn.type = 'button';
       attachBtn.className = 'ghost small block-attach-btn';
-      attachBtn.textContent = '📎 Файл';
+      attachBtn.innerHTML =
+        '<span class="block-attach-btn__icon">&#xE723;</span><span class="block-attach-btn__label">Файл</span>';
       attachBtn.title = 'Прикрепить файл или картинку';
       attachBtn.addEventListener('click', (event) => {
         event.preventDefault();

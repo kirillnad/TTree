@@ -849,6 +849,11 @@ main.content {
   color: #0369a1;
 }
 
+.article-public-icon {
+  font-family: 'SegoeIcons', var(--font-default);
+  margin-right: 0.25rem;
+}
+
 @media (max-width: 767px) {
   .article-toolbar .toolbar-label {
     display: none;
@@ -2180,6 +2185,16 @@ h4.block-title {
   padding: 0.2rem 0.6rem;
 }
 
+.block-attach-btn__icon {
+  font-family: 'SegoeIcons', var(--font-default);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.block-attach-btn__label {
+  font-family: inherit;
+}
+
 .block-drop-line {
   position: fixed;
   height: 4px;
@@ -2223,6 +2238,11 @@ h4.block-title {
 }
 body.block-dnd-active {
   user-select: none;
+}
+
+body.article-dnd-active {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Подсказки направления вставки при DnD страниц (дерево статей). */
@@ -2272,6 +2292,11 @@ body.block-dnd-active {
   border-bottom: 5px solid transparent;
   border-left: 7px solid #3794ff; /* стрелка вправо (вставка как ребёнок) */
   pointer-events: none;
+}
+
+.sidebar-article-item.article-dnd-source,
+#articleList li.article-dnd-source {
+  opacity: 0.6;
 }
 
 .sidebar-backdrop {
