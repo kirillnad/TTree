@@ -358,7 +358,6 @@ export function setDeletedArticlesIndex(articles = []) {
 export function handleArticleFilterInput(event) {
   state.articleFilterQuery = event.target.value || '';
   renderSidebarArticleList();
-  renderMainArticleList();
 }
 
 export function upsertArticleIndex(article) {
@@ -492,9 +491,8 @@ export function renderSidebarArticleList() {
     const publicIcon = node.publicSlug ? '\uE909 ' : '';
     button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
     button.addEventListener('click', () => {
-      // Игнорируем клик, если сейчас идёт drag&drop статей,
-      // чтобы дроп не приводил к случайному сворачиванию/разворачиванию узла.
-      if (draggingArticleId || window.__ttreeDraggingArticleId) return;
+      // Игнорируем клик только если перетаскивание запущено из заголовка статьи.
+      if (window.__ttreeDraggingArticleId) return;
       // Одинарный клик: выделяем статью и сворачиваем/разворачиваем потомков только в сайдбаре.
       state.sidebarSelectedArticleId = node.id;
       if (!state.sidebarCollapsedArticleIds) state.sidebarCollapsedArticleIds = [];
@@ -544,7 +542,7 @@ export function renderSidebarArticleList() {
 export function renderMainArticleList(articles = null) {
   if (!refs.articleList) return;
   refs.articleList.innerHTML = '';
-  const query = (state.articleFilterQuery || '').trim().toLowerCase();
+  const query = '';
   const base = Array.isArray(articles) && articles.length ? articles : (state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex);
   const favs = new Set(state.favoriteArticles || []);
   const collapsedSet = new Set(state.listCollapsedArticleIds || []);
@@ -640,9 +638,9 @@ export function renderMainArticleList(articles = null) {
       item.classList.add('active-article');
     }
     item.addEventListener('click', () => {
-      // Если сейчас выполняется перетаскивание статьи (drag&drop),
+      // Если сейчас выполняется перетаскивание из заголовка статьи,
       // не трогаем состояние свёрнутости при "клике" после дропа.
-      if (draggingArticleId || window.__ttreeDraggingArticleId) return;
+      if (window.__ttreeDraggingArticleId) return;
       // Одинарный клик: выделяем и сворачиваем/разворачиваем потомков только в списке статей.
       state.listSelectedArticleId = article.id;
       if (!state.listCollapsedArticleIds) state.listCollapsedArticleIds = [];

@@ -56,6 +56,67 @@ import { insertHtmlAtCaret } from './utils.js';
 import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js';
 import { loadArticle } from './article.js';
 
+let sidebarQuickFilterLastTypedAt = 0;
+
+function isEditableTarget(target) {
+  if (!target) return false;
+  const el = target instanceof Node ? target : null;
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+    return Boolean(target && target.isContentEditable);
+  }
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return el.isContentEditable;
+}
+
+function maybeHandleSidebarQuickFilterKey(event) {
+  const { key, ctrlKey, altKey, metaKey } = event;
+  if (ctrlKey || altKey || metaKey) return false;
+  const target = event.target;
+  if (isEditableTarget(target)) return false;
+  if (!refs.sidebar || !refs.sidebarQuickFilterInput || !refs.sidebarQuickFilter) return false;
+  // Работает только если виден сайдбар (колонка статей).
+  if (refs.sidebar.classList.contains('hidden')) return false;
+
+  const input = refs.sidebarQuickFilterInput;
+  const wrapper = refs.sidebarQuickFilter;
+
+  if (key === 'Escape') {
+    if (wrapper.classList.contains('hidden') && !state.articleFilterQuery) return false;
+    event.preventDefault();
+    state.articleFilterQuery = '';
+    input.value = '';
+    wrapper.classList.add('hidden');
+    sidebarQuickFilterLastTypedAt = 0;
+    renderSidebarArticleList();
+    return true;
+  }
+
+  // Только печатные символы.
+  if (key.length !== 1) return false;
+
+  event.preventDefault();
+  const now = Date.now();
+  const idle = !sidebarQuickFilterLastTypedAt || now - sidebarQuickFilterLastTypedAt > 2000;
+  wrapper.classList.remove('hidden');
+  // Берём уже существующее значение, если оно было.
+  const base = idle ? '' : (input.value || state.articleFilterQuery || '');
+  const next = base + key;
+  input.value = next;
+  state.articleFilterQuery = next;
+  renderSidebarArticleList();
+  // Фокусируем поле, чтобы дальнейший ввод шёл напрямую в него.
+  input.focus();
+  try {
+    const len = input.value.length;
+    input.setSelectionRange(len, len);
+  } catch (_) {
+    /* ignore */
+  }
+  sidebarQuickFilterLastTypedAt = now;
+  return true;
+}
+
 async function parseMemusExportFromFile(file) {
   if (!file) return null;
   let text;
@@ -537,6 +598,7 @@ function closeListMenu() {
 
 export function attachEvents() {
   document.addEventListener('keydown', (event) => {
+    if (maybeHandleSidebarQuickFilterKey(event)) return;
     if (state.mode === 'view') {
       handleArticlesListKey(event);
       handleViewKey(event);
@@ -1080,6 +1142,38 @@ export function attachEvents() {
   );
   if (refs.articleFilterInput) {
     refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
+  }
+  if (refs.sidebarQuickFilterInput) {
+    refs.sidebarQuickFilterInput.addEventListener('input', handleArticleFilterInput);
+    refs.sidebarQuickFilterInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        event.preventDefault();
+        refs.sidebarQuickFilterInput.value = '';
+        state.articleFilterQuery = '';
+        renderSidebarArticleList();
+        if (refs.sidebarQuickFilter) refs.sidebarQuickFilter.classList.add('hidden');
+        sidebarQuickFilterLastTypedAt = 0;
+        return;
+      }
+      const { key, ctrlKey, altKey, metaKey } = event;
+      if (ctrlKey || altKey || metaKey) return;
+      if (key.length !== 1) return;
+      const now = Date.now();
+      const idle = !sidebarQuickFilterLastTypedAt || now - sidebarQuickFilterLastTypedAt > 2000;
+      if (idle) {
+        // Очищаем поле перед началом нового "слова".
+        refs.sidebarQuickFilterInput.value = '';
+        state.articleFilterQuery = '';
+        renderSidebarArticleList();
+      }
+      sidebarQuickFilterLastTypedAt = now;
+    });
+    refs.sidebarQuickFilterInput.addEventListener('blur', () => {
+      if (!refs.sidebarQuickFilterInput) return;
+      if (refs.sidebarQuickFilterInput.value.trim() !== '') return;
+      if (refs.sidebarQuickFilter) refs.sidebarQuickFilter.classList.add('hidden');
+    });
   }
 
   if (refs.articleUndoBtn) {
