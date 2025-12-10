@@ -1918,6 +1918,12 @@ h4.block-title {
   flex-shrink: 0;
 }
 
+.sidebar-user-menu-icon--glyph {
+  font-family: 'SegoeIcons', var(--font-default);
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .sidebar-user-menu .menu-item {
   display: flex;
   align-items: center;

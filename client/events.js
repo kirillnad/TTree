@@ -1420,6 +1420,24 @@ export function attachEvents() {
       }
     });
   }
+  if (refs.telegramBotOpenBtn) {
+    refs.telegramBotOpenBtn.addEventListener('click', () => {
+      try {
+        window.open('https://t.me/Memus_pro_bot', '_blank', 'noopener,noreferrer');
+      } catch {
+        window.location.href = 'https://t.me/Memus_pro_bot';
+      }
+    });
+  }
+  if (refs.telegramFeedbackBotOpenBtn) {
+    refs.telegramFeedbackBotOpenBtn.addEventListener('click', () => {
+      try {
+        window.open('https://t.me/Memus_feedback_bot', '_blank', 'noopener,noreferrer');
+      } catch {
+        window.location.href = 'https://t.me/Memus_feedback_bot';
+      }
+    });
+  }
   document.addEventListener('click', (event) => {
     if (refs.searchPanel && !refs.searchPanel.contains(event.target)) {
       hideSearchResults();
