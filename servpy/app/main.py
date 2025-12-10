@@ -459,7 +459,9 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
 
     attachments: list[tuple[str, str]] = []
 
-    # Фото: берём последнюю (самую большую) версию.
+    # Фото: берём последнюю (самую большую) версию и сохраняем
+    # как обычное изображение в uploads, как если бы пользователь
+    # загрузил картинку через UI Memus.
     photos = message.get('photo') or []
     if isinstance(photos, list) and photos:
         best = photos[-1]
@@ -467,11 +469,17 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
         if file_id:
             try:
                 raw, filename, mime_type = _telegram_download_file(file_id)
-                disk_path = _upload_bytes_to_yandex_for_user(user, filename or 'photo', raw, mime_type or 'image/jpeg')
-                create_attachment(article_id, disk_path, filename or 'Фото', mime_type or '', len(raw))
-                attachments.append((disk_path, filename or 'Фото'))
+                image_url = _save_image_bytes_for_user(raw, mime_type or 'image/jpeg', user)
+                safe_src = html_mod.escape(image_url, quote=True)
+                alt_label = filename or 'Фото'
+                safe_alt = html_mod.escape(alt_label, quote=True)
+                parts.append(
+                    f'<p><img src="{safe_src}" alt="{safe_alt}" draggable="false" '
+                    'style="max-width:100%;max-height:15rem;object-fit:contain;display:block;'
+                    'margin:0.4rem 0;border-radius:12px;box-shadow:0 6px 18px rgba(15,30,40,0.1);" /></p>',
+                )
             except Exception as exc:  # noqa: BLE001
-                logger.error('Telegram bot: failed to store photo on Yandex Disk: %r', exc)
+                logger.error('Telegram bot: failed to store photo to uploads: %r', exc)
 
     # Документы / файлы.
     for key in ('document', 'audio', 'voice', 'video', 'video_note'):
@@ -483,14 +491,18 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
             continue
         try:
             raw, filename, mime_type = _telegram_download_file(file_id)
+            # Telegram для документов/видео/аудио обычно передаёт исходное имя файла
+            # в поле file_name — используем его и для подписи, и для "логического" имени
+            # вложения, чтобы в заметке не появлялись безликие file_1.pdf и т.п.
+            original_name = (obj.get('file_name') or '').strip() or filename or key
             disk_path = _upload_bytes_to_yandex_for_user(
                 user,
-                filename or key,
+                original_name,
                 raw,
                 mime_type or 'application/octet-stream',
             )
-            create_attachment(article_id, disk_path, filename or key, mime_type or '', len(raw))
-            label = filename or key
+            create_attachment(article_id, disk_path, original_name, mime_type or '', len(raw))
+            label = original_name
             attachments.append((disk_path, label))
         except Exception as exc:  # noqa: BLE001
             logger.error('Telegram bot: failed to store %s on Yandex Disk: %r', key, exc)
@@ -729,12 +741,11 @@ def _build_export_payload_for_article(article: dict[str, Any] | None) -> dict[st
     }
 
 
-def _import_image_from_data_url(data_url: str, current_user: User) -> str:
+def _save_image_bytes_for_user(raw: bytes, mime_type: str, current_user: User) -> str:
     """
-    Сохраняет картинку из data: URL в uploads так же, как upload_file:
+    Сохраняет картинку (сырые байты) в uploads так же, как upload_file:
     конвертирует её в WebP с качеством 75. Возвращает относительный URL /uploads/...
     """
-    raw, mime_type = _decode_data_url(data_url)
     now = datetime.utcnow()
     user_root = UPLOADS_DIR / current_user.id / 'images'
     target_dir = user_root / str(now.year) / f"{now.month:02}"
@@ -762,12 +773,21 @@ def _import_image_from_data_url(data_url: str, current_user: User) -> str:
         dest.write_bytes(out_bytes)
     except Exception:
         # Если Pillow не смог прочитать — сохраняем как есть с исходным расширением.
-        ext = mimetypes.guess_extension(mime_type) or ''
+        ext = mimetypes.guess_extension(mime_type or '') or ''
         fallback_name = f"{int(now.timestamp()*1000)}-{os.urandom(4).hex()}{ext}"
         dest = target_dir / fallback_name
         dest.write_bytes(raw)
     rel = dest.relative_to(UPLOADS_DIR).as_posix()
     return f"/uploads/{rel}"
+
+
+def _import_image_from_data_url(data_url: str, current_user: User) -> str:
+    """
+    Сохраняет картинку из data: URL в uploads так же, как upload_file:
+    конвертирует её в WebP с качеством 75. Возвращает относительный URL /uploads/...
+    """
+    raw, mime_type = _decode_data_url(data_url)
+    return _save_image_bytes_for_user(raw, mime_type, current_user)
 
 
 def _import_attachment_from_bytes(
@@ -2846,6 +2866,42 @@ def yandex_open_file(path: str = Query(..., description='Путь ресурса
     except Exception as exc:  # noqa: BLE001
         logger.error('Failed to publish Yandex Disk resource: %r', exc)
         raise HTTPException(status_code=502, detail='Не удалось опубликовать файл на Яндекс.Диске')
+
+    # На практике Яндекс.Диск иногда не возвращает public_url сразу в ответе на publish,
+    # хотя ссылка появляется в метаданных чуть позже. Чтобы не заставлять пользователя
+    # кликать второй раз, пробуем ещё раз прочитать мету.
+    if not public_url:
+        try:
+            meta_req = urllib.request.Request(
+                meta_url,
+                headers={'Authorization': f'OAuth {access_token}'},
+            )
+            with urllib.request.urlopen(meta_req, timeout=10) as resp:
+                meta = json.loads(resp.read().decode('utf-8'))
+            public_url = meta.get('public_url') or None
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Failed to refetch Yandex Disk resource meta after publish success: %r', exc)
+
+    # Если даже после повторного чтения метаданных нет public_url, делаем
+    # запасной вариант — прямую ссылку на скачивание через resources/download.
+    if not public_url:
+        download_url = f'https://cloud-api.yandex.net/v1/disk/resources/download?path={encoded}'
+        try:
+            dl_req = urllib.request.Request(
+                download_url,
+                headers={'Authorization': f'OAuth {access_token}'},
+            )
+            with urllib.request.urlopen(dl_req, timeout=10) as resp:
+                dl_data = json.loads(resp.read().decode('utf-8'))
+            href = dl_data.get('href') or None
+            if href:
+                return RedirectResponse(href)
+        except urllib.error.HTTPError as exc:  # noqa: BLE001
+            logger.error('Failed to get Yandex Disk download href: %r', exc)
+            if exc.code == 404:
+                raise HTTPException(status_code=404, detail='Файл на Яндекс.Диске не найден')
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Failed to get Yandex Disk download href: %r', exc)
 
     if not public_url:
         raise HTTPException(status_code=502, detail='Яндекс.Диск не вернул публичную ссылку')

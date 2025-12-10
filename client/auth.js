@@ -109,7 +109,14 @@ export async function bootstrapAuth() {
       refs.authYandexLoginBtn.classList.add('hidden');
     }
 
-    const user = await fetchCurrentUser();
+    // На некоторых мобильных браузерах (вроде старых WebView/Huawei)
+    // запрос /api/auth/me иногда «подвисает» без явной ошибки.
+    // Ограничиваем ожидание по таймауту, чтобы не держать оверлей бесконечно.
+    const authCheck = fetchCurrentUser();
+    const timeout = new Promise((resolve) => {
+      setTimeout(() => resolve(null), 8000);
+    });
+    const user = await Promise.race([authCheck, timeout]);
     if (user) {
       applyUserToUi(user);
       hideAuthOverlay();

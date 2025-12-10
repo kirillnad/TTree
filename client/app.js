@@ -7,10 +7,29 @@ import { initGraphView } from './graph.js';
 import { initTables } from './tables.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
 
+function logClient(kind, data) {
+  try {
+    fetch('/api/client/log', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind,
+        data,
+      }),
+    }).catch(() => {});
+  } catch {
+    // ignore logging errors
+  }
+}
+
 /**
  * Инициализация приложения
  */
 function startApp() {
+  logClient('app.start', {
+    ua: navigator.userAgent,
+  });
   initRouting();
   attachEvents();
   initSidebarStateFromStorage();
@@ -22,20 +41,38 @@ function startApp() {
   // На мобильных (и вообще в браузере) больше не используем service worker,
   // чтобы ничего не кешировалось "поверх" обычного обновления страницы.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .getRegistrations()
-      .then((registrations) => {
-        registrations.forEach((registration) => {
-          registration.unregister().catch(() => {});
-        });
-      })
-      .catch(() => {});
+    const sw = navigator.serviceWorker;
+    if (sw && typeof sw.getRegistrations === 'function') {
+      sw
+        .getRegistrations()
+        .then((registrations) => {
+          registrations.forEach((registration) => {
+            registration.unregister().catch(() => {});
+          });
+        })
+        .catch(() => {});
+    } else if (sw && typeof sw.getRegistration === 'function') {
+      sw
+        .getRegistration()
+        .then((registration) => {
+          if (registration) {
+            registration.unregister().catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
   }
 }
 
 async function init() {
+  logClient('auth.bootstrap.start', {
+    ua: navigator.userAgent,
+  });
   initAuth(startApp);
   await bootstrapAuth();
+  logClient('auth.bootstrap.done', {
+    ua: navigator.userAgent,
+  });
 }
 
 init().catch(() => {

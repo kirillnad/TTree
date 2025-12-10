@@ -664,20 +664,6 @@ main.content {
   border-radius: 0;
 }
 
-@media (max-width: 640px) {
-  #articleHeader.panel-header.article-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 20;
-  }
-
-  #articleView.panel {
-    margin-top: 3.4rem;
-  }
-}
-
 #articleHeader .title-row h2 {
   font-size: 1rem;
   font-weight: 600;
