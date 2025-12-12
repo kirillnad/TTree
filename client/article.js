@@ -371,9 +371,9 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     const body = document.createElement('div');
     body.className = 'block-text block-body';
-  const rawHtml = block.text || '';
-  const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
-  body.innerHTML = bodyHtml || '';
+    const rawHtml = block.text || '';
+    const bodyHtml = hasTitle ? sections.bodyHtml : rawHtml;
+    body.innerHTML = bodyHtml || '';
     if (!hasTitle) body.classList.add('block-body--no-title');
     if (!bodyHtml) body.classList.add('block-body--empty');
     body.spellcheck = false;
@@ -403,7 +403,9 @@ async function renderBlocks(blocks, container, depth = 1) {
         }
       });
     } else {
-      body.setAttribute('contenteditable', 'false');
+      // В режиме просмотра убираем contenteditable совсем,
+      // чтобы мобильные браузеры не пытались включать редактирование/selection.
+      body.removeAttribute('contenteditable');
     }
 
     body.addEventListener('click', (event) => {
@@ -978,6 +980,37 @@ let dragPreviewEl = null;
 let dragLayerEl = null;
 const dragHandleEntries = new Map();
 let dragLayerListenersBound = false;
+let dragSelectionGuardAttached = false;
+
+function handleDragSelectionChange() {
+  // Во время активной сессии DnD блоков не даём браузеру
+  // оставлять текстовое выделение (особенно на мобильных
+  // после долгого тапа), чтобы DnD был приоритетным жестом.
+  if (!activeDrag || !isDragModeOperational()) return;
+  // Для мыши (desktop) не гасим selection: оно не мешает DnD,
+  // а принудительный сброс даёт артефакт — выделение пропадает
+  // сразу после mouseup, особенно внутри <pre>.
+  if (activeDrag.pointerType === 'mouse') return;
+  const sel = window.getSelection ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed) return;
+  try {
+    sel.removeAllRanges();
+  } catch {
+    // ignore
+  }
+}
+
+function attachDragSelectionGuard() {
+  if (dragSelectionGuardAttached) return;
+  document.addEventListener('selectionchange', handleDragSelectionChange);
+  dragSelectionGuardAttached = true;
+}
+
+function detachDragSelectionGuard() {
+  if (!dragSelectionGuardAttached) return;
+  document.removeEventListener('selectionchange', handleDragSelectionChange);
+  dragSelectionGuardAttached = false;
+}
 
 function isDragModeOperational() {
   return Boolean(state.isDragModeEnabled && state.mode === 'view' && state.articleId !== 'inbox');
@@ -999,6 +1032,7 @@ function cancelActiveDragSession() {
     // ignore release errors
   }
   activeDrag = null;
+  detachDragSelectionGuard();
   clearDragUi();
 }
 
@@ -1014,6 +1048,7 @@ function beginDragSession(event, blockId, sourceEl, { bypassInteractiveCheck = f
   if (!located) return;
 
   activeDrag = {
+    pointerType: event.pointerType || 'mouse',
     blockId,
     pointerId: event.pointerId,
     originParentId: located.parent?.id || null,
@@ -1035,6 +1070,7 @@ function beginDragSession(event, blockId, sourceEl, { bypassInteractiveCheck = f
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerUp);
   window.addEventListener('pointercancel', handlePointerUp);
+  attachDragSelectionGuard();
 }
 
 function registerBlockDragSource(element, blockId, { allowInteractive = false } = {}) {
@@ -1042,6 +1078,12 @@ function registerBlockDragSource(element, blockId, { allowInteractive = false } 
   element.addEventListener('pointerdown', (event) => {
     if (!allowInteractive && isInteractiveDragTarget(event.target)) {
       return;
+    }
+    const isTouchPointer = event.pointerType === 'touch' || event.pointerType === 'pen';
+    // На тач‑устройствах в режиме перетаскивания гасим
+    // нативное выделение текста / контекстное меню.
+    if (isTouchPointer && isDragModeOperational()) {
+      event.preventDefault();
     }
     beginDragSession(event, blockId, element, { bypassInteractiveCheck: allowInteractive });
   });
@@ -1407,7 +1449,10 @@ function handlePointerMove(event) {
   if (!activeDrag.dragging) {
     if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
     activeDrag.dragging = true;
-    document.body.classList.add('block-dnd-active');
+    const pointerType = activeDrag.pointerType || event.pointerType || 'mouse';
+    if (pointerType === 'touch' || pointerType === 'pen') {
+      document.body.classList.add('block-dnd-active');
+    }
     createDragPreview(activeDrag.blockId);
   }
   event.preventDefault();

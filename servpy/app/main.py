@@ -168,6 +168,31 @@ app.add_middleware(
 )
 
 
+@app.middleware('http')
+async def disable_client_caching(request: Request, call_next):
+    """
+    Отключаем кэширование клиентских HTML/CSS/JS в браузере.
+    Это особенно важно для мобильных PWA, чтобы правки фронтенда
+    подтягивались сразу после обычного перезагруза страницы.
+    """
+    response: Response = await call_next(request)
+    path = request.url.path or ''
+    # Для статики и SPA-страниц отключаем кэш.
+    if request.method == 'GET' and not path.startswith('/uploads'):
+        content_type = (response.headers.get('content-type') or '').lower()
+        is_html = content_type.startswith('text/html')
+        is_css = content_type.startswith('text/css')
+        is_js = (
+            content_type.startswith('application/javascript')
+            or content_type.startswith('text/javascript')
+        )
+        if is_html or is_css or is_js:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+    return response
+
+
 def _decode_data_url(data_url: str) -> tuple[bytes, str]:
   """
   Разбирает data: URL и возвращает (bytes, mime_type).

@@ -133,6 +133,10 @@ html {
   margin-top: auto;
 }
 
+.sidebar-version {
+  opacity: 0.7;
+}
+
 .sidebar-quick-filter {
   display: flex;
   align-items: center;
@@ -651,7 +655,7 @@ main.content {
 
 /* Article view overrides: compact sticky header like VS Code topbar */
 #articleView.panel {
-  padding: 0 0.3rem;
+  padding: 0.75rem 0.3rem 0.3rem;
   margin-top: 0;
   border-radius: 0;
 }
@@ -662,6 +666,11 @@ main.content {
   margin-bottom: 0.4rem;
   padding: 0.4rem 0.5rem;
   border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  /* Мобильный режим сейчас без фиксированного заголовка статьи,
+     чтобы не ломать прокрутку; шапка скроллится вместе со статьёй. */
 }
 
 #articleHeader .title-row h2 {
@@ -740,6 +749,7 @@ main.content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 0.35rem;
   overscroll-behavior: contain;
 }
@@ -747,7 +757,19 @@ main.content {
 .drag-mode-enabled #blocksContainer .block:not(.editing) .block-content,
 .drag-mode-enabled #blocksContainer .block:not(.editing) .block-text {
   cursor: grab;
+  /* В режиме перетаскивания полностью передаём жесты в DnD,
+     отключая стандартные действия (в т.ч. выделение текста). */
   touch-action: none;
+}
+.drag-mode-enabled #blocksContainer .block:not(.editing),
+.drag-mode-enabled #blocksContainer .block:not(.editing) .block-text {
+  /* В режиме перетаскивания отключаем выделение текста,
+     чтобы жесты касания шли в DnD, а не в selection. */
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 .block-dnd-active #blocksContainer .block:not(.editing) .block-surface,
 .block-dnd-active #blocksContainer .block:not(.editing) .block-content,
@@ -1197,6 +1219,13 @@ button.icon-button.small {
   outline: none;
   overflow: visible;
   max-height: none;
+  /* В режиме редактирования разрешаем выделение текста и каретку,
+     даже если глобально или в drag-режиме selection отключён. */
+  user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  -moz-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* Типографика внутри блоков — как в test/typo.html */
@@ -2237,6 +2266,14 @@ body.article-dnd-active {
   -webkit-user-select: none;
 }
 
+/* В режиме перетаскивания блоков полностью отключаем выделение/контекстное меню */
+body.drag-mode-enabled {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 /* Подсказки направления вставки при DnD страниц (дерево статей). */
 .sidebar-article-item,
 #articleList li {
@@ -2592,11 +2629,13 @@ main.content {
   }
   .app-shell {
     flex-direction: column;
-    height: auto;
+    height: 100vh;
   }
   .sidebar {
     position: fixed;
     inset: 0;
+    max-width: 360px;
+    width: 90vw;
     transform: translateX(-100%);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     z-index: 1200;
@@ -2624,7 +2663,7 @@ main.content {
     overflow-x: hidden;
   }
   .panel {
-    padding: 1rem;
+    padding: 20px 16px 32px;
   }
   /* В экспортируемых / публичных HTML на мобильном убираем внешние поля и тень вокруг панели. */
   body.export-page .page {
@@ -2675,6 +2714,18 @@ main.content {
   .mobile-only {
     display: inline-flex;
   }
+  /* Небольшой отступ, чтобы первый блок не прилипал к заголовку */
+  #blocksContainer {
+    padding-top: 0.75rem;
+  }
+  /* На самом узком экране заголовок статьи прилипающий,
+     контент статьи прокручивается под ним */
+  #articleHeader {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: #f9fafb;
+  }
 }
 
 ul {
@@ -2688,6 +2739,11 @@ html,
 body {
   margin: 0;
   padding: 0;
+}
+
+/* В обычном приложении запрещаем горизонтальную прокрутку */
+body:not(.export-page) {
+  overflow-x: hidden;
 }
 
 body.export-page {
