@@ -40,6 +40,26 @@ servpy/app/data_store.py — CRUD, история, indent/outdent/move, поис
 servpy/app/main.py — FastAPI-приложение с CORS, аутентификацией и сессиями, загрузкой изображений (5МБ, MIME:image), сервингом клиентского client/, защищённым доступом к /uploads (каждый пользователь видит только свои файлы), API /api/auth/*, /api/articles/..., /api/search, /api/changelog и SPA-фолбеком (роутинг на стороне клиента);
 servpy/requirements.txt + .gitignore (новые sqlite/Uploads) чтобы можно было установить uvicorn, fastapi, pymorphy2, aiofiles.
 
+Стартовая «справочная» статья для новых пользователей
+
+Memus автоматически создаёт пользователю первую статью (онбординг/руководство) при первом входе, но только если у него ещё нет ни одной не удалённой статьи.
+
+Где реализовано:
+  - servpy/app/main.py: ensure_help_article_for_user(author_id)
+    - проверяет наличие статей пользователя;
+    - если статей нет — создаёт статью на основе шаблона client/help.html.
+
+Откуда берётся контент:
+  - TTree/client/help.html — HTML экспорт Memus, внутри должен быть JSON-снапшот:
+      <script id="memus-export">...</script>
+    Парсер ожидает payload вида { "source": "memus", "version": 1, "article": {...}, "blocks": [...] }.
+
+Как обновить стартовую статью:
+  1) В Memus создайте/откройте нужную статью-руководство (как вы хотите, чтобы её увидел новый пользователь).
+  2) Выполните «Экспорт в HTML».
+  3) Замените файл TTree/client/help.html на экспортированный HTML (важно сохранить блок memus-export внутри <script id="memus-export">).
+  4) Проверьте на новом пользователе: при первом входе статья должна появиться автоматически.
+
 Скрипты на Python/FTS позволяют импортировать server/data/articles.json (python -m servpy.app.migrate_json) и заново индексировать (python -m servpy.app.reindex_fts).
 
 Следующие шаги.

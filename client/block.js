@@ -98,6 +98,25 @@ export function clearEditingUndoSession() {
   state.editingUndo = null;
 }
 
+function notifyEditingInput(element) {
+  if (!element) return;
+  try {
+    const evt =
+      typeof InputEvent === 'function'
+        ? new InputEvent('input', { bubbles: true })
+        : new Event('input', { bubbles: true });
+    element.dispatchEvent(evt);
+  } catch (_error) {
+    try {
+      const fallback = document.createEvent('Event');
+      fallback.initEvent('input', true, false);
+      element.dispatchEvent(fallback);
+    } catch {
+      // ignore synthetic input failures
+    }
+  }
+}
+
 export function applyEditingUndoStep(direction) {
   const session = state.editingUndo;
   if (!session || !session.blockId || !direction) return false;
@@ -1194,6 +1213,7 @@ export function attachRichContentHandlers(element, blockId) {
         const trimmed = trimPastedHtml(safeHtml);
         clearEmptyPlaceholder(element);
         insertHtmlAtCaret(element, linkifyHtml(trimmed));
+        notifyEditingInput(element);
       } else {
         const text = event.clipboardData?.getData('text/plain') || '';
         const trimmed = text.trim();
@@ -1205,11 +1225,20 @@ export function attachRichContentHandlers(element, blockId) {
             element,
             `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`,
           );
+          notifyEditingInput(element);
         } else {
-          const safeTextHtml = escapeHtml(text).replace(/\n/g, '<br />');
+          const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          // Для обычного текста считаем, что одна пустая строка между абзацами —
+          // это «настоящий» перенос, а одиночные переводы строк внутри абзаца
+          // можно схлопнуть до пробела. Поэтому оставляем <br /><br /> только
+          // на местах двойных (и более) переводов строк.
+          const safeTextHtml = escapeHtml(normalized)
+            .replace(/\n{2,}/g, '<br /><br />')
+            .replace(/\n/g, ' ');
           const safeHtml = linkifyHtml(trimPastedHtml(safeTextHtml));
           clearEmptyPlaceholder(element);
           insertHtmlAtCaret(element, safeHtml);
+          notifyEditingInput(element);
         }
       }
     }

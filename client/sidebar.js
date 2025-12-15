@@ -394,8 +394,17 @@ function handleArticleDragStart(event) {
 }
 
 function handleArticleDragOver(event) {
-  if (!draggingArticleId && window.__ttreeDraggingArticleId) {
-    draggingArticleId = window.__ttreeDraggingArticleId;
+  if (!draggingArticleId) {
+    const fromWindow = window.__ttreeDraggingArticleId;
+    let fromTransfer = null;
+    if (!fromWindow && event?.dataTransfer) {
+      try {
+        fromTransfer = event.dataTransfer.getData('text/plain') || null;
+      } catch (_) {
+        fromTransfer = null;
+      }
+    }
+    draggingArticleId = fromWindow || fromTransfer || null;
   }
   if (!draggingArticleId) return;
   if (!event.currentTarget || !event.currentTarget.dataset.articleId) return;
@@ -415,6 +424,18 @@ function handleArticleDragOver(event) {
 }
 
 function handleArticleDrop(event) {
+  if (!draggingArticleId) {
+    const fromWindow = window.__ttreeDraggingArticleId;
+    let fromTransfer = null;
+    if (!fromWindow && event?.dataTransfer) {
+      try {
+        fromTransfer = event.dataTransfer.getData('text/plain') || null;
+      } catch (_) {
+        fromTransfer = null;
+      }
+    }
+    draggingArticleId = fromWindow || fromTransfer || null;
+  }
   if (!draggingArticleId) return;
   const targetLi = event.currentTarget;
   const targetId = targetLi?.dataset?.articleId || null;
@@ -430,10 +451,12 @@ function handleArticleDrop(event) {
   else if (offsetY > rect.height - third) dropMode = 'after';
   else dropMode = 'inside';
   commitArticleDrop(draggingArticleId, targetId, dropMode);
+  draggingArticleId = null;
 }
 
 function handleArticleDragEnd() {
   draggingArticleId = null;
+  window.__ttreeDraggingArticleId = null;
   clearDropIndicators();
 }
 
