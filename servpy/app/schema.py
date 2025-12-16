@@ -258,7 +258,7 @@ def _init_postgres_schema() -> None:
     # Семантический поиск (pgvector) — опционально.
     # Если расширение/права недоступны, core-функциональность не должна падать.
     try:
-        # Размерность должна совпадать с embedding-моделью Ollama (SERVPY_EMBEDDING_DIM).
+        # Размерность должна совпадать с embeddings-провайдером (SERVPY_EMBEDDING_DIM).
         # Важно: при смене размерности нужно пересоздать таблицу/колонку embeddings.
         from .embeddings import EMBEDDING_DIM  # локальный импорт, чтобы не тащить модуль везде
 

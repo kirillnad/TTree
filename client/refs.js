@@ -41,6 +41,7 @@ export const refs = {
   searchInput: document.getElementById('searchInput'),
   searchResults: document.getElementById('searchResults'),
   searchPanel: document.querySelector('.search-panel'),
+  searchModeToggle: document.getElementById('searchModeToggle'),
   articleTitleInput: document.getElementById('articleTitleInput'),
   editTitleBtn: document.getElementById('editTitleBtn'),
   hintToggleBtn: document.getElementById('hintToggleBtn'),

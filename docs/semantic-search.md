@@ -2,7 +2,7 @@
 
 В Memus реализован “поиск по смыслу” для блоков на базе:
 - PostgreSQL + расширение `pgvector` (хранение векторов и KNN);
-- локальные embeddings через Ollama (`/api/embeddings`).
+- embeddings через OpenAI API.
 
 ### Что именно ищется
 
@@ -17,15 +17,16 @@
    - В БД должно выполниться `CREATE EXTENSION vector;`
    - Схема пытается создать это расширение автоматически при старте (`init_schema()`), но если у пользователя БД нет прав — семантический поиск будет недоступен.
 
-2) Запущенный Ollama (локально на сервере/машине, где крутится backend).
+2) Доступный провайдер embeddings (OpenAI).
 
 ### Переменные окружения
 
 - `SERVPY_DATABASE_URL` — DSN PostgreSQL (обязателен).
-- `SERVPY_OLLAMA_URL` — URL Ollama, по умолчанию `http://127.0.0.1:11434`.
-- `SERVPY_OLLAMA_EMBED_MODEL` — модель embeddings в Ollama, по умолчанию `bge-m3`.
+- `SERVPY_OPENAI_API_KEY` / `OPENAI_API_KEY` — API key для OpenAI (обязателен).
+- `SERVPY_OPENAI_EMBED_MODEL` — модель embeddings OpenAI, по умолчанию `text-embedding-3-small`.
 - `SERVPY_EMBEDDING_DIM` — размерность эмбеддинга, по умолчанию `768`.
 - `SERVPY_EMBEDDING_MAX_CHARS` — максимальная длина одного чанка (по умолчанию `12000`); длинный текст блока разбивается на чанки и агрегируется в один embedding.
+- `SERVPY_SEMANTIC_REINDEX_CONCURRENCY` — параллелизм переиндексации (потоки), по умолчанию `4`.
 
 Важно: размерность `SERVPY_EMBEDDING_DIM` должна совпадать с размерностью модели embeddings и с типом в БД `vector(768)` в таблице `block_embeddings`.
 
@@ -69,7 +70,7 @@
 ### Как заполнить индекс
 
 1) Убедиться, что `pgvector` доступен (иначе endpoint будет отвечать 503).
-2) Убедиться, что Ollama запущен и модель embeddings установлена.
+2) Убедиться, что настроен OpenAI (ключ и модель), и что размерность совпадает с `SERVPY_EMBEDDING_DIM` и таблицей `block_embeddings`.
 3) Зайти в Memus под пользователем и вызвать `POST /api/search/semantic/reindex` (или меню пользователя → “Переиндексировать поиск”).
 4) Проверять прогресс через `GET /api/search/semantic/reindex/status` (в UI прогресс показывается тостом).
 

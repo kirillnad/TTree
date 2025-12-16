@@ -44,11 +44,11 @@ servpy/requirements.txt + .gitignore чтобы можно было устано
 
 Реализован поиск похожих блоков через:
   - PostgreSQL + pgvector (таблица block_embeddings, KNN по cosine);
-  - локальные embeddings через Ollama.
+  - embeddings через OpenAI API.
 
 Переменные окружения:
-  - SERVPY_OLLAMA_URL (по умолчанию http://127.0.0.1:11434)
-  - SERVPY_OLLAMA_EMBED_MODEL (по умолчанию bge-m3)
+  - SERVPY_OPENAI_API_KEY / OPENAI_API_KEY (для OpenAI)
+  - SERVPY_OPENAI_EMBED_MODEL (по умолчанию text-embedding-3-small)
   - SERVPY_EMBEDDING_DIM (по умолчанию 768)
 
 Endpoint’ы:

@@ -53,6 +53,10 @@ export function attachSidebarMobileHandlers() {
         if (refs.sidebarRecentBtn && btn === refs.sidebarRecentBtn) {
           return;
         }
+        // Не закрываем мобильный сайдбар при переключении режима поиска.
+        if (refs.searchModeToggle && btn === refs.searchModeToggle) {
+          return;
+        }
         closeSidebarMobile();
       },
       true,
@@ -72,4 +76,3 @@ export function attachSidebarMobileHandlers() {
     true,
   );
 }
-

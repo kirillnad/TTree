@@ -390,11 +390,19 @@ html {
   outline: none;
 }
 
-.search-panel__toggle--active {
+/* Активное состояние "Ai" — как у #sidebarRecentBtn.active. */
+#searchModeToggle.search-panel__toggle--active {
   background: #2563eb;
   border-color: #1d4ed8;
   color: #ffffff;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+.search-panel__toggle:not(.search-panel__toggle--active) {
+  opacity: 0.88;
+}
+.search-panel__toggle:not(.search-panel__toggle--active):hover {
+  opacity: 1;
+  border-color: #525252;
 }
 
 #quickNoteAddBtn {

@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import User, get_current_user
-from ..embeddings import EmbeddingsUnavailable
+from ..embeddings import EmbeddingsUnavailable, probe_embedding_info
 from ..semantic_search import get_reindex_task, request_cancel_reindex_task, start_reindex_task, try_semantic_search
 from ..telegram_notify import notify_user
 
@@ -25,14 +25,27 @@ def semantic_search(q: str = '', current_user: User = Depends(get_current_user))
             status_code=503,
             detail=(
                 'Семантический поиск недоступен: не удалось получить embeddings локально. '
-                'Запустите Ollama и установите модель для embeddings '
-                '(SERVPY_OLLAMA_URL, SERVPY_OLLAMA_EMBED_MODEL, SERVPY_EMBEDDING_DIM). '
+                'Настройте OpenAI embeddings '
+                '(SERVPY_OPENAI_API_KEY/OPENAI_API_KEY, SERVPY_OPENAI_EMBED_MODEL, SERVPY_EMBEDDING_DIM). '
                 f'Детали: {exc}'
             ),
         )
     except Exception as exc:  # noqa: BLE001
         notify_user(current_user.id, f'Семантический поиск: ошибка — {exc!r}', key='semantic-search')
         raise HTTPException(status_code=503, detail=f'Семантический поиск недоступен: {exc}')
+
+
+@router.get('/api/search/semantic/embed-info')
+def semantic_embed_info(current_user: User = Depends(get_current_user)):
+    """
+    Диагностика: возвращает фактическую размерность embeddings у текущего провайдера (Gemini),
+    чтобы правильно выставить SERVPY_EMBEDDING_DIM и vector(N) в БД.
+    """
+    try:
+        return probe_embedding_info('test')
+    except EmbeddingsUnavailable as exc:
+        notify_user(current_user.id, f'Gemini embeddings: probe failed — {exc}', key='semantic-search')
+        raise HTTPException(status_code=503, detail=str(exc))
 
 
 @router.post('/api/search/semantic/reindex')
