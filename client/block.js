@@ -164,11 +164,11 @@ export function findBlock(blockId, blocks = state.article?.blocks || [], parent 
   return null;
 }
 
-export function setCurrentBlock(blockId) {
-  setCurrentBlockInternal(blockId, { preserveSelection: false });
+export function setCurrentBlock(blockId, options = {}) {
+  setCurrentBlockInternal(blockId, { preserveSelection: false, ...options });
 }
 
-function updateSelectionUi({ scrollIntoView = false } = {}) {
+function updateSelectionUi({ scrollIntoView = false, scrollBehavior = 'smooth' } = {}) {
   const selectedIds = new Set(Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : []);
   if (state.currentBlockId) {
     selectedIds.add(state.currentBlockId);
@@ -201,7 +201,7 @@ function updateSelectionUi({ scrollIntoView = false } = {}) {
   if (scrollIntoView && state.mode === 'view' && state.currentBlockId) {
     const currentEl = document.querySelector(`.block[data-block-id="${state.currentBlockId}"]`);
     if (currentEl) {
-      currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      currentEl.scrollIntoView({ behavior: scrollBehavior || 'smooth', block: 'nearest' });
     }
   }
 }
@@ -227,13 +227,14 @@ export function moveSelection(offset) {
  */
 function setCurrentBlockInternal(blockId, options = {}) {
   if (!blockId || state.currentBlockId === blockId) return;
-  const { preserveSelection = false } = options;
+  const { preserveSelection = false, scrollIntoView, scrollBehavior } = options;
   state.currentBlockId = blockId;
   if (!preserveSelection) {
     state.selectionAnchorBlockId = null;
     state.selectedBlockIds = [];
   }
-  updateSelectionUi({ scrollIntoView: state.mode === 'view' });
+  const shouldScroll = typeof scrollIntoView === 'boolean' ? scrollIntoView : state.mode === 'view';
+  updateSelectionUi({ scrollIntoView: shouldScroll, scrollBehavior: scrollBehavior || 'smooth' });
 }
 
 export function extendSelection(offset) {
@@ -669,24 +670,17 @@ export async function setCollapseState(blockId, collapsed) {
     };
   };
 
-  const restoreScrollAnchor = (anchor) => {
-    if (!anchor?.container) return;
-    const { container } = anchor;
-    if (!anchor.currentId || typeof anchor.topOffset !== 'number') return;
-    const currentEl = container.querySelector(`.block[data-block-id="${anchor.currentId}"]`);
-    if (!currentEl) return;
-    const containerRect = container.getBoundingClientRect();
-    const currentRect = currentEl.getBoundingClientRect();
-    const newOffset = currentRect.top - containerRect.top;
-    container.scrollTop += newOffset - anchor.topOffset;
-    // Гарантия: текущий блок остаётся в видимой области.
-    const afterRect = currentEl.getBoundingClientRect();
-    const topOverflow = containerRect.top - afterRect.top;
-    const bottomOverflow = afterRect.bottom - containerRect.bottom;
-    const padding = 12;
-    if (topOverflow > 0) container.scrollTop -= topOverflow + padding;
-    else if (bottomOverflow > 0) container.scrollTop += bottomOverflow + padding;
-  };
+	  const restoreScrollAnchor = (anchor) => {
+	    if (!anchor?.container) return;
+	    const { container } = anchor;
+	    if (!anchor.currentId || typeof anchor.topOffset !== 'number') return;
+	    const currentEl = container.querySelector(`.block[data-block-id="${anchor.currentId}"]`);
+	    if (!currentEl) return;
+	    const containerRect = container.getBoundingClientRect();
+	    const currentRect = currentEl.getBoundingClientRect();
+	    const newOffset = currentRect.top - containerRect.top;
+	    container.scrollTop += newOffset - anchor.topOffset;
+	  };
 
   const scrollAnchor = captureScrollAnchor();
 

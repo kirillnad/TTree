@@ -259,6 +259,7 @@ async function importHtmlWithConflicts(file, conflictState, { allowApplyToAll } 
 
 function handleViewKey(event) {
   if (!state.article) return;
+  if (isEditableTarget(event.target)) return;
   if (
     state.isEditingTitle &&
     refs.articleTitleInput &&
@@ -294,6 +295,89 @@ function handleViewKey(event) {
     return;
   }
   const code = typeof event.code === 'string' ? event.code : '';
+  const moveSelectionPage = (direction) => {
+    const container = refs.blocksContainer;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const margin = 24;
+    const viewHeight = Math.max(0, containerRect.height - margin * 2);
+    if (viewHeight <= 0) return;
+
+    const page = Math.max(40, Math.round(viewHeight * 0.92));
+    const delta = direction === 'down' ? page : -page;
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const before = container.scrollTop;
+    const targetScrollTop = Math.max(0, Math.min(before + delta, maxScrollTop));
+
+    // Сначала прокручиваем контейнер на «страницу», затем выбираем верхний блок новой области.
+    container.scrollTop = targetScrollTop;
+
+    const topLimit = containerRect.top + margin;
+    const blocks = Array.from(container.querySelectorAll('.block[data-block-id]'));
+    if (!blocks.length) return;
+
+    const entries = blocks
+      .map((el) => {
+        const id = el.getAttribute('data-block-id') || '';
+        const rect = el.getBoundingClientRect();
+        return { id, rect };
+      })
+      .filter((x) => x.id);
+
+    if (!entries.length) return;
+
+    let chosen = entries.find((e) => e.rect.top >= topLimit) || null;
+    if (!chosen && direction === 'down') chosen = entries[entries.length - 1];
+    if (!chosen && direction === 'up') chosen = entries[0];
+
+    // Если скролл упёрся (вверх/вниз), всё равно переходим на крайний блок.
+    if (targetScrollTop === before && state.currentBlockId) {
+      if (direction === 'down') chosen = entries[entries.length - 1];
+      else chosen = entries[0];
+    }
+
+    if (chosen && chosen.id) {
+      state.scrollTargetBlockId = chosen.id;
+      // Не используем scrollIntoView, иначе браузер может «подвинуть» контейнер и сломать постраничность.
+      setCurrentBlock(chosen.id, { scrollIntoView: false });
+    }
+  };
+
+  const moveSelectionEdge = (direction) => {
+    const container = refs.blocksContainer;
+    if (!container) return;
+    const blocks = Array.from(container.querySelectorAll('.block[data-block-id]'));
+    if (!blocks.length) return;
+    const target = direction === 'end' ? blocks[blocks.length - 1] : blocks[0];
+    const id = target.getAttribute('data-block-id');
+    if (!id) return;
+    state.scrollTargetBlockId = id;
+    setCurrentBlock(id, { scrollIntoView: true, scrollBehavior: 'auto' });
+  };
+
+  if (!event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+    if (code === 'PageDown') {
+      event.preventDefault();
+      moveSelectionPage('down');
+      return;
+    }
+    if (code === 'PageUp') {
+      event.preventDefault();
+      moveSelectionPage('up');
+      return;
+    }
+    if (code === 'Home') {
+      event.preventDefault();
+      moveSelectionEdge('home');
+      return;
+    }
+    if (code === 'End') {
+      event.preventDefault();
+      moveSelectionEdge('end');
+      return;
+    }
+  }
+
   const isCtrlZ = event.ctrlKey && !event.shiftKey && code === 'KeyZ';
   const isCtrlY = event.ctrlKey && !event.shiftKey && code === 'KeyY';
   if (state.pendingTextPreview) {
