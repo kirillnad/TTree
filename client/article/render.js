@@ -207,7 +207,10 @@ async function renderBlocks(blocks, container, depth = 1) {
       headerLeft.className = 'block-header__left';
       headerLeft.appendChild(collapseBtn);
       if (hasTitle) {
-        const titleEl = document.createElement('div');
+        // Раньше заголовки блоков рендерились как h1-h6 в зависимости от уровня вложенности.
+        // Это влияет и на типографику, и на визуальную иерархию.
+        const level = Math.min(Math.max(depth, 1), 6);
+        const titleEl = document.createElement(`h${level}`);
         titleEl.className = 'block-title';
         titleEl.innerHTML = sections.titleHtml || '';
         headerLeft.appendChild(titleEl);
@@ -558,4 +561,3 @@ export function renderArticle() {
     }
   });
 }
-

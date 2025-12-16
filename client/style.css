@@ -1205,6 +1205,7 @@ button.icon-button.small {
   border-radius: 0;
   padding: 0;
   margin: 0;
+  display: none;
 }
 
 .block-text {
@@ -1427,9 +1428,15 @@ button.icon-button.small {
 }
 
 .block.editing .block-content > .block-header {
-  display: block;
-  margin: 0 0 0.2rem 0;
+  display: none;
+  margin: 0;
   padding: 0;
+}
+
+/* В режиме редактирования block-header не нужен: ориентируемся на contenteditable,
+   потому что класс .editing может отсутствовать в текущей разметке. */
+.block-content:has(> .block-text[contenteditable='true']) > .block-header {
+  display: none !important;
 }
 
 .block.block--no-title > .block-surface .block-title-spacer {
@@ -2193,6 +2200,10 @@ h4.block-title {
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+
+.editing > .block-header__left {
+  display: none;
 }
 
 /* Троеточие для свёрнутых блоков
