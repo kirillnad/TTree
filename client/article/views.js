@@ -182,21 +182,38 @@ export async function loadArticleView(id) {
         new Set(results.map((r) => (r && r.articleTitle ? String(r.articleTitle) : '')).filter(Boolean)),
       );
       const topArticles = uniqueArticles.slice(0, 8);
-      const summaryLines = [
+      const aiSummaryLines = ['<p><strong>Сводка</strong></p>'];
+      if (state.ragSummaryLoading) {
+        aiSummaryLines.push('<p class="meta">Генерирую сводку…</p>');
+      } else if (state.ragSummaryError) {
+        aiSummaryLines.push(`<p class="meta">Ошибка сводки: ${state.ragSummaryError}</p>`);
+      } else if (state.ragSummaryHtml) {
+        aiSummaryLines.push(state.ragSummaryHtml);
+      } else {
+        aiSummaryLines.push('<p class="meta">Сводка пока не готова.</p>');
+      }
+
+      const metaLines = [
         `<p><strong>AI-поиск: результаты</strong></p>`,
         `<p><span class="meta">Запрос:</span> ${query ? query : '—'}</p>`,
         `<p><span class="meta">Найдено блоков:</span> ${total}</p>`,
       ];
       if (topArticles.length) {
-        summaryLines.push(`<p><span class="meta">Статьи:</span> ${topArticles.join(' · ')}</p>`);
+        metaLines.push(`<p><span class="meta">Статьи:</span> ${topArticles.join(' · ')}</p>`);
       }
       if (uniqueArticles.length > topArticles.length) {
-        summaryLines.push(`<p><span class="meta">…и ещё:</span> ${uniqueArticles.length - topArticles.length}</p>`);
+        metaLines.push(`<p><span class="meta">…и ещё:</span> ${uniqueArticles.length - topArticles.length}</p>`);
       }
       const blocks = [
         {
-          id: 'rag-summary',
-          text: summaryLines.join(''),
+          id: 'rag-ai-summary',
+          text: aiSummaryLines.join(''),
+          children: [],
+          collapsed: false,
+        },
+        {
+          id: 'rag-meta',
+          text: metaLines.join(''),
           children: [],
           collapsed: false,
         },

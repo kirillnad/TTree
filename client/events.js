@@ -1121,6 +1121,11 @@ export function attachEvents() {
         return;
       }
 
+      const fullReindex = window.confirm(
+        'Переиндексировать семантический поиск:\n\nOK — всё заново (пересчитать все embeddings)\nОтмена — только отсутствующие (быстрее)',
+      );
+      const reindexMode = fullReindex ? 'all' : 'missing';
+
       refs.userMenu?.classList.add('hidden');
       refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
 
@@ -1218,6 +1223,8 @@ export function attachEvents() {
         const response = await fetch('/api/search/semantic/reindex', {
           method: 'POST',
           credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: reindexMode }),
         });
         if (!response.ok) {
           const text = await response.text().catch(() => '');

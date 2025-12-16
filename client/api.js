@@ -82,6 +82,16 @@ export function semanticSearch(query) {
   return apiRequest(`/api/search/semantic?q=${encodeURIComponent(query.trim())}`);
 }
 
+export function ragSummary(query, results) {
+  return apiRequest('/api/search/semantic/rag-summary', {
+    method: 'POST',
+    body: JSON.stringify({
+      query: (query || '').trim(),
+      results: Array.isArray(results) ? results : [],
+    }),
+  });
+}
+
 export function createArticle(title) {
   return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
 }

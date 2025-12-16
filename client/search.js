@@ -1,9 +1,10 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
 import { escapeHtml, escapeRegExp, htmlToLines, htmlToPlainText, logDebug } from './utils.js';
-import { apiRequest, search as apiSearch, semanticSearch } from './api.js?v=2';
+import { apiRequest, search as apiSearch, semanticSearch, ragSummary } from './api.js?v=2';
 import { navigate, routing } from './routing.js';
 import { setSidebarMobileOpen } from './sidebar.js';
+import { hideToast, showPersistentToast } from './toast.js';
 
 function highlightSnippet(snippet = '') {
   const term = state.searchQuery.trim();
@@ -180,7 +181,31 @@ export function openRagPageFromCurrentSearch() {
   state.ragQuery = query;
   // Сохраняем «снимок» результатов: пользователь может продолжить вводить в поиске.
   state.ragResults = JSON.parse(JSON.stringify(state.searchResults));
+  state.ragSummaryHtml = '';
+  state.ragSummaryError = '';
+  state.ragSummaryLoading = true;
   state.scrollTargetBlockId = null;
   state.currentBlockId = null;
   navigate(routing.article('RAG'));
+
+  // Генерируем резюме в фоне (результат будет показан в верхнем блоке RAG).
+  (async () => {
+    showPersistentToast('Генерирую сводку…', { protect: true });
+    try {
+      const data = await ragSummary(state.ragQuery, state.ragResults);
+      state.ragSummaryHtml = (data && data.summaryHtml) || '';
+      state.ragSummaryError = '';
+    } catch (error) {
+      state.ragSummaryError = error.message || 'Не удалось получить резюме';
+      state.ragSummaryHtml = '';
+    } finally {
+      state.ragSummaryLoading = false;
+      hideToast({ force: true });
+      // Если пользователь всё ещё на странице RAG — пересоберём виртуальную статью,
+      // чтобы верхний блок подхватил state.ragSummaryHtml/state.ragSummaryError.
+      if (state.articleId === 'RAG') {
+        navigate(routing.article('RAG'));
+      }
+    }
+  })();
 }

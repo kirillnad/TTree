@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from .db import execute
 
 # PostgreSQL-only schema.
 
 logger = logging.getLogger('uvicorn.error')
+
+def _parse_version(ver: str) -> tuple[int, int, int]:
+    raw = (ver or '').strip()
+    parts = raw.split('.')
+    out = []
+    for i in range(3):
+        try:
+            out.append(int(parts[i]))
+        except Exception:
+            out.append(0)
+    return (out[0], out[1], out[2])
 
 
 def _init_postgres_schema() -> None:
@@ -262,7 +274,20 @@ def _init_postgres_schema() -> None:
         # Важно: при смене размерности нужно пересоздать таблицу/колонку embeddings.
         from .embeddings import EMBEDDING_DIM  # локальный импорт, чтобы не тащить модуль везде
 
+        index_type = (os.environ.get('SERVPY_PGVECTOR_INDEX_TYPE') or 'auto').strip().lower()
+        ivfflat_lists = int(os.environ.get('SERVPY_PGVECTOR_IVFFLAT_LISTS') or '200')
+
         execute('CREATE EXTENSION IF NOT EXISTS vector')
+        # Выясняем версию pgvector, чтобы корректно выбирать индексы.
+        # На старых версиях/сборках бывает ограничение dims<=2000 и для hnsw, и для ivfflat.
+        try:
+            row = execute("SELECT extversion AS v FROM pg_extension WHERE extname='vector'").fetchone()
+            pgvector_version = str((row or {}).get('v') or '')
+        except Exception:
+            pgvector_version = ''
+        _pgvector_v = _parse_version(pgvector_version)
+        ann_dim_limit = 2000
+
         execute(
             f'''
             CREATE TABLE IF NOT EXISTS block_embeddings (
@@ -282,17 +307,41 @@ def _init_postgres_schema() -> None:
             ON block_embeddings(author_id)
             '''
         )
-        execute(
-            """
-            DO $$
-            BEGIN
-                IF EXISTS (SELECT 1 FROM pg_am WHERE amname = 'hnsw') THEN
-                    CREATE INDEX IF NOT EXISTS idx_block_embeddings_embedding_hnsw
-                        ON block_embeddings USING hnsw (embedding vector_cosine_ops);
-                END IF;
-            END$$;
-            """
-        )
+        # Индекс по embedding:
+        # - hnsw быстрее, но в pgvector имеет ограничение dims<=2000
+        # - ivfflat работает и для больших размерностей (например vector(3072))
+        if EMBEDDING_DIM > ann_dim_limit and index_type in ('auto', 'hnsw', 'ivfflat'):
+            logger.warning(
+                'pgvector %s: ANN index (hnsw/ivfflat) disabled for vector(%s) due to dim limit %s; '
+                'semantic search will work without ANN index (slower).',
+                pgvector_version or '?',
+                EMBEDDING_DIM,
+                ann_dim_limit,
+            )
+            return
+
+        if index_type == 'hnsw' or (index_type == 'auto' and EMBEDDING_DIM <= ann_dim_limit):
+            execute(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM pg_am WHERE amname = 'hnsw') THEN
+                        CREATE INDEX IF NOT EXISTS idx_block_embeddings_embedding_hnsw
+                            ON block_embeddings USING hnsw (embedding vector_cosine_ops);
+                    END IF;
+                END$$;
+                """
+            )
+        if index_type == 'ivfflat' or (index_type == 'auto' and EMBEDDING_DIM > ann_dim_limit):
+            # ivfflat требует ANALYZE для корректного планирования.
+            execute('ANALYZE block_embeddings')
+            execute(
+                f'''
+                CREATE INDEX IF NOT EXISTS idx_block_embeddings_embedding_ivfflat
+                    ON block_embeddings USING ivfflat (embedding vector_cosine_ops)
+                    WITH (lists = {max(1, ivfflat_lists)});
+                '''
+            )
     except Exception as exc:  # noqa: BLE001
         logger.warning('pgvector is not available; semantic search disabled: %r', exc)
 

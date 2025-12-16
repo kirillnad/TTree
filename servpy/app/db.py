@@ -16,11 +16,18 @@ def _resolve_database_url() -> str:
 
 DATABASE_URL = _resolve_database_url()
 
+DB_POOL_SIZE = int(os.environ.get('SERVPY_DB_POOL_SIZE') or '10')
+DB_MAX_OVERFLOW = int(os.environ.get('SERVPY_DB_MAX_OVERFLOW') or '20')
+DB_POOL_TIMEOUT = int(os.environ.get('SERVPY_DB_POOL_TIMEOUT') or '60')
+
 engine: Engine = create_engine(
     DATABASE_URL,
     future=True,
     echo=False,
     pool_pre_ping=True,
+    pool_size=max(1, DB_POOL_SIZE),
+    max_overflow=max(0, DB_MAX_OVERFLOW),
+    pool_timeout=max(1, DB_POOL_TIMEOUT),
 )
 
 DIALECT_NAME = engine.dialect.name
@@ -33,7 +40,22 @@ if not IS_POSTGRES:
 def _set_postgres_options(dbapi_connection, connection_record):  # type: ignore[override]
     # Вынесено из app/main.py → app/db.py. Здесь оставляем хук на connect,
     # чтобы при необходимости добавлять postgres-настройки в одном месте.
-    return
+    try:
+        probes_raw = os.environ.get('SERVPY_PGVECTOR_IVFFLAT_PROBES')
+        if probes_raw is None:
+            return
+        probes = int(probes_raw)
+        if probes <= 0:
+            return
+        cur = dbapi_connection.cursor()
+        cur.execute(f'SET ivfflat.probes = {probes}')
+        try:
+            cur.close()
+        except Exception:
+            pass
+    except Exception:
+        # Не блокируем подключение из-за настроек.
+        return
 
 
 class Database:

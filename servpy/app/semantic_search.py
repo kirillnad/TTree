@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import threading
 import logging
+import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime
 from typing import Any, Iterable, List
@@ -45,13 +46,16 @@ def request_cancel_reindex_task(author_id: str) -> dict[str, Any] | None:
         return task
 
 
-def start_reindex_task(author_id: str) -> dict[str, Any]:
+def start_reindex_task(author_id: str, mode: str = 'all') -> dict[str, Any]:
     """
     Стартует (или возвращает уже запущенную) задачу переиндексации embeddings для пользователя.
     Делается в фоне, чтобы HTTP-запрос не висел и не падал по таймаутам клиента/прокси.
     """
     if not author_id:
         raise ValueError('author_id required')
+    requested_mode = (mode or 'all').strip().lower()
+    if requested_mode not in ('all', 'missing'):
+        requested_mode = 'all'
 
     with _SEMANTIC_REINDEX_LOCK:
         existing = SEMANTIC_REINDEX_TASKS.get(author_id)
@@ -79,6 +83,7 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
         task = {
             'id': task_id,
             'status': 'running',
+            'mode': requested_mode,
             'startedAt': _iso_now(),
             'finishedAt': None,
             'lastActivityAt': _iso_now(),
@@ -88,6 +93,8 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
             'processed': 0,
             'indexed': 0,
             'failed': 0,
+            'inFlight': 0,
+            'queued': 0,
             'error': None,
             'cancelRequested': False,
         }
@@ -95,8 +102,7 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
 
     def _runner():
         try:
-            rows = CONN.execute(
-                '''
+            sql = '''
                 SELECT
                     b.id AS block_id,
                     b.article_id AS article_id,
@@ -105,10 +111,19 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                     b.updated_at AS updated_at
                 FROM blocks b
                 JOIN articles a ON a.id = b.article_id
+                {join_clause}
                 WHERE a.deleted_at IS NULL
                   AND a.author_id = ?
+                  {missing_filter}
                 ORDER BY b.updated_at DESC
-                ''',
+            '''
+            join_clause = ''
+            missing_filter = ''
+            if requested_mode == 'missing':
+                join_clause = 'LEFT JOIN block_embeddings be ON be.block_id = b.id AND be.author_id = a.author_id'
+                missing_filter = 'AND be.block_id IS NULL'
+            rows = CONN.execute(
+                sql.format(join_clause=join_clause, missing_filter=missing_filter),
                 (author_id,),
             ).fetchall()
             total = len(rows or [])
@@ -136,7 +151,8 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                 if not batch_rows:
                     return (0, 0, 0)
 
-                # 1) Подготовка и быстрый skip по updated_at (одним запросом)
+                # 1) Подготовка и быстрый skip по updated_at (одним запросом).
+                # В режиме mode=all этот skip выключен: пересчитываем всё заново.
                 valid_rows: List[dict[str, Any]] = []
                 block_ids: List[str] = []
                 for r in batch_rows:
@@ -147,35 +163,38 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                 if not valid_rows:
                     return (len(batch_rows), 0, 0)
 
-                existing_map: dict[str, str] = {}
-                try:
-                    placeholders = ','.join('?' for _ in block_ids)
-                    existing_rows = CONN.execute(
-                        f'''
-                        SELECT block_id AS "blockId", updated_at AS "updatedAt"
-                        FROM block_embeddings
-                        WHERE block_id IN ({placeholders})
-                        ''',
-                        tuple(block_ids),
-                    ).fetchall()
-                    for row in existing_rows or []:
-                        bid = row.get('blockId')
-                        if bid:
-                            existing_map[str(bid)] = str(row.get('updatedAt') or '')
-                except Exception:
-                    existing_map = {}
-
                 todo_rows: List[dict[str, Any]] = []
                 processed_local = 0
                 indexed_local = 0
                 failed_local = 0
-                for r in valid_rows:
-                    bid = str(r.get('block_id') or '')
-                    updated_at = str(r.get('updated_at') or '')
-                    if updated_at and existing_map.get(bid) == updated_at:
-                        processed_local += 1
-                        continue
-                    todo_rows.append(r)
+                if requested_mode == 'all':
+                    todo_rows = valid_rows
+                else:
+                    existing_map: dict[str, str] = {}
+                    try:
+                        placeholders = ','.join('?' for _ in block_ids)
+                        existing_rows = CONN.execute(
+                            f'''
+                            SELECT block_id AS "blockId", updated_at AS "updatedAt"
+                            FROM block_embeddings
+                            WHERE block_id IN ({placeholders})
+                            ''',
+                            tuple(block_ids),
+                        ).fetchall()
+                        for row in existing_rows or []:
+                            bid = row.get('blockId')
+                            if bid:
+                                existing_map[str(bid)] = str(row.get('updatedAt') or '')
+                    except Exception:
+                        existing_map = {}
+
+                    for r in valid_rows:
+                        bid = str(r.get('block_id') or '')
+                        updated_at = str(r.get('updated_at') or '')
+                        if updated_at and existing_map.get(bid) == updated_at:
+                            processed_local += 1
+                            continue
+                        todo_rows.append(r)
 
                 if not todo_rows:
                     return (processed_local, 0, 0)
@@ -253,6 +272,7 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
 
             in_flight: set = set()
             next_index = 0
+            last_heartbeat = time.monotonic()
 
             with ThreadPoolExecutor(max_workers=concurrency) as pool:
                 while next_index < len(rows_list) or in_flight:
@@ -292,6 +312,17 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
 
                     done, _pending = wait(in_flight, return_when=FIRST_COMPLETED, timeout=1.0)
                     if not done:
+                        # Heartbeat: показываем, что задача жива, даже если первый батч
+                        # ещё не завершился (например, долгий запрос embeddings).
+                        now = time.monotonic()
+                        if now - last_heartbeat >= 2.0:
+                            last_heartbeat = now
+                            with _SEMANTIC_REINDEX_LOCK:
+                                t = SEMANTIC_REINDEX_TASKS.get(author_id)
+                                if t:
+                                    t['inFlight'] = len(in_flight)
+                                    t['queued'] = next_index
+                                    t['lastActivityAt'] = _iso_now()
                         continue
 
                     for fut in done:
@@ -332,6 +363,8 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                                         t['processed'] = processed
                                         t['indexed'] = indexed
                                         t['failed'] = failed
+                                        t['inFlight'] = len(in_flight)
+                                        t['queued'] = next_index
                                         t['lastActivityAt'] = _iso_now()
 
             with _SEMANTIC_REINDEX_LOCK:
@@ -345,6 +378,8 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                     t['lastActivityAt'] = _iso_now()
                     t['currentBlockId'] = None
                     t['currentArticleId'] = None
+                    t['inFlight'] = 0
+                    t['queued'] = next_index
         except EmbeddingsUnavailable as exc:
             with _SEMANTIC_REINDEX_LOCK:
                 t = SEMANTIC_REINDEX_TASKS.get(author_id)
@@ -355,6 +390,7 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                     t['lastActivityAt'] = _iso_now()
                     t['currentBlockId'] = None
                     t['currentArticleId'] = None
+                    t['inFlight'] = 0
             notify_user(author_id, f'Переиндексация семантического поиска: ошибка embeddings — {exc}', key='semantic-reindex')
         except Exception as exc:  # noqa: BLE001
             with _SEMANTIC_REINDEX_LOCK:
@@ -366,6 +402,7 @@ def start_reindex_task(author_id: str) -> dict[str, Any]:
                     t['lastActivityAt'] = _iso_now()
                     t['currentBlockId'] = None
                     t['currentArticleId'] = None
+                    t['inFlight'] = 0
             notify_user(author_id, f'Переиндексация семантического поиска: ошибка — {exc!r}', key='semantic-reindex')
 
     thread = threading.Thread(target=_runner, name=f'semantic-reindex-{author_id}', daemon=True)
@@ -527,5 +564,5 @@ def reindex_user_embeddings(author_id: str) -> dict[str, Any]:
     """
     # Legacy sync API (оставлено для совместимости внутренних вызовов).
     # Рекомендуемый путь — start_reindex_task + status endpoint.
-    task = start_reindex_task(author_id)
+    task = start_reindex_task(author_id, mode='all')
     return {'taskId': task.get('id'), 'status': task.get('status')}
