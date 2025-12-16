@@ -33,6 +33,10 @@ export const state = {
   isMarkdownInserting: false,
   isTrashView: false,
   favoriteArticles: [],
+  // Режим списка статей в сайдбаре: 'tree' | 'recent'
+  sidebarArticlesMode: 'tree',
+  // История открытий статей (LRU: последние сверху).
+  recentArticleIds: [],
   // Независимое выделение статей в сайдбаре и в списке статей.
   sidebarSelectedArticleId: null,
   listSelectedArticleId: null,

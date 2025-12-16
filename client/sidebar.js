@@ -16,6 +16,9 @@ const FAVORITES_KEY = 'ttree_favorites';
 const COLLAPSED_ARTICLES_KEY = 'ttree_collapsed_articles';
 const LIST_COLLAPSED_ARTICLES_KEY = 'ttree_list_collapsed_articles';
 const SIDEBAR_COLLAPSED_KEY = 'ttree_sidebar_collapsed';
+const SIDEBAR_ARTICLES_MODE_KEY = 'ttree_sidebar_articles_mode';
+const RECENT_ARTICLES_KEY = 'ttree_recent_articles';
+const RECENT_ARTICLES_LIMIT = 300;
 
 let isTouchDevice = false;
 if (typeof window !== 'undefined') {
@@ -563,8 +566,70 @@ export function initSidebarStateFromStorage() {
   loadSidebarCollapsed();
   loadCollapsedArticles();
   loadListCollapsedArticles();
+  loadSidebarArticlesMode();
+  loadRecentArticles();
   if (refs.sidebar) {
     setSidebarCollapsed(state.isSidebarCollapsed);
+  }
+}
+
+function loadSidebarArticlesMode() {
+  try {
+    const raw = window.localStorage.getItem(SIDEBAR_ARTICLES_MODE_KEY) || '';
+    const mode = (raw || '').trim().toLowerCase();
+    if (mode === 'recent' || mode === 'tree') {
+      state.sidebarArticlesMode = mode;
+    }
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function saveSidebarArticlesMode() {
+  try {
+    window.localStorage.setItem(SIDEBAR_ARTICLES_MODE_KEY, state.sidebarArticlesMode || 'tree');
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function loadRecentArticles() {
+  try {
+    const raw = window.localStorage.getItem(RECENT_ARTICLES_KEY) || '[]';
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      state.recentArticleIds = parsed.filter((id) => typeof id === 'string' && id && id !== 'inbox').slice(0, RECENT_ARTICLES_LIMIT);
+    }
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function saveRecentArticles() {
+  try {
+    const list = Array.isArray(state.recentArticleIds) ? state.recentArticleIds : [];
+    window.localStorage.setItem(RECENT_ARTICLES_KEY, JSON.stringify(list.slice(0, RECENT_ARTICLES_LIMIT)));
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+export function toggleSidebarRecentMode() {
+  const next = state.sidebarArticlesMode === 'recent' ? 'tree' : 'recent';
+  state.sidebarArticlesMode = next;
+  saveSidebarArticlesMode();
+  renderSidebarArticleList();
+}
+
+export function recordArticleOpened(articleId) {
+  if (!articleId || articleId === 'inbox') return;
+  if (state.isPublicView) return;
+  const current = Array.isArray(state.recentArticleIds) ? state.recentArticleIds : [];
+  const next = [articleId, ...current.filter((id) => id !== articleId)];
+  state.recentArticleIds = next.slice(0, RECENT_ARTICLES_LIMIT);
+  saveRecentArticles();
+  if (state.sidebarArticlesMode === 'recent') {
+    renderSidebarArticleList();
   }
 }
 
@@ -713,6 +778,8 @@ function buildArticleTree(list = []) {
 export function renderSidebarArticleList() {
   if (!refs.sidebarArticleList) return;
   refs.sidebarArticleList.innerHTML = '';
+  if (refs.backToList) refs.backToList.classList.toggle('active', state.sidebarArticlesMode !== 'recent');
+  if (refs.sidebarRecentBtn) refs.sidebarRecentBtn.classList.toggle('active', state.sidebarArticlesMode === 'recent');
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
@@ -743,6 +810,51 @@ export function renderSidebarArticleList() {
         ? 'Нет совпадений'
         : 'Нет статей';
     refs.sidebarArticleList.appendChild(empty);
+    return;
+  }
+
+  const mode = state.sidebarArticlesMode === 'recent' ? 'recent' : 'tree';
+  if (mode === 'recent') {
+    const byId = new Map(base.map((a) => [a.id, a]));
+    const recentIds = Array.isArray(state.recentArticleIds) ? state.recentArticleIds : [];
+    const recentSet = new Set(recentIds);
+    const recentList = recentIds.map((id) => byId.get(id)).filter(Boolean);
+    const rest = sortArticles(base.filter((a) => !recentSet.has(a.id)));
+    const flat = [...recentList, ...rest];
+    flat.forEach((node) => {
+      const li = document.createElement('li');
+      li.className = 'sidebar-article-item';
+      li.dataset.articleId = node.id;
+
+      const row = document.createElement('div');
+      row.className = 'sidebar-article-row';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
+      const isFav = favs.has(node.id);
+      const titleText = escapeHtml(node.title || 'Без названия');
+      const publicIcon = node.publicSlug ? '\uE774 ' : '';
+      button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
+      button.addEventListener('click', () => {
+        if (window.__ttreeDraggingArticleId) return;
+        state.sidebarSelectedArticleId = node.id;
+        navigate(routing.article(node.id));
+        if (state.isSidebarMobileOpen) {
+          setSidebarMobileOpen(false);
+        }
+      });
+      const star = button.querySelector('.star-btn');
+      if (star) {
+        star.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleFavorite(node.id);
+        });
+      }
+      row.appendChild(button);
+      li.appendChild(row);
+      refs.sidebarArticleList.appendChild(li);
+    });
     return;
   }
 

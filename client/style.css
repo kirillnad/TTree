@@ -397,6 +397,12 @@ html {
   margin-bottom: 0.12rem;
   font-size: 0.95rem;
 }
+.sidebar-articles__header-left,
+.sidebar-articles__header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
 .sidebar-articles__header button,
 #quickNoteAddBtn {
   height: 22px;
@@ -414,6 +420,26 @@ html {
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+.sidebar-articles__header button.active {
+  border-color: #6b7280;
+  background: #374151;
+  color: #ffffff;
+}
+
+/* Более явная подсветка для активного режима "Последние". */
+#sidebarRecentBtn.active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+.sidebar-articles__header button:not(.active) {
+  opacity: 0.88;
+}
+.sidebar-articles__header button:not(.active):hover {
+  opacity: 1;
+  border-color: #525252;
 }
 .sidebar-graph-btn {
   min-width: 32px;

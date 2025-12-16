@@ -1,7 +1,7 @@
 import { state, isHintVisible } from './state.js';
 import { refs } from './refs.js';
 import { handleUndoAction, handleRedoAction, clearPendingTextPreview } from './undo.js';
-import {
+  import {
   moveCurrentBlock,
   moveSelectedBlocks,
   indentCurrentBlock,
@@ -35,8 +35,9 @@ import {
   toggleFavorite,
   ensureArticlesIndexLoaded,
   renderMainArticleList,
-  renderSidebarArticleList,
-} from './sidebar.js';
+    renderSidebarArticleList,
+    toggleSidebarRecentMode,
+  } from './sidebar.js';
 import {
   toggleSidebarCollapsed,
   handleArticleFilterInput,
@@ -804,6 +805,11 @@ export function attachEvents() {
     });
   }
   if (refs.backToList) refs.backToList.addEventListener('click', () => navigate(routing.list));
+  if (refs.sidebarRecentBtn) {
+    refs.sidebarRecentBtn.addEventListener('click', () => {
+      toggleSidebarRecentMode();
+    });
+  }
   if (refs.searchInput) {
     refs.searchInput.addEventListener('input', handleSearchInput);
     refs.searchInput.addEventListener('focus', () => {
@@ -1286,6 +1292,10 @@ export function attachEvents() {
         }
         // Не закрываем мобильный сайдбар при клике по крестику очистки фильтра.
         if (refs.sidebarQuickFilterClear && btn === refs.sidebarQuickFilterClear) {
+          return;
+        }
+        // Не закрываем мобильный сайдбар при переключении режима списка в сайдбаре.
+        if (refs.sidebarRecentBtn && btn === refs.sidebarRecentBtn) {
           return;
         }
         closeSidebarMobile();

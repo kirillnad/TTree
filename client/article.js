@@ -21,6 +21,7 @@ import { navigate, routing } from './routing.js';
 import { showPrompt, showConfirm, showPasswordWithHintPrompt } from './modal.js?v=2';
 import { startEditing, saveEditing, cancelEditing, createSibling } from './actions.js';
 import { deriveKeyFromPassword, decryptArticleBlocks, checkEncryptionVerifier, createEncryptionVerifier, encryptTextForArticle } from './encryption.js';
+import { recordArticleOpened } from './sidebar.js';
 
 function updatePublicToggleLabel() {
   if (!refs.articlePublicToggleBtn) return;
@@ -1499,6 +1500,7 @@ export async function loadArticleView(id) {
     const desired = state.scrollTargetBlockId || undefined;
     await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired, editBlockId: editTarget });
     renderArticle();
+    recordArticleOpened(id);
   } catch (error) {
     refs.blocksContainer.innerHTML = `<p class="meta">Не удалось загрузить статью: ${error.message}</p>`;
   }
