@@ -13,7 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from .auth import User, get_user_by_id
-from .db import CONN, IS_SQLITE
+from .db import CONN
 from .data_store import create_attachment, get_or_create_user_inbox, insert_block, save_article
 from .import_assets import _save_image_bytes_for_user
 from .yandex_disk_utils import _upload_bytes_to_yandex_for_user
@@ -155,24 +155,14 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
         now_iso = datetime.utcnow().isoformat()
         try:
             with CONN:
-                if IS_SQLITE:
-                    CONN.execute(
-                        '''
-                        INSERT INTO telegram_links (chat_id, user_id, created_at)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT(chat_id) DO UPDATE SET user_id = excluded.user_id, created_at = excluded.created_at
-                        ''',
-                        (chat_key, user_id, now_iso),
-                    )
-                else:
-                    CONN.execute(
-                        '''
-                        INSERT INTO telegram_links (chat_id, user_id, created_at)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT (chat_id) DO UPDATE SET user_id = EXCLUDED.user_id, created_at = EXCLUDED.created_at
-                        ''',
-                        (chat_key, user_id, now_iso),
-                    )
+                CONN.execute(
+                    '''
+                    INSERT INTO telegram_links (chat_id, user_id, created_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (chat_id) DO UPDATE SET user_id = EXCLUDED.user_id, created_at = EXCLUDED.created_at
+                    ''',
+                    (chat_key, user_id, now_iso),
+                )
                 CONN.execute('DELETE FROM telegram_link_tokens WHERE token = ?', (token,))
         except Exception as exc:  # noqa: BLE001
             logger.error('Telegram bot: failed to upsert telegram_links: %r', exc)
@@ -387,4 +377,3 @@ def create_link_token_for_user(user_id: str) -> dict[str, str]:
             (token, user_id, now.isoformat(), expires_at.isoformat()),
         )
     return {'token': token, 'expiresAt': expires_at.isoformat()}
-

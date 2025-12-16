@@ -150,7 +150,7 @@ def _get_public_article_row(slug: str):
     Находит статью по public_slug.
     Фолбэк: если exact slug не найден, пробуем добавить суффикс '-' или '_'
     (мобильные клиенты иногда обрезают завершающий символ в URL).
-    Возвращает sqlite row или None.
+    Возвращает строку из БД или None.
     """
     row = CONN.execute(
         'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
@@ -620,4 +620,3 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
 </html>
 """
     return html
-

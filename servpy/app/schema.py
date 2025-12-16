@@ -1,229 +1,11 @@
-from .db import IS_POSTGRES, IS_SQLITE, execute
+from __future__ import annotations
+
+from .db import execute
+
+# PostgreSQL-only schema.
 
 
-def _init_sqlite_schema():
-    statements = [
-        '''
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            display_name TEXT,
-            created_at TEXT NOT NULL,
-            is_superuser INTEGER NOT NULL DEFAULT 0
-        )
-        ''',
-        '''
-        CREATE TABLE IF NOT EXISTS articles (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            parent_id TEXT,
-            position INTEGER NOT NULL DEFAULT 0,
-            history TEXT NOT NULL DEFAULT '[]',
-            redo_history TEXT NOT NULL DEFAULT '[]',
-            block_trash TEXT NOT NULL DEFAULT '[]',
-            deleted_at TEXT,
-            author_id TEXT,
-            is_encrypted INTEGER NOT NULL DEFAULT 0,
-            encryption_salt TEXT,
-            encryption_verifier TEXT,
-            encryption_hint TEXT,
-            public_slug TEXT UNIQUE
-        )
-        ''',
-        '''
-        CREATE INDEX IF NOT EXISTS idx_articles_parent_position
-        ON articles(parent_id, position)
-        ''',
-        '''
-        CREATE TABLE IF NOT EXISTS blocks (
-            block_rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-            id TEXT NOT NULL UNIQUE,
-            article_id TEXT NOT NULL,
-            parent_id TEXT,
-            position INTEGER NOT NULL,
-            text TEXT NOT NULL DEFAULT '',
-            normalized_text TEXT NOT NULL DEFAULT '',
-            collapsed INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE,
-            FOREIGN KEY(parent_id) REFERENCES blocks(id) ON DELETE CASCADE
-        )
-        ''',
-        '''
-        CREATE INDEX IF NOT EXISTS idx_blocks_article_parent
-        ON blocks(article_id, parent_id, position)
-        ''',
-        '''
-        CREATE TABLE IF NOT EXISTS attachments (
-            id TEXT PRIMARY KEY,
-            article_id TEXT NOT NULL,
-            stored_path TEXT NOT NULL,
-            original_name TEXT NOT NULL,
-            content_type TEXT,
-            size INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
-        )
-        ''',
-        '''
-        CREATE INDEX IF NOT EXISTS idx_attachments_article
-        ON attachments(article_id)
-        ''',
-        '''
-        CREATE TABLE IF NOT EXISTS article_links (
-            from_id TEXT NOT NULL,
-            block_id TEXT NOT NULL DEFAULT '',
-            to_id TEXT NOT NULL,
-            kind TEXT NOT NULL DEFAULT 'internal',
-            PRIMARY KEY (from_id, block_id, to_id),
-            FOREIGN KEY(from_id) REFERENCES articles(id) ON DELETE CASCADE,
-            FOREIGN KEY(to_id) REFERENCES articles(id) ON DELETE CASCADE
-        )
-        ''',
-        '''
-        CREATE INDEX IF NOT EXISTS idx_article_links_to
-        ON article_links(to_id)
-        ''',
-        '''
-        CREATE TABLE IF NOT EXISTS user_yandex_tokens (
-            user_id TEXT PRIMARY KEY,
-            access_token TEXT NOT NULL,
-            refresh_token TEXT,
-            expires_at TEXT,
-            disk_root TEXT NOT NULL DEFAULT 'app:/',
-            initialized INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-        ''',
-    ]
-
-    for stmt in statements:
-        execute(stmt)
-
-    # Backwards-compatible additions for existing SQLite databases.
-    user_columns = execute("PRAGMA table_info(users)").fetchall()
-    user_col_names = {col['name'] for col in user_columns}
-    if 'is_superuser' not in user_col_names:
-        execute("ALTER TABLE users ADD COLUMN is_superuser INTEGER NOT NULL DEFAULT 0")
-
-    article_columns = execute("PRAGMA table_info(articles)").fetchall()
-    col_names = {col['name'] for col in article_columns}
-    if 'parent_id' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN parent_id TEXT")
-    if 'position' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
-    if 'deleted_at' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN deleted_at TEXT")
-    if 'author_id' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN author_id TEXT")
-    if 'is_encrypted' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN is_encrypted INTEGER NOT NULL DEFAULT 0")
-    if 'encryption_salt' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN encryption_salt TEXT")
-    if 'encryption_verifier' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN encryption_verifier TEXT")
-    if 'encryption_hint' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN encryption_hint TEXT")
-    if 'public_slug' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN public_slug TEXT")
-        execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_public_slug ON articles(public_slug)")
-    if 'block_trash' not in col_names:
-        execute("ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]'")
-
-    # Миграция article_links для добавления block_id и нового первичного ключа.
-    link_columns = execute("PRAGMA table_info(article_links)").fetchall()
-    link_col_names = {col['name'] for col in link_columns}
-    if link_columns and 'block_id' not in link_col_names:
-        # Пересоздаём таблицу article_links с нужной схемой, сохраняя данные.
-        execute('DROP TABLE IF EXISTS article_links_new')
-        execute(
-            '''
-            CREATE TABLE article_links_new (
-                from_id TEXT NOT NULL,
-                block_id TEXT NOT NULL DEFAULT '',
-                to_id TEXT NOT NULL,
-                kind TEXT NOT NULL DEFAULT 'internal',
-                PRIMARY KEY (from_id, block_id, to_id),
-                FOREIGN KEY(from_id) REFERENCES articles(id) ON DELETE CASCADE,
-                FOREIGN KEY(to_id) REFERENCES articles(id) ON DELETE CASCADE
-            )
-            ''',
-        )
-        execute(
-            '''
-            INSERT INTO article_links_new (from_id, block_id, to_id, kind)
-            SELECT from_id, '', to_id, kind FROM article_links
-            ''',
-        )
-        execute('DROP TABLE article_links')
-        execute('ALTER TABLE article_links_new RENAME TO article_links')
-        execute(
-            '''
-            CREATE INDEX IF NOT EXISTS idx_article_links_to
-            ON article_links(to_id)
-            ''',
-        )
-
-    execute('DROP TABLE IF EXISTS blocks_fts')
-    execute(
-        '''
-        CREATE VIRTUAL TABLE IF NOT EXISTS blocks_fts
-        USING fts5(
-            block_rowid UNINDEXED,
-            article_id UNINDEXED,
-            text,
-            lemma,
-            normalized_text,
-            tokenize = 'unicode61 remove_diacritics 0'
-        )
-        ''',
-    )
-
-    execute('DROP TABLE IF EXISTS articles_fts')
-    execute(
-        '''
-        CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts
-        USING fts5(
-            article_id UNINDEXED,
-            title,
-            lemma,
-            normalized_text,
-            tokenize = 'unicode61 remove_diacritics 0'
-        )
-        ''',
-    )
-
-    # Связка Telegram‑чатов с пользователями Memus.
-    execute(
-        '''
-        CREATE TABLE IF NOT EXISTS telegram_links (
-            chat_id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-        ''',
-    )
-
-    # Одноразовые токены для привязки Telegram‑чата к пользователю.
-    execute(
-        '''
-        CREATE TABLE IF NOT EXISTS telegram_link_tokens (
-            token TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            expires_at TEXT NOT NULL,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-        ''',
-    )
-
-
-def _init_postgres_schema():
+def _init_postgres_schema() -> None:
     statements = [
         '''
         CREATE TABLE IF NOT EXISTS users (
@@ -370,8 +152,7 @@ def _init_postgres_schema():
     for stmt in statements:
         execute(stmt)
 
-    # Ensure author_id, encryption flags, is_superuser and article_links.block_id exist
-    # even if tables pre-existed.
+    # Backwards-compatible additions for existing PostgreSQL databases.
     execute(
         """
         DO $$
@@ -448,7 +229,6 @@ def _init_postgres_schema():
                 ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]';
             END IF;
 
-            -- article_links.block_id и обновлённый первичный ключ
             IF NOT EXISTS (
                 SELECT 1
                 FROM information_schema.columns
@@ -457,7 +237,6 @@ def _init_postgres_schema():
                 ALTER TABLE article_links ADD COLUMN block_id TEXT NOT NULL DEFAULT '';
             END IF;
 
-            -- Обновляем первичный ключ article_links до (from_id, block_id, to_id)
             BEGIN
                 ALTER TABLE article_links DROP CONSTRAINT IF EXISTS article_links_pkey;
             EXCEPTION
@@ -473,10 +252,5 @@ def _init_postgres_schema():
     )
 
 
-def init_schema():
-    if IS_SQLITE:
-        _init_sqlite_schema()
-    elif IS_POSTGRES:
-        _init_postgres_schema()
-    else:
-        _init_sqlite_schema()
+def init_schema() -> None:
+    _init_postgres_schema()

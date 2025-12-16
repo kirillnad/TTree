@@ -2,7 +2,6 @@ import importlib
 import os
 import sys
 import warnings
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -34,9 +33,8 @@ def _load_app():
 
 @pytest.fixture()
 def app_env(monkeypatch, tmp_path_factory):
-    db_dir = tmp_path_factory.mktemp('db')
-    db_path = Path(db_dir) / 'test.sqlite'
-    monkeypatch.setenv('SERVPY_DATABASE_URL', f'sqlite:///{db_path}')
+    if not os.getenv('SERVPY_DATABASE_URL'):
+        pytest.skip('SERVPY_DATABASE_URL is required for server tests (PostgreSQL)')
 
     db, data_store, main = _load_app()
     # main imports seed sample data; wipe to keep tests isolated

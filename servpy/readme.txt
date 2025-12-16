@@ -15,7 +15,7 @@
     systemctl --user status ttree.service   # убедиться, что запустился
     journalctl --user -u ttree.service -f   # для отладки; stdout/stderr также в logs/servpy.log
 
-По умолчанию backend использует встроенный sqlite. Чтобы переключиться на PostgreSQL, задайте переменную окружения
+Backend работает только с PostgreSQL. Для запуска требуется переменная окружения
     SERVPY_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
 Перед первым запуском создайте пустую БД, после чего init_schema() автоматически создаст таблицы, индексы и tsvector-поля
 для полнотекстового поиска.
@@ -35,17 +35,17 @@
 В servpy/ появился полный FastAPI‑сервер с теми же маршрутами и поведением, что в Node:
 
 servpy/app/text_utils.py + pymorphy2 — лемматизация и нормализация текста (lemma + normalized_text) для каждого блока;
-servpy/app/db.py + schema.py — чистый sqlite3, WAL, FTS5 с колонками lemma и normalized_text, миграция/реиндексация (скрипты migrate_json.py и reindex_fts.py);
+servpy/app/db.py + schema.py — подключение к PostgreSQL + создание схемы и полнотекстовых индексов (tsvector), реиндексация (скрипты migrate_json.py и reindex_fts.py);
 servpy/app/data_store.py — CRUD, история, indent/outdent/move, поиск (lemma:* OR normalized_text:*), ensure_sample_article, create_article и весь набор операций, которые раньше делал dataStore.js; жёсткое разделение данных по пользователям (author_id в articles, поиск только в статьях текущего пользователя);
 servpy/app/main.py — FastAPI-приложение с CORS, аутентификацией и сессиями, загрузкой изображений (5МБ, MIME:image), сервингом клиентского client/, защищённым доступом к /uploads (каждый пользователь видит только свои файлы), API /api/auth/*, /api/articles/..., /api/search, /api/changelog и SPA-фолбеком (роутинг на стороне клиента);
-servpy/requirements.txt + .gitignore (новые sqlite/Uploads) чтобы можно было установить uvicorn, fastapi, pymorphy2, aiofiles.
+servpy/requirements.txt + .gitignore чтобы можно было установить uvicorn, fastapi, pymorphy2, aiofiles.
 
 Стартовая «справочная» статья для новых пользователей
 
 Memus автоматически создаёт пользователю первую статью (онбординг/руководство) при первом входе, но только если у него ещё нет ни одной не удалённой статьи.
 
 Где реализовано:
-  - servpy/app/main.py: ensure_help_article_for_user(author_id)
+  - servpy/app/onboarding.py: ensure_help_article_for_user(author_id)
     - проверяет наличие статей пользователя;
     - если статей нет — создаёт статью на основе шаблона client/help.html.
 

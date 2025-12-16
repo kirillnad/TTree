@@ -49,7 +49,7 @@ from .auth import (
     set_session_cookie,
     verify_password,
 )
-from .db import CONN, IS_SQLITE, IS_POSTGRES
+from .db import CONN
 from . import db as db_module
 from .data_store import (
     ArticleNotFound,
@@ -83,7 +83,6 @@ from .data_store import (
     create_attachment,
     save_article,
     rebuild_search_indexes,
-    build_sqlite_fts_query,
     build_postgres_ts_query,
     delete_user_with_data,
     _expand_wikilinks,
@@ -287,24 +286,14 @@ def _legacy_handle_telegram_message(message: dict[str, Any]) -> None:
         now_iso = datetime.utcnow().isoformat()
         try:
             with CONN:
-                if IS_SQLITE:
-                    CONN.execute(
-                        '''
-                        INSERT INTO telegram_links (chat_id, user_id, created_at)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT(chat_id) DO UPDATE SET user_id = excluded.user_id, created_at = excluded.created_at
-                        ''',
-                        (chat_key, user_id, now_iso),
-                    )
-                else:
-                    CONN.execute(
-                        '''
-                        INSERT INTO telegram_links (chat_id, user_id, created_at)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT (chat_id) DO UPDATE SET user_id = EXCLUDED.user_id, created_at = EXCLUDED.created_at
-                        ''',
-                        (chat_key, user_id, now_iso),
-                    )
+                CONN.execute(
+                    '''
+                    INSERT INTO telegram_links (chat_id, user_id, created_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (chat_id) DO UPDATE SET user_id = EXCLUDED.user_id, created_at = EXCLUDED.created_at
+                    ''',
+                    (chat_key, user_id, now_iso),
+                )
                 CONN.execute('DELETE FROM telegram_link_tokens WHERE token = ?', (token,))
         except Exception as exc:  # noqa: BLE001
             logger.error('Telegram bot: failed to upsert telegram_links: %r', exc)
@@ -768,7 +757,7 @@ def _get_public_article_row(slug: str):
     Находит статью по public_slug.
     Фолбэк: если exact slug не найден, пробуем добавить суффикс '-' или '_'
     (мобильные клиенты иногда обрезают завершающий символ в URL).
-    Возвращает sqlite row или None.
+    Возвращает строку из БД или None.
     """
     row = CONN.execute(
         'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',

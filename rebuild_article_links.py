@@ -6,8 +6,6 @@ One-off utility: rebuild article_links for all existing (not deleted) articles.
 Usage (from repo root):
 
     SERVPY_DATABASE_URL=postgresql+psycopg:///ttree python3 rebuild_article_links.py
-
-or оставьте переменную пустой, чтобы использовать дефолтную SQLite-базу.
 """
 
 from servpy.app.db import CONN
@@ -30,4 +28,3 @@ def main() -> None:
 
 if __name__ == '__main__':
   main()
-

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.engine import RowMapping
 
-from .db import CONN, IS_POSTGRES, IS_SQLITE, mark_search_index_clean
+from .db import CONN, mark_search_index_clean
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
@@ -206,24 +206,13 @@ def upsert_yandex_tokens(
             (access_token, refresh_token, expires_at, disk_root, user_id),
         )
     else:
-        if IS_POSTGRES:
-            # В PostgreSQL initialized — BOOLEAN, поэтому используем FALSE.
-            CONN.execute(
-                '''
-                INSERT INTO user_yandex_tokens (user_id, access_token, refresh_token, expires_at, disk_root, initialized)
-                VALUES (?, ?, ?, ?, ?, FALSE)
-                ''',
-                (user_id, access_token, refresh_token, expires_at, disk_root),
-            )
-        else:
-            # В SQLite initialized хранится как INTEGER 0/1.
-            CONN.execute(
-                '''
-                INSERT INTO user_yandex_tokens (user_id, access_token, refresh_token, expires_at, disk_root, initialized)
-                VALUES (?, ?, ?, ?, ?, 0)
-                ''',
-                (user_id, access_token, refresh_token, expires_at, disk_root),
-            )
+        CONN.execute(
+            '''
+            INSERT INTO user_yandex_tokens (user_id, access_token, refresh_token, expires_at, disk_root, initialized)
+            VALUES (?, ?, ?, ?, ?, FALSE)
+            ''',
+            (user_id, access_token, refresh_token, expires_at, disk_root),
+        )
 
 
 def _extract_article_ids_from_html(html_text: str) -> set[str]:
@@ -363,11 +352,8 @@ def _expand_wikilinks(html_text: str, author_id: str) -> str:
 
 
 def _insert_block_row(params: Tuple[Any, ...]) -> int:
-    if IS_POSTGRES:
-        row = CONN.execute(BLOCK_INSERT_SQL + ' RETURNING block_rowid', params).fetchone()
-        return int(row['block_rowid']) if row else 0
-    CONN.execute(BLOCK_INSERT_SQL, params)
-    return int(CONN.execute('SELECT last_insert_rowid() as block_rowid').fetchone()['block_rowid'])
+    row = CONN.execute(BLOCK_INSERT_SQL + ' RETURNING block_rowid', params).fetchone()
+    return int(row['block_rowid']) if row else 0
 
 
 def upsert_block_search_index(
@@ -377,16 +363,6 @@ def upsert_block_search_index(
     lemma: str,
     normalized_text: str,
 ) -> None:
-    if IS_SQLITE:
-        CONN.execute(
-            '''
-            INSERT OR REPLACE INTO blocks_fts
-              (block_rowid, article_id, text, lemma, normalized_text)
-            VALUES (?, ?, ?, ?, ?)
-            ''',
-            (block_rowid, article_id, text, lemma, normalized_text),
-        )
-        return
     CONN.execute(
         '''
         INSERT INTO blocks_fts (block_rowid, article_id, text, lemma, normalized_text)
@@ -797,26 +773,17 @@ def _article_search_fields(title: str = '') -> Tuple[str, str, str]:
 def upsert_article_search_index(article_id: str, title: str, *, use_transaction: bool = True) -> None:
     plain_title, lemma, normalized = _article_search_fields(title)
     def _execute():
-        if IS_SQLITE:
-            CONN.execute(
-                '''
-                INSERT OR REPLACE INTO articles_fts (article_id, title, lemma, normalized_text)
-                VALUES (?, ?, ?, ?)
-                ''',
-                (article_id, plain_title, lemma, normalized),
-            )
-        else:
-            CONN.execute(
-                '''
-                INSERT INTO articles_fts (article_id, title, lemma, normalized_text)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT (article_id) DO UPDATE
-                SET title = EXCLUDED.title,
-                    lemma = EXCLUDED.lemma,
-                    normalized_text = EXCLUDED.normalized_text
-                ''',
-                (article_id, plain_title, lemma, normalized),
-            )
+        CONN.execute(
+            '''
+            INSERT INTO articles_fts (article_id, title, lemma, normalized_text)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (article_id) DO UPDATE
+            SET title = EXCLUDED.title,
+                lemma = EXCLUDED.lemma,
+                normalized_text = EXCLUDED.normalized_text
+            ''',
+            (article_id, plain_title, lemma, normalized),
+        )
     if use_transaction:
         with CONN:
             _execute()
@@ -1732,7 +1699,7 @@ def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict
         desired = bool(encrypted_flag)
         if desired != current:
             updates.append('is_encrypted = ?')
-            # Для SQLite это сохранится как 0/1, для Postgres — как true/false.
+            # Драйвер корректно сохранит bool в базе.
             params.append(desired)
             article['encrypted'] = desired
             # При включении шифрования очищаем корзину блоков, чтобы
@@ -1980,7 +1947,7 @@ def _tokenize_search_term(term: str) -> Tuple[List[str], List[str]]:
 def _mapping_get_first(mapping: Any, *keys: str) -> Any:
     """
     Безопасно достаёт значение из RowMapping/словаря по первому существующему ключу.
-    Нужен из‑за различий в регистре/формате имён колонок между SQLite и Postgres.
+    Нужен из‑за различий в формате имён колонок между драйверами/версиями.
     """
     if mapping is None:
         return None
@@ -1995,16 +1962,6 @@ def _mapping_get_first(mapping: Any, *keys: str) -> Any:
             except Exception:  # noqa: BLE001
                 continue
     return None
-
-
-def build_sqlite_fts_query(term: str) -> str:
-    lemma_tokens, normalized_tokens = _tokenize_search_term(term)
-    parts = []
-    if lemma_tokens:
-        parts.append(' OR '.join(f'lemma:{token}*' for token in lemma_tokens))
-    if normalized_tokens:
-        parts.append(' OR '.join(f'normalized_text:{token}*' for token in normalized_tokens))
-    return ' OR '.join(parts)
 
 
 def build_postgres_ts_query(term: str) -> str:
@@ -2023,48 +1980,27 @@ def build_postgres_ts_query(term: str) -> str:
 
 
 def search_articles(query: str, limit: int = 10, author_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    if IS_SQLITE:
-        fts_query = build_sqlite_fts_query(query)
-        if not fts_query:
-            return []
-        sql = '''
-            SELECT
-                articles.id AS articleId,
-                articles.title AS title,
-                snippet(articles_fts, '', '', '...', -1, 48) AS snippet
-            FROM articles_fts
-            JOIN articles ON articles.id = articles_fts.article_id
-            WHERE articles_fts MATCH ? AND articles.deleted_at IS NULL
-        '''
-        params: List[Any] = [fts_query]
-        if author_id is not None:
-            sql += ' AND articles.author_id = ?'
-            params.append(author_id)
-        sql += ' ORDER BY bm25(articles_fts) ASC LIMIT ?'
-        params.append(limit)
-        rows = CONN.execute(sql, tuple(params)).fetchall()
-    else:
-        ts_query = build_postgres_ts_query(query)
-        if not ts_query:
-            return []
-        base_sql = '''
-            SELECT
-                articles.id AS articleId,
-                articles.title AS title,
-                ts_headline('simple', articles_fts.title, to_tsquery('simple', ?)) AS snippet,
-                ts_rank_cd(articles_fts.search_vector, to_tsquery('simple', ?)) AS rank
-            FROM articles_fts
-            JOIN articles ON articles.id = articles_fts.article_id
-            WHERE articles.deleted_at IS NULL
-              AND articles_fts.search_vector @@ to_tsquery('simple', ?)
-        '''
-        params: List[Any] = [ts_query, ts_query, ts_query]
-        if author_id is not None:
-            base_sql += ' AND articles.author_id = %s'
-            params.append(author_id)
-        base_sql += ' ORDER BY rank DESC, articles.updated_at DESC LIMIT %s'
-        params.append(limit)
-        rows = CONN.execute(base_sql, tuple(params)).fetchall()
+    ts_query = build_postgres_ts_query(query)
+    if not ts_query:
+        return []
+    base_sql = '''
+        SELECT
+            articles.id AS articleId,
+            articles.title AS title,
+            ts_headline('simple', articles_fts.title, to_tsquery('simple', ?)) AS snippet,
+            ts_rank_cd(articles_fts.search_vector, to_tsquery('simple', ?)) AS rank
+        FROM articles_fts
+        JOIN articles ON articles.id = articles_fts.article_id
+        WHERE articles.deleted_at IS NULL
+          AND articles_fts.search_vector @@ to_tsquery('simple', ?)
+    '''
+    params: List[Any] = [ts_query, ts_query, ts_query]
+    if author_id is not None:
+        base_sql += ' AND articles.author_id = ?'
+        params.append(author_id)
+    base_sql += ' ORDER BY rank DESC, articles.updated_at DESC LIMIT ?'
+    params.append(limit)
+    rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results: List[Dict[str, Any]] = []
     for row in rows:
         mapping = getattr(row, '_mapping', row)
@@ -2083,54 +2019,30 @@ def search_articles(query: str, limit: int = 10, author_id: Optional[str] = None
 
 
 def search_blocks(query: str, limit: int = 20, author_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    if IS_SQLITE:
-        fts_query = build_sqlite_fts_query(query)
-        if not fts_query:
-            return []
-        sql = '''
-            SELECT
-                blocks.id AS blockId,
-                articles.id AS articleId,
-                articles.title AS articleTitle,
-                snippet(blocks_fts, '', '', '...', -1, 64) AS snippet,
-                blocks.text AS blockText
-            FROM blocks_fts
-            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
-            JOIN articles ON articles.id = blocks.article_id
-            WHERE blocks_fts MATCH ? AND articles.deleted_at IS NULL
-        '''
-        params: List[Any] = [fts_query]
-        if author_id is not None:
-            sql += ' AND articles.author_id = ?'
-            params.append(author_id)
-        sql += ' ORDER BY bm25(blocks_fts) ASC LIMIT ?'
-        params.append(limit)
-        rows = CONN.execute(sql, tuple(params)).fetchall()
-    else:
-        ts_query = build_postgres_ts_query(query)
-        if not ts_query:
-            return []
-        base_sql = '''
-            SELECT
-                blocks.id AS blockId,
-                articles.id AS articleId,
-                articles.title AS articleTitle,
-                ts_headline('simple', blocks_fts.text, to_tsquery('simple', ?)) AS snippet,
-                blocks.text AS blockText,
-                ts_rank_cd(blocks_fts.search_vector, to_tsquery('simple', ?)) AS rank
-            FROM blocks_fts
-            JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
-            JOIN articles ON articles.id = blocks.article_id
-            WHERE articles.deleted_at IS NULL
-              AND blocks_fts.search_vector @@ to_tsquery('simple', ?)
-        '''
-        params: List[Any] = [ts_query, ts_query, ts_query]
-        if author_id is not None:
-            base_sql += ' AND articles.author_id = %s'
-            params.append(author_id)
-        base_sql += ' ORDER BY rank DESC, blocks.updated_at DESC LIMIT %s'
-        params.append(limit)
-        rows = CONN.execute(base_sql, tuple(params)).fetchall()
+    ts_query = build_postgres_ts_query(query)
+    if not ts_query:
+        return []
+    base_sql = '''
+        SELECT
+            blocks.id AS blockId,
+            articles.id AS articleId,
+            articles.title AS articleTitle,
+            ts_headline('simple', blocks_fts.text, to_tsquery('simple', ?)) AS snippet,
+            blocks.text AS blockText,
+            ts_rank_cd(blocks_fts.search_vector, to_tsquery('simple', ?)) AS rank
+        FROM blocks_fts
+        JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
+        JOIN articles ON articles.id = blocks.article_id
+        WHERE articles.deleted_at IS NULL
+          AND blocks_fts.search_vector @@ to_tsquery('simple', ?)
+    '''
+    params: List[Any] = [ts_query, ts_query, ts_query]
+    if author_id is not None:
+        base_sql += ' AND articles.author_id = ?'
+        params.append(author_id)
+    base_sql += ' ORDER BY rank DESC, blocks.updated_at DESC LIMIT ?'
+    params.append(limit)
+    rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results: List[Dict[str, Any]] = []
     for row in rows:
         mapping = getattr(row, '_mapping', row)
