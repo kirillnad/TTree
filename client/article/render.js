@@ -19,6 +19,7 @@ import {
 import { attachRichContentHandlers } from '../block.js';
 import { renderSidebarArticleList } from '../sidebar.js';
 import { applyPendingPreviewMarkup } from '../undo.js';
+import { navigate, routing } from '../routing.js';
 import { updateArticleHeaderUi } from './header.js';
 import { registerBlockDragSource, updateDragModeUi, clearDragLayer, ensureDragLayer } from './dnd.js';
 
@@ -359,6 +360,15 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     blockEl.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (state.isRagView && state.ragBlockMap && state.ragBlockMap[block.id]) {
+        const target = state.ragBlockMap[block.id];
+        if (target && target.articleId && target.blockId) {
+          state.scrollTargetBlockId = target.blockId;
+          state.currentBlockId = target.blockId;
+          navigate(routing.article(target.articleId));
+          return;
+        }
+      }
       const interactive = event.target.closest('button, a, [contenteditable="true"], .block-edit-actions');
       const headerEl = blockEl.querySelector('.block-header');
       const bodyEl = blockEl.querySelector('.block-text.block-body');
@@ -387,7 +397,7 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     surface.addEventListener('dblclick', (event) => {
       if (state.mode !== 'view') return;
-      if (state.isPublicView) return;
+      if (state.isPublicView || state.isRagView) return;
       const interactive = event.target.closest('button, a, [contenteditable="true"]');
       if (interactive && !interactive.matches('.block-text[contenteditable="true"]')) return;
       event.stopPropagation();

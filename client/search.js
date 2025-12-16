@@ -12,25 +12,41 @@ function highlightSnippet(snippet = '') {
   return escapeHtml(snippet).replace(regex, (match) => `<mark>${match}</mark>`);
 }
 
+function updateRagOpenButton() {
+  if (!refs.ragOpenBtn) return;
+  const shouldShow =
+    state.searchMode === 'semantic' &&
+    Boolean(state.searchQuery.trim()) &&
+    !state.searchLoading &&
+    !state.searchError &&
+    Array.isArray(state.searchResults) &&
+    state.searchResults.length > 0;
+  refs.ragOpenBtn.classList.toggle('hidden', !shouldShow);
+}
+
 export function renderSearchResults() {
   if (!refs.searchResults) return;
   const query = state.searchQuery.trim();
   if (!query) {
     refs.searchResults.classList.add('hidden');
     refs.searchResults.innerHTML = '';
+    updateRagOpenButton();
     return;
   }
   refs.searchResults.classList.remove('hidden');
   if (state.searchLoading) {
     refs.searchResults.innerHTML = '<div class="search-result-empty">Поиск...</div>';
+    updateRagOpenButton();
     return;
   }
   if (state.searchError) {
     refs.searchResults.innerHTML = `<div class="search-result-empty">${escapeHtml(state.searchError)}</div>`;
+    updateRagOpenButton();
     return;
   }
   if (!state.searchResults.length) {
     refs.searchResults.innerHTML = '<div class="search-result-empty">Ничего не найдено</div>';
+    updateRagOpenButton();
     return;
   }
   refs.searchResults.innerHTML = '';
@@ -61,6 +77,7 @@ export function renderSearchResults() {
     });
     refs.searchResults.appendChild(item);
   });
+  updateRagOpenButton();
 }
 
 export function hideSearchResults() {
@@ -144,6 +161,7 @@ function handleSearchResultClick(result) {
   state.searchQuery = '';
   state.searchResults = [];
   state.searchError = '';
+  updateRagOpenButton();
   const isArticle = result.type === 'article';
   state.scrollTargetBlockId = isArticle ? null : result.blockId;
   state.currentBlockId = isArticle ? null : result.blockId;
@@ -151,4 +169,18 @@ function handleSearchResultClick(result) {
     setSidebarMobileOpen(false);
   }
   navigate(routing.article(result.articleId));
+}
+
+export function openRagPageFromCurrentSearch() {
+  const query = state.searchQuery.trim();
+  if (!query) return;
+  if (state.searchMode !== 'semantic') return;
+  if (state.searchLoading || state.searchError) return;
+  if (!Array.isArray(state.searchResults) || !state.searchResults.length) return;
+  state.ragQuery = query;
+  // Сохраняем «снимок» результатов: пользователь может продолжить вводить в поиске.
+  state.ragResults = JSON.parse(JSON.stringify(state.searchResults));
+  state.scrollTargetBlockId = null;
+  state.currentBlockId = null;
+  navigate(routing.article('RAG'));
 }

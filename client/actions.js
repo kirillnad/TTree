@@ -51,6 +51,7 @@ async function maybeEncryptBlockPayloadForCurrentArticle(blockPayload) {
 
 export async function startEditing() {
   if (!state.currentBlockId) return;
+  if (state.isRagView) return;
   const targetBlockId = state.currentBlockId;
   // Запоминаем текущую прокрутку списка блоков, чтобы
   // вход в режим редактирования не «подскакивал» страницу.

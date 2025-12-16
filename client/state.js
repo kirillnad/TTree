@@ -2,6 +2,8 @@ export const state = {
   mode: 'view',
   // Открыт ли публичный просмотр внутри SPA (например, когда Android открывает /p/<slug> в установленном PWA).
   isPublicView: false,
+  // Специальная read-only страница для AI-резюме по результатам поиска.
+  isRagView: false,
   currentUser: null,
   articleId: null,
   article: null,
@@ -22,6 +24,9 @@ export const state = {
   searchLoading: false,
   searchRequestId: 0,
   searchMode: 'classic',
+  ragQuery: '',
+  ragResults: [],
+  ragBlockMap: {},
   scrollTargetBlockId: null,
   pendingEditBlockId: null,
   isEditingTitle: false,

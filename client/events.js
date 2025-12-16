@@ -26,7 +26,7 @@ import {
   setCurrentBlock,
   applyEditingUndoStep,
 } from './block.js';
-import { handleSearchInput, hideSearchResults, renderSearchResults } from './search.js';
+import { handleSearchInput, hideSearchResults, renderSearchResults, openRagPageFromCurrentSearch } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
 import {
   toggleHintPopover,
@@ -394,6 +394,32 @@ export function attachEvents() {
       if (state.searchQuery.trim()) {
         renderSearchResults();
       }
+    });
+  }
+  const updateSearchClearBtn = () => {
+    if (!refs.searchClearBtn || !refs.searchInput) return;
+    refs.searchClearBtn.classList.toggle('hidden', !(refs.searchInput.value || '').trim());
+  };
+  if (refs.searchInput) {
+    refs.searchInput.addEventListener('input', updateSearchClearBtn);
+    refs.searchInput.addEventListener('focus', updateSearchClearBtn);
+    updateSearchClearBtn();
+  }
+  if (refs.searchClearBtn && refs.searchInput) {
+    refs.searchClearBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      refs.searchInput.value = '';
+      refs.searchInput.focus({ preventScroll: true });
+      refs.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      updateSearchClearBtn();
+    });
+  }
+  if (refs.ragOpenBtn) {
+    refs.ragOpenBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openRagPageFromCurrentSearch();
     });
   }
   const updateSearchModeButton = () => {

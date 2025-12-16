@@ -80,7 +80,7 @@ export function handleViewKey(event) {
   ) {
     return;
   }
-  if (state.isPublicView) {
+  if (state.isPublicView || state.isRagView) {
     const code = typeof event.code === 'string' ? event.code : '';
     if (code === 'Enter') {
       event.preventDefault();

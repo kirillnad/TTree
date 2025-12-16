@@ -353,6 +353,12 @@ html {
   gap: 0.35rem;
 }
 
+.search-panel__input-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 #searchInput {
   width: 100%;
   border-radius: 3px;
@@ -363,6 +369,32 @@ html {
   font-size: 0.88rem;
   transition: border 0.15s ease;
   box-sizing: border-box;
+}
+
+.search-panel__clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #3c3c3c;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  line-height: 1;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.search-panel__clear:hover,
+.search-panel__clear:focus-visible {
+  border-color: #525252;
+  color: #ffffff;
+  outline: none;
 }
 
 .search-panel__toggle {

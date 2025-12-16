@@ -167,20 +167,45 @@ export function renderSidebarArticleList() {
   if (refs.backToList) refs.backToList.classList.toggle('active', state.sidebarArticlesMode !== 'recent');
   if (refs.sidebarRecentBtn) refs.sidebarRecentBtn.classList.toggle('active', state.sidebarArticlesMode === 'recent');
   const query = (state.articleFilterQuery || '').trim().toLowerCase();
+  const mode = state.sidebarArticlesMode === 'recent' ? 'recent' : 'tree';
   const source = state.isTrashView ? state.deletedArticlesIndex : state.articlesIndex;
   const favs = new Set(state.favoriteArticles || []);
   const collapsedSet = new Set(state.sidebarCollapsedArticleIds || []);
   const selectedId = state.sidebarSelectedArticleId || state.articleId;
+  const recentIds = Array.isArray(state.recentArticleIds) ? state.recentArticleIds : [];
+
+  // Виртуальные статьи (например, RAG) — не приходят с сервера, но должны
+  // отображаться в "Последние" и/или "Избранные".
+  const virtual = [];
+  const shouldIncludeRag =
+    !state.isTrashView && (favs.has('RAG') || (mode === 'recent' && recentIds.includes('RAG')));
+  if (shouldIncludeRag) {
+    const ragQuery = (state.ragQuery || '').trim();
+    virtual.push({
+      id: 'RAG',
+      title: ragQuery ? `AI: ${ragQuery}` : 'AI: результаты поиска',
+      updatedAt: new Date().toISOString(),
+      deletedAt: null,
+      publicSlug: null,
+      parentId: null,
+      position: 0,
+    });
+  }
+  const virtualSet = new Set(virtual.map((v) => v.id));
+  const mergedSource =
+    virtual.length && !state.isTrashView
+      ? [...(source || []).filter((a) => !virtualSet.has(a.id)), ...virtual]
+      : source;
 
   // Отдельно считаем наличие детей по полному списку (без фильтра),
   // чтобы иконка «есть дети» не пропадала из‑за фильтрации.
   const hasChildren = new Set();
-  (source || []).forEach((article) => {
+  (mergedSource || []).forEach((article) => {
     const pid = article.parentId || null;
     if (pid) hasChildren.add(pid);
   });
 
-  const base = (source || []).filter(
+  const base = (mergedSource || []).filter(
     (article) =>
       (!query ? true : (article.title || 'Без названия').toLowerCase().includes(query)) &&
       (!state.isTrashView ? article.id !== 'inbox' : true),
@@ -199,10 +224,8 @@ export function renderSidebarArticleList() {
     return;
   }
 
-  const mode = state.sidebarArticlesMode === 'recent' ? 'recent' : 'tree';
   if (mode === 'recent') {
     const byId = new Map(base.map((a) => [a.id, a]));
-    const recentIds = Array.isArray(state.recentArticleIds) ? state.recentArticleIds : [];
     const recentSet = new Set(recentIds);
     const recentList = recentIds.map((id) => byId.get(id)).filter(Boolean);
     const rest = sortArticles(base.filter((a) => !recentSet.has(a.id)));
@@ -521,4 +544,3 @@ export async function ensureDeletedArticlesIndexLoaded() {
 export function hideSidebarAuxUiWhenLeavingList() {
   hideHintPopover();
 }
-

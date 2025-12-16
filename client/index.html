@@ -111,12 +111,32 @@
           </div>
           <div class="search-panel sidebar-section">
             <div class="search-panel__row">
-              <input
-                id="searchInput"
-                type="text"
-                placeholder="Поиск..."
-                autocomplete="off"
-              />
+              <div class="search-panel__input-wrap">
+                <input
+                  id="searchInput"
+                  type="text"
+                  placeholder="Поиск..."
+                  autocomplete="off"
+                />
+                <button
+                  id="searchClearBtn"
+                  class="search-panel__clear hidden"
+                  type="button"
+                  title="Очистить поиск"
+                  aria-label="Очистить поиск"
+                >
+                  ×
+                </button>
+              </div>
+              <button
+                id="ragOpenBtn"
+                class="search-panel__toggle hidden"
+                type="button"
+                title="Открыть страницу с резюме и найденными блоками"
+                aria-label="Открыть RAG страницу"
+              >
+                <span>R</span>
+              </button>
               <button
                 id="searchModeToggle"
                 class="search-panel__toggle"

@@ -156,6 +156,7 @@ export async function mergeAllBlocksIntoFirst() {
 
 export async function loadArticleView(id) {
   state.isPublicView = false;
+  state.isRagView = false;
   document.body.classList.remove('public-embedded');
   // При открытии страницы всегда выходим из режима редактирования заголовка,
   // чтобы заголовок не «прятался» за полем ввода, особенно на мобильных.
@@ -165,6 +166,69 @@ export async function loadArticleView(id) {
   if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.blocksContainer.innerHTML = 'Загрузка...';
   try {
+    if (id === 'RAG') {
+      // Специальная страница (виртуальная статья) с резюме + найденными блоками.
+      state.isRagView = true;
+      state.mode = 'view';
+      state.editingBlockId = null;
+      state.pendingEditBlockId = null;
+      state.scrollTargetBlockId = null;
+      state.ragBlockMap = {};
+      recordArticleOpened('RAG');
+      const query = (state.ragQuery || '').trim();
+      const results = Array.isArray(state.ragResults) ? state.ragResults : [];
+      const total = results.length;
+      const uniqueArticles = Array.from(
+        new Set(results.map((r) => (r && r.articleTitle ? String(r.articleTitle) : '')).filter(Boolean)),
+      );
+      const topArticles = uniqueArticles.slice(0, 8);
+      const summaryLines = [
+        `<p><strong>AI-поиск: результаты</strong></p>`,
+        `<p><span class="meta">Запрос:</span> ${query ? query : '—'}</p>`,
+        `<p><span class="meta">Найдено блоков:</span> ${total}</p>`,
+      ];
+      if (topArticles.length) {
+        summaryLines.push(`<p><span class="meta">Статьи:</span> ${topArticles.join(' · ')}</p>`);
+      }
+      if (uniqueArticles.length > topArticles.length) {
+        summaryLines.push(`<p><span class="meta">…и ещё:</span> ${uniqueArticles.length - topArticles.length}</p>`);
+      }
+      const blocks = [
+        {
+          id: 'rag-summary',
+          text: summaryLines.join(''),
+          children: [],
+          collapsed: false,
+        },
+        ...results
+          .filter((r) => r && r.type === 'block')
+          .map((r, idx) => {
+            const blockHtml = r.blockText || '';
+            const title = r.articleTitle ? String(r.articleTitle) : '';
+            const header = title ? `<p><strong>${title}</strong></p>` : `<p><strong>Результат ${idx + 1}</strong></p>`;
+            const ragId = `rag-${r.blockId || idx}`;
+            if (r.articleId && r.blockId) {
+              state.ragBlockMap[ragId] = { articleId: r.articleId, blockId: r.blockId };
+            }
+            return {
+              id: ragId,
+              text: `${header}${blockHtml}`,
+              children: [],
+              collapsed: false,
+            };
+          }),
+      ];
+      state.article = {
+        id: 'RAG',
+        title: query ? `AI: ${query}` : 'AI: результаты поиска',
+        blocks,
+        updated_at: new Date().toISOString(),
+      };
+      state.articleId = 'RAG';
+      state.currentBlockId = blocks[0]?.id || null;
+      renderArticle();
+      return;
+    }
     const editTarget = state.pendingEditBlockId || undefined;
     // При входе в режим редактирования не скроллим блок к центру,
     // а используем scrollTargetBlockId только для переходов/поиска.
@@ -179,6 +243,7 @@ export async function loadArticleView(id) {
 
 export async function loadListView() {
   state.isPublicView = false;
+  state.isRagView = false;
   document.body.classList.remove('public-embedded');
   if (refs.usersView) refs.usersView.classList.add('hidden');
   state.article = null;
@@ -208,6 +273,7 @@ export async function loadListView() {
 
 export async function loadPublicArticleView(slug) {
   state.isPublicView = true;
+  state.isRagView = false;
   document.body.classList.add('public-embedded');
   if (refs.usersView) refs.usersView.classList.add('hidden');
   setViewMode(true);
@@ -306,4 +372,3 @@ export async function createInboxNote() {
     showToast(error.message || 'Не удалось создать заметку');
   }
 }
-
