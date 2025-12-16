@@ -1,5 +1,5 @@
 ﻿import { state } from './state.js';
-import { apiRequest, uploadImageFile, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js?v=2';
+import { apiRequest, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js?v=2';
 import { showToast } from './toast.js';
 import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
@@ -8,6 +8,35 @@ import { fetchArticlesIndex } from './api.js?v=2';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
 import { splitEditingBlockAtCaret } from './actions.js';
+// Вынесено из этого файла: навигация/выделение блоков → `./block/selection.js`.
+import { flattenVisible, findBlock, setCurrentBlock, moveSelection, extendSelection, updateSelectionUi } from './block/selection.js';
+
+// Публичный API остался прежним, но реализация вынесена в модуль `./block/selection.js`.
+export { flattenVisible, findBlock, setCurrentBlock, moveSelection, extendSelection };
+
+// Вынесено из этого файла: заголовок/тело блока + склейка <p> → `./block/paragraphMerge.js`.
+import { isSeparatorNode, extractBlockSections, normalizeToParagraphs, maybeHandleParagraphMergeKeydown } from './block/paragraphMerge.js';
+// Публичный API остался прежним, но реализация вынесена в модуль `./block/paragraphMerge.js`.
+export { isSeparatorNode, extractBlockSections };
+
+// Вынесено из этого файла: очистка/санитайз HTML → `./block/sanitize.js`.
+import { cleanupEditableHtml, linkifyHtml, sanitizePastedHtml, trimPastedHtml } from './block/sanitize.js';
+export { cleanupEditableHtml };
+
+// Вынесено из этого файла: плейсхолдеры contenteditable → `./block/editable.js`.
+import { clearEmptyPlaceholder } from './block/editable.js';
+
+// Вынесено из этого файла: изображения (вставка + resize) → `./block/images.js`.
+import {
+  isImageLikeFile,
+  collectImageFiles,
+  collectNonImageFiles,
+  insertImageFromFile,
+  initResizableImageResizing,
+} from './block/images.js';
+
+// Вынесено из этого файла: преобразование <p> ↔ <ol>/<ul> → `./block/lists.js`.
+import { applyListAction as applyListActionFromModule } from './block/lists.js';
 
 function resolveYandexDiskHref(rawPath = '') {
   if (!rawPath) return '';
@@ -24,15 +53,7 @@ function resolveYandexDiskHref(rawPath = '') {
   return rawPath;
 }
 
-export function flattenVisible(blocks = [], acc = []) {
-  blocks.forEach((block) => {
-    acc.push(block);
-    if (!block.collapsed && block.children?.length) {
-      flattenVisible(block.children, acc);
-    }
-  });
-  return acc;
-}
+// (flattenVisible) перенесено в `./block/selection.js`.
 
 const EDITING_UNDO_MAX_WORD_TAIL = 16;
 
@@ -150,241 +171,11 @@ export function applyEditingUndoStep(direction) {
   return true;
 }
 
-export function findBlock(blockId, blocks = state.article?.blocks || [], parent = null, ancestors = []) {
-  for (let i = 0; i < blocks.length; i += 1) {
-    const block = blocks[i];
-    if (block.id === blockId) {
-      return { block, parent, index: i, siblings: blocks, ancestors };
-    }
-    const nested = findBlock(blockId, block.children || [], block, [...ancestors, block]);
-    if (nested) {
-      return nested;
-    }
-  }
-  return null;
-}
+// (findBlock/setCurrentBlock/moveSelection/extendSelection + updateSelectionUi)
+// перенесены в `./block/selection.js`.
 
-export function setCurrentBlock(blockId, options = {}) {
-  setCurrentBlockInternal(blockId, { preserveSelection: false, ...options });
-}
-
-function updateSelectionUi({ scrollIntoView = false, scrollBehavior = 'smooth' } = {}) {
-  const selectedIds = new Set(Array.isArray(state.selectedBlockIds) ? state.selectedBlockIds : []);
-  if (state.currentBlockId) {
-    selectedIds.add(state.currentBlockId);
-  }
-  const blockEls = document.querySelectorAll('.block[data-block-id]');
-  blockEls.forEach((el) => {
-    const id = el.getAttribute('data-block-id');
-    const shouldSelect = id && selectedIds.has(id);
-    el.classList.toggle('selected', Boolean(shouldSelect));
-    el.classList.remove('block--selected-root-ancestor');
-    const surface = el.querySelector(':scope > .block-surface');
-    if (surface) surface.classList.remove('block--selected-root-ancestor');
-  });
-
-  // Подсветка корневого родителя для вложенного текущего блока.
-  if (state.currentBlockId && state.article && Array.isArray(state.article.blocks)) {
-    const located = findBlock(state.currentBlockId);
-    const ancestors = located?.ancestors || [];
-    const rootTargetId = ancestors.length > 0 ? ancestors[0]?.id : located?.block?.id;
-    if (rootTargetId) {
-      const rootEl = document.querySelector(`.block[data-block-id="${rootTargetId}"]`);
-      if (rootEl) {
-        // Подсвечиваем только "surface" корневого родителя, чтобы подсветка
-        // не растягивалась на всю высоту поддерева (children).
-        const rootSurface = rootEl.querySelector(':scope > .block-surface');
-        if (rootSurface) rootSurface.classList.add('block--selected-root-ancestor');
-      }
-    }
-  }
-  if (scrollIntoView && state.mode === 'view' && state.currentBlockId) {
-    const currentEl = document.querySelector(`.block[data-block-id="${state.currentBlockId}"]`);
-    if (currentEl) {
-      currentEl.scrollIntoView({ behavior: scrollBehavior || 'smooth', block: 'nearest' });
-    }
-  }
-}
-
-export function moveSelection(offset) {
-  if (!state.article) return;
-  const ordered = flattenVisible(state.article.blocks);
-  const index = ordered.findIndex((b) => b.id === state.currentBlockId);
-  if (index === -1) return;
-  const next = ordered[index + offset];
-  if (next) {
-    if (state.mode === 'view') {
-      state.scrollTargetBlockId = next.id;
-    }
-    // Обычное перемещение стрелками — сбрасываем мультивыделение.
-    setCurrentBlockInternal(next.id, { preserveSelection: false });
-  }
-}
-
-/**
- * Внутренний помощник для установки текущего блока.
- * Можно управлять тем, сбрасывать ли мультивыделение.
- */
-function setCurrentBlockInternal(blockId, options = {}) {
-  if (!blockId || state.currentBlockId === blockId) return;
-  const { preserveSelection = false, scrollIntoView, scrollBehavior } = options;
-  state.currentBlockId = blockId;
-  if (!preserveSelection) {
-    state.selectionAnchorBlockId = null;
-    state.selectedBlockIds = [];
-  }
-  const shouldScroll = typeof scrollIntoView === 'boolean' ? scrollIntoView : state.mode === 'view';
-  updateSelectionUi({ scrollIntoView: shouldScroll, scrollBehavior: scrollBehavior || 'smooth' });
-}
-
-export function extendSelection(offset) {
-  if (!state.article) return;
-  const ordered = flattenVisible(state.article.blocks);
-  if (!ordered.length) return;
-
-  // Базовый якорь — либо уже существующий, либо текущий блок.
-  let anchorId = state.selectionAnchorBlockId || state.currentBlockId || ordered[0].id;
-  if (!anchorId) anchorId = ordered[0].id;
-  if (!state.selectionAnchorBlockId) {
-    state.selectionAnchorBlockId = anchorId;
-  }
-
-  const anchorIndex = ordered.findIndex((b) => b.id === anchorId);
-  if (anchorIndex === -1) return;
-
-  const currentId = state.currentBlockId || anchorId;
-  let currentIndex = ordered.findIndex((b) => b.id === currentId);
-  if (currentIndex === -1) currentIndex = anchorIndex;
-
-  const newIndex = currentIndex + offset;
-  if (newIndex < 0 || newIndex >= ordered.length) return;
-
-  const [start, end] = newIndex >= anchorIndex ? [anchorIndex, newIndex] : [newIndex, anchorIndex];
-  const selected = ordered.slice(start, end + 1).map((b) => b.id);
-
-  state.selectedBlockIds = selected;
-  state.currentBlockId = ordered[newIndex].id;
-  if (state.mode === 'view') {
-    state.scrollTargetBlockId = state.currentBlockId;
-  }
-  updateSelectionUi({ scrollIntoView: state.mode === 'view' });
-}
-
-export function isSeparatorNode(node) {
-  if (!node) return false;
-  if (node.nodeType === Node.TEXT_NODE) return /\n\s*\n/.test(node.textContent || '');
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    if (node.tagName === 'BR') return true;
-    if (node.tagName === 'P' || node.tagName === 'DIV') {
-      const normalizedHtml = (node.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&(nbsp|#160);/gi, '').trim();
-      if (!normalizedHtml) return true;
-      const textContent = (node.textContent || '').replace(/\u00a0/g, '').trim();
-      if (!textContent && !node.querySelector('img')) return true;
-    }
-  }
-  return false;
-}
-
-function serializeNodes(nodes = []) {
-  const wrapper = document.createElement('div');
-  nodes.forEach((node) => wrapper.appendChild(node));
-  return wrapper.innerHTML.trim();
-}
-
-function normalizeToParagraphs(html = '') {
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
-  const paragraphs = [];
-  const pushParagraph = (contentHtml = '') => {
-    const p = document.createElement('p');
-    if (contentHtml) {
-      p.innerHTML = contentHtml;
-    } else {
-      p.appendChild(document.createElement('br'));
-    }
-    paragraphs.push(p);
-  };
-
-  Array.from(template.content.childNodes).forEach((node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = (node.textContent || '').trim();
-      if (text) pushParagraph(text);
-      return;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
-    if (node.tagName === 'P') {
-      paragraphs.push(node.cloneNode(true));
-      return;
-    }
-    if (node.tagName === 'BR') {
-      pushParagraph('');
-      return;
-    }
-    if (node.tagName === 'DIV') {
-      pushParagraph(node.innerHTML);
-      return;
-    }
-    // Any other element: wrap inside paragraph
-    pushParagraph(node.outerHTML);
-  });
-
-  if (!paragraphs.length) pushParagraph('');
-  const out = document.createElement('div');
-  paragraphs.forEach((p) => out.appendChild(p));
-  return out.innerHTML;
-}
-
-export function extractBlockSections(html = '') {
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
-
-  // РЈР±РёСЂР°РµРј РІРѕР·РјРѕР¶РЅС‹Рµ РѕР±РµСЂС‚РєРё .block-header, С‡С‚РѕР±С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РІС‹РґРµР»СЏС‚СЊ Р·Р°РіРѕР»РѕРІРѕРє/С‚РµР»Рѕ
-  template.content.querySelectorAll('.block-header').forEach((node) => {
-    const parent = node.parentNode;
-    if (!parent) return;
-    while (node.firstChild) {
-      parent.insertBefore(node.firstChild, node);
-    }
-    parent.removeChild(node);
-  });
-
-  const nodes = Array.from(template.content.childNodes);
-
-  const isIgnorableWhitespaceText = (node) =>
-    node?.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim();
-
-  // Новый принцип заголовка:
-  // заголовок — это только первый <p>, но только если СРАЗУ после него идёт
-  // пустая строка (разделитель), иначе заголовка нет вообще.
-  let firstIdx = 0;
-  while (firstIdx < nodes.length && isIgnorableWhitespaceText(nodes[firstIdx])) firstIdx += 1;
-  const first = nodes[firstIdx];
-  if (!first || first.nodeType !== Node.ELEMENT_NODE || first.tagName !== 'P' || isSeparatorNode(first)) {
-    return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
-  }
-
-  let secondIdx = firstIdx + 1;
-  while (secondIdx < nodes.length && isIgnorableWhitespaceText(nodes[secondIdx])) secondIdx += 1;
-  const second = nodes[secondIdx];
-  const isImmediateEmptyLine =
-    Boolean(second) &&
-    isSeparatorNode(second) &&
-    (second.nodeType === Node.ELEMENT_NODE
-      ? second.tagName === 'P' || second.tagName === 'DIV' || second.tagName === 'BR'
-      : false);
-
-  if (!isImmediateEmptyLine) {
-    // Если пустая строка встречается после 2+ абзацев — это не заголовок.
-    return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
-  }
-
-  const titleNodes = [first.cloneNode(true)];
-  const bodyNodes = [];
-  for (let i = secondIdx + 1; i < nodes.length; i += 1) {
-    bodyNodes.push(nodes[i].cloneNode(true));
-  }
-  return { titleHtml: serializeNodes(titleNodes), bodyHtml: serializeNodes(bodyNodes) };
-}
+// (isSeparatorNode/extractBlockSections/normalizeToParagraphs + merge <p> keydown)
+// перенесены в `./block/paragraphMerge.js`.
 
 export function buildEditableBlockHtml(html = '') {
   const sections = extractBlockSections(html);
@@ -429,220 +220,7 @@ export function buildStoredBlockHtml(html = '') {
   return `${header}<div><br /></div>${sections.bodyHtml}`;
 }
 
-export function cleanupEditableHtml(html = '') {
-  const originalTemplate = document.createElement('template');
-  originalTemplate.innerHTML = html || '';
-  const originalText = (originalTemplate.content.textContent || '')
-    .replace(/\u00a0/g, ' ')
-    .trim();
-  const originalHasAnchors = Boolean(originalTemplate.content.querySelector('a'));
-  // Запоминаем, была ли в исходном HTML ведущая «пустая» строка
-  // (первый осмысленный узел — пустой абзац/див, как в isSeparatorNode).
-  let hasLeadingEmptyLine = false;
-  {
-    const nodes = Array.from(originalTemplate.content.childNodes || []);
-    for (let i = 0; i < nodes.length; i += 1) {
-      const node = nodes[i];
-      if (node.nodeType === Node.TEXT_NODE) {
-        if (!(node.textContent || '').trim()) continue;
-        // Ненулевая текстовая нода — значит, пустой строки в начале не было.
-        break;
-      }
-      if (isSeparatorNode(node)) {
-        hasLeadingEmptyLine = true;
-      }
-      break;
-    }
-  }
-
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
-
-  // Специальный случай: блок состоит только из строк вида "|...|...|"
-  // Превращаем их сразу в HTML-таблицу и выходим.
-  const tryConvertPipeTable = () => {
-    const children = Array.from(template.content.childNodes || []);
-    if (!children.length) return false;
-    const paras = Array.from(template.content.querySelectorAll('p'));
-    if (paras.length < 2) return false;
-    const isTableRow = (line) => {
-      const trimmed = line.trim();
-      return trimmed.startsWith('|') && trimmed.indexOf('|', 1) !== -1;
-    };
-    const lines = paras.map((p) => (p.textContent || '').replace(/\u00a0/g, ' ').trim());
-    const nonEmptyLines = lines.filter((t) => t);
-    if (nonEmptyLines.length < 2) return false;
-    if (!nonEmptyLines.every(isTableRow)) return false;
-
-    const allRows = nonEmptyLines.map((raw) => {
-      const stripped = raw.trim();
-      const inner = stripped.endsWith('|') ? stripped.slice(1, -1) : stripped.slice(1);
-      return inner.split('|').map((cell) => cell.trim());
-    });
-    const header = allRows[0];
-    const body = allRows.slice(1);
-    const colCount = body.reduce((max, row) => Math.max(max, row.length), header.length);
-    const table = document.createElement('table');
-    table.className = 'memus-table';
-    const colgroup = document.createElement('colgroup');
-    const width = 100 / Math.max(colCount, 1);
-    for (let i = 0; i < colCount; i += 1) {
-      const col = document.createElement('col');
-      col.setAttribute('width', `${width.toFixed(4)}%`);
-      colgroup.appendChild(col);
-    }
-    table.appendChild(colgroup);
-    const thead = document.createElement('thead');
-    const trHead = document.createElement('tr');
-    for (let i = 0; i < colCount; i += 1) {
-      const th = document.createElement('th');
-      th.textContent = header[i] || '';
-      trHead.appendChild(th);
-    }
-    thead.appendChild(trHead);
-    table.appendChild(thead);
-    const tbody = document.createElement('tbody');
-    body.forEach((row) => {
-      const tr = document.createElement('tr');
-      const cells = [...row];
-      for (let i = 0; i < colCount; i += 1) {
-        const td = document.createElement('td');
-        td.textContent = cells[i] || '';
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    template.content.innerHTML = '';
-    template.content.appendChild(table);
-    const cleanedTable = linkifyHtml(template.innerHTML);
-    return cleanedTable.replace(/<\/a>\s*<a/gi, '</a> <a');
-  };
-
-  const tableResult = tryConvertPipeTable();
-  if (tableResult) {
-    return tableResult;
-  }
-
-  // Удаляем служебные элементы UI (панель управления таблицей и её кнопки),
-  // чтобы они не попадали в сохранённый HTML блока.
-  template.content.querySelectorAll('.table-toolbar, .table-toolbar-btn').forEach((node) => {
-    node.remove();
-  });
-
-  // СЂР°Р·РІРѕСЂР°С‡РёРІР°РµРј .block-header, СѓР±РёСЂР°РµРј РєР»Р°СЃСЃС‹
-  template.content.querySelectorAll('.block-header').forEach((node) => {
-    const parent = node.parentNode;
-    if (!parent) return;
-    while (node.firstChild) parent.insertBefore(node.firstChild, node);
-    parent.removeChild(node);
-  });
-
-  const convertDivsToParagraphs = (root) => {
-    Array.from(root.childNodes).forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        if (node.tagName === 'DIV') {
-          // Р·Р°РјРµРЅСЏРµРј div РЅР° p, СЃРѕС…СЂР°РЅСЏСЏ СЃРѕРґРµСЂР¶РёРјРѕРµ
-          const p = document.createElement('p');
-          p.innerHTML = node.innerHTML;
-          node.parentNode.replaceChild(p, node);
-          convertDivsToParagraphs(p);
-          return;
-        }
-        convertDivsToParagraphs(node);
-      }
-    });
-  };
-
-  convertDivsToParagraphs(template.content);
-
-  // РћР±РѕСЂР°С‡РёРІР°РµРј РІРµСЂС…РЅРµСѓСЂРѕРІРЅРµРІС‹Рµ С‚РµРєСЃС‚РѕРІС‹Рµ СѓР·Р»С‹ РІ Р°Р±Р·Р°С†С‹
-  const wrapTextNodes = (root) => {
-    const nodes = Array.from(root.childNodes || []);
-    nodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const raw = node.textContent || '';
-        const collapsed = raw.replace(/\u00a0/g, ' ');
-        const trimmed = collapsed.trim();
-        if (!trimmed) {
-          // Keep a spacer between inline siblings, otherwise drop
-          if (node.previousSibling && node.nextSibling) {
-            node.textContent = ' ';
-            return;
-          }
-          root.removeChild(node);
-          return;
-        }
-        const p = document.createElement('p');
-        p.textContent = collapsed;
-        root.replaceChild(p, node);
-      }
-    });
-  };
-  wrapTextNodes(template.content);
-
-  // Нормализация пустых строк:
-  // При сохранении НЕ удаляем пустые абзацы и НЕ схлопываем их —
-  // пользователь явно управляет пустыми строками.
-  // Единственное: приводим «пустой <p>» к <p><br/></p>, чтобы caret работал.
-  template.content.querySelectorAll('p').forEach((p) => {
-    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
-    if (!inner) {
-      p.innerHTML = '';
-      p.appendChild(document.createElement('br'));
-    }
-  });
-
-  const root = template.content;
-  const hasAnyParagraph = Boolean(root.querySelector('p'));
-
-  // Гарантируем наличие хотя бы одного абзаца.
-  if (!hasAnyParagraph) {
-    const p = document.createElement('p');
-    p.appendChild(document.createElement('br'));
-    root.appendChild(p);
-  } else if (hasLeadingEmptyLine) {
-    // Если в исходном блоке первая строка была пустой,
-    // восстанавливаем одну пустую строку в начале.
-    const nodesTop = Array.from(root.childNodes || []);
-    let anchor = null;
-    for (let i = 0; i < nodesTop.length; i += 1) {
-      const node = nodesTop[i];
-      if (node.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim()) {
-        // Пропускаем ведущие пробельные текстовые узлы.
-        // Они всё равно не влияют на разметку.
-        continue;
-      }
-      anchor = node;
-      break;
-    }
-    if (!anchor) {
-      // Нет видимых узлов — просто добавляем один пустой абзац.
-      const p = document.createElement('p');
-      p.appendChild(document.createElement('br'));
-      root.appendChild(p);
-    } else if (!(anchor.tagName === 'P' && isSeparatorNode(anchor))) {
-      // Если первый видимый узел уже не является пустым <p>,
-      // вставляем пустую строку перед ним.
-      const p = document.createElement('p');
-      p.appendChild(document.createElement('br'));
-      root.insertBefore(p, anchor);
-    }
-  }
-
-  const cleaned = linkifyHtml(template.innerHTML);
-  // Ensure adjacent links remain visually separated after cleanup
-  const normalized = cleaned.replace(/<\/a>\s*<a/gi, '</a> <a');
-
-  // Защита от «слишком агрессивной» очистки: если после всех преобразований
-  // HTML стал пустым, но в исходном содержимом был текст или ссылки —
-  // возвращаем исходный HTML как есть, чтобы не терять данные пользователя.
-  if (!normalized.trim() && (originalText || originalHasAnchors)) {
-    return html || '';
-  }
-
-  return normalized;
-}
+// cleanupEditableHtml перенесён в `./block/sanitize.js`.
 
 export async function toggleCollapse(blockId) {
   const located = findBlock(blockId);
@@ -751,292 +329,10 @@ export function countBlocks(blocks = []) {
   return (blocks || []).reduce((acc, block) => acc + 1 + countBlocks(block.children || []), 0);
 }
 
-const URL_REGEX = /((?:https?:\/\/|www\.)[^\s<>"']+)/gi;
-function linkifyHtml(html = '') {
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
+// linkifyHtml/sanitizePastedHtml/trimPastedHtml перенесены в `./block/sanitize.js`.
+// clearEmptyPlaceholder перенесён в `./block/editable.js`.
 
-  const linkifyNode = (node) => {
-    if (!node) return;
-    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'A') {
-      return; // skip existing links
-    }
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent || '';
-      URL_REGEX.lastIndex = 0;
-      const hasMatch = URL_REGEX.test(text);
-      if (!hasMatch) return;
-
-      const fragment = document.createDocumentFragment();
-      let lastIndex = 0;
-      URL_REGEX.lastIndex = 0;
-      let current;
-      while ((current = URL_REGEX.exec(text)) !== null) {
-        const [url] = current;
-        if (current.index > lastIndex) {
-          fragment.appendChild(document.createTextNode(text.slice(lastIndex, current.index)));
-        }
-        const href = url.startsWith('http') ? url : `https://${url}`;
-        const anchor = document.createElement('a');
-        anchor.href = href;
-        anchor.target = '_blank';
-        anchor.rel = 'noopener noreferrer';
-        anchor.textContent = url;
-        fragment.appendChild(anchor);
-        lastIndex = current.index + url.length;
-      }
-      if (lastIndex < text.length) {
-        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
-      }
-      if (node.parentNode) {
-        node.parentNode.replaceChild(fragment, node);
-      }
-      return;
-    }
-    Array.from(node.childNodes || []).forEach(linkifyNode);
-  };
-
-  Array.from(template.content.childNodes).forEach(linkifyNode);
-  return template.innerHTML;
-}
-
-function sanitizePastedHtml(html = '') {
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
-
-  // Remove scripts/styles entirely
-  template.content.querySelectorAll('script, style').forEach((node) => node.remove());
-
-  const isUnsafeUrl = (value = '') => /^javascript:/i.test(value.trim());
-
-  const cleanNode = (node) => {
-    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
-      Array.from(node?.childNodes || []).forEach(cleanNode);
-      return;
-    }
-
-    Array.from(node.attributes || []).forEach((attr) => {
-      const name = attr.name.toLowerCase();
-      const value = attr.value || '';
-      if (name.startsWith('on') || name === 'style') {
-        node.removeAttribute(attr.name);
-        return;
-      }
-      if ((name === 'href' || name === 'src') && isUnsafeUrl(value)) {
-        node.removeAttribute(attr.name);
-      }
-    });
-
-    Array.from(node.childNodes || []).forEach(cleanNode);
-  };
-
-  Array.from(template.content.childNodes || []).forEach(cleanNode);
-  return template.innerHTML;
-}
-
-function trimPastedHtml(html = '') {
-  const template = document.createElement('template');
-  template.innerHTML = html || '';
-
-  const isEmptyNode = (node) => {
-    if (!node) return true;
-    if (node.nodeType === Node.TEXT_NODE) {
-      return !(node.textContent || '').replace(/\u00a0/g, '').trim();
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return false;
-    if (node.tagName === 'BR') return true;
-    const content = (node.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
-    const text = (node.textContent || '').replace(/\u00a0/g, '').trim();
-    const hasMedia = !!node.querySelector('img,video,audio,iframe');
-    return !content && !text && !hasMedia;
-  };
-
-  while (template.content.firstChild && isEmptyNode(template.content.firstChild)) {
-    template.content.removeChild(template.content.firstChild);
-  }
-  while (template.content.lastChild && isEmptyNode(template.content.lastChild)) {
-    template.content.removeChild(template.content.lastChild);
-  }
-
-  return template.innerHTML;
-}
-
-function clearEmptyPlaceholder(element) {
-  if (!element) return;
-  const inner = (element.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
-  if (!inner) {
-    element.innerHTML = '';
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    range.collapse(true);
-    const sel = window.getSelection();
-    if (sel) {
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  }
-}
-
-function isImageLikeFile(file) {
-  if (!file) return false;
-  if (file.type && file.type.startsWith('image/')) return true;
-  const name = (file.name || '').toLowerCase();
-  if (!name) return false;
-  return /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(name);
-}
-
-function collectImageFiles(items = [], fallbackFiles = []) {
-  const files = [];
-  Array.from(items || []).forEach((item) => {
-    if (item.kind === 'file') {
-      const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
-      if (file && isImageLikeFile(file)) files.push(file);
-    }
-  });
-  if (!files.length && fallbackFiles?.length) {
-    Array.from(fallbackFiles).forEach((file) => {
-      if (isImageLikeFile(file)) files.push(file);
-    });
-  }
-  return files;
-}
-
-function collectNonImageFiles(items = [], fallbackFiles = []) {
-  const files = [];
-  Array.from(items || []).forEach((item) => {
-    if (item.kind === 'file') {
-      const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
-      if (file && !isImageLikeFile(file)) files.push(file);
-    }
-  });
-  if (!files.length && fallbackFiles?.length) {
-    Array.from(fallbackFiles).forEach((file) => {
-      if (!isImageLikeFile(file)) files.push(file);
-    });
-  }
-  return files;
-}
-
-async function insertImageFromFile(element, file, blockId) {
-  const token = `img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const rawName = file && file.name ? file.name : 'image';
-  const safeName = escapeHtml(rawName).replace(/"/g, '&quot;');
-  // Показываем текстовый плейсхолдер, чтобы было видно, что идёт загрузка.
-  try {
-    clearEmptyPlaceholder(element);
-    insertHtmlAtCaret(
-      element,
-      `<span data-pending-image="true" data-image-token="${token}">${safeName} (загрузка изображения...)</span>`,
-    );
-  } catch (_) {
-    // Если не получилось вставить плейсхолдер, просто продолжаем без него.
-  }
-  try {
-    const { url } = await uploadImageFile(file);
-    const innerImage = `<img src="${url}" alt="${safeName}" draggable="false" />`;
-    const finalHtml = `
-      <span class="resizable-image" style="width:320px;max-width:100%;">
-        <span class="resizable-image__inner">${innerImage}</span>
-        <span class="resizable-image__handle" data-direction="e" aria-hidden="true"></span>
-      </span>
-    `;
-    let container = element;
-    let placeholder =
-      container &&
-      container.querySelector(
-        `span[data-image-token="${token}"][data-pending-image="true"]`,
-      );
-    if (blockId && (!placeholder || !container.isConnected)) {
-      const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
-      if (blockRoot) {
-        const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
-        const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
-        if (liveBody) {
-          container = liveBody;
-          placeholder = container.querySelector(
-            `span[data-image-token="${token}"][data-pending-image="true"]`,
-          );
-        }
-      }
-    }
-    if (placeholder) {
-      placeholder.removeAttribute('data-pending-image');
-      placeholder.removeAttribute('data-image-token');
-      placeholder.outerHTML = finalHtml;
-    } else if (container) {
-      clearEmptyPlaceholder(container);
-      insertHtmlAtCaret(container, finalHtml);
-    }
-  } catch (error) {
-    // Обновляем плейсхолдер сообщением об ошибке, если он ещё в DOM.
-    try {
-      let container = element;
-      if (blockId && !container.isConnected) {
-        const blockRoot = document.querySelector(`.block[data-block-id="${blockId}"]`);
-        if (blockRoot) {
-          const liveEditable = blockRoot.querySelector('.block-text[contenteditable="true"]');
-          const liveBody = liveEditable || blockRoot.querySelector('.block-text.block-body');
-          if (liveBody) {
-            container = liveBody;
-          }
-        }
-      }
-      if (container) {
-        const placeholder = container.querySelector(
-          `span[data-image-token="${token}"][data-pending-image="true"]`,
-        );
-        if (placeholder) {
-          placeholder.textContent = `${rawName} (ошибка загрузки изображения)`;
-          placeholder.removeAttribute('data-pending-image');
-        }
-      }
-    } catch (_) {
-      /* ignore */
-    }
-    // Дополнительный лог на сервер для диагностики проблем на мобильных устройствах.
-    try {
-      fetch('/api/client/log', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'insertImageFromFileError',
-          data: {
-            message: error && error.message ? String(error.message) : String(error),
-            name: file && file.name,
-            type: file && file.type,
-            size: file && file.size,
-          },
-        }),
-      }).catch(() => {});
-    } catch (_) {
-      // ignore logging errors
-    }
-    // Параллельно показываем подробный alert на фронтенде,
-    // чтобы можно было увидеть причину прямо на мобильном.
-    try {
-      const debug = {
-        where: 'insertImageFromFile',
-        message: error && error.message ? String(error.message) : String(error),
-        status: typeof error?.status === 'number' ? error.status : null,
-        name: file && file.name,
-        type: file && file.type,
-        size: file && file.size,
-      };
-      const statusText = debug.status === null ? 'null' : String(debug.status);
-      // eslint-disable-next-line no-alert
-      window.alert(`upload failed (status ${statusText}):\\n${JSON.stringify(debug, null, 2)}`);
-    } catch (_) {
-      // ignore logging errors
-    }
-    const msg = String(error?.message || '').toLowerCase();
-    if (msg.includes('status 0') || msg.includes('network error')) {
-      showToast('Не удалось загрузить изображение (проблема с соединением). Обновите страницу и, при необходимости, войдите заново.');
-    } else {
-      showToast(error.message || 'Не удалось загрузить изображение');
-    }
-  }
-}
+// isImageLikeFile/collectImageFiles/collectNonImageFiles/insertImageFromFile перенесены в `./block/images.js`.
 
 let attachmentUploadNoticeShown = false;
 
@@ -1327,251 +623,17 @@ export function attachRichContentHandlers(element, blockId) {
     const range = sel.getRangeAt(0);
     if (!range || !range.collapsed) return;
 
-    const resolveParagraphAtCaret = (key) => {
-      const raw =
-        range.commonAncestorContainer?.nodeType === Node.ELEMENT_NODE
-          ? range.commonAncestorContainer
-          : range.commonAncestorContainer?.parentElement;
-      const direct = raw?.closest?.('p');
-      if (direct) return direct;
-
-      const root = element;
-      const childNodes = Array.from(root.childNodes);
-      let topChild = range.startContainer;
-      while (topChild && topChild.parentNode !== root) {
-        topChild = topChild.parentNode;
-      }
-      const startIndex = topChild ? childNodes.indexOf(topChild) : -1;
-
-      const search = (direction) => {
-        const step = direction === 'prev' ? -1 : 1;
-        let idx = startIndex;
-        if (idx === -1) {
-          idx = direction === 'prev' ? childNodes.length - 1 : 0;
-        } else {
-          idx = direction === 'prev' ? idx - 1 : idx;
-        }
-        while (idx >= 0 && idx < childNodes.length) {
-          const candidate = childNodes[idx];
-          if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
-            return candidate;
-          }
-          idx += step;
-        }
-        return null;
-      };
-
-      if (key === 'Delete') {
-        return search('next') || search('prev');
-      }
-      if (key === 'Backspace') {
-        return search('prev') || search('next');
-      }
-      return null;
-    };
-
-    const findParagraphsAroundBoundary = () => {
-      if (range.startContainer !== element) return { prev: null, next: null };
-      const nodes = Array.from(element.childNodes);
-      const idx = range.startOffset;
-      let prev = null;
-      let next = null;
-      for (let i = idx - 1; i >= 0; i -= 1) {
-        const candidate = nodes[i];
-        if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
-          prev = candidate;
-          break;
-        }
-      }
-      for (let i = idx; i < nodes.length; i += 1) {
-        const candidate = nodes[i];
-        if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
-          next = candidate;
-          break;
-        }
-      }
-      return { prev, next };
-    };
-
-    const findPrevParagraph = (p) => {
-      let cur = p?.previousElementSibling;
-      while (cur && cur.tagName !== 'P') cur = cur.previousElementSibling;
-      return cur && cur.tagName === 'P' ? cur : null;
-    };
-
-    const findNextParagraph = (p) => {
-      let cur = p?.nextElementSibling;
-      while (cur && cur.tagName !== 'P') cur = cur.nextElementSibling;
-      return cur && cur.tagName === 'P' ? cur : null;
-    };
-
-    const isEmptyFragment = (frag) => {
-      if (!frag) return true;
-      const transparentTags = new Set(['span', 'b', 'strong', 'i', 'em', 'u', 's', 'mark', 'code']);
-      const mediaTags = new Set(['img', 'video', 'audio', 'iframe']);
-      const hasMeaningful = (node) => {
-        if (!node) return false;
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = (node.textContent || '')
-            .replace(/[\u00a0\u200b\u200c\u200d\ufeff]/g, ' ')
-            .trim();
-          return text.length > 0;
-        }
-        if (node.nodeType !== Node.ELEMENT_NODE) return false;
-        const tag = node.tagName?.toLowerCase?.() || '';
-        if (tag === 'br') return false;
-        if (mediaTags.has(tag)) return true;
-        if (tag === 'a') {
-          // Ссылка без текста тоже считаем значимой.
-          if ((node.getAttribute('href') || '').trim()) return true;
-        }
-        const children = Array.from(node.childNodes || []);
-        if (transparentTags.has(tag) || tag === 'a') {
-          return children.some((child) => hasMeaningful(child));
-        }
-        // Для остальных тегов считаем их «значимыми», только если внутри есть что-то значимое.
-        return children.some((child) => hasMeaningful(child));
-      };
-      return !hasMeaningful(frag);
-    };
-
-    const isCaretAtStartOfP = (p) => {
-      if (!p) return false;
-      const start = document.createRange();
-      start.selectNodeContents(p);
-      start.collapse(true);
-      try {
-        return range.compareBoundaryPoints(Range.START_TO_START, start) === 0;
-      } catch (_) {
-        return false;
-      }
-    };
-
-    const isCaretAtEndOfP = (p) => {
-      if (!p) return false;
-      const post = document.createRange();
-      post.selectNodeContents(p);
-      try {
-        post.setStart(range.startContainer, range.startOffset);
-      } catch (_) {
-        return false;
-      }
-      if (isEmptyFragment(post.cloneContents())) return true;
-      // Фолбэк: иногда caret стоит "перед" пустым span/узлом так,
-      // что cloneContents видит элемент. Считаем концом абзаца, если
-      // позиция совпадает с концом содержимого p.
-      try {
-        const end = document.createRange();
-        end.selectNodeContents(p);
-        end.collapse(false);
-        return range.compareBoundaryPoints(Range.END_TO_END, end) === 0;
-      } catch (_) {
-        return false;
-      }
-    };
-
-    const focusRange = (r) => {
-      try {
-        sel.removeAllRanges();
-        sel.addRange(r);
-      } catch (_) {
-        // ignore
-      }
-      element.focus({ preventScroll: true });
-    };
-
-    // Склейка <p> как «текст»:
-    // - Backspace в начале абзаца склеивает с предыдущим
-    // - Delete в конце абзаца склеивает со следующим
-    const isBackspaceKey = event.key === 'Backspace' || event.code === 'Backspace' || event.keyCode === 8;
-    const isDeleteKey =
-      event.key === 'Delete' ||
-      event.key === 'Del' ||
-      event.code === 'Delete' ||
-      event.code === 'Del' ||
-      event.keyCode === 46;
-
-    if (window.__debugMergeP) {
-      logDebug('mergeP.keydown', {
-        key: event.key,
-        code: event.code,
-        keyCode: event.keyCode,
-        startContainer: range.startContainer?.nodeName,
-        startOffset: range.startOffset,
-        collapsed: range.collapsed,
-      });
-    }
-
-    if (isBackspaceKey) {
-      if (range.startContainer === element) {
-        const boundary = findParagraphsAroundBoundary();
-        if (boundary.prev && boundary.next) {
-          event.preventDefault();
-          event.stopPropagation();
-          const caret = document.createRange();
-          caret.selectNodeContents(boundary.prev);
-          caret.collapse(false);
-          while (boundary.next.firstChild) boundary.prev.appendChild(boundary.next.firstChild);
-          boundary.next.remove();
-          focusRange(caret);
-          notifyEditingInput(element);
-        }
-        return;
-      }
-      const p = resolveParagraphAtCaret('Backspace');
-      if (!p || !element.contains(p)) return;
-      if (!isCaretAtStartOfP(p)) return;
-      const prev = findPrevParagraph(p);
-      if (!prev || !element.contains(prev)) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const caret = document.createRange();
-      caret.selectNodeContents(prev);
-      caret.collapse(false);
-
-      while (p.firstChild) prev.appendChild(p.firstChild);
-      p.remove();
-
-      focusRange(caret);
-      notifyEditingInput(element);
-      return;
-    }
-
-    if (isDeleteKey) {
-      let p = resolveParagraphAtCaret('Delete');
-      if (!p || !element.contains(p)) {
-        const boundary = findParagraphsAroundBoundary();
-        if (boundary.prev && boundary.next) {
-          event.preventDefault();
-          event.stopPropagation();
-          const caret = document.createRange();
-          caret.selectNodeContents(boundary.prev);
-          caret.collapse(false);
-          while (boundary.next.firstChild) boundary.prev.appendChild(boundary.next.firstChild);
-          boundary.next.remove();
-          focusRange(caret);
-          notifyEditingInput(element);
-        }
-        return;
-      }
-      if (!isCaretAtEndOfP(p)) return;
-      const next = findNextParagraph(p);
-      if (!next || !element.contains(next)) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const caret = document.createRange();
-      caret.selectNodeContents(p);
-      caret.collapse(false);
-
-      while (next.firstChild) p.appendChild(next.firstChild);
-      next.remove();
-
-      focusRange(caret);
-      notifyEditingInput(element);
+    // Вынесено из этого файла: склейка <p> по Backspace/Delete → `./block/paragraphMerge.js`.
+    if (
+      maybeHandleParagraphMergeKeydown({
+        event,
+        element,
+        range,
+        selection: sel,
+        notifyEditingInput,
+        logDebug,
+      })
+    ) {
       return;
     }
 
@@ -1610,7 +672,7 @@ let appClipboard = {
 };
 let lastEditableSelectionRange = null;
 let selectionTrackerInitialized = false;
-let resizableImageSession = null;
+// resizableImageSession + pointer handlers перенесены в `./block/images.js`.
 
 function captureEditableSelectionRange() {
   const selection = window.getSelection();
@@ -1633,50 +695,7 @@ function captureEditableSelectionRange() {
   lastEditableSelectionRange = range.cloneRange();
 }
 
-function handleResizableImagePointerDown(event) {
-  if (event.button !== 0) return;
-  const handle = event.target?.closest('.resizable-image__handle');
-  if (!handle) return;
-  const wrapper = handle.closest('.resizable-image');
-  const block = wrapper?.closest('.block');
-  const blockId = block?.dataset?.blockId;
-  if (!wrapper || !blockId || state.mode !== 'edit' || state.editingBlockId !== blockId) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const rect = wrapper.getBoundingClientRect();
-  resizableImageSession = {
-    wrapper,
-    startWidth: rect.width,
-    startX: event.clientX,
-  };
-  wrapper.classList.add('resizable-image--resizing');
-}
-
-function handleResizableImagePointerMove(event) {
-  if (!resizableImageSession) return;
-  event.preventDefault();
-  const delta = event.clientX - resizableImageSession.startX;
-  const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-  const minWidth = rootFontSize;
-  const viewportMax = Math.max(minWidth, document.documentElement.clientWidth - 32);
-  let width = resizableImageSession.startWidth + delta;
-  width = Math.max(minWidth, Math.min(width, viewportMax));
-  resizableImageSession.wrapper.style.width = `${width}px`;
-}
-
-function handleResizableImagePointerEnd() {
-  if (!resizableImageSession) return;
-  resizableImageSession.wrapper.classList.remove('resizable-image--resizing');
-  resizableImageSession = null;
-}
-
-function initResizableImageResizing() {
-  document.addEventListener('pointerdown', handleResizableImagePointerDown);
-  document.addEventListener('pointermove', handleResizableImagePointerMove);
-  document.addEventListener('pointerup', handleResizableImagePointerEnd);
-  document.addEventListener('pointercancel', handleResizableImagePointerEnd);
-}
-
+// Ресайз изображений (pointer handlers) перенесён в `./block/images.js`.
 initResizableImageResizing();
 
 function ensureContextMenu() {
@@ -1775,133 +794,16 @@ function ensureContextMenu() {
     };
 
     const applyListAction = (listTag) => {
-      const target = resolveTarget();
-      if (!target || !document.contains(target)) return;
-      restoreSelection();
-
-      const selection = window.getSelection();
-      let range = null;
-      if (richContextRange && target.contains(richContextRange.commonAncestorContainer)) {
-        range = richContextRange.cloneRange();
-      } else if (selection && selection.rangeCount > 0) {
-        const candidate = selection.getRangeAt(0);
-        if (target.contains(candidate.commonAncestorContainer)) {
-          range = candidate.cloneRange();
-        }
-      }
-      if (!range) {
-        range = document.createRange();
-        range.selectNodeContents(target);
-        range.collapse(false);
-      }
-
-      const anchorElement =
-        range.startContainer?.nodeType === Node.ELEMENT_NODE
-          ? range.startContainer
-          : range.startContainer?.parentElement;
-      const insideLi = anchorElement?.closest?.('li');
-      const existingList = insideLi?.closest?.('ol,ul');
-
-      const setCaretToEnd = (node) => {
-        if (!node) return;
-        const caret = document.createRange();
-        caret.selectNodeContents(node);
-        caret.collapse(false);
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(caret);
-        }
-        richContextRange = caret.cloneRange();
-        target.focus({ preventScroll: true });
-        target.classList.remove('block-body--empty');
-        notifyEditingInput(target);
-      };
-
-      const unwrapListToParagraphs = (listEl) => {
-        const host =
-          listEl.parentElement?.tagName === 'P' &&
-          listEl.parentElement.childNodes.length === 1
-            ? listEl.parentElement
-            : listEl;
-        const items = Array.from(listEl.children || []).filter(
-          (child) => child.nodeType === Node.ELEMENT_NODE && child.tagName === 'LI',
-        );
-        const frag = document.createDocumentFragment();
-        const paragraphs = [];
-        items.forEach((li) => {
-          const p = document.createElement('p');
-          while (li.firstChild) p.appendChild(li.firstChild);
-          paragraphs.push(p);
-          frag.appendChild(p);
-        });
-        host.replaceWith(frag);
-        setCaretToEnd(paragraphs[0] || null);
-      };
-
-      if (existingList) {
-        const existingTag = existingList.tagName.toLowerCase();
-        if (existingTag === listTag) {
-          unwrapListToParagraphs(existingList);
-          return;
-        }
-        const converted = document.createElement(listTag);
-        while (existingList.firstChild) converted.appendChild(existingList.firstChild);
-        existingList.replaceWith(converted);
-        setCaretToEnd(insideLi || converted.lastElementChild || converted);
-        return;
-      }
-
-      // Иначе превращаем выбранные <p> в элементы списка. Важно: только <p>,
-      // чтобы вспомогательные <span> (обёртки/ручки/картинки) не становились <li>.
-      const findParagraphAtCollapsedCaret = () => {
-        if (!range.collapsed) return null;
-        let p = anchorElement?.closest?.('p') || null;
-        if (p && target.contains(p)) return p;
-        if (range.startContainer === target) {
-          const nodes = Array.from(target.childNodes);
-          const idx = range.startOffset;
-          for (let i = idx - 1; i >= 0; i -= 1) {
-            const n = nodes[i];
-            if (n?.nodeType === Node.ELEMENT_NODE && n.tagName === 'P') return n;
-          }
-          for (let i = idx; i < nodes.length; i += 1) {
-            const n = nodes[i];
-            if (n?.nodeType === Node.ELEMENT_NODE && n.tagName === 'P') return n;
-          }
-        }
-        return null;
-      };
-
-      let paragraphs = [];
-      if (range.collapsed) {
-        const p = findParagraphAtCollapsedCaret();
-        if (p) paragraphs = [p];
-      } else {
-        const directParagraphs = Array.from(target.querySelectorAll(':scope > p'));
-        paragraphs = directParagraphs.filter((p) => {
-          try {
-            return range.intersectsNode(p);
-          } catch {
-            return false;
-          }
-        });
-        if (!paragraphs.length) {
-          const fallback = anchorElement?.closest?.('p');
-          if (fallback && target.contains(fallback)) paragraphs = [fallback];
-        }
-      }
-      if (!paragraphs.length) return;
-
-      const listEl = document.createElement(listTag);
-      paragraphs.forEach((p) => {
-        const li = document.createElement('li');
-        while (p.firstChild) li.appendChild(p.firstChild);
-        listEl.appendChild(li);
+      applyListActionFromModule({
+        listTag,
+        resolveTarget,
+        restoreSelection,
+        richContextRange,
+        notifyEditingInput,
+        setRichContextRange: (nextRange) => {
+          richContextRange = nextRange ? nextRange.cloneRange() : null;
+        },
       });
-      const first = paragraphs[0];
-      first.replaceWith(listEl);
-      paragraphs.slice(1).forEach((p) => p.remove());
-      setCaretToEnd(listEl.firstElementChild || listEl);
     };
 
     const applyInsertArticleLink = async () => {
