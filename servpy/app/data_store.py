@@ -16,6 +16,7 @@ from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
 from .semantic_search import delete_block_embeddings, upsert_block_embedding, upsert_embeddings_for_block_tree
+from .telegram_notify import notify_user
 
 init_schema()
 
@@ -1220,6 +1221,15 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning('Failed to update semantic embedding for block %s: %r', block_id, exc)
+                try:
+                    notify_user(
+                        semantic_payload['authorId'],
+                        f'Семантический индекс: не удалось обновить embedding блока {block_id}: {exc!r}',
+                        key='semantic-embed-update',
+                    )
+                except Exception:
+                    # Не даём уведомлениям ломать основной CRUD.
+                    pass
         return response
 
     # Старая логика для других атрибутов или как fallback
@@ -1280,6 +1290,16 @@ def insert_block(article_id: str, target_block_id: str, direction: str, payload:
                 )
         except Exception as exc:  # noqa: BLE001
             logger.warning('Failed to update semantic embeddings after insert_block: %r', exc)
+            try:
+                art = CONN.execute('SELECT author_id FROM articles WHERE id = ?', (article_id,)).fetchone()
+                if art and art.get('author_id'):
+                    notify_user(
+                        art['author_id'],
+                        f'Семантический индекс: ошибка при вставке блока (обновление embeddings): {exc!r}',
+                        key='semantic-embed-update',
+                    )
+            except Exception:
+                pass
     return {'block': inserted, 'parentId': target['parent_id'], 'index': insertion}
 
 
@@ -1725,6 +1745,16 @@ def move_block_to_article(src_article_id: str, block_id: str, target_article_id:
             )
     except Exception as exc:  # noqa: BLE001
         logger.warning('Failed to update semantic embeddings after move_block_to_article: %r', exc)
+        try:
+            author_id = target_article.get('authorId') or ''
+            if author_id:
+                notify_user(
+                    author_id,
+                    f'Семантический индекс: ошибка при переносе блока между статьями (обновление embeddings): {exc!r}',
+                    key='semantic-embed-update',
+                )
+        except Exception:
+            pass
     return {'block': inserted, 'targetArticleId': target_article_id, 'index': insertion}
 
 

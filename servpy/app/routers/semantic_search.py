@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..auth import User, get_current_user
 from ..embeddings import EmbeddingsUnavailable
 from ..semantic_search import get_reindex_task, request_cancel_reindex_task, start_reindex_task, try_semantic_search
+from ..telegram_notify import notify_user
 
 # Вынесено из app/main.py → app/routers/semantic_search.py
 
@@ -19,6 +20,7 @@ def semantic_search(q: str = '', current_user: User = Depends(get_current_user))
     try:
         return try_semantic_search(current_user.id, query, limit=30)
     except EmbeddingsUnavailable as exc:
+        notify_user(current_user.id, f'Семантический поиск: embeddings недоступны — {exc}', key='semantic-search')
         raise HTTPException(
             status_code=503,
             detail=(
@@ -28,6 +30,9 @@ def semantic_search(q: str = '', current_user: User = Depends(get_current_user))
                 f'Детали: {exc}'
             ),
         )
+    except Exception as exc:  # noqa: BLE001
+        notify_user(current_user.id, f'Семантический поиск: ошибка — {exc!r}', key='semantic-search')
+        raise HTTPException(status_code=503, detail=f'Семантический поиск недоступен: {exc}')
 
 
 @router.post('/api/search/semantic/reindex')

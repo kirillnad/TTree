@@ -8,7 +8,7 @@ from ..auth import User, get_current_user
 from ..data_store import get_yandex_tokens
 from ..telegram_bot import TELEGRAM_BOT_TOKEN, create_link_token_for_user, process_telegram_update
 from ..telegram_notify import send_to_user_chats
-from ..db import CONN, DATABASE_URL
+from ..db import CONN
 
 # Вынесено из app/main.py → app/routers/telegram.py
 
@@ -66,22 +66,6 @@ def telegram_notify_test(current_user: User = Depends(get_current_user)):
         key='notify-test',
         force=True,
     )
-    # Диагностика: показываем, что именно увидел backend (не возвращаем токены/секреты).
-    result['db'] = DATABASE_URL.split('@')[-1] if DATABASE_URL else ''
-    try:
-        meta = {
-            'currentUser': (CONN.execute('SELECT current_user AS v').fetchone() or {}).get('v'),
-            'currentDatabase': (CONN.execute('SELECT current_database() AS v').fetchone() or {}).get('v'),
-            'searchPath': (CONN.execute('SHOW search_path').fetchone() or {}).get('search_path'),
-            'port': (CONN.execute('SHOW port').fetchone() or {}).get('port'),
-            'dataDirectory': (CONN.execute('SHOW data_directory').fetchone() or {}).get('data_directory'),
-            'unixSocketDirectories': (CONN.execute('SHOW unix_socket_directories').fetchone() or {}).get(
-                'unix_socket_directories'
-            ),
-        }
-    except Exception as exc:  # noqa: BLE001
-        meta = {'error': repr(exc)}
-    result['dbMeta'] = meta
     if not result.get('ok'):
         raise HTTPException(
             status_code=400,
