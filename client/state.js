@@ -1,5 +1,7 @@
 export const state = {
   mode: 'view',
+  // Открыт ли публичный просмотр внутри SPA (например, когда Android открывает /p/<slug> в установленном PWA).
+  isPublicView: false,
   currentUser: null,
   articleId: null,
   article: null,

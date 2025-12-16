@@ -266,6 +266,28 @@ function handleViewKey(event) {
   ) {
     return;
   }
+  if (state.isPublicView) {
+    const code = typeof event.code === 'string' ? event.code : '';
+    // В публичном режиме внутри SPA запрещаем любые операции,
+    // которые меняют данные (создание/редактирование/удаление/undo/redo).
+    if (code === 'Enter') {
+      event.preventDefault();
+      return;
+    }
+    if (
+      event.ctrlKey &&
+      (code === 'KeyZ' ||
+        code === 'KeyY' ||
+        code === 'Delete' ||
+        code === 'ArrowDown' ||
+        code === 'ArrowUp' ||
+        code === 'ArrowLeft' ||
+        code === 'ArrowRight')
+    ) {
+      event.preventDefault();
+      return;
+    }
+  }
   if (isHintVisible && event.code === 'Escape') {
     event.preventDefault();
     hideHintPopover();

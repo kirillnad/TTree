@@ -415,6 +415,7 @@ async function renderBlocks(blocks, container, depth = 1) {
     body.addEventListener('dblclick', (event) => {
       event.stopPropagation();
       if (state.mode !== 'view') return;
+      if (state.isPublicView) return;
       setCurrentBlock(block.id);
       startEditing();
     });
@@ -588,6 +589,7 @@ async function renderBlocks(blocks, container, depth = 1) {
 
     surface.addEventListener('dblclick', (event) => {
       if (state.mode !== 'view') return;
+      if (state.isPublicView) return;
       const interactive = event.target.closest('button, a, [contenteditable="true"]');
       if (interactive && !interactive.matches('.block-text[contenteditable="true"]')) return;
       event.stopPropagation();
@@ -1481,6 +1483,8 @@ async function handlePointerUp(event) {
 }
 
 export async function loadArticleView(id) {
+  state.isPublicView = false;
+  document.body.classList.remove('public-embedded');
   // При открытии страницы всегда выходим из режима редактирования заголовка,
   // чтобы заголовок не «прятался» за полем ввода, особенно на мобильных.
   state.isEditingTitle = false;
@@ -1501,6 +1505,8 @@ export async function loadArticleView(id) {
 }
 
 export async function loadListView() {
+  state.isPublicView = false;
+  document.body.classList.remove('public-embedded');
   if (refs.usersView) refs.usersView.classList.add('hidden');
   state.article = null;
   state.articleId = null;
@@ -1524,6 +1530,39 @@ export async function loadListView() {
     }
   } catch (error) {
     refs.articleList.innerHTML = `<li>Не удалось загрузить список: ${error.message}</li>`;
+  }
+}
+
+export async function loadPublicArticleView(slug) {
+  state.isPublicView = true;
+  document.body.classList.add('public-embedded');
+  if (refs.usersView) refs.usersView.classList.add('hidden');
+  setViewMode(true);
+  state.isEditingTitle = false;
+  state.mode = 'view';
+  state.editingBlockId = null;
+  state.pendingEditBlockId = null;
+  state.selectionAnchorBlockId = null;
+  state.selectedBlockIds = [];
+  state.undoStack = [];
+  state.redoStack = [];
+  clearPendingTextPreview({ restoreDom: false });
+
+  if (refs.blocksContainer) refs.blocksContainer.innerHTML = 'Загрузка...';
+  try {
+    const article = await apiRequest(`/api/public/articles/${encodeURIComponent(slug)}`, {
+      method: 'GET',
+      credentials: 'omit',
+    });
+    state.article = article;
+    state.articleId = article?.id || null;
+    const first = flattenVisible(article?.blocks || [])[0];
+    state.currentBlockId = first ? first.id : null;
+    renderArticle();
+  } catch (error) {
+    if (refs.blocksContainer) {
+      refs.blocksContainer.innerHTML = `<p class="meta">Не удалось открыть публичную статью: ${error.message}</p>`;
+    }
   }
 }
 

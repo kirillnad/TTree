@@ -6,6 +6,7 @@ import { initUsersPanel } from './users.js';
 import { initGraphView } from './graph.js';
 import { initTables } from './tables.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
+import { refs } from './refs.js';
 
 function logClient(kind, data) {
   try {
@@ -64,7 +65,44 @@ function startApp() {
   }
 }
 
+function startPublicApp() {
+  logClient('app.public.start', {
+    ua: navigator.userAgent,
+    path: window.location.pathname,
+  });
+  if (refs.authOverlay) refs.authOverlay.classList.add('hidden');
+  initRouting();
+  attachEvents();
+  route(window.location.pathname);
+  if ('serviceWorker' in navigator) {
+    const sw = navigator.serviceWorker;
+    if (sw && typeof sw.getRegistrations === 'function') {
+      sw
+        .getRegistrations()
+        .then((registrations) => {
+          registrations.forEach((registration) => {
+            registration.unregister().catch(() => {});
+          });
+        })
+        .catch(() => {});
+    } else if (sw && typeof sw.getRegistration === 'function') {
+      sw
+        .getRegistration()
+        .then((registration) => {
+          if (registration) {
+            registration.unregister().catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }
+  }
+}
+
 async function init() {
+  if (/^\/p\/[^/?#]+/.test(window.location.pathname)) {
+    startPublicApp();
+    return;
+  }
   logClient('auth.bootstrap.start', {
     ua: navigator.userAgent,
   });

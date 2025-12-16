@@ -1465,12 +1465,47 @@ def _generate_public_slug() -> str:
     while True:
         raw = os.urandom(8)
         candidate = base64.urlsafe_b64encode(raw).decode('ascii').rstrip('=\n')[:10]
+        # Некоторые мессенджеры/клиенты (особенно на мобильных) могут "съедать"
+        # завершающие символы '-'/'_' при авто-распознавании ссылок.
+        # Поэтому гарантируем, что slug начинается и заканчивается буквенно-цифровым символом.
+        if not re.match(r'^[A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9]$', candidate):
+            continue
         row = CONN.execute(
             'SELECT 1 FROM articles WHERE public_slug = ?',
             (candidate,),
         ).fetchone()
         if not row:
             return candidate
+
+
+def _get_public_article_row(slug: str):
+    """
+    Находит статью по public_slug.
+    Фолбэк: если exact slug не найден, пробуем добавить суффикс '-' или '_'
+    (мобильные клиенты иногда обрезают завершающий символ в URL).
+    Возвращает sqlite row или None.
+    """
+    row = CONN.execute(
+        'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
+        (slug,),
+    ).fetchone()
+    if row:
+        return row
+    if not slug:
+        return None
+    # Фолбэк только если exact отсутствует: избегаем подмены, если точное совпадение есть.
+    candidates = []
+    for suffix in ('-', '_'):
+        probe = f'{slug}{suffix}'
+        r = CONN.execute(
+            'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
+            (probe,),
+        ).fetchone()
+        if r:
+            candidates.append(r)
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
 
 
 def _render_public_block(block: dict[str, Any], heading_depth: int = 1) -> str:
@@ -3416,10 +3451,7 @@ def read_public_article(slug: str):
     Публичное чтение статьи по её slug без авторизации.
     Возвращает только данные статьи и блоков; редактирование на клиенте отключается.
     """
-    row = CONN.execute(
-        'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
-        (slug,),
-    ).fetchone()
+    row = _get_public_article_row(slug)
     if not row:
         raise HTTPException(status_code=404, detail='Article not found')
     article = build_article_from_row(row)
@@ -3434,10 +3466,7 @@ def read_public_article_page(slug: str):
     HTML-страница для публичного просмотра статьи по её slug.
     Не требует авторизации.
     """
-    row = CONN.execute(
-        'SELECT * FROM articles WHERE public_slug = ? AND deleted_at IS NULL',
-        (slug,),
-    ).fetchone()
+    row = _get_public_article_row(slug)
     if not row:
         raise HTTPException(status_code=404, detail='Article not found')
     article = build_article_from_row(row)

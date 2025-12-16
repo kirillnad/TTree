@@ -190,6 +190,7 @@ html {
 .sidebar.collapsed {
   width: 0px;
   padding: 1rem 0rem;
+  display: none;
 }
 
 .sidebar.collapsed .sidebar-content {
@@ -475,8 +476,8 @@ html {
   width: 6px;
   height: 6px;
   margin-right: 0.3rem;
-  border-right: 1px solid #5f636b;
-  border-bottom: 1px solid #5f636b;
+  border-right: 1px solid #fff;
+  border-bottom: 1px solid #fff;
   transform-origin: center center;
   transform: rotate(-135deg);
 }
@@ -2612,6 +2613,7 @@ body.drag-mode-enabled {
 }
 .sidebar.collapsed {
   transform: translateX(-100%);
+  display: none;
 }
 main.content {
 }
@@ -2647,6 +2649,7 @@ main.content {
     width: 0px;
     padding: 1rem 0rem;
     transform: none;
+    display: none;
   }
   .sidebar-backdrop {
     display: none !important;
@@ -2810,6 +2813,20 @@ body.export-page {
   background: #ffffff;
   overflow: auto;
   height: auto;
+}
+
+/* Публичная статья, открытая внутри SPA (Android PWA deep-link /p/<slug>). */
+body.public-embedded #authOverlay {
+  display: none !important;
+}
+body.public-embedded #sidebar,
+body.public-embedded #articleToolbar,
+body.public-embedded #articleMenuBtn,
+body.public-embedded #articleFavoriteBtn,
+body.public-embedded #articlePublicLinkBtn,
+body.public-embedded #mobileSidebarBtn,
+body.public-embedded #backToList {
+  display: none !important;
 }
 
 /* Центрированный «лист» документа */

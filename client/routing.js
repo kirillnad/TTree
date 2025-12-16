@@ -1,8 +1,9 @@
-import { loadArticleView, loadListView } from './article.js';
+import { loadArticleView, loadListView, loadPublicArticleView } from './article.js';
 
 export const routing = {
   list: '/',
   article: (id) => `/article/${id}`,
+  public: (slug) => `/p/${slug}`,
 };
 
 export function navigate(path) {
@@ -15,6 +16,11 @@ export function navigate(path) {
 }
 
 export function route(pathname) {
+  const publicMatch = pathname.match(/^\/p\/([^/?#]+)/);
+  if (publicMatch) {
+    loadPublicArticleView(decodeURIComponent(publicMatch[1]));
+    return;
+  }
   const match = pathname.match(/^\/article\/([0-9a-zA-Z-]+)/);
   if (match) {
     loadArticleView(match[1]);
