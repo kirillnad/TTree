@@ -39,6 +39,7 @@ async function maybeEncryptBlockPayloadForCurrentArticle(blockPayload) {
 
 export async function startEditing() {
   if (!state.currentBlockId) return;
+  const targetBlockId = state.currentBlockId;
   // Запоминаем текущую прокрутку списка блоков, чтобы
   // вход в режим редактирования не «подскакивал» страницу.
   state.editingScrollTop = refs.blocksContainer ? refs.blocksContainer.scrollTop : null;
@@ -51,7 +52,29 @@ export async function startEditing() {
   state.editingUndo = null;
   // Перерисовываем только текущий блок в режиме редактирования,
   // без полной перерисовки всей статьи.
-  await rerenderSingleBlock(state.currentBlockId);
+  await rerenderSingleBlock(targetBlockId);
+  // Иногда (например, после операций со структурой/слияния/частичного рендера)
+  // DOM-нода блока может ещё не соответствовать state, и частичный ререндер
+  // не переводит блок в contenteditable. В этом случае делаем полный ререндер.
+  let editable = document.querySelector(
+    `.block[data-block-id="${targetBlockId}"] .block-text[contenteditable="true"]`,
+  );
+  if (!editable) {
+    renderArticle();
+    await rerenderSingleBlock(targetBlockId);
+    editable = document.querySelector(
+      `.block[data-block-id="${targetBlockId}"] .block-text[contenteditable="true"]`,
+    );
+  }
+  if (!editable) {
+    // Фолбек: возвращаемся в view, чтобы не «залипнуть» в режиме edit без editable.
+    state.mode = 'view';
+    state.editingBlockId = null;
+    state.editingInitialText = '';
+    state.editingUndo = null;
+    state.currentBlockId = targetBlockId;
+    showToast('Не удалось открыть редактирование блока');
+  }
 }
 
 export async function saveEditing() {

@@ -1761,6 +1761,38 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     if (next) setCurrent(next);
   }
 
+  function scrollCurrentBlockStep(direction) {
+    if (!currentId) return false;
+    var el =
+      root.querySelector('.block[data-block-id=\"' + currentId + '\"] > .block-surface') ||
+      root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
+    if (!el) return false;
+    var rect = el.getBoundingClientRect();
+    var margin = 24;
+    var visibleHeight = window.innerHeight - margin * 2;
+    if (visibleHeight <= 0) return false;
+    if (rect.height <= visibleHeight) return false;
+    if (direction === 'down') {
+      var bottomLimit = window.innerHeight - margin;
+      if (rect.bottom <= bottomLimit) return false;
+      var delta = rect.bottom - bottomLimit;
+      var baseStep = Math.min(Math.max(delta, 40), 160);
+      var step = Math.max(24, Math.round(baseStep / 3));
+      window.scrollBy({ top: step, behavior: 'smooth' });
+      return true;
+    }
+    if (direction === 'up') {
+      var topLimit = margin;
+      if (rect.top >= topLimit) return false;
+      var deltaUp = topLimit - rect.top;
+      var baseStepUp = Math.min(Math.max(deltaUp, 40), 160);
+      var stepUp = Math.max(24, Math.round(baseStepUp / 3));
+      window.scrollBy({ top: -stepUp, behavior: 'smooth' });
+      return true;
+    }
+    return false;
+  }
+
   function handleArrowLeft() {
     if (!currentId) return;
     var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
@@ -1836,11 +1868,13 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
       return;
     }
     if (event.code === 'ArrowDown') {
-      moveSelection(1);
+      var scrolledDown = scrollCurrentBlockStep('down');
+      if (!scrolledDown) moveSelection(1);
       return;
     }
     if (event.code === 'ArrowUp') {
-      moveSelection(-1);
+      var scrolledUp = scrollCurrentBlockStep('up');
+      if (!scrolledUp) moveSelection(-1);
       return;
     }
     if (event.code === 'ArrowLeft') {
@@ -2083,6 +2117,38 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     if (next) setCurrent(next);
   }
 
+  function scrollCurrentBlockStep(direction) {
+    if (!currentId) return false;
+    var el =
+      root.querySelector('.block[data-block-id="' + currentId + '"] > .block-surface') ||
+      root.querySelector('.block[data-block-id="' + currentId + '"]');
+    if (!el) return false;
+    var rect = el.getBoundingClientRect();
+    var margin = 24;
+    var visibleHeight = window.innerHeight - margin * 2;
+    if (visibleHeight <= 0) return false;
+    if (rect.height <= visibleHeight) return false;
+    if (direction === 'down') {
+      var bottomLimit = window.innerHeight - margin;
+      if (rect.bottom <= bottomLimit) return false;
+      var delta = rect.bottom - bottomLimit;
+      var baseStep = Math.min(Math.max(delta, 40), 160);
+      var step = Math.max(24, Math.round(baseStep / 3));
+      window.scrollBy({ top: step, behavior: 'smooth' });
+      return true;
+    }
+    if (direction === 'up') {
+      var topLimit = margin;
+      if (rect.top >= topLimit) return false;
+      var deltaUp = topLimit - rect.top;
+      var baseStepUp = Math.min(Math.max(deltaUp, 40), 160);
+      var stepUp = Math.max(24, Math.round(baseStepUp / 3));
+      window.scrollBy({ top: -stepUp, behavior: 'smooth' });
+      return true;
+    }
+    return false;
+  }
+
   function handleArrowLeft() {
     if (!currentId) return;
     var block = root.querySelector('.block[data-block-id="' + currentId + '"]');
@@ -2152,11 +2218,13 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
       return;
     }
     if (event.code === 'ArrowDown') {
-      moveSelection(1);
+      var scrolledDown = scrollCurrentBlockStep('down');
+      if (!scrolledDown) moveSelection(1);
       return;
     }
     if (event.code === 'ArrowUp') {
-      moveSelection(-1);
+      var scrolledUp = scrollCurrentBlockStep('up');
+      if (!scrolledUp) moveSelection(-1);
       return;
     }
     if (event.code === 'ArrowLeft') {

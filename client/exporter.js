@@ -594,6 +594,38 @@ ${contentHtml}
     if (next) setCurrent(next);
   };
 
+  const scrollCurrentBlockStep = (direction) => {
+    if (!currentId) return false;
+    const el =
+      root.querySelector(\`.block[data-block-id="\${currentId}"] > .block-surface\`) ||
+      root.querySelector(\`.block[data-block-id="\${currentId}"]\`);
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    const margin = 24;
+    const visibleHeight = window.innerHeight - margin * 2;
+    if (visibleHeight <= 0) return false;
+    if (rect.height <= visibleHeight) return false;
+    if (direction === 'down') {
+      const bottomLimit = window.innerHeight - margin;
+      if (rect.bottom <= bottomLimit) return false;
+      const delta = rect.bottom - bottomLimit;
+      const baseStep = Math.min(Math.max(delta, 40), 160);
+      const step = Math.max(24, Math.round(baseStep / 3));
+      window.scrollBy({ top: step, behavior: 'smooth' });
+      return true;
+    }
+    if (direction === 'up') {
+      const topLimit = margin;
+      if (rect.top >= topLimit) return false;
+      const delta = topLimit - rect.top;
+      const baseStep = Math.min(Math.max(delta, 40), 160);
+      const step = Math.max(24, Math.round(baseStep / 3));
+      window.scrollBy({ top: -step, behavior: 'smooth' });
+      return true;
+    }
+    return false;
+  };
+
   const handleArrowLeft = () => {
     if (!currentId) return;
     const block = root.querySelector(\`.block[data-block-id="\${currentId}"]\`);
@@ -656,6 +688,38 @@ ${contentHtml}
     }
   });
 
+  function scrollCurrentBlockStep(direction) {
+    if (!currentId) return false;
+    const el =
+      root.querySelector('.block[data-block-id="' + currentId + '"] > .block-surface') ||
+      root.querySelector('.block[data-block-id="' + currentId + '"]');
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    const margin = 24;
+    const visibleHeight = window.innerHeight - margin * 2;
+    if (visibleHeight <= 0) return false;
+    if (rect.height <= visibleHeight) return false;
+    if (direction === 'down') {
+      const bottomLimit = window.innerHeight - margin;
+      if (rect.bottom <= bottomLimit) return false;
+      const delta = rect.bottom - bottomLimit;
+      const baseStep = Math.min(Math.max(delta, 40), 160);
+      const step = Math.max(24, Math.round(baseStep / 3));
+      window.scrollBy({ top: step, behavior: 'smooth' });
+      return true;
+    }
+    if (direction === 'up') {
+      const topLimit = margin;
+      if (rect.top >= topLimit) return false;
+      const deltaUp = topLimit - rect.top;
+      const baseStepUp = Math.min(Math.max(deltaUp, 40), 160);
+      const stepUp = Math.max(24, Math.round(baseStepUp / 3));
+      window.scrollBy({ top: -stepUp, behavior: 'smooth' });
+      return true;
+    }
+    return false;
+  }
+
   document.addEventListener('keydown', (event) => {
     if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', ' '].includes(event.code)) {
       event.preventDefault();
@@ -663,11 +727,13 @@ ${contentHtml}
       return;
     }
     if (event.code === 'ArrowDown') {
-      moveSelection(1);
+      const scrolled = scrollCurrentBlockStep('down');
+      if (!scrolled) moveSelection(1);
       return;
     }
     if (event.code === 'ArrowUp') {
-      moveSelection(-1);
+      const scrolled = scrollCurrentBlockStep('up');
+      if (!scrolled) moveSelection(-1);
       return;
     }
     if (event.code === 'ArrowLeft') {

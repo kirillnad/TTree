@@ -188,8 +188,8 @@ html {
 }
 
 .sidebar.collapsed {
-  width: 60px;
-  padding: 1rem 0.85rem;
+  width: 0px;
+  padding: 1rem 0rem;
 }
 
 .sidebar.collapsed .sidebar-content {
@@ -646,6 +646,7 @@ main.content {
   margin-bottom: 0.75rem;
   padding-bottom: 0.25rem;
   border-bottom: 1px solid #f1f5f9;
+  margin-left: 0.5rem;
 }
 
 .article-header {
@@ -1165,9 +1166,7 @@ button.icon-button.small {
   border-color: #3794ff;
 } */
 
-.blocks > .block.block--selected-root-ancestor {
-  border-color: #d4ddf0;
-}
+
 
 .block.editing > .block-surface {
   background: transparent;
@@ -1475,7 +1474,7 @@ button.icon-button.small {
   object-fit: contain;
   border-radius: 12px;
   display: block;
-  margin: 0.4rem 0;
+  /* margin: 0.4rem 0; */
   box-shadow: 0 6px 18px rgba(15, 30, 40, 0.1);
 }
 
@@ -1615,6 +1614,63 @@ button.icon-button.small {
   max-height: 90vh;
   border-radius: 12px;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+}
+.resizable-image {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  /* padding: 0.35rem 0.5rem; */
+  margin: 0.35rem 0;
+  background: #fff;
+  max-width: 100%;
+  min-width: 1rem;
+  touch-action: none;
+}
+
+.resizable-image__inner {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+}
+
+.resizable-image__inner img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.resizable-image__handle {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+  cursor: ew-resize;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.resizable-image--resizing {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+}
+
+.block.editing .resizable-image {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+}
+
+.block.editing .resizable-image__handle {
+  opacity: 1;
 }
 .modal-header h3 {
   margin: 0;
@@ -2588,8 +2644,8 @@ main.content {
     box-shadow: 0 20px 45px rgba(10, 15, 30, 0.35);
   }
   .sidebar.collapsed {
-    width: 60px;
-    padding: 1rem 0.85rem;
+    width: 0px;
+    padding: 1rem 0rem;
     transform: none;
   }
   .sidebar-backdrop {

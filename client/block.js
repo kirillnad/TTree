@@ -179,6 +179,8 @@ function updateSelectionUi({ scrollIntoView = false } = {}) {
     const shouldSelect = id && selectedIds.has(id);
     el.classList.toggle('selected', Boolean(shouldSelect));
     el.classList.remove('block--selected-root-ancestor');
+    const surface = el.querySelector(':scope > .block-surface');
+    if (surface) surface.classList.remove('block--selected-root-ancestor');
   });
 
   // Подсветка корневого родителя для вложенного текущего блока.
@@ -189,7 +191,10 @@ function updateSelectionUi({ scrollIntoView = false } = {}) {
     if (rootTargetId) {
       const rootEl = document.querySelector(`.block[data-block-id="${rootTargetId}"]`);
       if (rootEl) {
-        rootEl.classList.add('block--selected-root-ancestor');
+        // Подсвечиваем только "surface" корневого родителя, чтобы подсветка
+        // не растягивалась на всю высоту поддерева (children).
+        const rootSurface = rootEl.querySelector(':scope > .block-surface');
+        if (rootSurface) rootSurface.classList.add('block--selected-root-ancestor');
       }
     }
   }
@@ -343,19 +348,40 @@ export function extractBlockSections(html = '') {
   });
 
   const nodes = Array.from(template.content.childNodes);
-  const titleNodes = [];
-  const bodyNodes = [];
-  let separatorFound = false;
-  nodes.forEach((node) => {
-    if (!separatorFound && isSeparatorNode(node)) {
-      separatorFound = true;
-      return;
-    }
-    if (!separatorFound) titleNodes.push(node.cloneNode(true));
-    else bodyNodes.push(node.cloneNode(true));
-  });
 
-  if (!separatorFound) return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
+  const isIgnorableWhitespaceText = (node) =>
+    node?.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim();
+
+  // Новый принцип заголовка:
+  // заголовок — это только первый <p>, но только если СРАЗУ после него идёт
+  // пустая строка (разделитель), иначе заголовка нет вообще.
+  let firstIdx = 0;
+  while (firstIdx < nodes.length && isIgnorableWhitespaceText(nodes[firstIdx])) firstIdx += 1;
+  const first = nodes[firstIdx];
+  if (!first || first.nodeType !== Node.ELEMENT_NODE || first.tagName !== 'P' || isSeparatorNode(first)) {
+    return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
+  }
+
+  let secondIdx = firstIdx + 1;
+  while (secondIdx < nodes.length && isIgnorableWhitespaceText(nodes[secondIdx])) secondIdx += 1;
+  const second = nodes[secondIdx];
+  const isImmediateEmptyLine =
+    Boolean(second) &&
+    isSeparatorNode(second) &&
+    (second.nodeType === Node.ELEMENT_NODE
+      ? second.tagName === 'P' || second.tagName === 'DIV' || second.tagName === 'BR'
+      : false);
+
+  if (!isImmediateEmptyLine) {
+    // Если пустая строка встречается после 2+ абзацев — это не заголовок.
+    return { titleHtml: '', bodyHtml: serializeNodes(nodes) };
+  }
+
+  const titleNodes = [first.cloneNode(true)];
+  const bodyNodes = [];
+  for (let i = secondIdx + 1; i < nodes.length; i += 1) {
+    bodyNodes.push(nodes[i].cloneNode(true));
+  }
   return { titleHtml: serializeNodes(titleNodes), bodyHtml: serializeNodes(bodyNodes) };
 }
 
@@ -554,85 +580,15 @@ export function cleanupEditableHtml(html = '') {
   };
   wrapTextNodes(template.content);
 
-  // Приводим к чистым <p> и удаляем по‑настоящему пустые абзацы (<p></p>),
-  // но не трогаем абзацы с явным переносом строки (<p><br></p>),
-  // кроме специально оставленного пустого абзаца сразу после таблицы memus-table.
+  // Нормализация пустых строк:
+  // При сохранении НЕ удаляем пустые абзацы и НЕ схлопываем их —
+  // пользователь явно управляет пустыми строками.
+  // Единственное: приводим «пустой <p>» к <p><br/></p>, чтобы caret работал.
   template.content.querySelectorAll('p').forEach((p) => {
-    const inner = (p.innerHTML || '').replace(/&nbsp;/g, '').trim();
+    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
     if (!inner) {
-      const prev = p.previousSibling;
-      const isAfterMemusTable =
-        prev &&
-        prev.nodeType === Node.ELEMENT_NODE &&
-        prev.tagName === 'TABLE' &&
-        prev.classList &&
-        prev.classList.contains('memus-table');
-      if (isAfterMemusTable) {
-        // Нормализуем к <p><br/></p>, чтобы caret под таблицей работал как раньше.
-        p.innerHTML = '';
-        p.appendChild(document.createElement('br'));
-      } else if (p.parentNode) {
-        p.parentNode.removeChild(p);
-      }
-    }
-  });
-
-  // remove trailing empty paragraphs,
-  // но оставляем ОДИН пустой <p> сразу после таблицы,
-  // чтобы под таблицей можно было поставить курсор и дописать текст.
-  const nodes = Array.from(template.content.childNodes || []);
-  for (let i = nodes.length - 1; i >= 0; i -= 1) {
-    const node = nodes[i];
-    if (node.nodeType === Node.TEXT_NODE && !(node.textContent || '').trim()) {
-      // preserve inner spacers between siblings, but drop stray edges
-      if (!(node.previousSibling && node.nextSibling)) {
-        if (node.parentNode) node.parentNode.removeChild(node);
-        continue;
-      }
-    }
-    if (node.tagName === 'P') {
-      const inner = (node.innerHTML || '').replace(/&nbsp;/g, '').replace(/<br\s*\/?>/gi, '').trim();
-      if (!inner) {
-        const prev = node.previousSibling;
-        if (
-          prev &&
-          prev.nodeType === Node.ELEMENT_NODE &&
-          prev.tagName === 'TABLE' &&
-          prev.classList &&
-          prev.classList.contains('memus-table')
-        ) {
-          // Это единственная пустая строка сразу после таблицы — оставляем.
-          break;
-        }
-        if (node.parentNode) node.parentNode.removeChild(node);
-        continue;
-      }
-    }
-    break;
-  }
-
-  // Удаляем пустые абзацы внутри ячеек таблиц, чтобы
-  // в заголовках и ячейках не появлялись лишние пустые строки.
-  template.content.querySelectorAll('table.memus-table p').forEach((p) => {
-    const rawText = (p.textContent || '').replace(/\u00a0/g, ' ').trim();
-    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
-    if (!rawText && !inner) {
-      p.remove();
-    }
-  });
-
-  // Схлопываем последовательности пустых абзацев: оставляем не более одного подряд.
-  template.content.querySelectorAll('p').forEach((p) => {
-    const inner = (p.innerHTML || '').replace(/&nbsp;/gi, '').replace(/<br\s*\/?>/gi, '').trim();
-    if (inner) return;
-    const prev = p.previousElementSibling;
-    if (!prev || prev.tagName !== 'P') return;
-    const prevInner = (prev.innerHTML || '')
-      .replace(/&nbsp;/gi, '')
-      .replace(/<br\s*\/?>/gi, '')
-      .trim();
-    if (!prevInner) {
-      p.remove();
+      p.innerHTML = '';
+      p.appendChild(document.createElement('br'));
     }
   });
 
@@ -697,12 +653,50 @@ export async function setCollapseState(blockId, collapsed) {
   const located = findBlock(blockId);
   if (!located || located.block.collapsed === collapsed) return;
 
+  const captureScrollAnchor = () => {
+    const container = document.getElementById('blocksContainer');
+    if (!container) return null;
+    const currentId = state.currentBlockId;
+    if (!currentId) return { container };
+    const currentEl = container.querySelector(`.block[data-block-id="${currentId}"]`);
+    if (!currentEl) return { container };
+    const containerRect = container.getBoundingClientRect();
+    const currentRect = currentEl.getBoundingClientRect();
+    return {
+      container,
+      currentId,
+      topOffset: currentRect.top - containerRect.top,
+    };
+  };
+
+  const restoreScrollAnchor = (anchor) => {
+    if (!anchor?.container) return;
+    const { container } = anchor;
+    if (!anchor.currentId || typeof anchor.topOffset !== 'number') return;
+    const currentEl = container.querySelector(`.block[data-block-id="${anchor.currentId}"]`);
+    if (!currentEl) return;
+    const containerRect = container.getBoundingClientRect();
+    const currentRect = currentEl.getBoundingClientRect();
+    const newOffset = currentRect.top - containerRect.top;
+    container.scrollTop += newOffset - anchor.topOffset;
+    // Гарантия: текущий блок остаётся в видимой области.
+    const afterRect = currentEl.getBoundingClientRect();
+    const topOverflow = containerRect.top - afterRect.top;
+    const bottomOverflow = afterRect.bottom - containerRect.bottom;
+    const padding = 12;
+    if (topOverflow > 0) container.scrollTop -= topOverflow + padding;
+    else if (bottomOverflow > 0) container.scrollTop += bottomOverflow + padding;
+  };
+
+  const scrollAnchor = captureScrollAnchor();
+
   located.block.collapsed = collapsed;
   // Оптимистично обновляем только этот блок и его поддерево,
   // без полного пересчёта всей статьи, затем заново обновляем
   // UI выделения (в т.ч. рамку корневого родителя).
   await rerenderSingleBlock(blockId);
   updateSelectionUi({ scrollIntoView: false });
+  restoreScrollAnchor(scrollAnchor);
 
   try {
     const response = await apiRequest(`/api/articles/${state.articleId}/collapse`, {
@@ -719,6 +713,7 @@ export async function setCollapseState(blockId, collapsed) {
     located.block.collapsed = !collapsed;
     await rerenderSingleBlock(blockId);
     updateSelectionUi({ scrollIntoView: false });
+    restoreScrollAnchor(scrollAnchor);
     showToast(error.message || 'Не удалось изменить состояние блока');
   }
 }
@@ -944,7 +939,13 @@ async function insertImageFromFile(element, file, blockId) {
   }
   try {
     const { url } = await uploadImageFile(file);
-    const finalHtml = `<img src="${url}" alt="${safeName}" draggable="false" style="max-width:100%;max-height:15rem;object-fit:contain;display:block;margin:0.4rem 0;border-radius:12px;box-shadow:0 6px 18px rgba(15,30,40,0.1);" />`;
+    const innerImage = `<img src="${url}" alt="${safeName}" draggable="false" />`;
+    const finalHtml = `
+      <span class="resizable-image" style="width:320px;max-width:100%;">
+        <span class="resizable-image__inner">${innerImage}</span>
+        <span class="resizable-image__handle" data-direction="e" aria-hidden="true"></span>
+      </span>
+    `;
     let container = element;
     let placeholder =
       container &&
@@ -1263,6 +1264,11 @@ export function attachRichContentHandlers(element, blockId) {
   element.addEventListener('click', (event) => {
     const img = event.target?.closest('img');
     if (img) {
+      const handle = event.target?.closest('.resizable-image__handle');
+      if (handle) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       showImagePreview(img.src, img.alt || '');
       return;
@@ -1321,13 +1327,264 @@ export function attachRichContentHandlers(element, blockId) {
 
   element.addEventListener('keydown', (event) => {
     if (state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!range || !range.collapsed) return;
+
+    const resolveParagraphAtCaret = (key) => {
+      const raw =
+        range.commonAncestorContainer?.nodeType === Node.ELEMENT_NODE
+          ? range.commonAncestorContainer
+          : range.commonAncestorContainer?.parentElement;
+      const direct = raw?.closest?.('p');
+      if (direct) return direct;
+
+      const root = element;
+      const childNodes = Array.from(root.childNodes);
+      let topChild = range.startContainer;
+      while (topChild && topChild.parentNode !== root) {
+        topChild = topChild.parentNode;
+      }
+      const startIndex = topChild ? childNodes.indexOf(topChild) : -1;
+
+      const search = (direction) => {
+        const step = direction === 'prev' ? -1 : 1;
+        let idx = startIndex;
+        if (idx === -1) {
+          idx = direction === 'prev' ? childNodes.length - 1 : 0;
+        } else {
+          idx = direction === 'prev' ? idx - 1 : idx;
+        }
+        while (idx >= 0 && idx < childNodes.length) {
+          const candidate = childNodes[idx];
+          if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
+            return candidate;
+          }
+          idx += step;
+        }
+        return null;
+      };
+
+      if (key === 'Delete') {
+        return search('next') || search('prev');
+      }
+      if (key === 'Backspace') {
+        return search('prev') || search('next');
+      }
+      return null;
+    };
+
+    const findParagraphsAroundBoundary = () => {
+      if (range.startContainer !== element) return { prev: null, next: null };
+      const nodes = Array.from(element.childNodes);
+      const idx = range.startOffset;
+      let prev = null;
+      let next = null;
+      for (let i = idx - 1; i >= 0; i -= 1) {
+        const candidate = nodes[i];
+        if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
+          prev = candidate;
+          break;
+        }
+      }
+      for (let i = idx; i < nodes.length; i += 1) {
+        const candidate = nodes[i];
+        if (candidate?.nodeType === Node.ELEMENT_NODE && candidate.tagName === 'P') {
+          next = candidate;
+          break;
+        }
+      }
+      return { prev, next };
+    };
+
+    const findPrevParagraph = (p) => {
+      let cur = p?.previousElementSibling;
+      while (cur && cur.tagName !== 'P') cur = cur.previousElementSibling;
+      return cur && cur.tagName === 'P' ? cur : null;
+    };
+
+    const findNextParagraph = (p) => {
+      let cur = p?.nextElementSibling;
+      while (cur && cur.tagName !== 'P') cur = cur.nextElementSibling;
+      return cur && cur.tagName === 'P' ? cur : null;
+    };
+
+    const isEmptyFragment = (frag) => {
+      if (!frag) return true;
+      const transparentTags = new Set(['span', 'b', 'strong', 'i', 'em', 'u', 's', 'mark', 'code']);
+      const mediaTags = new Set(['img', 'video', 'audio', 'iframe']);
+      const hasMeaningful = (node) => {
+        if (!node) return false;
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = (node.textContent || '')
+            .replace(/[\u00a0\u200b\u200c\u200d\ufeff]/g, ' ')
+            .trim();
+          return text.length > 0;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+        const tag = node.tagName?.toLowerCase?.() || '';
+        if (tag === 'br') return false;
+        if (mediaTags.has(tag)) return true;
+        if (tag === 'a') {
+          // Ссылка без текста тоже считаем значимой.
+          if ((node.getAttribute('href') || '').trim()) return true;
+        }
+        const children = Array.from(node.childNodes || []);
+        if (transparentTags.has(tag) || tag === 'a') {
+          return children.some((child) => hasMeaningful(child));
+        }
+        // Для остальных тегов считаем их «значимыми», только если внутри есть что-то значимое.
+        return children.some((child) => hasMeaningful(child));
+      };
+      return !hasMeaningful(frag);
+    };
+
+    const isCaretAtStartOfP = (p) => {
+      if (!p) return false;
+      const start = document.createRange();
+      start.selectNodeContents(p);
+      start.collapse(true);
+      try {
+        return range.compareBoundaryPoints(Range.START_TO_START, start) === 0;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    const isCaretAtEndOfP = (p) => {
+      if (!p) return false;
+      const post = document.createRange();
+      post.selectNodeContents(p);
+      try {
+        post.setStart(range.startContainer, range.startOffset);
+      } catch (_) {
+        return false;
+      }
+      if (isEmptyFragment(post.cloneContents())) return true;
+      // Фолбэк: иногда caret стоит "перед" пустым span/узлом так,
+      // что cloneContents видит элемент. Считаем концом абзаца, если
+      // позиция совпадает с концом содержимого p.
+      try {
+        const end = document.createRange();
+        end.selectNodeContents(p);
+        end.collapse(false);
+        return range.compareBoundaryPoints(Range.END_TO_END, end) === 0;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    const focusRange = (r) => {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      } catch (_) {
+        // ignore
+      }
+      element.focus({ preventScroll: true });
+    };
+
+    // Склейка <p> как «текст»:
+    // - Backspace в начале абзаца склеивает с предыдущим
+    // - Delete в конце абзаца склеивает со следующим
+    const isBackspaceKey = event.key === 'Backspace' || event.code === 'Backspace' || event.keyCode === 8;
+    const isDeleteKey =
+      event.key === 'Delete' ||
+      event.key === 'Del' ||
+      event.code === 'Delete' ||
+      event.code === 'Del' ||
+      event.keyCode === 46;
+
+    if (window.__debugMergeP) {
+      logDebug('mergeP.keydown', {
+        key: event.key,
+        code: event.code,
+        keyCode: event.keyCode,
+        startContainer: range.startContainer?.nodeName,
+        startOffset: range.startOffset,
+        collapsed: range.collapsed,
+      });
+    }
+
+    if (isBackspaceKey) {
+      if (range.startContainer === element) {
+        const boundary = findParagraphsAroundBoundary();
+        if (boundary.prev && boundary.next) {
+          event.preventDefault();
+          event.stopPropagation();
+          const caret = document.createRange();
+          caret.selectNodeContents(boundary.prev);
+          caret.collapse(false);
+          while (boundary.next.firstChild) boundary.prev.appendChild(boundary.next.firstChild);
+          boundary.next.remove();
+          focusRange(caret);
+          notifyEditingInput(element);
+        }
+        return;
+      }
+      const p = resolveParagraphAtCaret('Backspace');
+      if (!p || !element.contains(p)) return;
+      if (!isCaretAtStartOfP(p)) return;
+      const prev = findPrevParagraph(p);
+      if (!prev || !element.contains(prev)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const caret = document.createRange();
+      caret.selectNodeContents(prev);
+      caret.collapse(false);
+
+      while (p.firstChild) prev.appendChild(p.firstChild);
+      p.remove();
+
+      focusRange(caret);
+      notifyEditingInput(element);
+      return;
+    }
+
+    if (isDeleteKey) {
+      let p = resolveParagraphAtCaret('Delete');
+      if (!p || !element.contains(p)) {
+        const boundary = findParagraphsAroundBoundary();
+        if (boundary.prev && boundary.next) {
+          event.preventDefault();
+          event.stopPropagation();
+          const caret = document.createRange();
+          caret.selectNodeContents(boundary.prev);
+          caret.collapse(false);
+          while (boundary.next.firstChild) boundary.prev.appendChild(boundary.next.firstChild);
+          boundary.next.remove();
+          focusRange(caret);
+          notifyEditingInput(element);
+        }
+        return;
+      }
+      if (!isCaretAtEndOfP(p)) return;
+      const next = findNextParagraph(p);
+      if (!next || !element.contains(next)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const caret = document.createRange();
+      caret.selectNodeContents(p);
+      caret.collapse(false);
+
+      while (next.firstChild) p.appendChild(next.firstChild);
+      next.remove();
+
+      focusRange(caret);
+      notifyEditingInput(element);
+      return;
+    }
+
     if (event.key !== 'Tab') return;
     // Таб в режиме редактирования: если курсор внутри элемента списка,
     // смещаем ul/ol вправо/влево. В остальных случаях не перехватываем
     // событие, чтобы глобальный обработчик мог, например, сохранить блок.
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
     const node =
       range.commonAncestorContainer?.nodeType === Node.ELEMENT_NODE
         ? range.commonAncestorContainer
@@ -1357,9 +1614,83 @@ let appClipboard = {
   text: '',
   sourceBlockId: null,
 };
+let lastEditableSelectionRange = null;
+let selectionTrackerInitialized = false;
+let resizableImageSession = null;
+
+function captureEditableSelectionRange() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  const container = range.commonAncestorContainer;
+  const anchorElement =
+    container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement;
+  const editable = anchorElement?.closest('.block-text[contenteditable="true"]');
+  if (!editable) {
+    lastEditableSelectionRange = null;
+    return;
+  }
+  const blockEl = editable.closest('.block');
+  const blockId = blockEl?.dataset?.blockId;
+  if (state.mode !== 'edit' || state.editingBlockId !== blockId) {
+    lastEditableSelectionRange = null;
+    return;
+  }
+  lastEditableSelectionRange = range.cloneRange();
+}
+
+function handleResizableImagePointerDown(event) {
+  if (event.button !== 0) return;
+  const handle = event.target?.closest('.resizable-image__handle');
+  if (!handle) return;
+  const wrapper = handle.closest('.resizable-image');
+  const block = wrapper?.closest('.block');
+  const blockId = block?.dataset?.blockId;
+  if (!wrapper || !blockId || state.mode !== 'edit' || state.editingBlockId !== blockId) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = wrapper.getBoundingClientRect();
+  resizableImageSession = {
+    wrapper,
+    startWidth: rect.width,
+    startX: event.clientX,
+  };
+  wrapper.classList.add('resizable-image--resizing');
+}
+
+function handleResizableImagePointerMove(event) {
+  if (!resizableImageSession) return;
+  event.preventDefault();
+  const delta = event.clientX - resizableImageSession.startX;
+  const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const minWidth = rootFontSize;
+  const viewportMax = Math.max(minWidth, document.documentElement.clientWidth - 32);
+  let width = resizableImageSession.startWidth + delta;
+  width = Math.max(minWidth, Math.min(width, viewportMax));
+  resizableImageSession.wrapper.style.width = `${width}px`;
+}
+
+function handleResizableImagePointerEnd() {
+  if (!resizableImageSession) return;
+  resizableImageSession.wrapper.classList.remove('resizable-image--resizing');
+  resizableImageSession = null;
+}
+
+function initResizableImageResizing() {
+  document.addEventListener('pointerdown', handleResizableImagePointerDown);
+  document.addEventListener('pointermove', handleResizableImagePointerMove);
+  document.addEventListener('pointerup', handleResizableImagePointerEnd);
+  document.addEventListener('pointercancel', handleResizableImagePointerEnd);
+}
+
+initResizableImageResizing();
 
 function ensureContextMenu() {
   if (richContextMenu) return richContextMenu;
+  if (!selectionTrackerInitialized) {
+    document.addEventListener('selectionchange', captureEditableSelectionRange);
+    selectionTrackerInitialized = true;
+  }
   const menu = document.createElement('div');
   menu.className = 'rich-context-menu hidden';
   menu.innerHTML = `
@@ -1447,6 +1778,136 @@ function ensureContextMenu() {
         if (fromActive) return fromActive;
       }
       return null;
+    };
+
+    const applyListAction = (listTag) => {
+      const target = resolveTarget();
+      if (!target || !document.contains(target)) return;
+      restoreSelection();
+
+      const selection = window.getSelection();
+      let range = null;
+      if (richContextRange && target.contains(richContextRange.commonAncestorContainer)) {
+        range = richContextRange.cloneRange();
+      } else if (selection && selection.rangeCount > 0) {
+        const candidate = selection.getRangeAt(0);
+        if (target.contains(candidate.commonAncestorContainer)) {
+          range = candidate.cloneRange();
+        }
+      }
+      if (!range) {
+        range = document.createRange();
+        range.selectNodeContents(target);
+        range.collapse(false);
+      }
+
+      const anchorElement =
+        range.startContainer?.nodeType === Node.ELEMENT_NODE
+          ? range.startContainer
+          : range.startContainer?.parentElement;
+      const insideLi = anchorElement?.closest?.('li');
+      const existingList = insideLi?.closest?.('ol,ul');
+
+      const setCaretToEnd = (node) => {
+        if (!node) return;
+        const caret = document.createRange();
+        caret.selectNodeContents(node);
+        caret.collapse(false);
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(caret);
+        }
+        richContextRange = caret.cloneRange();
+        target.focus({ preventScroll: true });
+        target.classList.remove('block-body--empty');
+        notifyEditingInput(target);
+      };
+
+      const unwrapListToParagraphs = (listEl) => {
+        const host =
+          listEl.parentElement?.tagName === 'P' &&
+          listEl.parentElement.childNodes.length === 1
+            ? listEl.parentElement
+            : listEl;
+        const items = Array.from(listEl.children || []).filter(
+          (child) => child.nodeType === Node.ELEMENT_NODE && child.tagName === 'LI',
+        );
+        const frag = document.createDocumentFragment();
+        const paragraphs = [];
+        items.forEach((li) => {
+          const p = document.createElement('p');
+          while (li.firstChild) p.appendChild(li.firstChild);
+          paragraphs.push(p);
+          frag.appendChild(p);
+        });
+        host.replaceWith(frag);
+        setCaretToEnd(paragraphs[0] || null);
+      };
+
+      if (existingList) {
+        const existingTag = existingList.tagName.toLowerCase();
+        if (existingTag === listTag) {
+          unwrapListToParagraphs(existingList);
+          return;
+        }
+        const converted = document.createElement(listTag);
+        while (existingList.firstChild) converted.appendChild(existingList.firstChild);
+        existingList.replaceWith(converted);
+        setCaretToEnd(insideLi || converted.lastElementChild || converted);
+        return;
+      }
+
+      // Иначе превращаем выбранные <p> в элементы списка. Важно: только <p>,
+      // чтобы вспомогательные <span> (обёртки/ручки/картинки) не становились <li>.
+      const findParagraphAtCollapsedCaret = () => {
+        if (!range.collapsed) return null;
+        let p = anchorElement?.closest?.('p') || null;
+        if (p && target.contains(p)) return p;
+        if (range.startContainer === target) {
+          const nodes = Array.from(target.childNodes);
+          const idx = range.startOffset;
+          for (let i = idx - 1; i >= 0; i -= 1) {
+            const n = nodes[i];
+            if (n?.nodeType === Node.ELEMENT_NODE && n.tagName === 'P') return n;
+          }
+          for (let i = idx; i < nodes.length; i += 1) {
+            const n = nodes[i];
+            if (n?.nodeType === Node.ELEMENT_NODE && n.tagName === 'P') return n;
+          }
+        }
+        return null;
+      };
+
+      let paragraphs = [];
+      if (range.collapsed) {
+        const p = findParagraphAtCollapsedCaret();
+        if (p) paragraphs = [p];
+      } else {
+        const directParagraphs = Array.from(target.querySelectorAll(':scope > p'));
+        paragraphs = directParagraphs.filter((p) => {
+          try {
+            return range.intersectsNode(p);
+          } catch {
+            return false;
+          }
+        });
+        if (!paragraphs.length) {
+          const fallback = anchorElement?.closest?.('p');
+          if (fallback && target.contains(fallback)) paragraphs = [fallback];
+        }
+      }
+      if (!paragraphs.length) return;
+
+      const listEl = document.createElement(listTag);
+      paragraphs.forEach((p) => {
+        const li = document.createElement('li');
+        while (p.firstChild) li.appendChild(p.firstChild);
+        listEl.appendChild(li);
+      });
+      const first = paragraphs[0];
+      first.replaceWith(listEl);
+      paragraphs.slice(1).forEach((p) => p.remove());
+      setCaretToEnd(listEl.firstElementChild || listEl);
     };
 
     const applyInsertArticleLink = async () => {
@@ -1624,10 +2085,10 @@ function ensureContextMenu() {
         document.execCommand('underline');
         break;
       case 'ul':
-        document.execCommand('insertUnorderedList');
+        applyListAction('ul');
         break;
       case 'ol':
-        document.execCommand('insertOrderedList');
+        applyListAction('ol');
         break;
       case 'quote':
         document.execCommand('formatBlock', false, 'blockquote');
@@ -1788,9 +2249,12 @@ function showContextMenu(event) {
   const menu = ensureContextMenu();
   menu.classList.remove('hidden');
   menu.style.visibility = 'hidden';
+  captureEditableSelectionRange();
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
     richContextRange = sel.getRangeAt(0).cloneRange();
+  } else if (lastEditableSelectionRange) {
+    richContextRange = lastEditableSelectionRange.cloneRange();
   } else {
     richContextRange = null;
   }

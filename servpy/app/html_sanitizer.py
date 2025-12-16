@@ -39,6 +39,7 @@ ALLOWED_ATTRS = {
     'a': {'href', 'title', 'target', 'rel'},
     'img': {'src', 'alt', 'title'},
     'div': {'class'},
+    'span': {'class', 'style'},
     'table': {'class'},
     'col': {'width'},
 }
@@ -103,7 +104,14 @@ class _Sanitizer(HTMLParser):
         allowed = ALLOWED_ATTRS.get(tag, set())
         formatted = []
         for key, value in attrs:
-            if key not in allowed or value is None:
+            if value is None:
+                continue
+            normalized = key.lower()
+            if normalized.startswith('data-') or normalized.startswith('aria-'):
+                sanitized = escape(value, quote=True)
+                formatted.append(f'{key}="{sanitized}"')
+                continue
+            if key not in allowed:
                 continue
             if tag == 'a' and key == 'href' and not _is_allowed_url(value):
                 continue
@@ -121,7 +129,9 @@ def sanitize_html(html: str | None) -> str:
     parser.feed(html)
     parser.close()
     sanitized = ''.join(parser.result)
-    return _strip_empty_edges(sanitized)
+    # Не обрезаем пустые строки на краях: пользовательские пустые абзацы
+    # должны сохраняться при сохранении блока.
+    return sanitized
 
 
 def _strip_empty_edges(html: str) -> str:
