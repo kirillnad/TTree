@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from .db import execute
 
 # PostgreSQL-only schema.
+
+logger = logging.getLogger('uvicorn.error')
 
 
 def _init_postgres_schema() -> None:
@@ -250,6 +254,47 @@ def _init_postgres_schema() -> None:
         END$$;
         """
     )
+
+    # Семантический поиск (pgvector) — опционально.
+    # Если расширение/права недоступны, core-функциональность не должна падать.
+    try:
+        # Размерность должна совпадать с embedding-моделью Ollama (SERVPY_EMBEDDING_DIM).
+        # Важно: при смене размерности нужно пересоздать таблицу/колонку embeddings.
+        from .embeddings import EMBEDDING_DIM  # локальный импорт, чтобы не тащить модуль везде
+
+        execute('CREATE EXTENSION IF NOT EXISTS vector')
+        execute(
+            f'''
+            CREATE TABLE IF NOT EXISTS block_embeddings (
+                block_id TEXT PRIMARY KEY,
+                author_id TEXT NOT NULL,
+                article_id TEXT NOT NULL,
+                article_title TEXT NOT NULL DEFAULT '',
+                plain_text TEXT NOT NULL DEFAULT '',
+                embedding vector({EMBEDDING_DIM}) NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            '''
+        )
+        execute(
+            '''
+            CREATE INDEX IF NOT EXISTS idx_block_embeddings_author
+            ON block_embeddings(author_id)
+            '''
+        )
+        execute(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_am WHERE amname = 'hnsw') THEN
+                    CREATE INDEX IF NOT EXISTS idx_block_embeddings_embedding_hnsw
+                        ON block_embeddings USING hnsw (embedding vector_cosine_ops);
+                END IF;
+            END$$;
+            """
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('pgvector is not available; semantic search disabled: %r', exc)
 
 
 def init_schema() -> None:

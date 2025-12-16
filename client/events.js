@@ -75,6 +75,46 @@ import { handleArticlesListKey } from './events/listKeys.js';
 import { attachSidebarMobileHandlers } from './events/sidebarMobile.js';
 
 let sidebarQuickFilterLastTypedAt = 0;
+let semanticReindexPollTimeoutId = null;
+let semanticReindexIsPolling = false;
+let semanticReindexBaseLabel = 'Переиндексировать поиск';
+let semanticReindexRunningLabel = 'Переиндексация';
+
+function updateSemanticReindexBtnLabel(task) {
+  if (!refs.semanticReindexBtn) return;
+  const label = refs.semanticReindexBtn.querySelector('.sidebar-user-menu-label');
+  if (!label) return;
+  if (task && task.status === 'running') {
+    const processed = Number(task.processed || 0);
+    const total = Number(task.total || 0);
+    const indexParts = total > 0 ? `${processed}/${total}` : `${processed}`;
+    label.textContent = `${semanticReindexRunningLabel}: ${indexParts}`;
+    return;
+  }
+  let suffix = '';
+  if (task && task.status === 'cooldown') {
+    const remaining = Number(task.cooldownRemainingSeconds || 0);
+    suffix = remaining > 0 ? ` (через ${Math.ceil(remaining / 60)} мин)` : ' (попробуйте позже)';
+  } else if (task && task.status === 'completed') {
+    suffix = ` (${task.indexed || 0})`;
+  }
+  label.textContent = `${semanticReindexBaseLabel}${suffix}`;
+}
+
+async function refreshSemanticReindexBtnStatus() {
+  if (!refs.semanticReindexBtn) return;
+  try {
+    const response = await fetch('/api/search/semantic/reindex/status', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) return;
+    const task = await response.json();
+    updateSemanticReindexBtnLabel(task);
+  } catch {
+    // ignore
+  }
+}
 
 function maybeHandleSidebarQuickFilterKey(event) {
   const { key, ctrlKey, altKey, metaKey } = event;
@@ -355,6 +395,35 @@ export function attachEvents() {
         renderSearchResults();
       }
     });
+  }
+  const updateSearchModeButton = () => {
+    if (!refs.searchModeToggle) return;
+    const semantic = state.searchMode === 'semantic';
+    refs.searchModeToggle.classList.toggle('search-panel__toggle--active', semantic);
+    refs.searchModeToggle.dataset.mode = semantic ? 'semantic' : 'classic';
+    refs.searchModeToggle.setAttribute(
+      'title',
+      semantic ? 'Семантический поиск включён' : 'Переключиться на семантический поиск'
+    );
+    refs.searchModeToggle.setAttribute(
+      'aria-label',
+      semantic ? 'Семантический поиск' : 'Классический поиск'
+    );
+    if (refs.searchInput) {
+      refs.searchInput.placeholder = semantic ? 'Семантический поиск...' : 'Поиск...';
+    }
+  };
+  if (refs.searchModeToggle) {
+    refs.searchModeToggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.searchMode = state.searchMode === 'semantic' ? 'classic' : 'semantic';
+      updateSearchModeButton();
+      if (refs.searchInput) {
+        refs.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    updateSearchModeButton();
   }
   if (refs.editTitleBtn) {
     refs.editTitleBtn.addEventListener('click', startTitleEditingMode);
@@ -1007,6 +1076,141 @@ export function attachEvents() {
       } else {
         refs.userMenu.classList.remove('hidden');
         refs.userMenuBtn.setAttribute('aria-expanded', 'true');
+        refreshSemanticReindexBtnStatus();
+      }
+    });
+  }
+  if (refs.semanticReindexBtn) {
+    const labelSpan = refs.semanticReindexBtn.querySelector('.sidebar-user-menu-label');
+    if (labelSpan && labelSpan.textContent) {
+      semanticReindexBaseLabel = labelSpan.textContent.trim();
+    }
+
+    refs.semanticReindexBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (semanticReindexIsPolling) {
+        showToast('Переиндексация уже выполняется');
+        return;
+      }
+
+      refs.userMenu?.classList.add('hidden');
+      refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
+
+      const btn = refs.semanticReindexBtn;
+      if (btn) btn.disabled = true;
+
+      const stopPolling = () => {
+        semanticReindexIsPolling = false;
+        if (semanticReindexPollTimeoutId !== null) {
+          clearTimeout(semanticReindexPollTimeoutId);
+          semanticReindexPollTimeoutId = null;
+        }
+        if (btn) btn.disabled = false;
+      };
+
+      const renderStatusToast = (task) => {
+        if (!task || typeof task !== 'object') {
+          showPersistentToast('Переиндексация семантического поиска...', { protect: true });
+          return;
+        }
+        const status = task.status || 'unknown';
+        if (status === 'running') {
+          const total = Number(task.total || 0);
+          const processed = Number(task.processed || 0);
+          const failed = Number(task.failed || 0);
+          const indexed = Number(task.indexed || 0);
+          const parts = [];
+          if (total > 0) parts.push(`${processed}/${total}`);
+          else parts.push(`${processed}`);
+          parts.push(`готово: ${indexed}`);
+          if (failed) parts.push(`ошибки: ${failed}`);
+          showPersistentToast(`Переиндексация… ${parts.join(' • ')}`, { protect: true });
+          return;
+        }
+        if (status === 'cooldown') {
+          const remaining = Number(task.cooldownRemainingSeconds || 0);
+          if (remaining > 0) {
+            const mins = Math.ceil(remaining / 60);
+            showToast(`Слишком часто: попробуйте через ~${mins} мин`);
+          } else {
+            showToast('Слишком часто: попробуйте позже');
+          }
+          return;
+        }
+        if (status === 'completed') {
+          showToast(`Индекс обновлён: ${task.indexed || 0} блоков`);
+          return;
+        }
+        if (status === 'cancelled') {
+          showToast('Переиндексация отменена');
+          return;
+        }
+        if (status === 'failed') {
+          showToast(task.error || 'Переиндексация завершилась с ошибкой');
+          return;
+        }
+        showToast(`Переиндексация: ${status}`);
+      };
+
+      const pollStatus = async () => {
+        try {
+          const response = await fetch('/api/search/semantic/reindex/status', {
+            method: 'GET',
+            credentials: 'include',
+          });
+          if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(text || response.statusText);
+          }
+          const task = await response.json();
+          if (!task || task.status === 'idle') {
+            hideToast({ force: true });
+            showToast('Переиндексация не запущена');
+            stopPolling();
+            return;
+          }
+          if (task.status === 'running') {
+            renderStatusToast(task);
+            updateSemanticReindexBtnLabel(task);
+            semanticReindexPollTimeoutId = setTimeout(pollStatus, 1000);
+            return;
+          }
+          hideToast({ force: true });
+          renderStatusToast(task);
+          updateSemanticReindexBtnLabel(task);
+          stopPolling();
+        } catch (error) {
+          hideToast({ force: true });
+          showToast(error.message || 'Не удалось получить статус переиндексации');
+          stopPolling();
+        }
+      };
+
+      try {
+        const response = await fetch('/api/search/semantic/reindex', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || response.statusText);
+        }
+        const task = await response.json();
+        if (task && task.status === 'cooldown') {
+          renderStatusToast(task);
+          stopPolling();
+          return;
+        }
+        semanticReindexIsPolling = true;
+        renderStatusToast(task);
+        updateSemanticReindexBtnLabel(task);
+        await pollStatus();
+      } catch (error) {
+        hideToast({ force: true });
+        showToast(error.message || 'Не удалось переиндексировать семантический поиск');
+        stopPolling();
       }
     });
   }

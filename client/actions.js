@@ -10,6 +10,18 @@ import { buildBlockPayloadFromParsed, parseMarkdownBlocksInput, looksLikeMarkdow
 import { isEditableElement } from './utils.js';
 import { encryptTextForArticle, encryptBlockTree } from './encryption.js';
 
+function placeCaretAtEnd(element) {
+  if (!element) return;
+  element.focus({ preventScroll: true });
+  const selection = window.getSelection && window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.addRange(range);
+}
+
 function setPasteProgress(active, message = 'Вставляем Markdown...') {
   state.isMarkdownInserting = active;
   const node = refs.pasteProgress;
@@ -74,7 +86,9 @@ export async function startEditing() {
     state.editingUndo = null;
     state.currentBlockId = targetBlockId;
     showToast('Не удалось открыть редактирование блока');
+    return;
   }
+  placeCaretAtEnd(editable);
 }
 
 export async function saveEditing() {

@@ -21,6 +21,7 @@ export const state = {
   searchError: '',
   searchLoading: false,
   searchRequestId: 0,
+  searchMode: 'classic',
   scrollTargetBlockId: null,
   pendingEditBlockId: null,
   isEditingTitle: false,

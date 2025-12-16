@@ -55,6 +55,7 @@ export const refs = {
   articleFilterInput: document.getElementById('articleFilterInput'),
   trashTabBtn: document.getElementById('trashTabBtn'),
   articlesTabBtn: document.getElementById('articlesTabBtn'),
+  semanticReindexBtn: document.getElementById('semanticReindexBtn'),
   lastChangeValue: document.getElementById('lastChangeValue'),
   graphToggleBtn: document.getElementById('graphToggleBtn'),
   listMenuBtn: document.getElementById('listMenuBtn'),

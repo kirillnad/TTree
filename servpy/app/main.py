@@ -106,6 +106,7 @@ from .routers import export as export_routes
 from .routers import graph as graph_routes
 from .routers import users as users_routes
 from .routers import search as search_routes
+from .routers import semantic_search as semantic_search_routes
 from .routers import misc as misc_routes
 from .routers import oauth as oauth_routes
 from .routers import yandex_disk as yandex_disk_routes
@@ -209,6 +210,7 @@ app.include_router(export_routes.router)
 app.include_router(graph_routes.router)
 app.include_router(users_routes.router)
 app.include_router(search_routes.router)
+app.include_router(semantic_search_routes.router)
 app.include_router(misc_routes.router)
 app.include_router(oauth_routes.router)
 app.include_router(yandex_disk_routes.router)

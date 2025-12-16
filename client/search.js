@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
 import { escapeHtml, escapeRegExp, htmlToLines, htmlToPlainText, logDebug } from './utils.js';
-import { apiRequest, search as apiSearch } from './api.js?v=2';
+import { apiRequest, search as apiSearch, semanticSearch } from './api.js?v=2';
 import { navigate, routing } from './routing.js';
 import { setSidebarMobileOpen } from './sidebar.js';
 
@@ -120,7 +120,8 @@ export async function handleSearchInput(event) {
   state.searchRequestId = requestId;
   renderSearchResults();
   try {
-    const data = await apiSearch(value);
+    const searchFn = state.searchMode === 'semantic' ? semanticSearch : apiSearch;
+    const data = await searchFn(value);
     if (state.searchRequestId === requestId) {
       state.searchResults = data;
       state.searchError = '';

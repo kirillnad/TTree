@@ -1,6 +1,7 @@
 import { refs } from './refs.js';
 
 let hideTimeoutId = null;
+let toastProtected = false;
 
 function clearHideTimeout() {
   if (hideTimeoutId !== null) {
@@ -9,9 +10,24 @@ function clearHideTimeout() {
   }
 }
 
+function setToastProtected(value) {
+  toastProtected = Boolean(value);
+  if (!refs.toast) return;
+  if (toastProtected) {
+    refs.toast.dataset.protected = 'true';
+  } else {
+    refs.toast.removeAttribute('data-protected');
+  }
+}
+
 export function showToast(message, options = {}) {
   if (!refs.toast) return;
   const duration = typeof options.duration === 'number' ? options.duration : 2500;
+  if (options.protect) {
+    setToastProtected(true);
+  } else {
+    setToastProtected(false);
+  }
   clearHideTimeout();
   refs.toast.textContent = message;
   refs.toast.classList.remove('hidden');
@@ -27,13 +43,17 @@ export function showToast(message, options = {}) {
   }
 }
 
-export function showPersistentToast(message) {
-  showToast(message, { duration: 0 });
+export function showPersistentToast(message, options = {}) {
+  showToast(message, { ...options, duration: 0 });
 }
 
-export function hideToast() {
+export function hideToast(options = {}) {
   if (!refs.toast) return;
+  if (toastProtected && !options.force) {
+    return;
+  }
   clearHideTimeout();
+  setToastProtected(false);
   refs.toast.classList.remove('show');
   refs.toast.classList.add('hidden');
 }

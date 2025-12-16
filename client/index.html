@@ -110,12 +110,24 @@
             <button id="quickNoteAddBtn" class="ghost small" type="button" title="Добавить быструю заметку">Новая</button>
           </div>
           <div class="search-panel sidebar-section">
-            <input
-              id="searchInput"
-              type="text"
-              placeholder="Поиск..."
-              autocomplete="off"
-            />
+            <div class="search-panel__row">
+              <input
+                id="searchInput"
+                type="text"
+                placeholder="Поиск..."
+                autocomplete="off"
+              />
+              <button
+                id="searchModeToggle"
+                class="search-panel__toggle"
+                type="button"
+                title="Переключиться на семантический поиск"
+                aria-label="Переключить режим поиска"
+                data-mode="classic"
+              >
+                <span>Ai</span>
+              </button>
+            </div>
             <div id="searchResults" class="search-results hidden"></div>
           </div>
             <div class="sidebar-articles sidebar-section">
@@ -242,6 +254,12 @@
                   &#xE725;
                 </span>
                 <span class="sidebar-user-menu-label">Обратная связь</span>
+              </button>
+              <button id="semanticReindexBtn" class="menu-item" type="button" role="menuitem">
+                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">
+                  &#xE6A9;
+                </span>
+                <span class="sidebar-user-menu-label">Переиндексировать поиск</span>
               </button>
               <button id="logoutBtn" class="menu-item" type="button" role="menuitem">
                 <span class="sidebar-user-menu-icon sidebar-user-menu-icon--logout" aria-hidden="true">

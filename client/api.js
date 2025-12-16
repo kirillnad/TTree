@@ -78,6 +78,10 @@ export function search(query) {
   return apiRequest(`/api/search?q=${encodeURIComponent(query.trim())}`);
 }
 
+export function semanticSearch(query) {
+  return apiRequest(`/api/search/semantic?q=${encodeURIComponent(query.trim())}`);
+}
+
 export function createArticle(title) {
   return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
 }

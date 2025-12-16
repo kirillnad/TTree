@@ -15,6 +15,7 @@ from .db import CONN, mark_search_index_clean
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
+from .semantic_search import delete_block_embeddings, upsert_block_embedding, upsert_embeddings_for_block_tree
 
 init_schema()
 
@@ -1131,6 +1132,7 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
         now = iso_now()
         history_entry = None
         response: Dict[str, Any] = {'id': block_id}
+        semantic_payload: dict[str, Any] | None = None
 
         with CONN:
             # Получаем данные блока один раз, чтобы проверить его существование
@@ -1150,7 +1152,7 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
 
                 # Автоматически разворачиваем wikilinks [[...]] в ссылки на статьи пользователя.
                 article_row = CONN.execute(
-                    'SELECT history, redo_history, author_id FROM articles WHERE id = ?',
+                    'SELECT history, redo_history, author_id, title FROM articles WHERE id = ?',
                     (article_id,),
                 ).fetchone()
                 if not article_row:
@@ -1184,6 +1186,11 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
                 response['text'] = new_text
                 # После изменения текста блока инкрементально обновляем связи.
                 _update_article_links_for_block(article_id, block_id, previous_text, new_text)
+                semantic_payload = {
+                    'authorId': author_id,
+                    'articleTitle': article_row.get('title') or '',
+                    'text': new_text,
+                }
 
             if 'collapsed' in attrs:
                 collapsed_val = bool(attrs['collapsed'])
@@ -1199,6 +1206,20 @@ def update_block(article_id: str, block_id: str, attrs: Dict[str, Any]) -> Optio
 
         if history_entry:
             response['historyEntryId'] = history_entry['id']
+        # Семантический индекс обновляем после основной транзакции, чтобы не держать блокировки
+        # на время вычисления embedding (может быть медленно).
+        if semantic_payload and semantic_payload.get('authorId'):
+            try:
+                upsert_block_embedding(
+                    author_id=semantic_payload['authorId'],
+                    article_id=article_id,
+                    article_title=semantic_payload.get('articleTitle') or '',
+                    block_id=block_id,
+                    block_html=semantic_payload.get('text') or '',
+                    updated_at=now,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning('Failed to update semantic embedding for block %s: %r', block_id, exc)
         return response
 
     # Старая логика для других атрибутов или как fallback
@@ -1245,6 +1266,20 @@ def insert_block(article_id: str, target_block_id: str, direction: str, payload:
       # не требуют полного пересчёта article_links.
       if payload is not None and (payload.get('text') or payload.get('children')):
           _rebuild_article_links_for_article_id(article_id)
+    # Если вставили блок с контентом (например, при split/undo/импорт) — создаём embeddings.
+    if payload is not None and (payload.get('text') or payload.get('children')):
+        try:
+            art = CONN.execute('SELECT author_id, title FROM articles WHERE id = ?', (article_id,)).fetchone()
+            if art and art.get('author_id'):
+                upsert_embeddings_for_block_tree(
+                    author_id=art['author_id'],
+                    article_id=article_id,
+                    article_title=art.get('title') or '',
+                    blocks=[inserted],
+                    updated_at=now,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Failed to update semantic embeddings after insert_block: %r', exc)
     return {'block': inserted, 'parentId': target['parent_id'], 'index': insertion}
 
 
@@ -1284,23 +1319,26 @@ def delete_block(article_id: str, block_id: str) -> Optional[Dict[str, Any]]:
             'UPDATE articles SET block_trash = ? , updated_at = ? WHERE id = ?',
             (serialize_history(trash), now, article_id),
         )
-        rowids = [
-            row['block_rowid']
-            for row in CONN.execute(
-                '''
-                WITH RECURSIVE subtree(id) AS (
-                    SELECT id FROM blocks WHERE id = ? AND article_id = ?
-                    UNION ALL
-                    SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
-                )
-                SELECT block_rowid FROM blocks WHERE article_id = ? AND id IN (SELECT id FROM subtree)
-                ''',
-                (block_id, article_id, article_id),
-            ).fetchall()
-        ]
+        subtree_rows = CONN.execute(
+            '''
+            WITH RECURSIVE subtree(id) AS (
+                SELECT id FROM blocks WHERE id = ? AND article_id = ?
+                UNION ALL
+                SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
+            )
+            SELECT id, block_rowid
+            FROM blocks
+            WHERE article_id = ? AND id IN (SELECT id FROM subtree)
+            ''',
+            (block_id, article_id, article_id),
+        ).fetchall()
+        rowids = [row['block_rowid'] for row in subtree_rows or []]
+        block_ids = [row['id'] for row in subtree_rows or []]
         if rowids:
             placeholders = ','.join('?' for _ in rowids)
             CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', tuple(rowids))
+        if block_ids:
+            delete_block_embeddings(block_ids)
         CONN.execute('DELETE FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id))
         CONN.execute(
             f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',
@@ -1341,23 +1379,26 @@ def delete_block_permanent(article_id: str, block_id: str) -> Optional[Dict[str,
   now = iso_now()
   clause, params = _parent_clause(parent_id)
   with CONN:
-      rowids = [
-          row['block_rowid']
-          for row in CONN.execute(
-              '''
-              WITH RECURSIVE subtree(id) AS (
-                  SELECT id FROM blocks WHERE id = ? AND article_id = ?
-                  UNION ALL
-                  SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
-              )
-              SELECT block_rowid FROM blocks WHERE article_id = ? AND id IN (SELECT id FROM subtree)
-              ''',
-              (block_id, article_id, article_id),
-          ).fetchall()
-      ]
+      subtree_rows = CONN.execute(
+          '''
+          WITH RECURSIVE subtree(id) AS (
+              SELECT id FROM blocks WHERE id = ? AND article_id = ?
+              UNION ALL
+              SELECT b.id FROM blocks b JOIN subtree s ON b.parent_id = s.id
+          )
+          SELECT id, block_rowid
+          FROM blocks
+          WHERE article_id = ? AND id IN (SELECT id FROM subtree)
+          ''',
+          (block_id, article_id, article_id),
+      ).fetchall()
+      rowids = [row['block_rowid'] for row in subtree_rows or []]
+      block_ids = [row['id'] for row in subtree_rows or []]
       if rowids:
           placeholders = ','.join('?' for _ in rowids)
           CONN.execute(f'DELETE FROM blocks_fts WHERE block_rowid IN ({placeholders})', tuple(rowids))
+      if block_ids:
+          delete_block_embeddings(block_ids)
       CONN.execute('DELETE FROM blocks WHERE id = ? AND article_id = ?', (block_id, article_id))
       CONN.execute(
           f'UPDATE blocks SET position = position - 1 WHERE article_id = ? AND {clause} AND position > ?',
@@ -1672,6 +1713,18 @@ def move_block_to_article(src_article_id: str, block_id: str, target_article_id:
     inserted = _insert_block_tree(target_article_id, payload, None, insertion, iso_now())
     with CONN:
         CONN.execute('UPDATE articles SET updated_at = ? WHERE id = ?', (iso_now(), target_article_id))
+    try:
+        author_id = target_article.get('authorId') or ''
+        if author_id:
+            upsert_embeddings_for_block_tree(
+                author_id=author_id,
+                article_id=target_article_id,
+                article_title=target_article.get('title') or '',
+                blocks=[inserted],
+                updated_at=iso_now(),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Failed to update semantic embeddings after move_block_to_article: %r', exc)
     return {'block': inserted, 'targetArticleId': target_article_id, 'index': insertion}
 
 
