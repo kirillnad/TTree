@@ -18,6 +18,7 @@ from ..data_store import (
     move_block_to_article,
     move_block_to_parent,
     outdent_block,
+    replace_article_blocks_tree,
     redo_block_text_change,
     restore_block,
     restore_block_from_trash,
@@ -59,6 +60,36 @@ def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User 
         return block
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.put('/api/articles/{article_id}/blocks/replace-tree')
+def put_replace_blocks_tree(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Атомарно заменяет дерево блоков статьи.
+
+    Нужен для outline-редактора: он редактирует всю статью как один документ и сохраняет дерево целиком.
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    if not get_article(real_article_id, current_user.id):
+        raise HTTPException(status_code=404, detail='Article not found')
+    blocks = payload.get('blocks') if payload else None
+    if not isinstance(blocks, list):
+        raise HTTPException(status_code=400, detail='Missing blocks')
+    try:
+        result = replace_article_blocks_tree(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            blocks=blocks,
+        )
+        return result
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # Вынесено из app/main.py → app/routers/blocks.py
@@ -262,4 +293,3 @@ def post_move_to(article_id: str, block_id: str, target_article_id: str, current
         raise HTTPException(status_code=404, detail=str(e)) from e
     except InvalidOperation as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-

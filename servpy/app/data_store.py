@@ -1252,6 +1252,205 @@ def update_block_collapse(article_id: str, block_id: str, collapsed: bool) -> Op
     return update_block(article_id, block_id, {'collapsed': collapsed})
 
 
+def replace_article_blocks_tree(
+    *,
+    article_id: str,
+    author_id: str,
+    blocks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Атомарно заменяет дерево блоков статьи (parent/position/text/collapsed) на присланное клиентом.
+
+    Используется для outline-редактора (один документ на статью), который сохраняет всю структуру
+    целиком, а не по одному блоку.
+
+    Важные свойства:
+    - сохраняет created_at/updated_at для блоков, где текст/коллапс не изменились;
+    - обновляет FTS и article_links;
+    - добавляет записи истории (articles.history) только для блоков с изменившимся text.
+    """
+    if not article_id:
+        raise ArticleNotFound('Article not found')
+    if not author_id:
+        raise InvalidOperation('author_id required')
+    if not isinstance(blocks, list):
+        raise InvalidOperation('blocks must be a list')
+
+    def _validate_and_collect(
+        nodes: list[dict[str, Any]],
+        *,
+        depth: int,
+        seen: set[str],
+    ) -> None:
+        if depth > 64:
+            # Технический ограничитель против циклов/аномалий в payload.
+            raise InvalidOperation('Too deep block tree')
+        for blk in nodes:
+            if not isinstance(blk, dict):
+                raise InvalidOperation('Invalid block payload')
+            bid = blk.get('id')
+            if not isinstance(bid, str) or not bid:
+                raise InvalidOperation('Block id is required')
+            if bid in seen:
+                raise InvalidOperation(f'Duplicate block id: {bid}')
+            seen.add(bid)
+            text = blk.get('text', '')
+            if text is None:
+                text = ''
+            if not isinstance(text, str):
+                raise InvalidOperation('Block text must be string')
+            collapsed = blk.get('collapsed', False)
+            if collapsed is None:
+                collapsed = False
+            if not isinstance(collapsed, bool):
+                raise InvalidOperation('Block collapsed must be boolean')
+            children = blk.get('children') or []
+            if children and not isinstance(children, list):
+                raise InvalidOperation('Block children must be list')
+            _validate_and_collect(children, depth=depth + 1, seen=seen)
+
+    seen_ids: set[str] = set()
+    _validate_and_collect(blocks, depth=0, seen=seen_ids)
+
+    # Снимок текущих блоков, чтобы:
+    # - сохранить created_at/updated_at для неизменённых блоков;
+    # - построить историю изменений текста;
+    # - решить, какие embeddings нужно обновить.
+    existing_rows = CONN.execute(
+        '''
+        SELECT id, text, collapsed, created_at, updated_at
+        FROM blocks
+        WHERE article_id = ?
+        ''',
+        (article_id,),
+    ).fetchall()
+    existing_map: dict[str, dict[str, Any]] = {}
+    for row in existing_rows or []:
+        bid = row.get('id')
+        if bid:
+            existing_map[str(bid)] = {
+                'text': row.get('text') or '',
+                'collapsed': bool(row.get('collapsed')),
+                'createdAt': row.get('created_at') or '',
+                'updatedAt': row.get('updated_at') or '',
+            }
+
+    article_row = CONN.execute(
+        'SELECT history, redo_history, author_id, title FROM articles WHERE id = ?',
+        (article_id,),
+    ).fetchone()
+    if not article_row:
+        raise ArticleNotFound('Article not found')
+    if str(article_row.get('author_id') or '') != str(author_id):
+        raise ArticleNotFound('Article not found')
+
+    history = deserialize_history(article_row.get('history'))
+    now = iso_now()
+
+    def _push_history_if_text_changed(block_id: str, before: str, after: str) -> None:
+        if before == after:
+            return
+        entry = {
+            'id': str(uuid.uuid4()),
+            'blockId': block_id,
+            'before': before,
+            'after': after,
+            'timestamp': now,
+        }
+        history.append(entry)
+
+    # Собираем список блоков, для которых нужно обновить embeddings (новые или изменившие текст).
+    changed_for_embeddings: list[dict[str, Any]] = []
+    removed_ids = set(existing_map.keys()) - seen_ids
+
+    def _insert_tree(
+        nodes: list[dict[str, Any]],
+        *,
+        parent_id: str | None,
+    ) -> None:
+        for index, blk in enumerate(nodes):
+            bid = str(blk.get('id') or '')
+            raw_text = blk.get('text') or ''
+            raw_collapsed = bool(blk.get('collapsed', False))
+
+            # Важно: нормализуем HTML так же, как в update_block, чтобы данные были однородными.
+            new_text = sanitize_html(raw_text or '')
+            new_text = _maybe_convert_pipe_table_html(new_text)
+            # Раскрываем wikilinks [[...]] как в update_block.
+            if author_id:
+                new_text = _expand_wikilinks(new_text, author_id)
+
+            prev = existing_map.get(bid)
+            prev_text = (prev.get('text') if prev else '') or ''
+            prev_collapsed = bool(prev.get('collapsed')) if prev else False
+            created_at = (prev.get('createdAt') if prev else None) or now
+            updated_at = (prev.get('updatedAt') if prev else None) or now
+            if prev and (prev_text != new_text or prev_collapsed != raw_collapsed):
+                updated_at = now
+            if not prev:
+                updated_at = now
+
+            if prev_text != new_text:
+                _push_history_if_text_changed(bid, prev_text, new_text)
+                changed_for_embeddings.append({'id': bid, 'text': new_text, 'children': []})
+
+            plain_text = strip_html(new_text)
+            lemma = build_lemma(plain_text)
+            normalized_text = build_normalized_tokens(plain_text)
+            block_rowid = _insert_block_row(
+                (
+                    bid,
+                    article_id,
+                    parent_id,
+                    index,
+                    new_text,
+                    normalized_text,
+                    int(raw_collapsed),
+                    created_at,
+                    updated_at,
+                ),
+            )
+            upsert_block_search_index(block_rowid, article_id, new_text, lemma, normalized_text)
+
+            children = blk.get('children') or []
+            if children:
+                _insert_tree(children, parent_id=bid)
+
+    with CONN:
+        CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
+        CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
+        _insert_tree(blocks, parent_id=None)
+        CONN.execute(
+            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ? WHERE id = ?',
+            (now, serialize_history(history), '[]', article_id),
+        )
+        _rebuild_article_links_for_article_id(article_id)
+
+    # Семантические embeddings обновляем после транзакции.
+    try:
+        if removed_ids:
+            delete_block_embeddings(list(removed_ids))
+        if changed_for_embeddings:
+            # Обновляем embeddings только для блоков, где поменялся текст (или блок новый).
+            upsert_embeddings_for_block_tree(
+                author_id=author_id,
+                article_id=article_id,
+                article_title=article_row.get('title') or '',
+                blocks=changed_for_embeddings,
+                updated_at=now,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Failed to update semantic embeddings after replace_article_blocks_tree: %r', exc)
+
+    return {
+        'status': 'ok',
+        'articleId': article_id,
+        'updatedAt': now,
+        'changedBlockIds': [b.get('id') for b in changed_for_embeddings if b.get('id')],
+        'removedBlockIds': list(removed_ids),
+    }
+
+
 def insert_block(article_id: str, target_block_id: str, direction: str, payload: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     target = CONN.execute(
         'SELECT id, parent_id, position FROM blocks WHERE id = ? AND article_id = ?',

@@ -96,6 +96,16 @@ export function createArticle(title) {
   return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
 }
 
+export function replaceArticleBlocksTree(articleId, blocks) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/blocks/replace-tree`, {
+    method: 'PUT',
+    body: JSON.stringify({ blocks: Array.isArray(blocks) ? blocks : [] }),
+  });
+}
+
 export function deleteArticle(id, options = {}) {
   const force = options.force ? '?force=true' : '';
   return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' });

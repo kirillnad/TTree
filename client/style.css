@@ -1690,6 +1690,125 @@ button.icon-button.small {
   color: #1d4ed8;
 }
 
+/* Outline editor (TipTap PoC) */
+.outline-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.outline-editor__bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(17, 24, 39, 0.92);
+  backdrop-filter: blur(10px);
+}
+.outline-editor__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+}
+.outline-editor__body {
+  padding: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+.outline-editor__placeholder {
+  padding: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  color: rgba(226, 232, 240, 0.85);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.outline-prosemirror {
+  outline: none;
+  min-height: 60vh;
+  padding-bottom: 120px;
+}
+.outline-section {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: rgba(15, 23, 42, 0.2);
+}
+.outline-section[data-collapsed="true"] > .outline-body,
+.outline-section[data-collapsed="true"] > .outline-children {
+  display: none;
+}
+.outline-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 28px;
+}
+.outline-heading__toggle {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.35);
+  color: rgba(226, 232, 240, 0.9);
+  cursor: pointer;
+}
+.outline-section > .outline-heading .outline-heading__toggle::before {
+  content: "▼";
+  font-size: 11px;
+  line-height: 1;
+}
+.outline-section[data-collapsed="true"] > .outline-heading .outline-heading__toggle::before {
+  content: "▶";
+}
+.outline-heading__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.outline-heading[data-empty="true"] .outline-heading__content::before {
+  content: "Заголовок…";
+  color: rgba(226, 232, 240, 0.55);
+}
+.outline-heading[data-depth="2"] {
+  padding-left: 14px;
+}
+.outline-heading[data-depth="3"] {
+  padding-left: 28px;
+}
+.outline-heading[data-depth="4"] {
+  padding-left: 42px;
+}
+.outline-heading[data-depth="5"] {
+  padding-left: 56px;
+}
+.outline-heading[data-depth="6"] {
+  padding-left: 70px;
+}
+.outline-body {
+  padding-left: 32px;
+  margin-top: 6px;
+}
+.outline-children {
+  padding-left: 20px;
+  margin-top: 6px;
+}
+.outline-editor__loading {
+  margin-top: 10px;
+  color: rgba(226, 232, 240, 0.75);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

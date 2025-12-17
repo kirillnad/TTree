@@ -72,6 +72,7 @@ export const refs = {
   articleEncryptionRemoveBtn: document.getElementById('articleEncryptionRemoveBtn'),
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
+  outlineEditBtn: document.getElementById('outlineEditBtn'),
   exportAllHtmlZipBtn: document.getElementById('exportAllHtmlZipBtn'),
   importArticleBtn: document.getElementById('importArticleBtn'),
   importMarkdownBtn: document.getElementById('importMarkdownBtn'),
@@ -94,4 +95,5 @@ export const refs = {
   sidebarQuickFilter: document.getElementById('sidebarQuickFilter'),
   sidebarQuickFilterInput: document.getElementById('sidebarQuickFilterInput'),
   sidebarQuickFilterClear: document.getElementById('sidebarQuickFilterClear'),
+  outlineEditor: document.getElementById('outlineEditor'),
 };
