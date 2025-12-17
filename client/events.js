@@ -65,7 +65,7 @@ import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
 import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js?v=2';
 import { loadArticle } from './article.js';
-import { openOutlineEditor } from './outline/editor.js';
+import { openOutlineEditor } from './outline/editor.js?v=6';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
 // Вынесено из этого файла: обработка клавиш в режиме редактирования → `./events/editKeys.js`.

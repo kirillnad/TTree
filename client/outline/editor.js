@@ -9,6 +9,7 @@ import { encryptBlockTree } from '../encryption.js';
 let mounted = false;
 let tiptap = null;
 let outlineEditorInstance = null;
+let mountPromise = null;
 
 function stripHtml(html = '') {
   const tmp = document.createElement('div');
@@ -60,6 +61,8 @@ async function loadTiptap() {
   if (typeof window === 'undefined') {
     throw new Error('Outline editor is browser-only');
   }
+  // Важно: не используем `?bundle` в esm.sh, иначе можно получить несколько копий
+  // prosemirror-* и ошибку вида "Adding different instances of a keyed plugin (plugin$)".
   const [
     core,
     starterKitMod,
@@ -72,16 +75,16 @@ async function loadTiptap() {
     tableCellMod,
     tableHeaderMod,
   ] = await Promise.all([
-    import('https://esm.sh/@tiptap/core?bundle'),
-    import('https://esm.sh/@tiptap/starter-kit?bundle'),
-    import('https://esm.sh/@tiptap/html?bundle'),
-    import('https://esm.sh/@tiptap/pm/state?bundle'),
-    import('https://esm.sh/@tiptap/extension-link?bundle'),
-    import('https://esm.sh/@tiptap/extension-image?bundle'),
-    import('https://esm.sh/@tiptap/extension-table?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-row?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-cell?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-header?bundle'),
+    import('https://esm.sh/@tiptap/core'),
+    import('https://esm.sh/@tiptap/starter-kit'),
+    import('https://esm.sh/@tiptap/html'),
+    import('https://esm.sh/@tiptap/pm/state'),
+    import('https://esm.sh/@tiptap/extension-link'),
+    import('https://esm.sh/@tiptap/extension-image'),
+    import('https://esm.sh/@tiptap/extension-table'),
+    import('https://esm.sh/@tiptap/extension-table-row'),
+    import('https://esm.sh/@tiptap/extension-table-cell'),
+    import('https://esm.sh/@tiptap/extension-table-header'),
   ]);
 
   tiptap = {
@@ -138,6 +141,9 @@ async function mountOutlineEditor() {
     return;
   }
 
+  // Защита от двойного mount (например, если юзер кликнул дважды пока грузим tiptap).
+  if (mountPromise) return mountPromise;
+  mountPromise = (async () => {
   const { core, starterKitMod, htmlMod, pmStateMod } = await loadTiptap();
   const { Editor, Node, Extension, mergeAttributes } = core;
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
@@ -200,7 +206,7 @@ async function mountOutlineEditor() {
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'outline-heading__toggle';
-        toggle.title = 'Свернуть/развернуть (Shift+←/→)';
+        toggle.title = 'Свернуть/развернуть (Shift+←/→), с детьми (Shift+↑/↓)';
         toggle.setAttribute('aria-label', 'Свернуть/развернуть');
 
         const contentDOM = document.createElement('div');
@@ -344,6 +350,53 @@ async function mountOutlineEditor() {
         const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(headingStart + 1), 1));
         dispatch(tr.scrollIntoView());
         return true;
+      };
+
+      const moveSelectionToSectionEnd = (pmState, dispatch, sectionPos) => {
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const heading = sectionNode.child(0);
+        const body = sectionNode.child(1);
+        const isCollapsed = Boolean(sectionNode.attrs?.collapsed);
+        if (isCollapsed) {
+          const headingStart = sectionPos + 1;
+          const headingEnd = headingStart + heading.nodeSize - 1;
+          const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(headingEnd), -1));
+          dispatch(tr);
+          return true;
+        }
+        const bodyStart = sectionPos + 1 + heading.nodeSize;
+        const bodyEnd = bodyStart + body.nodeSize - 1;
+        const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(bodyEnd), -1));
+        dispatch(tr);
+        return true;
+      };
+
+      const isSectionVisible = (doc, sectionPos) => {
+        try {
+          const $p = doc.resolve(Math.min(doc.content.size, Math.max(0, sectionPos + 1)));
+          for (let d = $p.depth; d > 0; d -= 1) {
+            const n = $p.node(d);
+            if (n?.type?.name !== 'outlineSection') continue;
+            const pos = $p.before(d);
+            if (pos === sectionPos) continue;
+            if (Boolean(n.attrs?.collapsed)) return false;
+          }
+          return true;
+        } catch {
+          return true;
+        }
+      };
+
+      const findPrevVisibleSectionPos = (doc, beforePos) => {
+        let prev = null;
+        doc.nodesBetween(0, beforePos, (node, pos) => {
+          if (pos >= beforePos) return false;
+          if (node?.type?.name !== 'outlineSection') return;
+          if (!isSectionVisible(doc, pos)) return;
+          prev = pos;
+        });
+        return prev;
       };
 
       const deleteCurrentSection = (pmState, dispatch, sectionPos) => {
@@ -551,6 +604,36 @@ async function mountOutlineEditor() {
           return true;
         });
 
+      const toggleCollapsedRecursive = (collapsed) =>
+        this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+          if (typeof sectionPos !== 'number') return false;
+          const sectionNode = pmState.doc.nodeAt(sectionPos);
+          if (!sectionNode) return false;
+          const next = Boolean(collapsed);
+
+          // Текущая секция + все её потомки (без предков).
+          // Делаем через относительные позиции внутри `sectionNode`, чтобы гарантированно
+          // не задеть родителей даже при краевых позициях selections.
+          const positions = [sectionPos];
+          sectionNode.descendants((node, pos) => {
+            if (node?.type?.name !== 'outlineSection') return;
+            positions.push(sectionPos + 1 + pos);
+          });
+
+          if (!positions.length) return false;
+
+          let tr = pmState.tr;
+          for (const pos of positions) {
+            const node = tr.doc.nodeAt(pos);
+            if (!node) continue;
+            if (Boolean(node.attrs?.collapsed) === next) continue;
+            tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
+          }
+          dispatch(tr);
+          return true;
+        });
+
       return {
         'Mod-ArrowUp': () => moveSection('up'),
         'Mod-ArrowDown': () => moveSection('down'),
@@ -558,6 +641,8 @@ async function mountOutlineEditor() {
         'Mod-ArrowLeft': () => outdentSection(),
         'Shift-ArrowRight': () => toggleCollapsed(false),
         'Shift-ArrowLeft': () => toggleCollapsed(true),
+        'Shift-ArrowUp': () => toggleCollapsedRecursive(true),
+        'Shift-ArrowDown': () => toggleCollapsedRecursive(false),
         Backspace: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
@@ -598,7 +683,9 @@ async function mountOutlineEditor() {
                 const schema = pmState.doc.type.schema;
                 tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
               }
-              tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 1), 1));
+              // Ставим курсор внутрь первого абзаца body (а не "между" body и абзацем),
+              // иначе Delete/Backspace могут не срабатывать ожидаемо.
+              tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
               dispatch(tr.scrollIntoView());
               return true;
             }
@@ -618,12 +705,30 @@ async function mountOutlineEditor() {
             const bodyNode = sectionNode.child(1);
             const bodyStart = sectionPos + 1 + headingNode.nodeSize;
 
+            // Enter в начале заголовка: вставляем новый блок выше текущего
+            // и ставим курсор в начало нового заголовка.
+            if ($from.parentOffset === 0) {
+              const schema = pmState.doc.type.schema;
+              const newSection = schema.nodes.outlineSection.create(
+                { id: safeUuid(), collapsed: false },
+                [
+                  schema.nodes.outlineHeading.create({}, []),
+                  schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+                  schema.nodes.outlineChildren.create({}, []),
+                ],
+              );
+              let tr = pmState.tr.insert(sectionPos, newSection);
+              tr = tr.setSelection(TextSelection.create(tr.doc, sectionPos + 2));
+              dispatch(tr.scrollIntoView());
+              return true;
+            }
+
             let tr = pmState.tr;
             if (!bodyNode.childCount) {
               const schema = pmState.doc.type.schema;
               tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
             }
-            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 1), 1));
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
             dispatch(tr.scrollIntoView());
             return true;
           }),
@@ -636,21 +741,42 @@ async function mountOutlineEditor() {
             if ($from.parentOffset !== 0) return false;
             const sectionPos = findSectionPos(pmState.doc, $from);
             if (typeof sectionPos !== 'number') return false;
+
+            // Навигация должна соответствовать визуальному порядку секций:
+            // ищем предыдущую ВИДИМУЮ секцию в порядке обхода документа (DFS),
+            // игнорируя секции, скрытые из-за collapsed-родителей.
+            const prevVisible = findPrevVisibleSectionPos(pmState.doc, sectionPos);
+            if (typeof prevVisible === 'number') {
+              return moveSelectionToSectionEnd(pmState, dispatch, prevVisible);
+            }
+
             const $pos = pmState.doc.resolve(sectionPos);
             const idx = $pos.index();
             const parent = $pos.parent;
-            if (!parent || idx <= 0) return false;
-            const prevNode = parent.child(idx - 1);
-            const prevStart = sectionPos - prevNode.nodeSize;
-            const prevSection = pmState.doc.nodeAt(prevStart);
-            if (!prevSection) return false;
-            const prevHeading = prevSection.child(0);
-            const prevBody = prevSection.child(1);
-            const bodyStart = prevStart + 1 + prevHeading.nodeSize;
-            const bodyEnd = bodyStart + prevBody.nodeSize - 1;
-            const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(bodyEnd), -1));
-            dispatch(tr.scrollIntoView());
-            return true;
+            if (!parent) return false;
+
+            // Обычный кейс: есть предыдущий sibling — прыгаем в конец его body.
+            if (idx > 0) {
+              const prevNode = parent.child(idx - 1);
+              const prevStart = sectionPos - prevNode.nodeSize;
+              return moveSelectionToSectionEnd(pmState, dispatch, prevStart);
+            }
+
+            // Если мы первый child, то предыдущего sibling нет — прыгаем в конец body родителя.
+            let currentDepth = null;
+            let parentDepth = null;
+            for (let d = $from.depth; d > 0; d -= 1) {
+              if ($from.node(d)?.type?.name === 'outlineSection') {
+                if (currentDepth === null) currentDepth = d;
+                else {
+                  parentDepth = d;
+                  break;
+                }
+              }
+            }
+            if (parentDepth === null) return false;
+            const parentSectionPos = $from.before(parentDepth);
+            return moveSelectionToSectionEnd(pmState, dispatch, parentSectionPos);
           }),
       };
     },
@@ -728,7 +854,7 @@ async function mountOutlineEditor() {
                 ],
               );
               tr = tr.insert(insertPos, newSection);
-              tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+              tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
               view.dispatch(tr.scrollIntoView());
               return true;
             },
@@ -760,6 +886,15 @@ async function mountOutlineEditor() {
     blocks: state.article?.blocks || [],
     parseHtmlToNodes,
   });
+
+  if (outlineEditorInstance) {
+    try {
+      outlineEditorInstance.destroy();
+    } catch {
+      // ignore
+    }
+    outlineEditorInstance = null;
+  }
 
   outlineEditorInstance = new Editor({
     element: contentRoot,
@@ -793,6 +928,13 @@ async function mountOutlineEditor() {
   });
 
   contentRoot.focus?.({ preventScroll: true });
+  })();
+
+  try {
+    await mountPromise;
+  } finally {
+    mountPromise = null;
+  }
 }
 
 function escapeHtml(value = '') {
