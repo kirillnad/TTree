@@ -1,7 +1,7 @@
 // Вынесено из `article.js`: загрузка статьи в state (без DOM-рендера).
 
 import { state } from '../state.js';
-import { fetchArticle } from '../api.js?v=2';
+import { fetchArticle } from '../api.js?v=4';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { showToast } from '../toast.js';
 import { upsertArticleIndex } from '../sidebar.js';
@@ -12,6 +12,21 @@ import { updatePublicToggleLabel } from './header.js';
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
   const switchingArticle = state.articleId !== id;
+
+  if (switchingArticle && state.isOutlineEditing) {
+    try {
+      const outline = await import('../outline/editor.js?v=11');
+      if (outline?.flushOutlineAutosave) {
+        await outline.flushOutlineAutosave();
+      }
+      if (outline?.closeOutlineEditor) {
+        outline.closeOutlineEditor();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   state.articleId = id;
   state.isEditingTitle = false;
   state.pendingTextPreview = null;
@@ -62,4 +77,3 @@ export async function loadArticle(id, options = {}) {
   updatePublicToggleLabel();
   return article;
 }
-

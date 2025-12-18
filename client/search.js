@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
 import { escapeHtml, escapeRegExp, htmlToLines, htmlToPlainText, logDebug } from './utils.js';
-import { apiRequest, search as apiSearch, semanticSearch, ragSummary } from './api.js?v=2';
+import { apiRequest, search as apiSearch, semanticSearch, ragSummary } from './api.js?v=4';
 import { navigate, routing } from './routing.js';
 import { setSidebarMobileOpen } from './sidebar.js';
 import { hideToast, showPersistentToast } from './toast.js';

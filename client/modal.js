@@ -73,6 +73,75 @@ function buildModal({ title, message, confirmText, cancelText, renderBody }) {
   return { overlay, card, confirmBtn, cancelBtn, form };
 }
 
+function diffTextSegments(currentText = '', nextText = '') {
+  const a = Array.from(currentText);
+  const b = Array.from(nextText);
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i -= 1) {
+    for (let j = n - 1; j >= 0; j -= 1) {
+      if (a[i] === b[j]) {
+        dp[i][j] = dp[i + 1][j + 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+  const operations = [];
+  let i = 0;
+  let j = 0;
+  while (i < m && j < n) {
+    if (a[i] === b[j]) {
+      operations.push({ type: 'same', value: a[i] });
+      i += 1;
+      j += 1;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      operations.push({ type: 'removed', value: a[i] });
+      i += 1;
+    } else {
+      operations.push({ type: 'added', value: b[j] });
+      j += 1;
+    }
+  }
+  while (i < m) {
+    operations.push({ type: 'removed', value: a[i] });
+    i += 1;
+  }
+  while (j < n) {
+    operations.push({ type: 'added', value: b[j] });
+    j += 1;
+  }
+
+  const chunks = [];
+  operations.forEach((op) => {
+    if (!op.value) return;
+    const last = chunks[chunks.length - 1];
+    if (last && last.type === op.type) {
+      last.value += op.value;
+    } else {
+      chunks.push({ type: op.type, value: op.value });
+    }
+  });
+  return chunks;
+}
+
+function renderDiffFragment({ baseText = '', nextText = '', mode = 'before' } = {}) {
+  const frag = document.createDocumentFragment();
+  const chunks = diffTextSegments(baseText, nextText);
+  chunks.forEach((chunk) => {
+    if (mode === 'before' && chunk.type === 'added') return;
+    if (mode === 'after' && chunk.type === 'removed') return;
+    const span = document.createElement('span');
+    span.className = 'diff-seg';
+    if (chunk.type === 'added') span.classList.add('diff-seg--added');
+    if (chunk.type === 'removed') span.classList.add('diff-seg--removed');
+    span.textContent = chunk.value;
+    frag.appendChild(span);
+  });
+  return frag;
+}
+
 export function showConfirm(options = {}) {
   const root = ensureRoot();
   const { overlay, card, confirmBtn, cancelBtn, form } = buildModal(options);
@@ -187,7 +256,7 @@ export function showPrompt(options = {}) {
     }
     if (event.code === 'Enter' && inputRef && !options.hideConfirm) {
       const nextValue = inputRef.value.trim();
-      if (!nextValue) return;
+      if (!nextValue && !options.allowEmpty) return;
       event.preventDefault();
       resolveResult(nextValue);
     }
@@ -196,7 +265,7 @@ export function showPrompt(options = {}) {
   const updateConfirmState = () => {
     if (!confirmBtn || !inputRef) return;
     const hasValue = Boolean(inputRef.value.trim());
-    confirmBtn.disabled = !hasValue;
+    confirmBtn.disabled = !hasValue && !options.allowEmpty;
   };
 
   const renderSuggestions = () => {
@@ -268,6 +337,14 @@ export function showPrompt(options = {}) {
         updateConfirmState();
         if (suggestions.length) renderSuggestions();
       });
+      if (options.hideConfirm) {
+        inputRef.addEventListener('keydown', (event) => {
+          if (event.code === 'Enter') {
+            event.preventDefault();
+            resolveResult(inputRef.value.trim());
+          }
+        });
+      }
       updateConfirmState();
       if (suggestions.length) renderSuggestions();
     } else {
@@ -402,6 +479,409 @@ export function showPublicLinkModal(options = {}) {
       } else {
         card.focus({ preventScroll: true });
       }
+    });
+  });
+}
+
+export function showVersionsPicker(options = {}) {
+  const root = ensureRoot();
+  const versions = Array.isArray(options.versions) ? options.versions : [];
+  let selectedId = versions[0]?.id || '';
+
+  const formatTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso || '');
+      return new Intl.DateTimeFormat('ru-RU', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(d);
+    } catch {
+      return String(iso || '');
+    }
+  };
+
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
+    title: options.title || 'Версии',
+    confirmText: options.confirmText || 'Восстановить',
+    cancelText: options.cancelText || 'Закрыть',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      const hint = document.createElement('p');
+      hint.className = 'modal-body__text';
+      hint.textContent = options.message || 'Выберите версию статьи для восстановления.';
+      fragment.appendChild(hint);
+
+      if (!versions.length) {
+        const empty = document.createElement('div');
+        empty.className = 'modal-empty';
+        empty.textContent = 'Версий пока нет.';
+        fragment.appendChild(empty);
+        return fragment;
+      }
+
+      const list = document.createElement('div');
+      list.className = 'modal-list';
+
+      versions.forEach((v, idx) => {
+        const row = document.createElement('label');
+        row.className = 'modal-list__item';
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'version';
+        radio.value = v.id || '';
+        radio.checked = idx === 0;
+        radio.addEventListener('change', () => {
+          selectedId = radio.value;
+          confirmBtn.disabled = !selectedId;
+          compareBtn.disabled = !selectedId;
+        });
+
+        const meta = document.createElement('div');
+        meta.className = 'modal-list__meta';
+
+        const title = document.createElement('div');
+        title.className = 'modal-list__title';
+        title.textContent = v.label || formatTime(v.created_at || v.createdAt);
+
+        const subtitle = document.createElement('div');
+        subtitle.className = 'modal-list__subtitle';
+        const reason = v.reason || '';
+        const created = formatTime(v.created_at || v.createdAt);
+        subtitle.textContent = [created, reason].filter(Boolean).join(' · ');
+
+        meta.appendChild(title);
+        meta.appendChild(subtitle);
+
+        row.appendChild(radio);
+        row.appendChild(meta);
+        list.appendChild(row);
+      });
+
+      fragment.appendChild(list);
+      return fragment;
+    },
+  });
+
+  confirmBtn.classList.remove('danger-btn');
+  confirmBtn.disabled = !selectedId;
+
+  const compareBtn = document.createElement('button');
+  compareBtn.type = 'button';
+  compareBtn.className = 'ghost';
+  compareBtn.textContent = options.compareText || 'Сравнить';
+  compareBtn.disabled = !selectedId;
+  const footer = card.querySelector('.modal-footer');
+  if (footer) {
+    footer.insertBefore(compareBtn, confirmBtn);
+  }
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+
+    const submitHandler = () => {
+      if (!selectedId) return;
+      resolveResult({ action: 'restore', versionId: selectedId });
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitHandler();
+    });
+    confirmBtn.addEventListener('click', submitHandler);
+    compareBtn.addEventListener('click', () => {
+      if (!selectedId) return;
+      resolveResult({ action: 'compare', versionId: selectedId });
+    });
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  });
+}
+
+export function showVersionCompareTargetPicker(options = {}) {
+  const root = ensureRoot();
+  const versions = Array.isArray(options.versions) ? options.versions : [];
+  const excludeId = String(options.excludeId || '');
+  const listItems = [
+    { kind: 'current', id: '__current__', title: 'Текущая статья' },
+    ...versions
+      .filter((v) => String(v.id || '') && String(v.id || '') !== excludeId)
+      .map((v) => ({
+        kind: 'version',
+        id: String(v.id),
+        title: v.label || v.created_at || v.createdAt || v.id,
+      })),
+  ];
+  let selectedId = listItems[0]?.id || '';
+
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
+    title: options.title || 'Сравнить с…',
+    confirmText: options.confirmText || 'Сравнить',
+    cancelText: options.cancelText || 'Отмена',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      const hint = document.createElement('p');
+      hint.className = 'modal-body__text';
+      hint.textContent = options.message || 'Выберите вторую сторону сравнения.';
+      fragment.appendChild(hint);
+
+      const list = document.createElement('div');
+      list.className = 'modal-list';
+      listItems.forEach((item, idx) => {
+        const row = document.createElement('label');
+        row.className = 'modal-list__item';
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'compareTarget';
+        radio.value = item.id;
+        radio.checked = idx === 0;
+        radio.addEventListener('change', () => {
+          selectedId = radio.value;
+          confirmBtn.disabled = !selectedId;
+        });
+
+        const meta = document.createElement('div');
+        meta.className = 'modal-list__meta';
+        const title = document.createElement('div');
+        title.className = 'modal-list__title';
+        title.textContent = item.title;
+        meta.appendChild(title);
+        row.appendChild(radio);
+        row.appendChild(meta);
+        list.appendChild(row);
+      });
+
+      fragment.appendChild(list);
+      return fragment;
+    },
+  });
+
+  confirmBtn.classList.remove('danger-btn');
+  confirmBtn.disabled = !selectedId;
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    const submitHandler = () => {
+      if (!selectedId) return;
+      const item = listItems.find((x) => x.id === selectedId) || null;
+      if (!item) {
+        resolveResult(null);
+        return;
+      }
+      if (item.kind === 'current') {
+        resolveResult({ target: 'current' });
+        return;
+      }
+      resolveResult({ target: 'version', versionId: item.id });
+    };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitHandler();
+    });
+    confirmBtn.addEventListener('click', submitHandler);
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  });
+}
+
+export function showVersionDiffModal(options = {}) {
+  const root = ensureRoot();
+  const changes = Array.isArray(options.changes) ? options.changes : [];
+  let selected = changes.find((c) => c.type === 'changed') || changes[0] || null;
+
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    title: options.title || 'Отличия версий',
+    confirmText: 'Закрыть',
+    cancelText: '',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+
+      const summary = document.createElement('div');
+      summary.className = 'diff-summary';
+      const counts = changes.reduce(
+        (acc, c) => {
+          acc[c.type] = (acc[c.type] || 0) + 1;
+          return acc;
+        },
+        { added: 0, removed: 0, changed: 0 },
+      );
+      summary.textContent = `Изменено: ${counts.changed || 0} · Добавлено: ${counts.added || 0} · Удалено: ${counts.removed || 0}`;
+      fragment.appendChild(summary);
+
+      if (!changes.length) {
+        const empty = document.createElement('div');
+        empty.className = 'modal-empty';
+        empty.textContent = 'Нет отличий.';
+        fragment.appendChild(empty);
+        return fragment;
+      }
+
+      const list = document.createElement('div');
+      list.className = 'modal-list';
+      changes.forEach((c) => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = `diff-item diff-item--${c.type}${selected && selected.id === c.id ? ' diff-item--active' : ''}`;
+        const label = c.label || c.id;
+        row.textContent = `${c.type === 'changed' ? '≠' : c.type === 'added' ? '+' : '−'} ${label}`;
+        row.addEventListener('click', () => {
+          selected = c;
+          // re-render by rebuilding modal content is overkill; just update active class + panes.
+          list.querySelectorAll('.diff-item').forEach((el) => el.classList.remove('diff-item--active'));
+          row.classList.add('diff-item--active');
+          updatePanes();
+        });
+        list.appendChild(row);
+      });
+      fragment.appendChild(list);
+
+      const panes = document.createElement('div');
+      panes.className = 'diff-panes';
+      const beforeWrap = document.createElement('div');
+      beforeWrap.className = 'diff-pane-wrap';
+      const afterWrap = document.createElement('div');
+      afterWrap.className = 'diff-pane-wrap';
+
+      const beforeTitle = document.createElement('div');
+      beforeTitle.className = 'diff-pane-title';
+      beforeTitle.textContent = options.beforeTitle || 'Версия';
+      const afterTitle = document.createElement('div');
+      afterTitle.className = 'diff-pane-title';
+      afterTitle.textContent = options.afterTitle || 'Текущая';
+
+      const before = document.createElement('div');
+      before.className = 'diff-pane diff-pane--before';
+      const after = document.createElement('div');
+      after.className = 'diff-pane diff-pane--after';
+
+      beforeWrap.appendChild(beforeTitle);
+      beforeWrap.appendChild(before);
+      afterWrap.appendChild(afterTitle);
+      afterWrap.appendChild(after);
+
+      panes.appendChild(beforeWrap);
+      panes.appendChild(afterWrap);
+      fragment.appendChild(panes);
+
+      const updatePanes = () => {
+        const base = selected?.before || '';
+        const next = selected?.after || '';
+        before.innerHTML = '';
+        after.innerHTML = '';
+        before.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'before' }));
+        after.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'after' }));
+      };
+      updatePanes();
+
+      return fragment;
+    },
+  });
+
+  card.classList.add('modal-card--fullscreen');
+  card.classList.add('modal-card--diff-light');
+
+  // превращаем confirm в обычный OK и прячем cancel
+  confirmBtn.classList.remove('danger-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = () => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult();
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.addEventListener('click', resolveResult);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult();
+    });
+    document.addEventListener('keydown', onKeyDown);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
     });
   });
 }

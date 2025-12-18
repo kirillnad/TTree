@@ -25,6 +25,7 @@ import {
   setCollapseState,
   setCurrentBlock,
   applyEditingUndoStep,
+  extractBlockSections,
 } from './block.js';
 import { handleSearchInput, hideSearchResults, renderSearchResults, openRagPageFromCurrentSearch } from './search.js';
 import { startTitleEditingMode, handleTitleInputKeydown, handleTitleInputBlur, toggleArticleMenu, closeArticleMenu, isArticleMenuVisible, handleDeleteArticle, handleTitleClick } from './title.js';
@@ -60,12 +61,22 @@ import {
   indentArticleApi,
   outdentArticleApi,
   createTelegramLinkToken,
-} from './api.js?v=2';
+} from './api.js?v=4';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret } from './utils.js';
-import { showPrompt, showConfirm, showImportConflictDialog, showPublicLinkModal, showBlockTrashPicker } from './modal.js?v=2';
+import {
+  showPrompt,
+  showConfirm,
+  showImportConflictDialog,
+  showPublicLinkModal,
+  showBlockTrashPicker,
+  showVersionsPicker,
+  showVersionCompareTargetPicker,
+  showVersionDiffModal,
+} from './modal.js?v=5';
 import { loadArticle } from './article.js';
-import { openOutlineEditor } from './outline/editor.js?v=6';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=12';
+import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
 // Вынесено из этого файла: обработка клавиш в режиме редактирования → `./events/editKeys.js`.
@@ -581,6 +592,194 @@ export function attachEvents() {
       event.stopPropagation();
       closeArticleMenu();
       openOutlineEditor();
+    });
+  }
+  if (refs.saveVersionBtn) {
+    refs.saveVersionBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      if (!state.articleId) return;
+      try {
+        const label = await showPrompt({
+          title: 'Сохранить версию',
+          message: 'Название версии (можно пустым)',
+          placeholder: 'Например: перед рефакторингом',
+          confirmText: 'Сохранить',
+          cancelText: 'Отмена',
+          allowEmpty: true,
+        });
+        // Если пользователь отменил — просто выходим.
+        if (label === null) return;
+
+        showPersistentToast('Сохраняем версию…');
+        await createArticleVersion(state.articleId, (label || '').trim() || null);
+        hideToast();
+        showToast('Версия сохранена');
+      } catch (error) {
+        hideToast();
+        showToast(error?.message || 'Не удалось сохранить версию');
+      }
+    });
+  }
+  if (refs.versionsBtn) {
+    refs.versionsBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      if (!state.articleId) return;
+      if (state.article?.encrypted) {
+        showToast('Сравнение версий пока недоступно для зашифрованных статей');
+        return;
+      }
+      try {
+        showPersistentToast('Загружаем версии…');
+        const result = await fetchArticleVersions(state.articleId);
+        hideToast();
+        const versions = Array.isArray(result?.versions) ? result.versions : [];
+        const choiceRaw = await showVersionsPicker({ versions });
+        if (!choiceRaw) return;
+        const choice =
+          typeof choiceRaw === 'string'
+            ? { action: 'restore', versionId: choiceRaw }
+            : choiceRaw;
+        if (!choice || !choice.versionId) return;
+        const { action, versionId } = choice;
+        if (action === 'compare') {
+          const formatTime = (iso) => {
+            try {
+              const d = new Date(iso);
+              if (Number.isNaN(d.getTime())) return String(iso || '');
+              return new Intl.DateTimeFormat('ru-RU', {
+                year: '2-digit',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(d);
+            } catch {
+              return String(iso || '');
+            }
+          };
+
+          const labelForVersion = (id) => {
+            const v = versions.find((x) => String(x?.id || '') === String(id));
+            if (!v) return String(id);
+            return String(v?.label || formatTime(v?.created_at || v?.createdAt) || id);
+          };
+
+          const target = await showVersionCompareTargetPicker({
+            versions,
+            excludeId: versionId,
+          });
+          if (!target) return;
+
+          showPersistentToast('Сравниваем…');
+          const verA = await fetchArticleVersion(state.articleId, versionId);
+          const blocksA = Array.isArray(verA?.blocks) ? verA.blocks : [];
+
+          let blocksB = [];
+          let beforeTitle = `Версия: ${labelForVersion(versionId)}`;
+          let afterTitle = 'Текущая';
+          if (target.target === 'current') {
+            blocksB = Array.isArray(state.article?.blocks) ? state.article.blocks : [];
+          } else {
+            const verB = await fetchArticleVersion(state.articleId, target.versionId);
+            blocksB = Array.isArray(verB?.blocks) ? verB.blocks : [];
+            afterTitle = `Версия: ${labelForVersion(target.versionId)}`;
+          }
+          hideToast();
+
+          const strip = (html = '') => {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html || '';
+            return (tmp.textContent || '').replace(/\u00a0/g, ' ').trim();
+          };
+
+          const toIndexTextMap = (blocks) => {
+            const map = new Map();
+            const order = [];
+            const visit = (arr) => {
+              (arr || []).forEach((blk) => {
+                const id = String(blk?.id || '');
+                const text = String(blk?.text || '');
+                // title/body в Memus блоках разделены <p>title</p><p><br/></p>
+                const parts = extractBlockSections(text);
+                const titlePlain = strip(parts.titleHtml || '');
+                const bodyPlain = strip(parts.bodyHtml || '');
+                const indexText = `${titlePlain}\n${bodyPlain}`.trim();
+                if (id) {
+                  map.set(id, { indexText, label: titlePlain || id });
+                  order.push(id);
+                }
+                if (Array.isArray(blk?.children) && blk.children.length) visit(blk.children);
+              });
+            };
+            visit(blocks);
+            return { map, order };
+          };
+
+          const version = toIndexTextMap(blocksA);
+          const current = toIndexTextMap(blocksB);
+
+          const changes = [];
+          const seen = new Set();
+          version.order.forEach((id) => {
+            seen.add(id);
+            const a = version.map.get(id);
+            const b = current.map.get(id);
+            if (!b) {
+              changes.push({ type: 'removed', id, label: a?.label || id, before: a?.indexText || '', after: '' });
+              return;
+            }
+            if ((a?.indexText || '') !== (b?.indexText || '')) {
+              changes.push({
+                type: 'changed',
+                id,
+                label: b?.label || a?.label || id,
+                before: a?.indexText || '',
+                after: b?.indexText || '',
+              });
+            }
+          });
+          current.order.forEach((id) => {
+            if (seen.has(id)) return;
+            const b = current.map.get(id);
+            changes.push({ type: 'added', id, label: b?.label || id, before: '', after: b?.indexText || '' });
+          });
+
+          await showVersionDiffModal({
+            title: 'Отличия',
+            beforeTitle,
+            afterTitle,
+            changes,
+          });
+          return;
+        }
+
+        const ok = await showConfirm({
+          title: 'Восстановить версию?',
+          message: 'Текущее содержимое статьи будет заменено выбранной версией.',
+          confirmText: 'Восстановить',
+          cancelText: 'Отмена',
+        });
+        if (!ok) return;
+        const wasOutline = Boolean(state.isOutlineEditing);
+        showPersistentToast('Восстанавливаем…');
+        await restoreArticleVersion(state.articleId, versionId);
+        await loadArticle(state.articleId, { resetUndoStacks: true });
+        if (wasOutline) {
+          // Если пользователь находится в outline-режиме, нужно пересобрать TipTap документ,
+          // иначе экран останется на старом содержимом.
+          closeOutlineEditor();
+          await openOutlineEditor();
+        } else {
+          renderArticle();
+        }
+        hideToast();
+        showToast('Версия восстановлена');
+      } catch (error) {
+        hideToast();
+        showToast(error?.message || 'Не удалось открыть версии');
+      }
     });
   }
   if (refs.exportCurrentBlockBtn) {

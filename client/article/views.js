@@ -2,9 +2,9 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { apiRequest, fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=2';
+import { apiRequest, fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=4';
 import { showToast } from '../toast.js';
-import { showPrompt } from '../modal.js?v=2';
+import { showPrompt } from '../modal.js?v=5';
 import { navigate, routing } from '../routing.js';
 import {
   ensureArticlesIndexLoaded,

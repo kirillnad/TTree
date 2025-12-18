@@ -1,10 +1,10 @@
 ﻿import { state } from './state.js';
-import { apiRequest, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js?v=2';
+import { apiRequest, uploadAttachmentFileWithProgress, uploadFileToYandexDisk } from './api.js?v=4';
 import { showToast } from './toast.js';
 import { rerenderSingleBlock } from './article.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from './utils.js';
-import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js?v=2';
-import { fetchArticlesIndex } from './api.js?v=2';
+import { showPrompt, showImagePreview, showLinkPrompt } from './modal.js?v=5';
+import { fetchArticlesIndex } from './api.js?v=4';
 import { routing } from './routing.js';
 import { navigate } from './routing.js';
 import { splitEditingBlockAtCaret } from './actions.js';

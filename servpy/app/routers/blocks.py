@@ -79,11 +79,19 @@ def put_replace_blocks_tree(
     blocks = payload.get('blocks') if payload else None
     if not isinstance(blocks, list):
         raise HTTPException(status_code=400, detail='Missing blocks')
+    create_version_if_stale_hours = payload.get('createVersionIfStaleHours') if payload else None
+    if create_version_if_stale_hours is not None and not isinstance(create_version_if_stale_hours, (int, float)):
+        raise HTTPException(status_code=400, detail='createVersionIfStaleHours must be number')
+    doc_json = payload.get('docJson') if payload else None
+    if doc_json is not None and not isinstance(doc_json, (dict, list)):
+        raise HTTPException(status_code=400, detail='docJson must be object')
     try:
         result = replace_article_blocks_tree(
             article_id=real_article_id,
             author_id=current_user.id,
             blocks=blocks,
+            create_version_if_stale_hours=int(create_version_if_stale_hours) if create_version_if_stale_hours is not None else None,
+            doc_json=doc_json,
         )
         return result
     except ArticleNotFound as exc:

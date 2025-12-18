@@ -1257,6 +1257,8 @@ def replace_article_blocks_tree(
     article_id: str,
     author_id: str,
     blocks: list[dict[str, Any]],
+    create_version_if_stale_hours: int | None = None,
+    doc_json: dict[str, Any] | list[Any] | None = None,
 ) -> dict[str, Any]:
     """
     Атомарно заменяет дерево блоков статьи (parent/position/text/collapsed) на присланное клиентом.
@@ -1336,7 +1338,7 @@ def replace_article_blocks_tree(
             }
 
     article_row = CONN.execute(
-        'SELECT history, redo_history, author_id, title FROM articles WHERE id = ?',
+        'SELECT history, redo_history, author_id, title, updated_at, article_doc_json FROM articles WHERE id = ?',
         (article_id,),
     ).fetchone()
     if not article_row:
@@ -1345,7 +1347,57 @@ def replace_article_blocks_tree(
         raise ArticleNotFound('Article not found')
 
     history = deserialize_history(article_row.get('history'))
+    history_entries_added: list[dict[str, Any]] = []
     now = iso_now()
+    now_dt = datetime.utcnow()
+    doc_json_str = None
+    if doc_json is not None:
+        try:
+            doc_json_str = json.dumps(doc_json)
+        except Exception:
+            doc_json_str = None
+
+    def _maybe_create_auto_version() -> None:
+        if not create_version_if_stale_hours:
+            return
+        try:
+            hours = int(create_version_if_stale_hours)
+        except Exception:
+            return
+        if hours <= 0:
+            return
+        updated_at_raw = (article_row.get('updated_at') or '').strip()
+        if not updated_at_raw:
+            return
+        try:
+            updated_dt = datetime.fromisoformat(updated_at_raw)
+        except Exception:
+            return
+        age_seconds = (now_dt - updated_dt).total_seconds()
+        if age_seconds < hours * 3600:
+            return
+        # Сохраняем версию "как было" перед первым изменением после долгой паузы.
+        try:
+            blocks_snapshot = rows_to_tree(article_id)
+            CONN.execute(
+                '''
+                INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    str(uuid.uuid4()),
+                    article_id,
+                    author_id,
+                    now,
+                    'auto-12h',
+                    None,
+                    json.dumps(blocks_snapshot or []),
+                    article_row.get('article_doc_json'),
+                ),
+            )
+        except Exception:
+            # Не блокируем сохранение статьи из-за версии.
+            return
 
     def _push_history_if_text_changed(block_id: str, before: str, after: str) -> None:
         if before == after:
@@ -1358,6 +1410,7 @@ def replace_article_blocks_tree(
             'timestamp': now,
         }
         history.append(entry)
+        history_entries_added.append(entry)
 
     # Собираем список блоков, для которых нужно обновить embeddings (новые или изменившие текст).
     changed_for_embeddings: list[dict[str, Any]] = []
@@ -1417,12 +1470,13 @@ def replace_article_blocks_tree(
                 _insert_tree(children, parent_id=bid)
 
     with CONN:
+        _maybe_create_auto_version()
         CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
         CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
         _insert_tree(blocks, parent_id=None)
         CONN.execute(
-            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ? WHERE id = ?',
-            (now, serialize_history(history), '[]', article_id),
+            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            (now, serialize_history(history), '[]', doc_json_str, article_id),
         )
         _rebuild_article_links_for_article_id(article_id)
 
@@ -1448,6 +1502,7 @@ def replace_article_blocks_tree(
         'updatedAt': now,
         'changedBlockIds': [b.get('id') for b in changed_for_embeddings if b.get('id')],
         'removedBlockIds': list(removed_ids),
+        'historyEntriesAdded': history_entries_added,
     }
 
 

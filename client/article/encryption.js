@@ -1,9 +1,9 @@
 // Вынесено из `article.js`: шифрование/расшифровка статьи и управление ключами.
 
 import { state } from '../state.js';
-import { apiRequest } from '../api.js?v=2';
+import { apiRequest } from '../api.js?v=4';
 import { showToast } from '../toast.js';
-import { showPrompt, showConfirm, showPasswordWithHintPrompt } from '../modal.js?v=2';
+import { showPrompt, showConfirm, showPasswordWithHintPrompt } from '../modal.js?v=5';
 import { logDebug } from '../utils.js';
 import {
   deriveKeyFromPassword,
@@ -311,4 +311,3 @@ export async function removeArticleEncryption() {
     showToast(error.message || 'Не удалось отключить шифрование');
   }
 }
-

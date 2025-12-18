@@ -73,6 +73,8 @@ export const refs = {
   deleteArticleBtn: document.getElementById('deleteArticleBtn'),
   exportArticleBtn: document.getElementById('exportArticleBtn'),
   outlineEditBtn: document.getElementById('outlineEditBtn'),
+  saveVersionBtn: document.getElementById('saveVersionBtn'),
+  versionsBtn: document.getElementById('versionsBtn'),
   exportAllHtmlZipBtn: document.getElementById('exportAllHtmlZipBtn'),
   importArticleBtn: document.getElementById('importArticleBtn'),
   importMarkdownBtn: document.getElementById('importMarkdownBtn'),

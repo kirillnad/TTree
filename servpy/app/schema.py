@@ -50,7 +50,8 @@ def _init_postgres_schema() -> None:
             encryption_salt TEXT,
             encryption_verifier TEXT,
             encryption_hint TEXT,
-            public_slug TEXT UNIQUE
+            public_slug TEXT UNIQUE,
+            article_doc_json TEXT
         )
         ''',
         '''
@@ -85,6 +86,22 @@ def _init_postgres_schema() -> None:
             size BIGINT NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
         )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS article_versions (
+            id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT 'manual',
+            label TEXT,
+            blocks_json TEXT NOT NULL DEFAULT '[]',
+            doc_json TEXT
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_article_versions_article_created
+        ON article_versions(article_id, created_at DESC)
         ''',
         '''
         CREATE INDEX IF NOT EXISTS idx_attachments_article
@@ -243,6 +260,13 @@ def _init_postgres_schema() -> None:
                 WHERE table_name = 'articles' AND column_name = 'block_trash'
             ) THEN
                 ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]';
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'article_doc_json'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN article_doc_json TEXT;
             END IF;
 
             IF NOT EXISTS (

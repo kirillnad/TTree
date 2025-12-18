@@ -96,13 +96,20 @@ export function createArticle(title) {
   return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
 }
 
-export function replaceArticleBlocksTree(articleId, blocks) {
+export function replaceArticleBlocksTree(articleId, blocks, options = {}) {
   if (!articleId) {
     return Promise.reject(new Error('articleId is required'));
   }
+  const payload = { blocks: Array.isArray(blocks) ? blocks : [] };
+  if (options && typeof options.createVersionIfStaleHours === 'number') {
+    payload.createVersionIfStaleHours = options.createVersionIfStaleHours;
+  }
+  if (options && options.docJson) {
+    payload.docJson = options.docJson;
+  }
   return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/blocks/replace-tree`, {
     method: 'PUT',
-    body: JSON.stringify({ blocks: Array.isArray(blocks) ? blocks : [] }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -243,6 +250,58 @@ export function uploadImageFile(file) {
     }
     return viaXhr();
   });
+}
+
+export function createArticleVersion(articleId, label = null) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  const payload = {};
+  if (label) payload.label = String(label);
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/versions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchArticleVersions(articleId) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/versions`, {
+    method: 'GET',
+  });
+}
+
+export function restoreArticleVersion(articleId, versionId) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  if (!versionId) {
+    return Promise.reject(new Error('versionId is required'));
+  }
+  return apiRequest(
+    `/api/articles/${encodeURIComponent(articleId)}/versions/${encodeURIComponent(versionId)}/restore`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    },
+  );
+}
+
+export function fetchArticleVersion(articleId, versionId) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  if (!versionId) {
+    return Promise.reject(new Error('versionId is required'));
+  }
+  return apiRequest(
+    `/api/articles/${encodeURIComponent(articleId)}/versions/${encodeURIComponent(versionId)}`,
+    {
+      method: 'GET',
+    },
+  );
 }
 
 export function uploadAttachmentFile(articleId, file) {

@@ -2,19 +2,81 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { replaceArticleBlocksTree } from '../api.js?v=2';
-import { renderArticle } from '../article.js';
+import { replaceArticleBlocksTree } from '../api.js?v=4';
 import { encryptBlockTree } from '../encryption.js';
+import { hydrateUndoRedoFromArticle } from '../undo.js';
 
 let mounted = false;
 let tiptap = null;
 let outlineEditorInstance = null;
 let mountPromise = null;
+let autosaveTimer = null;
+let autosaveInFlight = false;
+let outlineLastSavedAt = null;
+let lastActiveSectionId = null;
+const committedSectionIndexText = new Map();
+const dirtySectionIds = new Set();
+let docDirty = false;
+let onlineHandlerAttached = false;
+
+const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
+
+function readAutosaveQueue() {
+  try {
+    const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAutosaveQueue(queue) {
+  try {
+    window.localStorage.setItem(OUTLINE_QUEUE_KEY, JSON.stringify(queue || {}));
+  } catch {
+    // ignore
+  }
+}
+
+function setQueuedBlocks(articleId, blocksPlain) {
+  if (!articleId) return;
+  if (state.article?.encrypted) return; // не сохраняем plaintext зашифрованных статей в localStorage
+  const queue = readAutosaveQueue();
+  queue[String(articleId)] = {
+    blocks: Array.isArray(blocksPlain) ? blocksPlain : [],
+    queuedAt: Date.now(),
+  };
+  writeAutosaveQueue(queue);
+}
+
+function getQueuedBlocks(articleId) {
+  const queue = readAutosaveQueue();
+  const entry = queue && articleId ? queue[String(articleId)] : null;
+  if (!entry || !Array.isArray(entry.blocks)) return null;
+  return entry.blocks;
+}
+
+function clearQueuedBlocks(articleId) {
+  if (!articleId) return;
+  const queue = readAutosaveQueue();
+  if (queue && Object.prototype.hasOwnProperty.call(queue, String(articleId))) {
+    delete queue[String(articleId)];
+    writeAutosaveQueue(queue);
+  }
+}
 
 function stripHtml(html = '') {
   const tmp = document.createElement('div');
   tmp.innerHTML = html || '';
   return (tmp.textContent || '').replace(/\u00a0/g, ' ').trim();
+}
+
+function normalizeWhitespace(text = '') {
+  return String(text || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function safeUuid() {
@@ -29,10 +91,7 @@ function renderOutlineShell({ loading = false } = {}) {
   refs.outlineEditor.innerHTML = `
     <div class="outline-editor__bar">
       <div class="outline-editor__title">Outline редактор</div>
-      <div class="outline-editor__actions">
-        <button type="button" class="ghost small" data-outline-action="save" ${loading ? 'disabled' : ''}>Сохранить</button>
-        <button type="button" class="ghost small" data-outline-action="cancel">Закрыть</button>
-      </div>
+      <div class="outline-editor__status" data-outline-status="true"></div>
     </div>
     <div class="outline-editor__body">
       <div class="outline-editor__content" id="outlineEditorContent"></div>
@@ -41,19 +100,22 @@ function renderOutlineShell({ loading = false } = {}) {
   `;
   if (!mounted) {
     mounted = true;
-    refs.outlineEditor.addEventListener('click', (event) => {
-      const btn = event.target?.closest?.('button[data-outline-action]');
-      if (!btn) return;
-      const action = btn.dataset.outlineAction;
-      if (action === 'cancel') {
-        closeOutlineEditor();
-        return;
-      }
-      if (action === 'save') {
-        saveOutlineEditor();
-      }
-    });
+    // no buttons: autosave only
   }
+}
+
+function formatTimeShort(date) {
+  try {
+    return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(date);
+  } catch {
+    return '';
+  }
+}
+
+function setOutlineStatus(text = '') {
+  const el = refs.outlineEditor?.querySelector?.('[data-outline-status="true"]');
+  if (!el) return;
+  el.textContent = text || '';
 }
 
 async function loadTiptap() {
@@ -74,6 +136,7 @@ async function loadTiptap() {
     tableRowMod,
     tableCellMod,
     tableHeaderMod,
+    uniqueIdMod,
   ] = await Promise.all([
     import('https://esm.sh/@tiptap/core'),
     import('https://esm.sh/@tiptap/starter-kit'),
@@ -85,6 +148,7 @@ async function loadTiptap() {
     import('https://esm.sh/@tiptap/extension-table-row'),
     import('https://esm.sh/@tiptap/extension-table-cell'),
     import('https://esm.sh/@tiptap/extension-table-header'),
+    import('https://esm.sh/@tiptap/extension-unique-id'),
   ]);
 
   tiptap = {
@@ -98,6 +162,7 @@ async function loadTiptap() {
     tableRowMod,
     tableCellMod,
     tableHeaderMod,
+    uniqueIdMod,
   };
   return tiptap;
 }
@@ -133,6 +198,98 @@ function buildOutlineDocFromBlocks({ blocks, parseHtmlToNodes }) {
   return { type: 'doc', content: sections.length ? sections : [convertBlock({ id: safeUuid(), text: '', collapsed: false, children: [] })] };
 }
 
+function findOutlineSectionPosAtSelection(doc, $from) {
+  for (let d = $from.depth; d > 0; d -= 1) {
+    if ($from.node(d)?.type?.name === 'outlineSection') return $from.before(d);
+  }
+  return null;
+}
+
+function computeSectionIndexText(sectionNode) {
+  if (!sectionNode) return '';
+  const headingNode = sectionNode.child(0);
+  const bodyNode = sectionNode.child(1);
+  const titlePlain = normalizeWhitespace(headingNode?.textContent || '');
+  let bodyPlain = '';
+  try {
+    bodyPlain = normalizeWhitespace(bodyNode?.textBetween?.(0, bodyNode.content.size, '\n', '\n') || '');
+  } catch {
+    bodyPlain = normalizeWhitespace(bodyNode?.textContent || '');
+  }
+  return normalizeWhitespace(`${titlePlain}\n${bodyPlain}`);
+}
+
+function rebuildCommittedIndexTextMap(doc) {
+  committedSectionIndexText.clear();
+  doc.descendants((node) => {
+    if (node?.type?.name !== 'outlineSection') return;
+    const id = String(node.attrs?.id || '');
+    if (!id) return;
+    committedSectionIndexText.set(id, computeSectionIndexText(node));
+  });
+}
+
+function findSectionPosById(doc, sectionId) {
+  let found = null;
+  doc.descendants((node, pos) => {
+    if (found !== null) return false;
+    if (node?.type?.name !== 'outlineSection') return;
+    if (String(node.attrs?.id || '') !== String(sectionId || '')) return;
+    found = pos;
+  });
+  return found;
+}
+
+function markSectionDirtyIfChanged(doc, sectionId) {
+  if (!sectionId) return false;
+  const pos = findSectionPosById(doc, sectionId);
+  if (typeof pos !== 'number') return false;
+  const node = doc.nodeAt(pos);
+  if (!node) return false;
+  const current = computeSectionIndexText(node);
+  const committed = committedSectionIndexText.get(sectionId) || '';
+  if (current === committed) return false;
+  dirtySectionIds.add(sectionId);
+  return true;
+}
+
+function scheduleAutosave({ delayMs = 1200 } = {}) {
+  if (!state.isOutlineEditing) return;
+  if (!outlineEditorInstance) return;
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    autosaveTimer = null;
+    void runAutosave();
+  }, Math.max(200, delayMs));
+}
+
+async function runAutosave({ force = false } = {}) {
+  if (!state.isOutlineEditing) return;
+  if (!outlineEditorInstance) return;
+  if (autosaveInFlight) return;
+  if (!force && !docDirty && !dirtySectionIds.size) return;
+  autosaveInFlight = true;
+  setOutlineStatus('Сохраняем…');
+  try {
+    // Если пользователь менял текст и не покидал секцию, помечаем текущую секцию dirty,
+    // чтобы семантика “истории секций” оставалась корректной.
+    try {
+      const pmState = outlineEditorInstance.state;
+      const pos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+      if (typeof pos === 'number') {
+        const node = pmState.doc.nodeAt(pos);
+        const id = String(node?.attrs?.id || '');
+        if (id) markSectionDirtyIfChanged(pmState.doc, id);
+      }
+    } catch {
+      // ignore
+    }
+    await saveOutlineEditor({ silent: true });
+  } finally {
+    autosaveInFlight = false;
+  }
+}
+
 async function mountOutlineEditor() {
   if (!refs.outlineEditor) return;
   const contentRoot = refs.outlineEditor.querySelector('#outlineEditorContent');
@@ -156,6 +313,7 @@ async function mountOutlineEditor() {
   const TableRow = tiptap.tableRowMod.default || tiptap.tableRowMod.TableRow || tiptap.tableRowMod;
   const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
   const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
+  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
 
   const OutlineDocument = Node.create({
     name: 'doc',
@@ -206,7 +364,7 @@ async function mountOutlineEditor() {
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'outline-heading__toggle';
-        toggle.title = 'Свернуть/развернуть (Shift+←/→), с детьми (Shift+↑/↓)';
+        toggle.title = 'Свернуть/развернуть (Ctrl+←/→), с детьми (Ctrl+↑/↓)';
         toggle.setAttribute('aria-label', 'Свернуть/развернуть');
 
         const contentDOM = document.createElement('div');
@@ -270,7 +428,6 @@ async function mountOutlineEditor() {
     draggable: true,
     addAttributes() {
       return {
-        id: { default: null },
         collapsed: { default: false },
       };
     },
@@ -301,6 +458,13 @@ async function mountOutlineEditor() {
         return null;
       };
 
+      const findDepth = ($from, name) => {
+        for (let d = $from.depth; d > 0; d -= 1) {
+          if ($from.node(d)?.type?.name === name) return d;
+        }
+        return null;
+      };
+
       const isEffectivelyEmptyNode = (node) => {
         if (!node) return true;
         const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
@@ -315,6 +479,47 @@ async function mountOutlineEditor() {
             if (childText) return false;
           }
         }
+        return true;
+      };
+
+      // Защита от "случайного склеивания" секций при выделении тела через Shift+↓,
+      // когда selection фактически захватывает начало заголовка следующей секции.
+      const clampCrossSectionDeletionToBody = (pmState, dispatch) => {
+        const { selection } = pmState;
+        if (!selection || selection.empty) return false;
+        const fromSectionPos = findSectionPos(pmState.doc, selection.$from);
+        const toSectionPos = findSectionPos(pmState.doc, selection.$to);
+        if (typeof fromSectionPos !== 'number' || typeof toSectionPos !== 'number') return false;
+        if (fromSectionPos === toSectionPos) return false;
+
+        const fromBodyDepth = findDepth(selection.$from, 'outlineBody');
+        if (fromBodyDepth === null) return false;
+
+        // Если selection заканчивается ровно в начале заголовка другой секции — это почти
+        // всегда результат keyboard selection (Shift+↓), а не намерение "удалить секции".
+        if (selection.$to.parent?.type?.name !== 'outlineHeading') return false;
+        if (selection.$to.parentOffset !== 0) return false;
+
+        const sectionNode = pmState.doc.nodeAt(fromSectionPos);
+        if (!sectionNode) return false;
+        const headingNode = sectionNode.child(0);
+        const bodyNode = sectionNode.child(1);
+        const bodyStart = fromSectionPos + 1 + headingNode.nodeSize;
+        const bodyContentFrom = bodyStart + 1;
+        const bodyContentTo = bodyStart + bodyNode.nodeSize - 1;
+
+        const deleteFrom = Math.max(selection.from, bodyContentFrom);
+        const deleteTo = Math.min(selection.to, bodyContentTo);
+        if (deleteTo < deleteFrom) return true;
+
+        let tr = pmState.tr.delete(deleteFrom, deleteTo);
+        const bodyAfter = tr.doc.nodeAt(bodyStart);
+        if (bodyAfter && bodyAfter.content.size === 0) {
+          const schema = tr.doc.type.schema;
+          tr = tr.insert(bodyContentFrom, schema.nodes.paragraph.create({}, []));
+        }
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyContentFrom + 1), 1));
+        dispatch(tr.scrollIntoView());
         return true;
       };
 
@@ -635,17 +840,18 @@ async function mountOutlineEditor() {
         });
 
       return {
-        'Mod-ArrowUp': () => moveSection('up'),
-        'Mod-ArrowDown': () => moveSection('down'),
-        'Mod-ArrowRight': () => indentSection(),
-        'Mod-ArrowLeft': () => outdentSection(),
-        'Shift-ArrowRight': () => toggleCollapsed(false),
-        'Shift-ArrowLeft': () => toggleCollapsed(true),
-        'Shift-ArrowUp': () => toggleCollapsedRecursive(true),
-        'Shift-ArrowDown': () => toggleCollapsedRecursive(false),
+        'Alt-ArrowUp': () => moveSection('up'),
+        'Alt-ArrowDown': () => moveSection('down'),
+        'Alt-ArrowRight': () => indentSection(),
+        'Alt-ArrowLeft': () => outdentSection(),
+        'Mod-ArrowRight': () => toggleCollapsed(false),
+        'Mod-ArrowLeft': () => toggleCollapsed(true),
+        'Mod-ArrowUp': () => toggleCollapsedRecursive(true),
+        'Mod-ArrowDown': () => toggleCollapsedRecursive(false),
         Backspace: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
+            if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
             if ($from.parent?.type?.name !== 'outlineHeading') return false;
@@ -662,6 +868,7 @@ async function mountOutlineEditor() {
         Delete: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
+            if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
             if ($from.parent?.type?.name !== 'outlineHeading') return false;
@@ -904,6 +1111,11 @@ async function mountOutlineEditor() {
       OutlineHeading,
       OutlineBody,
       OutlineChildren,
+      UniqueID.configure({
+        types: ['outlineSection'],
+        attributeName: 'id',
+        generateID: () => safeUuid(),
+      }),
       StarterKit.configure({
         document: false,
         heading: false,
@@ -924,6 +1136,42 @@ async function mountOutlineEditor() {
       attributes: {
         class: 'outline-prosemirror',
       },
+    },
+    onCreate: ({ editor }) => {
+      try {
+        rebuildCommittedIndexTextMap(editor.state.doc);
+      } catch {
+        // ignore
+      }
+      dirtySectionIds.clear();
+      docDirty = false;
+      outlineLastSavedAt = null;
+      lastActiveSectionId = null;
+      setOutlineStatus('');
+    },
+    onUpdate: () => {
+      // Любое изменение документа считается изменением текущей секции (или нескольких),
+      // но “коммит секции” мы делаем при уходе из неё (onSelectionUpdate).
+      docDirty = true;
+      scheduleAutosave({ delayMs: 1500 });
+    },
+    onSelectionUpdate: ({ editor }) => {
+      const { state: pmState } = editor;
+      const { selection } = pmState;
+      if (!selection) return;
+      const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, selection.$from);
+      if (typeof sectionPos !== 'number') return;
+      const sectionNode = pmState.doc.nodeAt(sectionPos);
+      const sectionId = String(sectionNode?.attrs?.id || '');
+      if (!sectionId) return;
+      if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
+        const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
+        if (changed) {
+          // Ушли из секции — стараемся сохранить быстрее, чтобы история “секции” была естественной.
+          scheduleAutosave({ delayMs: 350 });
+        }
+      }
+      lastActiveSectionId = sectionId;
     },
   });
 
@@ -1013,41 +1261,74 @@ function serializeOutlineToBlocks() {
   return blocks;
 }
 
-async function saveOutlineEditor() {
+async function saveOutlineEditor(options = {}) {
   if (!state.articleId || !state.article) return;
   if (!outlineEditorInstance) return;
+  const silent = Boolean(options.silent);
   try {
-    showPersistentToast('Сохраняем outline…');
+    if (!silent) showPersistentToast('Сохраняем outline…');
     const blocksPlain = serializeOutlineToBlocks();
     if (!blocksPlain.length) {
-      hideToast();
-      showToast('Нечего сохранять');
+      if (!silent) {
+        hideToast();
+        showToast('Нечего сохранять');
+      }
       return;
     }
     const blocksForServer = JSON.parse(JSON.stringify(blocksPlain));
     if (state.article.encrypted) {
       const key = state.articleEncryptionKeys?.[state.articleId] || null;
       if (!key) {
-        hideToast();
-        showToast('Не найден ключ шифрования для статьи');
+        if (!silent) {
+          hideToast();
+          showToast('Не найден ключ шифрования для статьи');
+        }
         return;
       }
       await encryptBlockTree(blocksForServer, key);
     }
-    const result = await replaceArticleBlocksTree(state.articleId, blocksForServer);
-    hideToast();
+    const result = await replaceArticleBlocksTree(state.articleId, blocksForServer, {
+      createVersionIfStaleHours: 12,
+      docJson: outlineEditorInstance.getJSON(),
+    });
+    if (!silent) hideToast();
     if (state.article) {
       state.article.blocks = blocksPlain;
       if (result?.updatedAt) {
         state.article.updatedAt = result.updatedAt;
       }
+      if (Array.isArray(result?.historyEntriesAdded) && result.historyEntriesAdded.length) {
+        state.article.history = [...(state.article.history || []), ...result.historyEntriesAdded];
+        state.article.redoHistory = [];
+        hydrateUndoRedoFromArticle(state.article);
+      }
     }
-    closeOutlineEditor();
-    renderArticle();
-    showToast('Статья сохранена');
+    try {
+      rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
+      dirtySectionIds.clear();
+    } catch {
+      // ignore
+    }
+    docDirty = false;
+    clearQueuedBlocks(state.articleId);
+    outlineLastSavedAt = new Date();
+    setOutlineStatus(`Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
   } catch (error) {
-    hideToast();
-    showToast(error?.message || 'Не удалось сохранить outline');
+    if (!silent) {
+      hideToast();
+      showToast(error?.message || 'Не удалось сохранить outline');
+    } else {
+      setOutlineStatus('Ошибка сохранения');
+    }
+    // Сохраняем в локальную очередь, чтобы догнать позже.
+    try {
+      const blocksPlain = serializeOutlineToBlocks();
+      if (blocksPlain?.length) setQueuedBlocks(state.articleId, blocksPlain);
+    } catch {
+      // ignore
+    }
+    // Ретрай чуть позже.
+    scheduleAutosave({ delayMs: 5000 });
   }
 }
 
@@ -1068,12 +1349,41 @@ export async function openOutlineEditor() {
   refs.outlineEditor.classList.remove('hidden');
   refs.blocksContainer.classList.add('hidden');
   renderOutlineShell({ loading: true });
+
+  // Если есть отложенный черновик (предыдущий автосейв не ушёл) — подхватываем.
+  const queued = getQueuedBlocks(state.articleId);
+  if (queued && Array.isArray(queued) && queued.length && state.article && !state.article.encrypted) {
+    state.article.blocks = queued;
+  }
+
   try {
     await mountOutlineEditor();
     const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
     if (loading) loading.classList.add('hidden');
-    const saveBtn = refs.outlineEditor.querySelector('button[data-outline-action="save"]');
-    if (saveBtn) saveBtn.disabled = false;
+    setOutlineStatus('Сохраняется автоматически');
+
+    if (!onlineHandlerAttached) {
+      onlineHandlerAttached = true;
+      window.addEventListener('online', () => {
+        if (!state.isOutlineEditing) return;
+        void runAutosave({ force: true });
+      });
+      window.addEventListener('blur', () => {
+        if (!state.isOutlineEditing) return;
+        void runAutosave({ force: true });
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!state.isOutlineEditing) return;
+        if (document.visibilityState !== 'visible') {
+          void runAutosave({ force: true });
+        }
+      });
+    }
+
+    // Если есть очередь, пробуем сохранить сразу.
+    if (getQueuedBlocks(state.articleId)) {
+      void runAutosave({ force: true });
+    }
   } catch (error) {
     showToast(error?.message || 'Не удалось загрузить outline-редактор');
     closeOutlineEditor();
@@ -1082,6 +1392,15 @@ export async function openOutlineEditor() {
 
 export function closeOutlineEditor() {
   state.isOutlineEditing = false;
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+  autosaveInFlight = false;
+  dirtySectionIds.clear();
+  committedSectionIndexText.clear();
+  lastActiveSectionId = null;
+  docDirty = false;
   if (outlineEditorInstance) {
     try {
       outlineEditorInstance.destroy();
@@ -1093,4 +1412,14 @@ export function closeOutlineEditor() {
   tiptap = null;
   if (refs.outlineEditor) refs.outlineEditor.classList.add('hidden');
   if (refs.blocksContainer) refs.blocksContainer.classList.remove('hidden');
+}
+
+export async function flushOutlineAutosave() {
+  if (!state.isOutlineEditing) return;
+  if (!outlineEditorInstance) return;
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+  await runAutosave({ force: true });
 }

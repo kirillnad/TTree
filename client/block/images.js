@@ -1,7 +1,7 @@
 // Вынесено из `block.js`: вставка изображений + ресайз изображений в редакторе.
 
 import { state } from '../state.js';
-import { uploadImageFile } from '../api.js?v=2';
+import { uploadImageFile } from '../api.js?v=4';
 import { showToast } from '../toast.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from '../utils.js';
 import { clearEmptyPlaceholder } from './editable.js';
@@ -217,4 +217,3 @@ export function initResizableImageResizing() {
   document.addEventListener('pointerup', handleResizableImagePointerEnd);
   document.addEventListener('pointercancel', handleResizableImagePointerEnd);
 }
-
