@@ -699,6 +699,88 @@ async function mountOutlineEditor() {
         return true;
       };
 
+      const mergeSectionIntoParentBody = (pmState, dispatch, sectionPos) => {
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const $from = pmState.selection.$from;
+
+        // Находим непосредственного родителя секции.
+        let currentDepth = null;
+        let parentDepth = null;
+        for (let d = $from.depth; d > 0; d -= 1) {
+          if ($from.node(d)?.type?.name === 'outlineSection') {
+            if (currentDepth === null) currentDepth = d;
+            else {
+              parentDepth = d;
+              break;
+            }
+          }
+        }
+        if (currentDepth === null || parentDepth === null) return false;
+        const parentPos = $from.before(parentDepth);
+        const parentNode = pmState.doc.nodeAt(parentPos);
+        if (!parentNode) return false;
+
+        const schema = pmState.doc.type.schema;
+        const childHeading = sectionNode.child(0);
+        const childBody = sectionNode.child(1);
+        const childChildren = sectionNode.child(2);
+
+        // 1) Удаляем текущую секцию из children родителя.
+        let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+        const parentAfter = tr.doc.nodeAt(parentPos);
+        if (!parentAfter) {
+          dispatch(tr.scrollIntoView());
+          return true;
+        }
+
+        // 2) Переносим содержимое секции в body родителя:
+        //    - заголовок секции превращаем в отдельный paragraph (если не пустой),
+        //    - затем добавляем body секции.
+        const parentHeading = parentAfter.child(0);
+        const parentBody = parentAfter.child(1);
+        const parentChildren = parentAfter.child(2);
+
+        const extraBlocks = [];
+        const headingText = (childHeading?.textContent || '').replace(/\u00a0/g, ' ').trim();
+        if (headingText) {
+          extraBlocks.push(schema.nodes.paragraph.create({}, [schema.text(headingText)]));
+        }
+        // Добавляем body как есть (block*).
+        childBody?.content?.forEach?.((node) => {
+          extraBlocks.push(node);
+        });
+
+        const extraFragment = extraBlocks.length ? schema.nodes.outlineBody.create({}, extraBlocks).content : null;
+        const mergedBodyContent = extraFragment ? parentBody.content.append(extraFragment) : parentBody.content;
+
+        // 3) Дети удалённой секции становятся детьми родителя в начале (на месте удалённой секции).
+        const mergedChildrenContent = childChildren.content.append(parentChildren.content);
+
+        const newParentSection = schema.nodes.outlineSection.create(
+          { ...parentAfter.attrs, collapsed: false },
+          [
+            parentHeading,
+            schema.nodes.outlineBody.create({}, mergedBodyContent),
+            schema.nodes.outlineChildren.create({}, mergedChildrenContent),
+          ],
+        );
+
+        tr = tr.replaceWith(parentPos, parentPos + parentAfter.nodeSize, newParentSection);
+
+        // 4) Ставим курсор в конец body родителя.
+        const parentFinal = tr.doc.nodeAt(parentPos);
+        if (parentFinal) {
+          const heading = parentFinal.child(0);
+          const body = parentFinal.child(1);
+          const bodyStart = parentPos + 1 + heading.nodeSize;
+          const bodyEnd = bodyStart + body.nodeSize - 1;
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+        }
+        dispatch(tr.scrollIntoView());
+        return true;
+      };
+
       const moveSection = (dir) =>
         this.editor.commands.command(({ state: pmState, dispatch }) => {
           const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
@@ -946,6 +1028,16 @@ async function mountOutlineEditor() {
             if (!sectionNode) return false;
             if (isSectionEmpty(sectionNode)) {
               return deleteCurrentSection(pmState, dispatch, sectionPos);
+            }
+            // Если нет предыдущего sibling — сливаемся в body родителя.
+            try {
+              const $pos = pmState.doc.resolve(sectionPos);
+              const idx = $pos.index();
+              if (idx <= 0) {
+                return mergeSectionIntoParentBody(pmState, dispatch, sectionPos);
+              }
+            } catch {
+              // ignore
             }
             return mergeSectionIntoPrevious(pmState, dispatch, sectionPos);
           }),
