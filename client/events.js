@@ -63,7 +63,7 @@ import {
   createTelegramLinkToken,
 } from './api.js?v=4';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
-import { insertHtmlAtCaret } from './utils.js';
+import { insertHtmlAtCaret, htmlToLines } from './utils.js';
 import {
   showPrompt,
   showConfirm,
@@ -73,9 +73,10 @@ import {
   showVersionsPicker,
   showVersionCompareTargetPicker,
   showVersionDiffModal,
-} from './modal.js?v=5';
+  showBlockHistoryModal,
+} from './modal.js?v=8';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=12';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=13';
 import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
@@ -779,6 +780,93 @@ export function attachEvents() {
       } catch (error) {
         hideToast();
         showToast(error?.message || 'Не удалось открыть версии');
+      }
+    });
+  }
+  if (refs.blockHistoryBtn) {
+    refs.blockHistoryBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      if (!state.articleId || !state.article) return;
+      if (state.article.encrypted) {
+        showToast('История блоков пока недоступна для зашифрованных статей');
+        return;
+      }
+      try {
+        let blockId = state.currentBlockId || null;
+        if (state.isOutlineEditing) {
+          try {
+            const outline = await import('./outline/editor.js?v=13');
+            if (outline?.getOutlineActiveSectionId) {
+              blockId = outline.getOutlineActiveSectionId() || blockId;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        if (!blockId) {
+          showToast('Не выбран блок');
+          return;
+        }
+        showPersistentToast('Загружаем историю…');
+        const result = await apiRequest(
+          `/api/articles/${encodeURIComponent(state.articleId)}/blocks/${encodeURIComponent(blockId)}/history?limit=200`,
+        );
+        hideToast();
+        const entriesRaw = Array.isArray(result?.entries) ? result.entries : [];
+
+        const toPlain = (htmlText) => {
+          const parts = extractBlockSections(String(htmlText || ''));
+          const titleLines = htmlToLines(parts.titleHtml || '');
+          const bodyLines = htmlToLines(parts.bodyHtml || '');
+          return [...titleLines, ...bodyLines].join('\n').trim();
+        };
+
+        const entries = entriesRaw.map((e) => ({
+          ...e,
+          beforePlain: toPlain(e.before),
+          afterPlain: toPlain(e.after),
+        }));
+
+        const choice = await showBlockHistoryModal({
+          title: 'История блока',
+          entries,
+          canRestore: true,
+          beforeTitle: 'До',
+          afterTitle: 'После',
+        });
+        if (!choice || choice.action !== 'restore' || !choice.entry) return;
+
+        const ok = await showConfirm({
+          title: 'Восстановить блок?',
+          message: 'Блок будет заменён на состояние до выбранного изменения.',
+          confirmText: 'Восстановить',
+          cancelText: 'Отмена',
+        });
+        if (!ok) return;
+
+        const htmlToRestore = String(choice.entry.after || '');
+        if (state.isOutlineEditing) {
+          const outline = await import('./outline/editor.js?v=13');
+          if (outline?.restoreOutlineSectionFromBlockHtml) {
+            outline.restoreOutlineSectionFromBlockHtml(blockId, htmlToRestore);
+            showToast('Восстановлено (будет сохранено автоматически)');
+            return;
+          }
+        }
+
+        showPersistentToast('Восстанавливаем…');
+        await apiRequest(`/api/articles/${encodeURIComponent(state.articleId)}/blocks/${encodeURIComponent(blockId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ text: htmlToRestore }),
+        });
+        hideToast();
+        await loadArticle(state.articleId, { desiredBlockId: blockId, resetUndoStacks: true });
+        renderArticle();
+        showToast('Блок восстановлен');
+      } catch (error) {
+        hideToast();
+        showToast(error?.message || 'Не удалось загрузить историю блока');
       }
     });
   }

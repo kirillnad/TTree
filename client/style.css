@@ -2090,6 +2090,38 @@ button.icon-button.small {
   gap: 10px;
   align-items: stretch;
 }
+.diff-layout {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 12px;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+.diff-sidebar {
+  margin-top: 0;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+}
+.diff-main {
+  min-width: 0;
+  min-height: 0;
+}
+.diff-panes--side {
+  margin-top: 0;
+  height: 100%;
+}
+.diff-panes--side .diff-pane-wrap {
+  height: 100%;
+  min-height: 0;
+}
+.diff-panes--side .diff-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
 .diff-pane-wrap {
   min-width: 0;
   display: flex;
@@ -2129,6 +2161,9 @@ button.icon-button.small {
 }
 
 @media (max-width: 820px) {
+  .diff-layout {
+    grid-template-columns: 1fr;
+  }
   .diff-panes {
     grid-template-columns: 1fr;
   }

@@ -20,6 +20,7 @@ from ..data_store import (
     outdent_article as outdent_article_ds,
     restore_article,
     update_article_meta,
+    update_article_doc_json,
 )
 from .common import _present_article, _resolve_article_id_for_user
 
@@ -78,6 +79,20 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     return article
+
+
+@router.put('/api/articles/{article_id}/doc-json')
+def put_article_doc_json(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    doc_json = payload.get('docJson') if payload else None
+    if doc_json is None:
+        raise HTTPException(status_code=400, detail='docJson is required')
+    if not isinstance(doc_json, dict):
+        raise HTTPException(status_code=400, detail='docJson must be object')
+    ok = update_article_doc_json(real_article_id, current_user.id, doc_json)
+    if not ok:
+        raise HTTPException(status_code=404, detail='Article not found')
+    return {'status': 'ok'}
 
 
 # Вынесено из app/main.py → app/routers/articles.py
@@ -179,4 +194,3 @@ def post_restore_article(article_id: str, current_user: User = Depends(get_curre
     if not article:
         raise HTTPException(status_code=404, detail='Article not found or not deleted')
     return _present_article(article, article_id)
-

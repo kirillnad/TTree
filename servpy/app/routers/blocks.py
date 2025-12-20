@@ -26,6 +26,7 @@ from ..data_store import (
     update_block,
     update_block_collapse,
     get_article,
+    get_block_text_history,
 )
 from .common import _handle_undo_redo, _resolve_article_id_for_user
 
@@ -43,6 +44,18 @@ def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current
         return block
     except (ArticleNotFound, BlockNotFound) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.get('/api/articles/{article_id}/blocks/{block_id}/history')
+def get_block_history(article_id: str, block_id: str, limit: int = 100, current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    try:
+        result = get_block_text_history(real_article_id, current_user.id, block_id, limit=limit)
+        return result
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # Вынесено из app/main.py → app/routers/blocks.py

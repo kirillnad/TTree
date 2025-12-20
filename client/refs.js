@@ -75,6 +75,7 @@ export const refs = {
   outlineEditBtn: document.getElementById('outlineEditBtn'),
   saveVersionBtn: document.getElementById('saveVersionBtn'),
   versionsBtn: document.getElementById('versionsBtn'),
+  blockHistoryBtn: document.getElementById('blockHistoryBtn'),
   exportAllHtmlZipBtn: document.getElementById('exportAllHtmlZipBtn'),
   importArticleBtn: document.getElementById('importArticleBtn'),
   importMarkdownBtn: document.getElementById('importMarkdownBtn'),

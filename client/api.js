@@ -113,6 +113,19 @@ export function replaceArticleBlocksTree(articleId, blocks, options = {}) {
   });
 }
 
+export function updateArticleDocJson(articleId, docJson) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  if (!docJson || typeof docJson !== 'object') {
+    return Promise.reject(new Error('docJson must be object'));
+  }
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json`, {
+    method: 'PUT',
+    body: JSON.stringify({ docJson }),
+  });
+}
+
 export function deleteArticle(id, options = {}) {
   const force = options.force ? '?force=true' : '';
   return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' });

@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { replaceArticleBlocksTree } from '../api.js?v=4';
+import { replaceArticleBlocksTree, updateArticleDocJson } from '../api.js?v=5';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 
@@ -18,6 +18,7 @@ const committedSectionIndexText = new Map();
 const dirtySectionIds = new Set();
 let docDirty = false;
 let onlineHandlerAttached = false;
+let outlineParseHtmlToNodes = null;
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
 
@@ -1088,11 +1089,24 @@ async function mountOutlineEditor() {
     ]);
     return Array.isArray(tmp?.content) ? tmp.content : [];
   };
+  outlineParseHtmlToNodes = parseHtmlToNodes;
 
-  const content = buildOutlineDocFromBlocks({
-    blocks: state.article?.blocks || [],
-    parseHtmlToNodes,
-  });
+  let shouldBootstrapDocJson = false;
+  let content = null;
+  const candidate = state.article?.docJson || null;
+  if (candidate && typeof candidate === 'object') {
+    // TipTap can accept JSON content directly.
+    if (candidate.type === 'doc' && Array.isArray(candidate.content)) {
+      content = candidate;
+    }
+  }
+  if (!content) {
+    content = buildOutlineDocFromBlocks({
+      blocks: state.article?.blocks || [],
+      parseHtmlToNodes,
+    });
+    shouldBootstrapDocJson = Boolean(state.article && !state.article?.docJson && !state.article?.encrypted);
+  }
 
   if (outlineEditorInstance) {
     try {
@@ -1138,6 +1152,17 @@ async function mountOutlineEditor() {
       },
     },
     onCreate: ({ editor }) => {
+      // Если docJson ещё не хранится на сервере (статья была создана/редактировалась
+      // только в блочном режиме), сохраняем docJson отдельно, не трогая blocks.
+      if (shouldBootstrapDocJson && state.articleId && state.article && !state.article.encrypted) {
+        try {
+          const docJson = editor.getJSON();
+          state.article.docJson = docJson;
+          updateArticleDocJson(state.articleId, docJson).catch(() => {});
+        } catch {
+          // ignore
+        }
+      }
       try {
         rebuildCommittedIndexTextMap(editor.state.doc);
       } catch {
@@ -1289,7 +1314,8 @@ async function saveOutlineEditor(options = {}) {
     }
     const result = await replaceArticleBlocksTree(state.articleId, blocksForServer, {
       createVersionIfStaleHours: 12,
-      docJson: outlineEditorInstance.getJSON(),
+      // Никогда не отправляем plaintext docJson для зашифрованных статей.
+      docJson: state.article.encrypted ? null : outlineEditorInstance.getJSON(),
     });
     if (!silent) hideToast();
     if (state.article) {
@@ -1330,6 +1356,56 @@ async function saveOutlineEditor(options = {}) {
     // Ретрай чуть позже.
     scheduleAutosave({ delayMs: 5000 });
   }
+}
+
+export function getOutlineActiveSectionId() {
+  return lastActiveSectionId || null;
+}
+
+export function restoreOutlineSectionFromBlockHtml(sectionId, htmlText) {
+  if (!outlineEditorInstance) return false;
+  const sid = String(sectionId || '');
+  if (!sid) return false;
+  const pos = findSectionPosById(outlineEditorInstance.state.doc, sid);
+  if (typeof pos !== 'number') return false;
+  const sectionNode = outlineEditorInstance.state.doc.nodeAt(pos);
+  if (!sectionNode) return false;
+  const schema = outlineEditorInstance.state.doc.type.schema;
+
+  const parts = extractBlockSections(String(htmlText || ''));
+  const titleText = stripHtml(parts.titleHtml || '') || stripHtml(parts.bodyHtml || '').slice(0, 80) || 'Без названия';
+  const bodyNodesJson = outlineParseHtmlToNodes ? outlineParseHtmlToNodes(parts.bodyHtml || '') : [];
+  const bodyNodes = [];
+  for (const n of bodyNodesJson || []) {
+    try {
+      bodyNodes.push(schema.nodeFromJSON(n));
+    } catch {
+      // ignore invalid nodes
+    }
+  }
+  if (!bodyNodes.length) {
+    bodyNodes.push(schema.nodes.paragraph.create({}, []));
+  }
+
+  const headingNode = schema.nodes.outlineHeading.create({}, titleText ? [schema.text(titleText)] : []);
+  const bodyNode = schema.nodes.outlineBody.create({}, bodyNodes);
+  const childrenNode = sectionNode.child(2);
+  const nextSection = schema.nodes.outlineSection.create(sectionNode.attrs, [headingNode, bodyNode, childrenNode]);
+
+  let tr = outlineEditorInstance.state.tr.replaceWith(pos, pos + sectionNode.nodeSize, nextSection);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      tr = tr.setSelection(TextSelection.create(tr.doc, pos + 2));
+    }
+  } catch {
+    // ignore
+  }
+  outlineEditorInstance.view.dispatch(tr);
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return true;
 }
 
 export async function openOutlineEditor() {

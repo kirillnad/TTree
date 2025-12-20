@@ -4,7 +4,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { apiRequest, fetchArticlesIndex } from '../api.js?v=4';
 import { showToast } from '../toast.js';
-import { showPrompt } from '../modal.js?v=5';
+import { showPrompt } from '../modal.js?v=8';
 import { startEditing, saveEditing, cancelEditing, createSibling } from '../actions.js';
 import { placeCaretAtEnd, placeCaretAtStart } from '../utils.js';
 import {

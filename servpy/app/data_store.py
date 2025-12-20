@@ -422,6 +422,15 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
             'salt=' if row.get('encryption_salt') else 'no-salt',
             'verifier=' if row.get('encryption_verifier') else 'no-verifier',
         )
+    doc_json_value = None
+    if not encrypted_flag:
+        raw_doc_json = row.get('article_doc_json')
+        if raw_doc_json:
+            try:
+                doc_json_value = json.loads(raw_doc_json)
+            except Exception:
+                doc_json_value = None
+
     return {
         'id': row['id'],
         'title': row['title'],
@@ -439,6 +448,7 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'encryptionSalt': row.get('encryption_salt'),
         'encryptionVerifier': row.get('encryption_verifier'),
         'encryptionHint': row.get('encryption_hint'),
+        'docJson': doc_json_value,
         'blocks': rows_to_tree(row['id']),
     }
 
@@ -720,6 +730,64 @@ def restore_article(article_id: str, author_id: Optional[str] = None) -> Optiona
             (now, article_id),
         )
     return get_article(article_id, author_id=author_id, include_deleted=True)
+
+
+def update_article_doc_json(article_id: str, author_id: str, doc_json: Any) -> bool:
+    """
+    Updates `articles.article_doc_json` without touching blocks/history/updated_at.
+    Intended for bootstrap: store TipTap doc_json derived from existing blocks.
+    """
+    if not article_id or not author_id:
+        return False
+    doc_json_str = None
+    try:
+        doc_json_str = json.dumps(doc_json)
+    except Exception:
+        doc_json_str = None
+    with CONN:
+        row = CONN.execute(
+            'SELECT author_id, is_encrypted, encryption_salt, encryption_verifier FROM articles WHERE id = ?',
+            (article_id,),
+        ).fetchone()
+        if not row:
+            return False
+        if str(row.get('author_id') or '') != str(author_id):
+            return False
+        encrypted_flag = bool(row.get('is_encrypted', 0)) or (
+            bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+        )
+        if encrypted_flag:
+            # Never store plaintext docJson for encrypted articles.
+            return False
+        CONN.execute('UPDATE articles SET article_doc_json = ? WHERE id = ?', (doc_json_str, article_id))
+    return True
+
+
+def get_block_text_history(article_id: str, author_id: str, block_id: str, limit: int = 100) -> dict[str, Any]:
+    if not article_id or not author_id or not block_id:
+        raise ArticleNotFound('Article not found')
+    row = CONN.execute(
+        '''
+        SELECT author_id, history, redo_history, is_encrypted, encryption_salt, encryption_verifier
+        FROM articles
+        WHERE id = ? AND deleted_at IS NULL
+        ''',
+        (article_id,),
+    ).fetchone()
+    if not row or str(row.get('author_id') or '') != str(author_id):
+        raise ArticleNotFound('Article not found')
+    encrypted_flag = bool(row.get('is_encrypted', 0)) or (
+        bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+    )
+    if encrypted_flag:
+        raise InvalidOperation('Block history is not available for encrypted articles')
+    history = deserialize_history(row.get('history'))
+    entries = [h for h in (history or []) if str(h.get('blockId') or '') == str(block_id)]
+    if limit and limit > 0:
+        entries = entries[-int(limit) :]
+    # newest first
+    entries = list(reversed(entries))
+    return {'entries': entries}
 
 def insert_blocks_recursive(
     article_id: str,
@@ -1475,7 +1543,7 @@ def replace_article_blocks_tree(
         CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
         _insert_tree(blocks, parent_id=None)
         CONN.execute(
-            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = COALESCE(?, article_doc_json) WHERE id = ?',
             (now, serialize_history(history), '[]', doc_json_str, article_id),
         )
         _rebuild_article_links_for_article_id(article_id)
@@ -2045,6 +2113,11 @@ def update_article_meta(article_id: str, attrs: Dict[str, Any]) -> Optional[Dict
                 updates.append('block_trash = ?')
                 params.append(serialize_history([]))
                 article['blockTrash'] = []
+            # Также очищаем plaintext docJson (outline), чтобы не оставалось
+            # незашифрованного содержимого на сервере.
+            if desired:
+                updates.append('article_doc_json = NULL')
+                article['docJson'] = None
 
     if 'encryptionSalt' in attrs:
         if salt != article.get('encryptionSalt'):

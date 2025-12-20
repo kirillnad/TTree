@@ -886,6 +886,204 @@ export function showVersionDiffModal(options = {}) {
   });
 }
 
+export function showBlockHistoryModal(options = {}) {
+  const root = ensureRoot();
+  const entries = Array.isArray(options.entries) ? options.entries : [];
+  let selected = entries[0] || null;
+  let activeEntryForRestore = selected;
+  let rowButtons = [];
+  let updatePanesFn = null;
+
+  const formatTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso || '');
+      return new Intl.DateTimeFormat('ru-RU', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(d);
+    } catch {
+      return String(iso || '');
+    }
+  };
+
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    title: options.title || 'История блока',
+    confirmText: 'Закрыть',
+    cancelText: options.canRestore ? 'Восстановить (после изменения)' : '',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      const hint = document.createElement('p');
+      hint.className = 'modal-body__text';
+      hint.textContent =
+        options.message || 'Выберите изменение. Можно восстановить состояние блока до выбранного изменения.';
+      fragment.appendChild(hint);
+
+      if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'modal-empty';
+        empty.textContent = 'История пуста.';
+        fragment.appendChild(empty);
+        return fragment;
+      }
+
+      const layout = document.createElement('div');
+      layout.className = 'diff-layout';
+
+      const list = document.createElement('div');
+      list.className = 'modal-list diff-sidebar';
+      rowButtons = [];
+      entries.forEach((e) => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        const isActive = Boolean(selected && selected.id === e.id);
+        row.className = `diff-item${isActive ? ' diff-item--active' : ''}`;
+        row.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        const timeLabel = formatTime(e.timestamp);
+        row.textContent = timeLabel ? `≠ ${timeLabel}` : `≠ ${e.id || ''}`.trim();
+        row.addEventListener('click', () => {
+          selected = e;
+          list.querySelectorAll('.diff-item').forEach((el) => {
+            el.classList.remove('diff-item--active');
+            el.setAttribute('aria-selected', 'false');
+          });
+          row.classList.add('diff-item--active');
+          row.setAttribute('aria-selected', 'true');
+          updatePanes();
+        });
+        list.appendChild(row);
+        rowButtons.push(row);
+      });
+
+      const main = document.createElement('div');
+      main.className = 'diff-main';
+
+      const panes = document.createElement('div');
+      panes.className = 'diff-panes diff-panes--side';
+      const beforeWrap = document.createElement('div');
+      beforeWrap.className = 'diff-pane-wrap';
+      const afterWrap = document.createElement('div');
+      afterWrap.className = 'diff-pane-wrap';
+
+      const beforeTitle = document.createElement('div');
+      beforeTitle.className = 'diff-pane-title';
+      beforeTitle.textContent = options.beforeTitle || 'До';
+      const afterTitle = document.createElement('div');
+      afterTitle.className = 'diff-pane-title';
+      afterTitle.textContent = options.afterTitle || 'После';
+
+      const before = document.createElement('div');
+      before.className = 'diff-pane diff-pane--before';
+      const after = document.createElement('div');
+      after.className = 'diff-pane diff-pane--after';
+
+      beforeWrap.appendChild(beforeTitle);
+      beforeWrap.appendChild(before);
+      afterWrap.appendChild(afterTitle);
+      afterWrap.appendChild(after);
+      panes.appendChild(beforeWrap);
+      panes.appendChild(afterWrap);
+      main.appendChild(panes);
+      layout.appendChild(list);
+      layout.appendChild(main);
+      fragment.appendChild(layout);
+
+      const updatePanes = () => {
+        activeEntryForRestore = selected;
+        const base = selected?.beforePlain || selected?.before || '';
+        const next = selected?.afterPlain || selected?.after || '';
+        before.innerHTML = '';
+        after.innerHTML = '';
+        before.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'before' }));
+        after.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'after' }));
+      };
+      updatePanesFn = updatePanes;
+      updatePanes();
+
+      return fragment;
+    },
+  });
+
+  card.classList.add('modal-card--fullscreen');
+  card.classList.add('modal-card--diff-light');
+
+  confirmBtn.classList.remove('danger-btn');
+  if (!options.canRestore && cancelBtn) cancelBtn.style.display = 'none';
+  if (cancelBtn) cancelBtn.classList.add('danger-btn');
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+    if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+      if (!entries.length) return;
+      event.preventDefault();
+      const currentId = String(selected?.id || '');
+      let idx = entries.findIndex((e) => String(e?.id || '') === currentId);
+      if (idx < 0) idx = 0;
+      idx = event.code === 'ArrowUp' ? Math.max(0, idx - 1) : Math.min(entries.length - 1, idx + 1);
+      const nextEntry = entries[idx] || null;
+      if (!nextEntry) return;
+      selected = nextEntry;
+      const btn = rowButtons[idx];
+      rowButtons.forEach((el) => {
+        el.classList.remove('diff-item--active');
+        el.setAttribute('aria-selected', 'false');
+      });
+      if (btn) {
+        btn.classList.add('diff-item--active');
+        btn.setAttribute('aria-selected', 'true');
+        btn.focus({ preventScroll: true });
+        try {
+          btn.scrollIntoView({ block: 'nearest' });
+        } catch {
+          // ignore
+        }
+      }
+      if (typeof updatePanesFn === 'function') updatePanesFn();
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.addEventListener('click', () => resolveResult(null));
+    if (cancelBtn && options.canRestore) {
+      cancelBtn.addEventListener('click', () =>
+        resolveResult({ action: 'restore', entry: activeEntryForRestore || selected || null }),
+      );
+    }
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  });
+}
+
 export function showLinkPrompt(options = {}) {
   const root = ensureRoot();
   let textInput = null;
