@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>Memus. Всё, что вы узнали — в одном месте. Удобно. Надёжно. Везде с вами.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/style.css?v=18" />
+    <link rel="stylesheet" href="/style.css?v=22" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#111827" />
@@ -459,6 +459,121 @@
                   &#xE710;<span class="toolbar-label"> Новый</span>
                 </button>
               </div>
+              <div id="outlineToolbar" class="outline-toolbar hidden">
+                <button id="outlineUndoBtn" class="ghost small" type="button" title="Отменить (Ctrl+Z)">
+                  &#xE7A7;<span class="toolbar-label"> Отменить</span>
+                </button>
+                <button id="outlineRedoBtn" class="ghost small" type="button" title="Повторить (Ctrl+Y)">
+                  &#xE7A6;<span class="toolbar-label"> Повторить</span>
+                </button>
+                <div class="outline-toolbar__dropdown">
+                  <button
+                    id="outlineTextMenuBtn"
+                    class="ghost small outline-toolbar__dropdown-btn"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="outlineTextMenu"
+                    title="Текст"
+                  >
+                    Aa<span class="toolbar-label"> Текст</span>
+                  </button>
+                  <div id="outlineTextMenu" class="outline-toolbar__menu hidden" role="menu">
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBold">
+                      <span class="outline-menu__icon"><strong>Ж</strong></span><span class="outline-menu__label">Жирный</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleItalic">
+                      <span class="outline-menu__icon"><em>/</em></span><span class="outline-menu__label">Курсив</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleStrike">
+                      <span class="outline-menu__icon"><s>З</s></span><span class="outline-menu__label">Зачёркнутый</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleCode">
+                      <span class="outline-menu__icon">&lt;/&gt;</span><span class="outline-menu__label">Код (inline)</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBlockquote">
+                      <span class="outline-menu__icon">❝</span><span class="outline-menu__label">Цитата</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="outline-toolbar__dropdown">
+                  <button
+                    id="outlineListsMenuBtn"
+                    class="ghost small outline-toolbar__dropdown-btn"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="outlineListsMenu"
+                    title="Списки"
+                  >
+                    •<span class="toolbar-label"> Списки</span>
+                  </button>
+                  <div id="outlineListsMenu" class="outline-toolbar__menu hidden" role="menu">
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBulletList">
+                      <span class="outline-menu__icon">•</span><span class="outline-menu__label">Маркированный</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleOrderedList">
+                      <span class="outline-menu__icon">1.</span><span class="outline-menu__label">Нумерованный</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetList">
+                      <span class="outline-menu__icon">✕</span><span class="outline-menu__label">Отменить</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="outline-toolbar__dropdown">
+                  <button
+                    id="outlineTableMenuBtn"
+                    class="ghost small outline-toolbar__dropdown-btn"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="outlineTableMenu"
+                    title="Таблица"
+                  >
+                    &#xF0E2;<span class="toolbar-label"> Таблица</span>
+                  </button>
+                  <div id="outlineTableMenu" class="outline-toolbar__menu hidden" role="menu">
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertTable">
+                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xF0E2;</span><span class="outline-menu__label">Вставить таблицу 2×2</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleHeaderRow">
+                      <span class="outline-menu__icon">H↔</span><span class="outline-menu__label">Header row</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleHeaderColumn">
+                      <span class="outline-menu__icon">H↕</span><span class="outline-menu__label">Header column</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="addRowBefore">
+                      <span class="outline-menu__icon">+R↑</span><span class="outline-menu__label">Строка (до)</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="addRowAfter">
+                      <span class="outline-menu__icon">+R</span><span class="outline-menu__label">Строка (после)</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteRow">
+                      <span class="outline-menu__icon">−R</span><span class="outline-menu__label">Удалить строку</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="addColumnBefore">
+                      <span class="outline-menu__icon">+C←</span><span class="outline-menu__label">Столбец (до)</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="addColumnAfter">
+                      <span class="outline-menu__icon">+C</span><span class="outline-menu__label">Столбец (после)</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteColumn">
+                      <span class="outline-menu__icon">−C</span><span class="outline-menu__label">Удалить столбец</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="mergeCells">
+                      <span class="outline-menu__icon">⇄</span><span class="outline-menu__label">Объединить ячейки</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="splitCell">
+                      <span class="outline-menu__icon">⊞</span><span class="outline-menu__label">Разделить ячейку</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteTable">
+                      <span class="outline-menu__icon">✕</span><span class="outline-menu__label">Удалить таблицу</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
             <span class="inline-progress__spinner" aria-hidden="true"></span>
@@ -500,6 +615,6 @@
       href="https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css"
     />
     <script src="https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js"></script>
-    <script type="module" src="/app.js?v=12"></script>
+    <script type="module" src="/app.js?v=14"></script>
   </body>
 </html>

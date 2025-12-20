@@ -23,6 +23,7 @@ let outlineGenerateHTML = null;
 let outlineHtmlExtensions = null;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
+let outlineToolbarCleanup = null;
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
 
@@ -122,6 +123,304 @@ function renderOutlineShell({ loading = false } = {}) {
   }
 }
 
+function mountOutlineToolbar(editor) {
+  if (!refs.outlineToolbar) return;
+  if (!editor) return;
+
+  const root = refs.outlineToolbar;
+  const btns = {
+    undo: refs.outlineUndoBtn,
+    redo: refs.outlineRedoBtn,
+    textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
+    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
+    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
+  };
+  const dropdownBtns = Array.from(root.querySelectorAll('.outline-toolbar__dropdown-btn'));
+  const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
+  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
+
+  const click = (el, handler) => {
+    if (!el) return () => {};
+    const onClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handler();
+    };
+    el.addEventListener('click', onClick);
+    return () => el.removeEventListener('click', onClick);
+  };
+
+  const markActive = (el, active) => {
+    if (!el) return;
+    el.classList.toggle('is-active', Boolean(active));
+    el.setAttribute('aria-pressed', active ? 'true' : 'false');
+  };
+
+  const closeAllMenus = () => {
+    for (const menu of menus) menu.classList.add('hidden');
+    for (const btn of dropdownBtns) btn.setAttribute('aria-expanded', 'false');
+  };
+
+  const toggleMenu = (btn) => {
+    if (!btn) return;
+    const menuId = btn.getAttribute('aria-controls');
+    const menu = menuId ? root.querySelector(`#${menuId}`) : null;
+    if (!menu) return;
+    const isOpen = !menu.classList.contains('hidden');
+    closeAllMenus();
+    if (!isOpen) {
+      menu.classList.remove('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  const canRun = (build) => {
+    try {
+      const chain = editor.can().chain();
+      build(chain);
+      return chain.run();
+    } catch {
+      return false;
+    }
+  };
+
+  const runAction = (action) => {
+    if (!action) return false;
+    try {
+      const chain = editor.chain().focus();
+      if (action === 'toggleBold') return chain.toggleBold().run();
+      if (action === 'toggleItalic') return chain.toggleItalic().run();
+      if (action === 'toggleStrike') return chain.toggleStrike().run();
+      if (action === 'toggleCode') return chain.toggleCode().run();
+      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
+      if (action === 'toggleBulletList') {
+        // UX: allow switching ordered -> bullet in one click.
+        if (editor.isActive('orderedList')) {
+          return chain.toggleOrderedList().toggleBulletList().run();
+        }
+        return chain.toggleBulletList().run();
+      }
+      if (action === 'toggleOrderedList') {
+        // UX: allow switching bullet -> ordered in one click.
+        if (editor.isActive('bulletList')) {
+          return chain.toggleBulletList().toggleOrderedList().run();
+        }
+        return chain.toggleOrderedList().run();
+      }
+      if (action === 'unsetList') {
+        if (editor.isActive('bulletList')) return chain.toggleBulletList().run();
+        if (editor.isActive('orderedList')) return chain.toggleOrderedList().run();
+        return chain.liftListItem('listItem').run();
+      }
+      if (action === 'insertTable') return chain.insertTable({ rows: 2, cols: 2, withHeaderRow: false }).run();
+      if (action === 'toggleHeaderRow') return chain.toggleHeaderRow().run();
+      if (action === 'toggleHeaderColumn') return chain.toggleHeaderColumn().run();
+      if (action === 'addRowBefore') return chain.addRowBefore().run();
+      if (action === 'addRowAfter') return chain.addRowAfter().run();
+      if (action === 'deleteRow') return chain.deleteRow().run();
+      if (action === 'addColumnBefore') return chain.addColumnBefore().run();
+      if (action === 'addColumnAfter') return chain.addColumnAfter().run();
+      if (action === 'deleteColumn') return chain.deleteColumn().run();
+      if (action === 'mergeCells') return chain.mergeCells().run();
+      if (action === 'splitCell') return chain.splitCell().run();
+      if (action === 'deleteTable') return chain.deleteTable().run();
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const sync = () => {
+    if (!state.isOutlineEditing) return;
+    if (!editor || editor.isDestroyed) return;
+
+    if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
+    if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
+
+    // Dropdown group buttons
+    if (btns.textMenuBtn) {
+      const active =
+        editor.isActive('bold') ||
+        editor.isActive('italic') ||
+        editor.isActive('strike') ||
+        editor.isActive('code') ||
+        editor.isActive('blockquote');
+      markActive(btns.textMenuBtn, active);
+    }
+    if (btns.listsMenuBtn) {
+      const active = editor.isActive('bulletList') || editor.isActive('orderedList');
+      markActive(btns.listsMenuBtn, active);
+    }
+    if (btns.tableMenuBtn) {
+      const active = editor.isActive('table');
+      markActive(btns.tableMenuBtn, active);
+    }
+
+    // Menu items
+    for (const el of actionButtons) {
+      const action = el.dataset.outlineAction || '';
+      if (!action) continue;
+
+      let isActive = false;
+      let isDisabled = false;
+
+      if (action === 'toggleBold') {
+        isActive = editor.isActive('bold');
+        isDisabled = !canRun((c) => c.toggleBold());
+      } else if (action === 'toggleItalic') {
+        isActive = editor.isActive('italic');
+        isDisabled = !canRun((c) => c.toggleItalic());
+      } else if (action === 'toggleStrike') {
+        isActive = editor.isActive('strike');
+        isDisabled = !canRun((c) => c.toggleStrike());
+      } else if (action === 'toggleCode') {
+        isActive = editor.isActive('code');
+        isDisabled = !canRun((c) => c.toggleCode());
+      } else if (action === 'toggleBlockquote') {
+        isActive = editor.isActive('blockquote');
+        isDisabled = !canRun((c) => c.toggleBlockquote());
+      } else if (action === 'toggleBulletList') {
+        isActive = editor.isActive('bulletList');
+        // UX: allow switching ordered -> bullet in one click.
+        if (editor.isActive('orderedList')) {
+          isDisabled = !(canRun((c) => c.toggleOrderedList()) && canRun((c) => c.toggleBulletList()));
+        } else {
+          isDisabled = !canRun((c) => c.toggleBulletList());
+        }
+      } else if (action === 'toggleOrderedList') {
+        isActive = editor.isActive('orderedList');
+        // UX: allow switching bullet -> ordered in one click.
+        if (editor.isActive('bulletList')) {
+          isDisabled = !(canRun((c) => c.toggleBulletList()) && canRun((c) => c.toggleOrderedList()));
+        } else {
+          isDisabled = !canRun((c) => c.toggleOrderedList());
+        }
+      } else if (action === 'unsetList') {
+        isActive = false;
+        if (editor.isActive('bulletList')) isDisabled = !canRun((c) => c.toggleBulletList());
+        else if (editor.isActive('orderedList')) isDisabled = !canRun((c) => c.toggleOrderedList());
+        else isDisabled = !canRun((c) => c.liftListItem('listItem'));
+      } else if (action === 'insertTable') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }));
+      } else if (action === 'toggleHeaderRow') {
+        isActive = editor.isActive('tableHeader');
+        isDisabled = !canRun((c) => c.toggleHeaderRow());
+      } else if (action === 'toggleHeaderColumn') {
+        isActive = editor.isActive('tableHeader');
+        isDisabled = !canRun((c) => c.toggleHeaderColumn());
+      } else if (action === 'addRowBefore') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.addRowBefore());
+      } else if (action === 'addRowAfter') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.addRowAfter());
+      } else if (action === 'deleteRow') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.deleteRow());
+      } else if (action === 'addColumnBefore') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.addColumnBefore());
+      } else if (action === 'addColumnAfter') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.addColumnAfter());
+      } else if (action === 'deleteColumn') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.deleteColumn());
+      } else if (action === 'mergeCells') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.mergeCells());
+      } else if (action === 'splitCell') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.splitCell());
+      } else if (action === 'deleteTable') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.deleteTable());
+      }
+
+      el.disabled = Boolean(isDisabled);
+      el.classList.toggle('is-active', Boolean(isActive));
+    }
+  };
+
+  let syncRaf = null;
+  const scheduleSync = () => {
+    if (syncRaf) return;
+    syncRaf = window.requestAnimationFrame(() => {
+      syncRaf = null;
+      sync();
+    });
+  };
+
+  const cleanups = [
+    click(btns.undo, () => editor.chain().focus().undo().run()),
+    click(btns.redo, () => editor.chain().focus().redo().run()),
+  ];
+
+  for (const btn of dropdownBtns) {
+    cleanups.push(click(btn, () => toggleMenu(btn)));
+  }
+  for (const item of actionButtons) {
+    cleanups.push(
+      click(item, () => {
+        const action = item.dataset.outlineAction || '';
+        const ok = runAction(action);
+        closeAllMenus();
+        if (ok) scheduleSync();
+      }),
+    );
+  }
+
+  const onDocPointerDown = (event) => {
+    if (!state.isOutlineEditing) return;
+    if (!root.contains(event.target)) {
+      closeAllMenus();
+    }
+  };
+  const onDocKeyDown = (event) => {
+    if (!state.isOutlineEditing) return;
+    if (event.key === 'Escape') {
+      closeAllMenus();
+    }
+  };
+  document.addEventListener('pointerdown', onDocPointerDown);
+  document.addEventListener('keydown', onDocKeyDown);
+  cleanups.push(() => document.removeEventListener('pointerdown', onDocPointerDown));
+  cleanups.push(() => document.removeEventListener('keydown', onDocKeyDown));
+
+  const offTx = editor.on('transaction', scheduleSync);
+  const offSel = editor.on('selectionUpdate', scheduleSync);
+  cleanups.push(() => offTx?.());
+  cleanups.push(() => offSel?.());
+
+  scheduleSync();
+
+  outlineToolbarCleanup = () => {
+    if (syncRaf) {
+      window.cancelAnimationFrame(syncRaf);
+      syncRaf = null;
+    }
+    for (const fn of cleanups) {
+      try {
+        fn();
+      } catch {
+        // ignore
+      }
+    }
+  };
+}
+
+function unmountOutlineToolbar() {
+  if (outlineToolbarCleanup) {
+    try {
+      outlineToolbarCleanup();
+    } catch {
+      // ignore
+    }
+  }
+  outlineToolbarCleanup = null;
+}
+
 function formatTimeShort(date) {
   try {
     return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(date);
@@ -141,49 +440,22 @@ async function loadTiptap() {
   if (typeof window === 'undefined') {
     throw new Error('Outline editor is browser-only');
   }
-  // Важно: не используем `?bundle` в esm.sh, иначе можно получить несколько копий
-  // prosemirror-* и ошибку вида "Adding different instances of a keyed plugin (plugin$)".
-  const [
-    core,
-    starterKitMod,
-    htmlMod,
-    pmStateMod,
-    pmViewMod,
-    linkMod,
-    imageMod,
-    tableMod,
-    tableRowMod,
-    tableCellMod,
-    tableHeaderMod,
-    uniqueIdMod,
-  ] = await Promise.all([
-    import('https://esm.sh/@tiptap/core'),
-    import('https://esm.sh/@tiptap/starter-kit'),
-    import('https://esm.sh/@tiptap/html'),
-    import('https://esm.sh/@tiptap/pm/state'),
-    import('https://esm.sh/@tiptap/pm/view'),
-    import('https://esm.sh/@tiptap/extension-link'),
-    import('https://esm.sh/@tiptap/extension-image'),
-    import('https://esm.sh/@tiptap/extension-table'),
-    import('https://esm.sh/@tiptap/extension-table-row'),
-    import('https://esm.sh/@tiptap/extension-table-cell'),
-    import('https://esm.sh/@tiptap/extension-table-header'),
-    import('https://esm.sh/@tiptap/extension-unique-id'),
-  ]);
-
+  // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
+  // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
+  const mod = await import('./tiptap.bundle.js?v=1');
   tiptap = {
-    core,
-    starterKitMod,
-    htmlMod,
-    pmStateMod,
-    pmViewMod,
-    linkMod,
-    imageMod,
-    tableMod,
-    tableRowMod,
-    tableCellMod,
-    tableHeaderMod,
-    uniqueIdMod,
+    core: mod.core,
+    starterKitMod: mod.starterKitMod,
+    htmlMod: mod.htmlMod,
+    pmStateMod: mod.pmStateMod,
+    pmViewMod: mod.pmViewMod,
+    linkMod: mod.linkMod,
+    imageMod: mod.imageMod,
+    tableMod: mod.tableMod,
+    tableRowMod: mod.tableRowMod,
+    tableCellMod: mod.tableCellMod,
+    tableHeaderMod: mod.tableHeaderMod,
+    uniqueIdMod: mod.uniqueIdMod,
   };
   return tiptap;
 }
@@ -198,7 +470,9 @@ function buildOutlineDocFromBlocks({ blocks, parseHtmlToNodes }) {
     const id = String(blk?.id || safeUuid());
     const collapsed = Boolean(blk?.collapsed);
     const sections = extractBlockSections(String(blk?.text || ''));
-    const titleText = stripHtml(sections.titleHtml) || stripHtml(sections.bodyHtml).slice(0, 80) || 'Без названия';
+    // Заголовок секции — это отдельное поле; не подменяем его первой строкой body,
+    // иначе при удалении заголовка body "переедет" в заголовок при следующем открытии.
+    const titleText = stripHtml(sections.titleHtml) || '';
     const bodyNodes = ensureParagraph(parseHtmlToNodes(sections.bodyHtml || ''));
     const children = Array.isArray(blk?.children) ? blk.children : [];
     return {
@@ -711,6 +985,50 @@ async function mountOutlineEditor() {
           tr = tr.insert(bodyContentFrom, schema.nodes.paragraph.create({}, []));
         }
         tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyContentFrom + 1), 1));
+        dispatch(tr.scrollIntoView());
+        return true;
+      };
+
+      // Защита от ситуации, когда удаление/вырезание "всего заголовка" удаляет ноду outlineHeading,
+      // и ProseMirror нормализует секцию, подтягивая первую строку body в заголовок.
+      const clampHeadingDeletionToHeadingText = (pmState, dispatch, options = {}) => {
+        const { selection } = pmState;
+        if (!selection || selection.empty) return false;
+        const fromSectionPos = findSectionPos(pmState.doc, selection.$from);
+        const toSectionPos = findSectionPos(pmState.doc, selection.$to);
+        if (typeof fromSectionPos !== 'number' || typeof toSectionPos !== 'number') return false;
+        if (fromSectionPos !== toSectionPos) return false;
+
+        const fromHeadingDepth = findDepth(selection.$from, 'outlineHeading');
+        const toHeadingDepth = findDepth(selection.$to, 'outlineHeading');
+        if (fromHeadingDepth === null || toHeadingDepth === null) return false;
+
+        const sectionNode = pmState.doc.nodeAt(fromSectionPos);
+        if (!sectionNode) return false;
+        const headingNode = sectionNode.child(0);
+        const headingStart = fromSectionPos + 1;
+        const headingContentFrom = headingStart + 1;
+        const headingContentTo = headingStart + headingNode.nodeSize - 1;
+
+        // Срабатываем только если selection целиком внутри контента заголовка.
+        if (selection.from < headingContentFrom) return false;
+        if (selection.to > headingContentTo) return false;
+
+        const deleteFrom = Math.max(selection.from, headingContentFrom);
+        const deleteTo = Math.min(selection.to, headingContentTo);
+        if (deleteTo < deleteFrom) return true;
+
+        if (typeof options.onClipboard === 'function') {
+          try {
+            const plain = pmState.doc.textBetween(deleteFrom, deleteTo, '\n', '\n');
+            options.onClipboard(plain);
+          } catch {
+            // ignore
+          }
+        }
+
+        let tr = pmState.tr.delete(deleteFrom, deleteTo);
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingContentFrom), 1));
         dispatch(tr.scrollIntoView());
         return true;
       };
@@ -1340,6 +1658,7 @@ async function mountOutlineEditor() {
         Backspace: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
+            if (clampHeadingDeletionToHeadingText(pmState, dispatch)) return true;
             if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
@@ -1367,6 +1686,7 @@ async function mountOutlineEditor() {
         Delete: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
+            if (clampHeadingDeletionToHeadingText(pmState, dispatch)) return true;
             if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
@@ -1534,7 +1854,47 @@ async function mountOutlineEditor() {
                   const fromSectionPos = findSectionPos(pmState.doc, selection.$from);
                   const toSectionPos = findSectionPos(pmState.doc, selection.$to);
                   if (typeof fromSectionPos !== 'number' || typeof toSectionPos !== 'number') return false;
-                  if (fromSectionPos === toSectionPos) return false;
+                  const escapeHtml = (s = '') =>
+                    String(s || '')
+                      .replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
+
+                  // Если вырезаем только заголовок (selection внутри outlineHeading),
+                  // то не удаляем саму ноду заголовка, чтобы body не "переезжал" вверх.
+                  if (fromSectionPos === toSectionPos) {
+                    const fromHeadingDepth = findDepth(selection.$from, 'outlineHeading');
+                    const toHeadingDepth = findDepth(selection.$to, 'outlineHeading');
+                    if (fromHeadingDepth !== null && toHeadingDepth !== null) {
+                      const sectionNode = pmState.doc.nodeAt(fromSectionPos);
+                      if (!sectionNode) return false;
+                      const headingNode = sectionNode.child(0);
+                      const headingStart = fromSectionPos + 1;
+                      const headingContentFrom = headingStart + 1;
+                      const headingContentTo = headingStart + headingNode.nodeSize - 1;
+                      if (selection.from >= headingContentFrom && selection.to <= headingContentTo) {
+                        const deleteFrom = Math.max(selection.from, headingContentFrom);
+                        const deleteTo = Math.min(selection.to, headingContentTo);
+                        const plain = pmState.doc.textBetween(deleteFrom, deleteTo, '\n', '\n');
+                        if (event?.clipboardData) {
+                          try {
+                            event.clipboardData.setData('text/plain', plain);
+                            event.clipboardData.setData('text/html', `<pre>${escapeHtml(plain)}</pre>`);
+                          } catch {
+                            // ignore
+                          }
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        let tr = pmState.tr.delete(deleteFrom, deleteTo);
+                        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingContentFrom), 1));
+                        view.dispatch(tr.scrollIntoView());
+                        return true;
+                      }
+                    }
+                    return false;
+                  }
 
                   const fromBodyDepth = findDepth(selection.$from, 'outlineBody');
                   if (fromBodyDepth === null) return false;
@@ -1555,12 +1915,6 @@ async function mountOutlineEditor() {
 
                   // Пишем в clipboard хотя бы text/plain, чтобы Ctrl+X не превращался в "Delete".
                   const plain = pmState.doc.textBetween(deleteFrom, deleteTo, '\n', '\n');
-                  const escapeHtml = (s = '') =>
-                    String(s || '')
-                      .replace(/&/g, '&amp;')
-                      .replace(/</g, '&lt;')
-                      .replace(/>/g, '&gt;')
-                      .replace(/"/g, '&quot;');
                   if (event?.clipboardData) {
                     try {
                       event.clipboardData.setData('text/plain', plain);
@@ -1936,11 +2290,12 @@ async function mountOutlineEditor() {
         openOnClick: false,
       }),
       Image,
+      OutlineCommands,
+      // Tables (same nodes/commands as TableKit)
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
       TableCell,
-      OutlineCommands,
     ],
     content,
     editorProps: {
@@ -2229,6 +2584,8 @@ export async function openOutlineEditor() {
     return;
   }
   state.isOutlineEditing = true;
+  if (refs.articleToolbar) refs.articleToolbar.classList.add('hidden');
+  if (refs.outlineToolbar) refs.outlineToolbar.classList.remove('hidden');
   refs.outlineEditor.classList.remove('hidden');
   refs.blocksContainer.classList.add('hidden');
   renderOutlineShell({ loading: true });
@@ -2241,6 +2598,11 @@ export async function openOutlineEditor() {
 
   try {
     await mountOutlineEditor();
+    try {
+      mountOutlineToolbar(outlineEditorInstance);
+    } catch {
+      // ignore
+    }
     const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
     if (loading) loading.classList.add('hidden');
     setOutlineStatus('Сохраняется автоматически');
@@ -2275,6 +2637,9 @@ export async function openOutlineEditor() {
 
 export function closeOutlineEditor() {
   state.isOutlineEditing = false;
+  unmountOutlineToolbar();
+  if (refs.outlineToolbar) refs.outlineToolbar.classList.add('hidden');
+  if (refs.articleToolbar) refs.articleToolbar.classList.remove('hidden');
   if (autosaveTimer) {
     clearTimeout(autosaveTimer);
     autosaveTimer = null;

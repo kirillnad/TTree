@@ -15,7 +15,7 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle && state.isOutlineEditing) {
     try {
-      const outline = await import('../outline/editor.js?v=26');
+      const outline = await import('../outline/editor.js?v=35');
       if (outline?.flushOutlineAutosave) {
         await outline.flushOutlineAutosave();
       }

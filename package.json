@@ -4,17 +4,30 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "snap": "node scripts/snap.js"
+    "snap": "node scripts/snap.js",
+    "build:tiptap": "node scripts/build_tiptap_bundle.mjs"
   },
   "description": "",
   "license": "ISC",
   "devDependencies": {
     "css": "^3.0.0",
+    "esbuild": "^0.27.2",
     "happy-dom": "^20.0.10",
     "playwright": "^1.57.0",
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "@tiptap/core": "^3.14.0",
+    "@tiptap/extension-image": "^3.14.0",
+    "@tiptap/extension-link": "^3.14.0",
+    "@tiptap/extension-table": "^3.14.0",
+    "@tiptap/extension-table-cell": "^3.14.0",
+    "@tiptap/extension-table-header": "^3.14.0",
+    "@tiptap/extension-table-row": "^3.14.0",
+    "@tiptap/extension-unique-id": "^3.14.0",
+    "@tiptap/html": "^3.14.0",
+    "@tiptap/pm": "^3.14.0",
+    "@tiptap/starter-kit": "^3.14.0",
     "crypto-js": "^4.2.0"
   }
 }
