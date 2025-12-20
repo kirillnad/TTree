@@ -761,7 +761,12 @@ async function mountOutlineEditor() {
           const prevChildren = prevSection.child(2);
           const childrenStart = prevStart + 1 + prevHeading.nodeSize + prevBody.nodeSize;
           const insertPos = childrenStart + prevChildren.nodeSize - 1;
-          const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(insertPos, sectionNode);
+          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(insertPos, sectionNode);
+          // Если новый родитель свёрнут, развернём его, чтобы переносимый блок не "исчезал".
+          const parentAfter = tr.doc.nodeAt(prevStart);
+          if (parentAfter?.type?.name === 'outlineSection' && Boolean(parentAfter.attrs?.collapsed)) {
+            tr = tr.setNodeMarkup(prevStart, undefined, { ...parentAfter.attrs, collapsed: false });
+          }
           const sel = TextSelection.near(tr.doc.resolve(insertPos + 2), 1);
           tr.setSelection(sel);
           dispatch(tr.scrollIntoView());
@@ -810,33 +815,109 @@ async function mountOutlineEditor() {
           return true;
         });
 
-      const toggleCollapsedRecursive = (collapsed) =>
+      const collectSectionPositions = (doc, rootPos) => {
+        const rootNode = doc.nodeAt(rootPos);
+        if (!rootNode || rootNode.type?.name !== 'outlineSection') return [];
+        const positions = [rootPos];
+        rootNode.descendants((node, pos) => {
+          if (node?.type?.name !== 'outlineSection') return;
+          positions.push(rootPos + 1 + pos);
+        });
+        return positions;
+      };
+
+      const findImmediateParentSectionPosForSectionPos = (doc, sectionPos) => {
+        try {
+          const $inside = doc.resolve(Math.min(doc.content.size, sectionPos + 1));
+          let currentDepth = null;
+          for (let d = $inside.depth; d > 0; d -= 1) {
+            if ($inside.node(d)?.type?.name !== 'outlineSection') continue;
+            const pos = $inside.before(d);
+            if (pos === sectionPos) {
+              currentDepth = d;
+              break;
+            }
+          }
+          if (currentDepth === null) return null;
+          for (let d = currentDepth - 1; d > 0; d -= 1) {
+            if ($inside.node(d)?.type?.name === 'outlineSection') return $inside.before(d);
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      };
+
+      const applyCollapsedToPositions = (pmState, dispatch, positions, collapsed) => {
+        const next = Boolean(collapsed);
+        let tr = pmState.tr;
+        for (const pos of positions) {
+          const node = tr.doc.nodeAt(pos);
+          if (!node || node.type?.name !== 'outlineSection') continue;
+          if (Boolean(node.attrs?.collapsed) === next) continue;
+          tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
+        }
+        dispatch(tr);
+      };
+
+      const collapseParentSubtree = () =>
         this.editor.commands.command(({ state: pmState, dispatch }) => {
           const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+          if (typeof sectionPos !== 'number') return false;
+          const parentPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+          const targetPos = typeof parentPos === 'number' ? parentPos : sectionPos;
+          const positions = collectSectionPositions(pmState.doc, targetPos);
+          if (!positions.length) return false;
+
+          // Схлопываем полностью subtree: parent + все дети внутри него.
+          let tr = pmState.tr;
+          for (const pos of positions) {
+            const node = tr.doc.nodeAt(pos);
+            if (!node || node.type?.name !== 'outlineSection') continue;
+            if (Boolean(node.attrs?.collapsed) === true) continue;
+            tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: true });
+          }
+
+          // После схлопывания переносим курсор в заголовок targetPos,
+          // иначе selection может оказаться "внутри" скрытых детей.
+          const targetNode = tr.doc.nodeAt(targetPos);
+          if (targetNode) {
+            const heading = targetNode.child(0);
+            const headingStart = targetPos + 1;
+            const headingEnd = headingStart + heading.nodeSize - 1;
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingEnd), -1));
+          }
+          dispatch(tr.scrollIntoView());
+          return true;
+        });
+
+      const expandCurrentSubtree = () =>
+        this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+          if (typeof sectionPos !== 'number') return false;
+          const positions = collectSectionPositions(pmState.doc, sectionPos);
+          if (!positions.length) return false;
+          // Разворачиваем полностью subtree: current + все дети внутри него.
+          applyCollapsedToPositions(pmState, dispatch, positions, false);
+          return true;
+        });
+
+      const toggleCollapsedRecursive = (collapsed) =>
+        this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const { selection } = pmState;
+          const selectedNode = selection?.node || null;
+          const sectionPos =
+            selectedNode?.type?.name === 'outlineSection'
+              ? selection.from
+              : findSectionPos(pmState.doc, pmState.selection.$from);
           if (typeof sectionPos !== 'number') return false;
           const sectionNode = pmState.doc.nodeAt(sectionPos);
           if (!sectionNode) return false;
           const next = Boolean(collapsed);
 
-          // Текущая секция + все её потомки (без предков).
-          // Делаем через относительные позиции внутри `sectionNode`, чтобы гарантированно
-          // не задеть родителей даже при краевых позициях selections.
-          const positions = [sectionPos];
-          sectionNode.descendants((node, pos) => {
-            if (node?.type?.name !== 'outlineSection') return;
-            positions.push(sectionPos + 1 + pos);
-          });
-
+          const positions = collectSectionPositions(pmState.doc, sectionPos);
           if (!positions.length) return false;
-
-          let tr = pmState.tr;
-          for (const pos of positions) {
-            const node = tr.doc.nodeAt(pos);
-            if (!node) continue;
-            if (Boolean(node.attrs?.collapsed) === next) continue;
-            tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
-          }
-          dispatch(tr);
+          applyCollapsedToPositions(pmState, dispatch, positions, next);
           return true;
         });
 
@@ -847,8 +928,10 @@ async function mountOutlineEditor() {
         'Alt-ArrowLeft': () => outdentSection(),
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
-        'Mod-ArrowUp': () => toggleCollapsedRecursive(true),
-        'Mod-ArrowDown': () => toggleCollapsedRecursive(false),
+        // Ctrl+↑: схлопнуть родителя (и всё внутри него)
+        'Mod-ArrowUp': () => collapseParentSubtree(),
+        // Ctrl+↓: развернуть текущую секцию (и всех её детей)
+        'Mod-ArrowDown': () => expandCurrentSubtree(),
         Backspace: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
@@ -997,6 +1080,106 @@ async function mountOutlineEditor() {
       };
 
       return [
+        new Plugin({
+          props: {
+            handleKeyDown: (view, event) => {
+              // Гарантируем работу Ctrl+↑/↓ независимо от того, где стоит курсор
+              // (в заголовке/теле/на границе), и не даём дефолтной навигации/скроллу перехватывать хоткей.
+              if (!event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return false;
+              if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return false;
+
+              const { state: pmState } = view;
+              const { selection } = pmState;
+              if (!selection) return false;
+
+              const findSectionPosFromSelection = () => {
+                const selectedNode = selection?.node || null;
+                if (selectedNode?.type?.name === 'outlineSection') return selection.from;
+                const $from = selection.$from;
+                for (let d = $from.depth; d > 0; d -= 1) {
+                  if ($from.node(d)?.type?.name === 'outlineSection') return $from.before(d);
+                }
+                return null;
+              };
+
+              const sectionPos = findSectionPosFromSelection();
+              if (typeof sectionPos !== 'number') return false;
+
+              const findImmediateParentSectionPosForSectionPos = (doc, pos) => {
+                try {
+                  const $inside = doc.resolve(Math.min(doc.content.size, pos + 1));
+                  let currentDepth = null;
+                  for (let d = $inside.depth; d > 0; d -= 1) {
+                    if ($inside.node(d)?.type?.name !== 'outlineSection') continue;
+                    if ($inside.before(d) === pos) {
+                      currentDepth = d;
+                      break;
+                    }
+                  }
+                  if (currentDepth === null) return null;
+                  for (let d = currentDepth - 1; d > 0; d -= 1) {
+                    if ($inside.node(d)?.type?.name === 'outlineSection') return $inside.before(d);
+                  }
+                  return null;
+                } catch {
+                  return null;
+                }
+              };
+
+              const collectSectionPositions = (doc, rootPos) => {
+                const rootNode = doc.nodeAt(rootPos);
+                if (!rootNode || rootNode.type?.name !== 'outlineSection') return [];
+                const positions = [rootPos];
+                rootNode.descendants((node, p) => {
+                  if (node?.type?.name !== 'outlineSection') return;
+                  positions.push(rootPos + 1 + p);
+                });
+                return positions;
+              };
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              if (event.key === 'ArrowUp') {
+                // Ctrl+↑: схлопнуть родителя (и всех детей внутри него).
+                const parentPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+                const targetPos = typeof parentPos === 'number' ? parentPos : sectionPos;
+                const positions = collectSectionPositions(pmState.doc, targetPos);
+                if (!positions.length) return true;
+
+                let tr = pmState.tr;
+                for (const p of positions) {
+                  const node = tr.doc.nodeAt(p);
+                  if (!node || node.type?.name !== 'outlineSection') continue;
+                  if (Boolean(node.attrs?.collapsed) === true) continue;
+                  tr = tr.setNodeMarkup(p, undefined, { ...node.attrs, collapsed: true });
+                }
+                const targetNode = tr.doc.nodeAt(targetPos);
+                if (targetNode) {
+                  const heading = targetNode.child(0);
+                  const headingStart = targetPos + 1;
+                  const headingEnd = headingStart + heading.nodeSize - 1;
+                  tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingEnd), -1));
+                }
+                view.dispatch(tr.scrollIntoView());
+                return true;
+              }
+
+              // Ctrl+↓: развернуть текущий блок (и всех детей внутри него).
+              const positions = collectSectionPositions(pmState.doc, sectionPos);
+              if (!positions.length) return true;
+              let tr = pmState.tr;
+              for (const p of positions) {
+                const node = tr.doc.nodeAt(p);
+                if (!node || node.type?.name !== 'outlineSection') continue;
+                if (Boolean(node.attrs?.collapsed) === false) continue;
+                tr = tr.setNodeMarkup(p, undefined, { ...node.attrs, collapsed: false });
+              }
+              view.dispatch(tr);
+              return true;
+            },
+          },
+        }),
         new Plugin({
           props: {
             handleKeyDown: (view, event) => {
