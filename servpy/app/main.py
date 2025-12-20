@@ -112,6 +112,7 @@ from .routers import oauth as oauth_routes
 from .routers import yandex_disk as yandex_disk_routes
 from .routers import telegram as telegram_routes
 from .routers import versions as versions_routes
+from .routers import outline as outline_routes
 from .public_render import _render_public_block
 from .onboarding import ensure_help_article_for_user
 from .import_assets import (
@@ -217,6 +218,7 @@ app.include_router(oauth_routes.router)
 app.include_router(yandex_disk_routes.router)
 app.include_router(telegram_routes.router)
 app.include_router(versions_routes.router)
+app.include_router(outline_routes.router)
 app.include_router(import_markdown_routes.router)
 app.include_router(import_html_routes.router)
 app.include_router(import_logseq_routes.router)

@@ -44,14 +44,12 @@ export function handleEditKey(event) {
   if (
     event.code === 'Tab' &&
     !event.ctrlKey &&
-    !event.shiftKey &&
     !event.altKey &&
     !event.metaKey
   ) {
-    // Tab в режиме редактирования: сохраняем блок и выходим в просмотр,
-    // вместо перехода фокуса на другие элементы.
+    // В режиме редактирования Tab не должен уводить фокус на кнопки интерфейса.
+    // Ничего не делаем кроме preventDefault, чтобы не навешивать действий на Tab.
     event.preventDefault();
-    saveEditing();
     return;
   }
   if (event.ctrlKey && event.code === 'ArrowRight') {
@@ -69,4 +67,3 @@ export function handleEditKey(event) {
     cancelEditing();
   }
 }
-

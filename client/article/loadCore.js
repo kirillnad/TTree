@@ -1,7 +1,7 @@
 // Вынесено из `article.js`: загрузка статьи в state (без DOM-рендера).
 
 import { state } from '../state.js';
-import { fetchArticle } from '../api.js?v=5';
+import { fetchArticle } from '../api.js?v=6';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { showToast } from '../toast.js';
 import { upsertArticleIndex } from '../sidebar.js';
@@ -15,7 +15,7 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle && state.isOutlineEditing) {
     try {
-      const outline = await import('../outline/editor.js?v=15');
+      const outline = await import('../outline/editor.js?v=26');
       if (outline?.flushOutlineAutosave) {
         await outline.flushOutlineAutosave();
       }

@@ -126,6 +126,26 @@ export function updateArticleDocJson(articleId, docJson) {
   });
 }
 
+export function generateOutlineTitle(text) {
+  if (typeof text !== 'string') {
+    return Promise.reject(new Error('text must be string'));
+  }
+  return apiRequest('/api/outline/generate-title', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
+
+export function proofreadOutlineHtml(html) {
+  if (typeof html !== 'string') {
+    return Promise.reject(new Error('html must be string'));
+  }
+  return apiRequest('/api/outline/proofread-html', {
+    method: 'POST',
+    body: JSON.stringify({ html }),
+  });
+}
+
 export function deleteArticle(id, options = {}) {
   const force = options.force ? '?force=true' : '';
   return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' });

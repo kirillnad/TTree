@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { replaceArticleBlocksTree, updateArticleDocJson } from '../api.js?v=5';
+import { replaceArticleBlocksTree, updateArticleDocJson, generateOutlineTitle, proofreadOutlineHtml } from '../api.js?v=7';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 
@@ -19,6 +19,10 @@ const dirtySectionIds = new Set();
 let docDirty = false;
 let onlineHandlerAttached = false;
 let outlineParseHtmlToNodes = null;
+let outlineGenerateHTML = null;
+let outlineHtmlExtensions = null;
+const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
+const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
 
@@ -80,6 +84,19 @@ function normalizeWhitespace(text = '') {
     .trim();
 }
 
+function hashTextForTitle(text = '') {
+  const s = String(text || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return String(h);
+}
+
+function hashTextForProofread(text = '') {
+  return hashTextForTitle(String(text || '').slice(0, 12000));
+}
+
 function safeUuid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -131,6 +148,7 @@ async function loadTiptap() {
     starterKitMod,
     htmlMod,
     pmStateMod,
+    pmViewMod,
     linkMod,
     imageMod,
     tableMod,
@@ -143,6 +161,7 @@ async function loadTiptap() {
     import('https://esm.sh/@tiptap/starter-kit'),
     import('https://esm.sh/@tiptap/html'),
     import('https://esm.sh/@tiptap/pm/state'),
+    import('https://esm.sh/@tiptap/pm/view'),
     import('https://esm.sh/@tiptap/extension-link'),
     import('https://esm.sh/@tiptap/extension-image'),
     import('https://esm.sh/@tiptap/extension-table'),
@@ -157,6 +176,7 @@ async function loadTiptap() {
     starterKitMod,
     htmlMod,
     pmStateMod,
+    pmViewMod,
     linkMod,
     imageMod,
     tableMod,
@@ -220,6 +240,86 @@ function computeSectionIndexText(sectionNode) {
   return normalizeWhitespace(`${titlePlain}\n${bodyPlain}`);
 }
 
+function computeSectionBodyPlain(sectionNode) {
+  if (!sectionNode) return '';
+  const bodyNode = sectionNode.child(1);
+  let bodyPlain = '';
+  try {
+    bodyPlain = normalizeWhitespace(bodyNode?.textBetween?.(0, bodyNode.content.size, '\n', '\n') || '');
+  } catch {
+    bodyPlain = normalizeWhitespace(bodyNode?.textContent || '');
+  }
+  return bodyPlain;
+}
+
+function bodyNodeToHtml(bodyNode) {
+  if (!outlineGenerateHTML || !outlineHtmlExtensions) return '';
+  const content = [];
+  bodyNode?.content?.forEach?.((child) => {
+    content.push(child.toJSON());
+  });
+  const doc = { type: 'doc', content };
+  const html = outlineGenerateHTML(doc, outlineHtmlExtensions) || '';
+  return (html || '').trim();
+}
+
+function applyBodyHtmlToSection(editor, sectionId, html) {
+  if (!editor || !sectionId) return false;
+  if (!outlineParseHtmlToNodes) return false;
+  const pos = findSectionPosById(editor.state.doc, sectionId);
+  if (typeof pos !== 'number') return false;
+  const sectionNode = editor.state.doc.nodeAt(pos);
+  if (!sectionNode) return false;
+  const headingNode = sectionNode.child(0);
+  const bodyNode = sectionNode.child(1);
+  const bodyPos = pos + 1 + headingNode.nodeSize;
+  const schema = editor.state.schema;
+  let nodesJson = [];
+  try {
+    nodesJson = outlineParseHtmlToNodes(html || '');
+  } catch {
+    nodesJson = [];
+  }
+  let nodes = [];
+  try {
+    nodes = (Array.isArray(nodesJson) ? nodesJson : []).map((n) => schema.nodeFromJSON(n));
+  } catch {
+    nodes = [schema.nodes.paragraph.create({}, [])];
+  }
+  if (!nodes.length) {
+    nodes = [schema.nodes.paragraph.create({}, [])];
+  }
+  const newBody = schema.nodes.outlineBody.create({}, nodes);
+  const tr = editor.state.tr.replaceWith(bodyPos, bodyPos + bodyNode.nodeSize, newBody);
+  editor.view.dispatch(tr);
+  return true;
+}
+
+function isHeadingEmpty(sectionNode) {
+  if (!sectionNode) return true;
+  const headingNode = sectionNode.child(0);
+  return !normalizeWhitespace(headingNode?.textContent || '');
+}
+
+function applyGeneratedHeading(editor, sectionId, titleText) {
+  if (!editor || !sectionId) return false;
+  const pos = findSectionPosById(editor.state.doc, sectionId);
+  if (typeof pos !== 'number') return false;
+  const sectionNode = editor.state.doc.nodeAt(pos);
+  if (!sectionNode) return false;
+  if (!isHeadingEmpty(sectionNode)) return false;
+  const headingNode = sectionNode.child(0);
+  const headingStart = pos + 1;
+  const from = headingStart + 1;
+  const to = headingStart + headingNode.nodeSize - 1;
+  const title = String(titleText || '').trim();
+  if (!title) return false;
+  const safe = title.length > 200 ? title.slice(0, 200) : title;
+  const tr = editor.state.tr.insertText(safe, from, to);
+  editor.view.dispatch(tr);
+  return true;
+}
+
 function rebuildCommittedIndexTextMap(doc) {
   committedSectionIndexText.clear();
   doc.descendants((node) => {
@@ -239,6 +339,85 @@ function findSectionPosById(doc, sectionId) {
     found = pos;
   });
   return found;
+}
+
+function maybeGenerateTitleOnLeave(editor, doc, sectionId) {
+  if (!editor || !doc || !sectionId) return;
+  if (state.article?.encrypted) return;
+
+  const pos = findSectionPosById(doc, sectionId);
+  const sectionNode = typeof pos === 'number' ? doc.nodeAt(pos) : null;
+  if (!sectionNode) return;
+  if (!isHeadingEmpty(sectionNode)) return;
+  const bodyPlain = computeSectionBodyPlain(sectionNode);
+  if (!bodyPlain) return;
+
+  const bodyHash = hashTextForTitle(bodyPlain);
+  const prev = titleGenState.get(sectionId) || null;
+  if (prev?.inFlight) return;
+  if (prev?.bodyHash === bodyHash) return;
+
+  titleGenState.set(sectionId, { bodyHash, inFlight: true });
+  generateOutlineTitle(bodyPlain)
+    .then((res) => {
+      const title = String(res?.title || '').trim();
+      if (!title) return;
+      if (title.length > 200) return;
+      const currentDoc = editor.state.doc;
+      const currentPos = findSectionPosById(currentDoc, sectionId);
+      const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
+      if (!currentNode) return;
+      if (!isHeadingEmpty(currentNode)) return;
+      const currentBody = computeSectionBodyPlain(currentNode);
+      if (hashTextForTitle(currentBody) !== bodyHash) return;
+      const applied = applyGeneratedHeading(editor, sectionId, title);
+      if (!applied) return;
+      docDirty = true;
+      scheduleAutosave({ delayMs: 900 });
+    })
+    .catch(() => {})
+    .finally(() => {
+      titleGenState.set(sectionId, { bodyHash, inFlight: false });
+    });
+}
+
+function maybeProofreadOnLeave(editor, doc, sectionId) {
+  if (!editor || !doc || !sectionId) return;
+  if (state.article?.encrypted) return;
+
+  const pos = findSectionPosById(doc, sectionId);
+  const sectionNode = typeof pos === 'number' ? doc.nodeAt(pos) : null;
+  if (!sectionNode) return;
+  const bodyNode = sectionNode.child(1);
+  const bodyHtml = bodyNodeToHtml(bodyNode);
+  if (!bodyHtml) return;
+
+  const htmlHash = hashTextForProofread(bodyHtml);
+  const prev = proofreadState.get(sectionId) || null;
+  if (prev?.inFlight) return;
+  if (prev?.htmlHash === htmlHash) return;
+
+  proofreadState.set(sectionId, { htmlHash, inFlight: true });
+  proofreadOutlineHtml(bodyHtml)
+    .then((res) => {
+      const correctedHtml = String(res?.html || '').trim();
+      if (!correctedHtml) return;
+      const currentDoc = editor.state.doc;
+      const currentPos = findSectionPosById(currentDoc, sectionId);
+      const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
+      if (!currentNode) return;
+      const currentBodyHtml = bodyNodeToHtml(currentNode.child(1));
+      if (hashTextForProofread(currentBodyHtml) !== htmlHash) return;
+      if (hashTextForProofread(correctedHtml) === htmlHash) return;
+      const applied = applyBodyHtmlToSection(editor, sectionId, correctedHtml);
+      if (!applied) return;
+      docDirty = true;
+      scheduleAutosave({ delayMs: 900 });
+    })
+    .catch(() => {})
+    .finally(() => {
+      proofreadState.set(sectionId, { htmlHash, inFlight: false });
+    });
 }
 
 function markSectionDirtyIfChanged(doc, sectionId) {
@@ -302,12 +481,13 @@ async function mountOutlineEditor() {
   // Защита от двойного mount (например, если юзер кликнул дважды пока грузим tiptap).
   if (mountPromise) return mountPromise;
   mountPromise = (async () => {
-  const { core, starterKitMod, htmlMod, pmStateMod } = await loadTiptap();
+  const { core, starterKitMod, htmlMod, pmStateMod, pmViewMod } = await loadTiptap();
   const { Editor, Node, Extension, mergeAttributes } = core;
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
   const { Plugin } = pmStateMod;
+  const { Decoration, DecorationSet } = pmViewMod;
   const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
   const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
   const Table = tiptap.tableMod.default || tiptap.tableMod.Table || tiptap.tableMod;
@@ -315,6 +495,17 @@ async function mountOutlineEditor() {
   const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
   const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
   const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
+
+  outlineGenerateHTML = generateHTML;
+  outlineHtmlExtensions = [
+    StarterKit.configure({ heading: false, link: false }),
+    Link.configure({ openOnClick: false }),
+    Image,
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
+  ];
 
   const OutlineDocument = Node.create({
     name: 'doc',
@@ -818,6 +1009,136 @@ async function mountOutlineEditor() {
           return false;
         });
 
+      const splitSectionAtCaret = () =>
+        this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const { selection } = pmState;
+          if (!selection?.empty) return false;
+          const { $from } = selection;
+          const sectionPos = findSectionPos(pmState.doc, $from);
+          if (typeof sectionPos !== 'number') return false;
+          const sectionNode = pmState.doc.nodeAt(sectionPos);
+          if (!sectionNode) return false;
+          const schema = pmState.doc.type.schema;
+
+          // Если секция схлопнута — Ctrl+Enter просто создаёт новый sibling ниже
+          // (ничего не переносим и не "split" содержимое).
+          if (Boolean(sectionNode.attrs?.collapsed)) {
+            const insertPos = sectionPos + sectionNode.nodeSize;
+            const newSection = schema.nodes.outlineSection.create(
+              { id: safeUuid(), collapsed: false },
+              [
+                schema.nodes.outlineHeading.create({}, []),
+                schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+                schema.nodes.outlineChildren.create({}, []),
+              ],
+            );
+            let tr = pmState.tr.insert(insertPos, newSection);
+            tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+            dispatch(tr.scrollIntoView());
+            return true;
+          }
+
+          const emptyChildren = schema.nodes.outlineChildren.create({}, []);
+          const ensureBodyNotEmpty = (bodyNode) => {
+            if (bodyNode && bodyNode.childCount) return bodyNode;
+            return schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+          };
+
+          // Split в заголовке: делим текст заголовка на 2 секции,
+          // body+children переносим в новую секцию.
+          if ($from.parent?.type?.name === 'outlineHeading') {
+            const headingNode = sectionNode.child(0);
+            const bodyNode = sectionNode.child(1);
+            const childrenNode = sectionNode.child(2);
+            const offset = $from.parentOffset || 0;
+            const beforeText = headingNode.textBetween(0, Math.max(0, Math.min(offset, headingNode.content.size)), '', '');
+            const afterText = headingNode.textBetween(Math.max(0, Math.min(offset, headingNode.content.size)), headingNode.content.size, '', '');
+            const leftHeading = schema.nodes.outlineHeading.create({}, beforeText ? [schema.text(beforeText)] : []);
+            const rightHeading = schema.nodes.outlineHeading.create({}, afterText ? [schema.text(afterText)] : []);
+            const newId = safeUuid();
+            const leftSection = schema.nodes.outlineSection.create(
+              { ...sectionNode.attrs, collapsed: false },
+              [leftHeading, ensureBodyNotEmpty(schema.nodes.outlineBody.create({}, [])), emptyChildren],
+            );
+            const rightSection = schema.nodes.outlineSection.create(
+              { id: newId, collapsed: false },
+              [rightHeading, ensureBodyNotEmpty(bodyNode), childrenNode],
+            );
+            let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, leftSection);
+            const leftAfter = tr.doc.nodeAt(sectionPos);
+            const insertPos = sectionPos + (leftAfter ? leftAfter.nodeSize : leftSection.nodeSize);
+            tr = tr.insert(insertPos, rightSection);
+            tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+            dispatch(tr.scrollIntoView());
+            return true;
+          }
+
+          // Split в body: разрезаем body в позиции курсора и переносим tail + children в новую секцию.
+          const bodyDepth = findDepth($from, 'outlineBody');
+          if (bodyDepth === null) return false;
+          if (!$from.parent?.isTextblock) return false;
+
+          let tr = pmState.tr;
+          const originalFrom = selection.from;
+          try {
+            tr = tr.split(originalFrom);
+          } catch {
+            return false;
+          }
+
+          // Переносим курсор в начало "второй половины", чтобы определить границу на уровне параграфа.
+          const mapped = tr.mapping.map(originalFrom);
+          try {
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, mapped + 1)), 1));
+          } catch {
+            // ignore
+          }
+          const $sel = tr.selection.$from;
+          const bodyDepthSel = findDepth($sel, 'outlineBody');
+          const paragraphDepth = findDepth($sel, 'paragraph');
+          if (bodyDepthSel === null || paragraphDepth === null) return false;
+
+          const cutFrom = $sel.before(paragraphDepth);
+          const bodyEnd = $sel.end(bodyDepthSel);
+          if (typeof cutFrom !== 'number' || typeof bodyEnd !== 'number') return false;
+          if (bodyEnd < cutFrom) return false;
+
+          const tailFragment = tr.doc.slice(cutFrom, bodyEnd).content;
+          tr = tr.delete(cutFrom, bodyEnd);
+
+          // Находим секцию после всех изменений.
+          const sectionPosAfter = tr.mapping.map(sectionPos, -1);
+          const currentSection = tr.doc.nodeAt(sectionPosAfter);
+          if (!currentSection) {
+            dispatch(tr.scrollIntoView());
+            return true;
+          }
+          const currentHeading = currentSection.child(0);
+          const currentBody = ensureBodyNotEmpty(currentSection.child(1));
+          const currentChildren = currentSection.child(2);
+
+          const newCurrentSection = schema.nodes.outlineSection.create(
+            { ...currentSection.attrs, collapsed: false },
+            [currentHeading, currentBody, emptyChildren],
+          );
+
+          const tailBody =
+            tailFragment && tailFragment.childCount
+              ? schema.nodes.outlineBody.create({}, tailFragment)
+              : schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+          const newSection = schema.nodes.outlineSection.create(
+            { id: safeUuid(), collapsed: false },
+            [schema.nodes.outlineHeading.create({}, []), tailBody, currentChildren],
+          );
+
+          tr = tr.replaceWith(sectionPosAfter, sectionPosAfter + currentSection.nodeSize, newCurrentSection);
+          const insertPos = sectionPosAfter + newCurrentSection.nodeSize;
+          tr = tr.insert(insertPos, newSection);
+          tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+          dispatch(tr.scrollIntoView());
+          return true;
+        });
+
       const indentSection = () =>
         this.editor.commands.command(({ state: pmState, dispatch }) => {
           const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
@@ -1014,6 +1335,8 @@ async function mountOutlineEditor() {
         'Mod-ArrowUp': () => collapseParentSubtree(),
         // Ctrl+↓: развернуть текущую секцию (и всех её детей)
         'Mod-ArrowDown': () => expandCurrentSubtree(),
+        // Ctrl+Enter: split секции в позиции курсора (children → в новую секцию)
+        'Mod-Enter': () => splitSectionAtCaret(),
         Backspace: () =>
           this.editor.commands.command(({ state: pmState, dispatch }) => {
             const { selection } = pmState;
@@ -1087,6 +1410,25 @@ async function mountOutlineEditor() {
             const headingNode = sectionNode.child(0);
             const bodyNode = sectionNode.child(1);
             const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+
+            // Enter в конце заголовка схлопнутой секции: создаём новый sibling ниже,
+            // ничего не переносим и не пытаемся переходить в скрытое body.
+            if (Boolean(sectionNode.attrs?.collapsed) && $from.parentOffset === headingNode.content.size) {
+              const insertPos = sectionPos + sectionNode.nodeSize;
+              const schema = pmState.doc.type.schema;
+              const newSection = schema.nodes.outlineSection.create(
+                { id: safeUuid(), collapsed: false },
+                [
+                  schema.nodes.outlineHeading.create({}, []),
+                  schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+                  schema.nodes.outlineChildren.create({}, []),
+                ],
+              );
+              let tr = pmState.tr.insert(insertPos, newSection);
+              tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+              dispatch(tr.scrollIntoView());
+              return true;
+            }
 
             // Enter в начале заголовка: вставляем новый блок выше текущего
             // и ставим курсор в начало нового заголовка.
@@ -1172,6 +1514,160 @@ async function mountOutlineEditor() {
       };
 
       return [
+        new Plugin({
+          props: {
+            handleDOMEvents: {
+              cut: (view, event) => {
+                try {
+                  const { state: pmState } = view;
+                  const { selection } = pmState;
+                  if (!selection || selection.empty) return false;
+
+                  // Ctrl/Cmd+X: защита как для Delete/Backspace — не даём "съесть" границу секций,
+                  // если выделение начинается в body и заканчивается в начале heading другой секции.
+                  const findSectionPos = (doc, $from) => {
+                    for (let d = $from.depth; d > 0; d -= 1) {
+                      if ($from.node(d)?.type?.name === 'outlineSection') return $from.before(d);
+                    }
+                    return null;
+                  };
+                  const fromSectionPos = findSectionPos(pmState.doc, selection.$from);
+                  const toSectionPos = findSectionPos(pmState.doc, selection.$to);
+                  if (typeof fromSectionPos !== 'number' || typeof toSectionPos !== 'number') return false;
+                  if (fromSectionPos === toSectionPos) return false;
+
+                  const fromBodyDepth = findDepth(selection.$from, 'outlineBody');
+                  if (fromBodyDepth === null) return false;
+                  if (selection.$to.parent?.type?.name !== 'outlineHeading') return false;
+                  if (selection.$to.parentOffset !== 0) return false;
+
+                  const sectionNode = pmState.doc.nodeAt(fromSectionPos);
+                  if (!sectionNode) return false;
+                  const headingNode = sectionNode.child(0);
+                  const bodyNode = sectionNode.child(1);
+                  const bodyStart = fromSectionPos + 1 + headingNode.nodeSize;
+                  const bodyContentFrom = bodyStart + 1;
+                  const bodyContentTo = bodyStart + bodyNode.nodeSize - 1;
+
+                  const deleteFrom = Math.max(selection.from, bodyContentFrom);
+                  const deleteTo = Math.min(selection.to, bodyContentTo);
+                  if (deleteTo < deleteFrom) return true;
+
+                  // Пишем в clipboard хотя бы text/plain, чтобы Ctrl+X не превращался в "Delete".
+                  const plain = pmState.doc.textBetween(deleteFrom, deleteTo, '\n', '\n');
+                  const escapeHtml = (s = '') =>
+                    String(s || '')
+                      .replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
+                  if (event?.clipboardData) {
+                    try {
+                      event.clipboardData.setData('text/plain', plain);
+                      event.clipboardData.setData('text/html', `<pre>${escapeHtml(plain)}</pre>`);
+                    } catch {
+                      // ignore
+                    }
+                  }
+
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  let tr = pmState.tr.delete(deleteFrom, deleteTo);
+                  const bodyAfter = tr.doc.nodeAt(bodyStart);
+                  if (bodyAfter && bodyAfter.content.size === 0) {
+                    const schema = tr.doc.type.schema;
+                    tr = tr.insert(bodyContentFrom, schema.nodes.paragraph.create({}, []));
+                  }
+                  tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyContentFrom + 1), 1));
+                  view.dispatch(tr.scrollIntoView());
+                  return true;
+                } catch {
+                  return false;
+                }
+              },
+            },
+          },
+        }),
+        new Plugin({
+          props: {
+            handleKeyDown: (view, event) => {
+              // UX для списков: если курсор в начале li и жмём Backspace,
+              // переносим содержимое текущего li как НОВЫЙ абзац в конец предыдущего li,
+              // вместо склеивания в конец строки.
+              if (event.key !== 'Backspace') return false;
+              const { state: pmState } = view;
+              const { selection } = pmState;
+              if (!selection?.empty) return false;
+              const { $from } = selection;
+              if ($from.parent?.type?.name !== 'paragraph') return false;
+              if ($from.parentOffset !== 0) return false;
+
+              // Найдём listItem и убедимся, что мы в самом начале первого paragraph внутри него.
+              let listItemDepth = null;
+              for (let d = $from.depth; d > 0; d -= 1) {
+                if ($from.node(d)?.type?.name === 'listItem') {
+                  listItemDepth = d;
+                  break;
+                }
+              }
+              if (listItemDepth === null) return false;
+              if ($from.index(listItemDepth) !== 0) return false;
+
+              const listDepth = listItemDepth - 1;
+              const listNode = $from.node(listDepth);
+              if (!listNode) return false;
+              // Индекс текущего listItem среди children списка (bulletList/orderedList).
+              const itemIndex = $from.index(listDepth);
+              if (itemIndex <= 0) return false;
+
+              const listItemPos = $from.before(listItemDepth);
+              const prevNode = listNode.child(itemIndex - 1);
+              const prevStart = listItemPos - prevNode.nodeSize;
+              const curNode = pmState.doc.nodeAt(listItemPos);
+              if (!curNode || curNode.type?.name !== 'listItem') return false;
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              // Собираем новый prev li = old prev + blocks текущего li,
+              // при этом blocks остаются отдельными paragraph'ами (а не склеиваются в один).
+              const mergedPrev = prevNode.type.create(
+                prevNode.attrs,
+                prevNode.content.append(curNode.content),
+                prevNode.marks,
+              );
+              let tr = pmState.tr.replaceWith(prevStart, prevStart + prevNode.nodeSize, mergedPrev);
+
+              // Позиция, где начинается перенесённый контент (после старого контента prev li).
+              const insertedStartOrig = prevStart + 1 + prevNode.content.size;
+              const insertedStart = tr.mapping.map(insertedStartOrig, 1);
+
+              const curPosMapped = tr.mapping.map(listItemPos);
+              tr = tr.delete(curPosMapped, curPosMapped + curNode.nodeSize);
+
+              // Ставим курсор в начало перенесённого текста (в новый paragraph).
+              try {
+                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertedStart + 1), 1));
+              } catch {
+                // ignore
+              }
+              view.dispatch(tr.scrollIntoView());
+              return true;
+            },
+          },
+        }),
+        new Plugin({
+          props: {
+            handleKeyDown: (_view, event) => {
+              // Внутри редактора Tab не должен уводить фокус на кнопки интерфейса.
+              // При этом оставляем возможность другим плагинам обработать Tab (списки/таблицы).
+              if (event.key !== 'Tab') return false;
+              event.preventDefault();
+              return false;
+            },
+          },
+        }),
         new Plugin({
           props: {
             handleKeyDown: (view, event) => {
@@ -1347,6 +1843,31 @@ async function mountOutlineEditor() {
     },
   });
 
+  const OutlineActiveSection = Extension.create({
+    name: 'outlineActiveSection',
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          props: {
+            decorations(pmState) {
+              try {
+                const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+                if (typeof sectionPos !== 'number') return null;
+                const sectionNode = pmState.doc.nodeAt(sectionPos);
+                if (!sectionNode) return null;
+                return DecorationSet.create(pmState.doc, [
+                  Decoration.node(sectionPos, sectionPos + sectionNode.nodeSize, { 'data-active': 'true' }),
+                ]);
+              } catch {
+                return null;
+              }
+            },
+          },
+        }),
+      ];
+    },
+  });
+
   const parseHtmlToNodes = (html) => {
     const normalized = (html || '').trim();
     if (!normalized) return [];
@@ -1400,6 +1921,7 @@ async function mountOutlineEditor() {
       OutlineHeading,
       OutlineBody,
       OutlineChildren,
+      OutlineActiveSection,
       UniqueID.configure({
         types: ['outlineSection'],
         attributeName: 'id',
@@ -1465,8 +1987,18 @@ async function mountOutlineEditor() {
       const sectionId = String(sectionNode?.attrs?.id || '');
       if (!sectionId) return;
       if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
+        try {
+          maybeGenerateTitleOnLeave(editor, pmState.doc, lastActiveSectionId);
+        } catch {
+          // ignore
+        }
         const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
         if (changed) {
+          try {
+            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
+          } catch {
+            // ignore
+          }
           // Ушли из секции — стараемся сохранить быстрее, чтобы история “секции” была естественной.
           scheduleAutosave({ delayMs: 350 });
         }
