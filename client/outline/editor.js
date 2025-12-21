@@ -2,12 +2,14 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
+import { showImagePreview } from '../modal.js?v=8';
 import {
   replaceArticleBlocksTree,
   updateArticleDocJson,
   generateOutlineTitle,
   proofreadOutlineHtml,
   fetchArticlesIndex,
+  uploadImageFile,
 } from '../api.js?v=7';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
@@ -958,25 +960,409 @@ async function mountOutlineEditor() {
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
   const { Plugin, PluginKey } = pmStateMod;
-  const { Decoration, DecorationSet } = pmViewMod;
-  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
-  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
-  const Table = tiptap.tableMod.default || tiptap.tableMod.Table || tiptap.tableMod;
-  const TableRow = tiptap.tableRowMod.default || tiptap.tableRowMod.TableRow || tiptap.tableRowMod;
-  const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
-  const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
-  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
+	  const { Decoration, DecorationSet } = pmViewMod;
+	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
+	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
+	  const Table = tiptap.tableMod.default || tiptap.tableMod.Table || tiptap.tableMod;
+	  const TableRow = tiptap.tableRowMod.default || tiptap.tableRowMod.TableRow || tiptap.tableRowMod;
+	  const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
+	  const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
+	  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
 
-  outlineGenerateHTML = generateHTML;
-  outlineHtmlExtensions = [
-    StarterKit.configure({ heading: false, link: false }),
-    Link.configure({ openOnClick: false }),
-    Image,
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableHeader,
-    TableCell,
-  ];
+	  const parseWidthPx = (value) => {
+	    const raw = String(value || '').trim();
+	    if (!raw) return null;
+	    const m = raw.match(/(\d+(?:\.\d+)?)px/i);
+	    if (!m) return null;
+	    const num = Number.parseFloat(m[1]);
+	    return Number.isFinite(num) ? num : null;
+	  };
+
+	  const ResizableImage = Image.extend({
+	    inline: true,
+	    group: 'inline',
+	    addAttributes() {
+	      const parentAttrs = typeof this.parent === 'function' ? this.parent() : {};
+	      return {
+	        ...parentAttrs,
+	        width: {
+	          default: 320,
+	          parseHTML: (element) => {
+	            try {
+	              const el = element;
+	              const wrapper =
+	                el && el.classList && el.classList.contains('resizable-image')
+	                  ? el
+	                  : el?.closest?.('.resizable-image');
+	              const fromStyle = parseWidthPx(wrapper?.style?.width || '');
+	              if (fromStyle !== null) return Math.round(fromStyle);
+	              const fromAttr = parseWidthPx(wrapper?.getAttribute?.('style') || '') || parseWidthPx(el?.getAttribute?.('style') || '');
+	              if (fromAttr !== null) return Math.round(fromAttr);
+	              const data = wrapper?.getAttribute?.('data-width') || el?.getAttribute?.('data-width') || '';
+	              const fromData = Number.parseFloat(String(data || ''));
+	              if (Number.isFinite(fromData) && fromData > 0) return Math.round(fromData);
+	              return 320;
+	            } catch {
+	              return 320;
+	            }
+	          },
+	          renderHTML: () => ({}),
+	        },
+	        uploadToken: {
+	          default: null,
+	          parseHTML: () => null,
+	          renderHTML: () => ({}),
+	        },
+	      };
+	    },
+	    parseHTML() {
+	      return [
+	        {
+	          tag: 'span.resizable-image',
+	          getAttrs: (element) => {
+	            const el = element;
+	            const img = el?.querySelector?.('img');
+	            const src = img?.getAttribute?.('src') || '';
+	            if (!src) return false;
+	            const alt = img?.getAttribute?.('alt') || '';
+	            const title = img?.getAttribute?.('title') || '';
+	            const width = parseWidthPx(el?.style?.width || '') ?? 320;
+	            return { src, alt, title, width: Math.round(width) };
+	          },
+	        },
+	        {
+	          tag: 'img[src]',
+	          getAttrs: (element) => {
+	            const el = element;
+	            const src = el?.getAttribute?.('src') || '';
+	            if (!src) return false;
+	            const alt = el?.getAttribute?.('alt') || '';
+	            const title = el?.getAttribute?.('title') || '';
+	            return { src, alt, title, width: 320 };
+	          },
+	        },
+	      ];
+	    },
+	    renderHTML({ node, HTMLAttributes }) {
+	      const rawWidth = node?.attrs?.width;
+	      const width = Number.isFinite(Number(rawWidth)) ? Math.round(Number(rawWidth)) : 320;
+	      const imgAttrs = { ...HTMLAttributes };
+	      delete imgAttrs.width;
+	      delete imgAttrs.uploadToken;
+	      return [
+	        'span',
+	        mergeAttributes(
+	          { class: 'resizable-image', style: `width:${width}px;max-width:100%;` },
+	          {},
+	        ),
+	        ['span', { class: 'resizable-image__inner' }, ['img', mergeAttributes(imgAttrs, { draggable: 'false' })]],
+	        ['span', { class: 'resizable-image__handle', 'data-direction': 'e', 'aria-hidden': 'true' }],
+	      ];
+	    },
+	  });
+
+	  outlineGenerateHTML = generateHTML;
+	  outlineHtmlExtensions = [
+	    StarterKit.configure({ heading: false, link: false }),
+	    Link.configure({ openOnClick: false }),
+	    ResizableImage,
+	    Table.configure({ resizable: true }),
+	    TableRow,
+	    TableHeader,
+	    TableCell,
+	  ];
+
+	  const findImagePosByUploadToken = (doc, token) => {
+	    let found = null;
+	    if (!token) return null;
+	    doc.descendants((node, pos) => {
+	      if (found !== null) return false;
+	      if (node?.type?.name !== 'image') return;
+	      if (String(node.attrs?.uploadToken || '') !== String(token)) return;
+	      found = pos;
+	    });
+	    return found;
+	  };
+
+	  const OutlineImageUpload = Extension.create({
+	    name: 'outlineImageUpload',
+	    addProseMirrorPlugins() {
+	      const isImageLikeFile = (file) => {
+	        if (!file) return false;
+	        if (file.type && String(file.type).startsWith('image/')) return true;
+	        const name = String(file.name || '').toLowerCase();
+	        return Boolean(name && /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(name));
+	      };
+
+	      const collectFiles = (items, fallbackFiles) => {
+	        const files = [];
+	        Array.from(items || []).forEach((item) => {
+	          if (item.kind !== 'file') return;
+	          const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
+	          if (file && isImageLikeFile(file)) files.push(file);
+	        });
+	        if (!files.length && fallbackFiles?.length) {
+	          Array.from(fallbackFiles).forEach((file) => {
+	            if (isImageLikeFile(file)) files.push(file);
+	          });
+	        }
+	        return files;
+	      };
+
+		      const insertUploadingImage = (view, file) => {
+		        const token = `upl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+		        const objectUrl = URL.createObjectURL(file);
+		        const imgNode = view.state.schema.nodes.image.create({
+		          src: objectUrl,
+		          alt: file?.name || 'image',
+		          width: 320,
+		          uploadToken: token,
+		        });
+		        // Вставляем картинку как inline, обрамляя пробелами, чтобы можно было писать до/после.
+		        let tr = view.state.tr;
+		        const selFrom = tr.selection.from;
+		        const selTo = tr.selection.to;
+		        // Удаляем выделение (если было) и вставляем пробелы/картинку.
+		        if (selTo > selFrom) tr = tr.delete(selFrom, selTo);
+		        tr = tr.insertText('  ', selFrom, selFrom);
+		        const insertAt = tr.mapping.map(selFrom, 1);
+		        tr = tr.replaceRangeWith(insertAt, insertAt, imgNode);
+		        const afterImg = tr.mapping.map(insertAt + imgNode.nodeSize, 1);
+		        tr = tr.insertText('  ', afterImg, afterImg);
+		        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, afterImg + 1)), 1));
+		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		        view.dispatch(tr.scrollIntoView());
+
+	        uploadImageFile(file)
+	          .then((res) => {
+	            const url = String(res?.url || '').trim();
+	            try {
+	              URL.revokeObjectURL(objectUrl);
+	            } catch {
+	              // ignore
+	            }
+	            if (!url) throw new Error('Upload failed');
+	            const pos = findImagePosByUploadToken(view.state.doc, token);
+	            if (typeof pos !== 'number') return;
+	            const node = view.state.doc.nodeAt(pos);
+	            if (!node || node.type?.name !== 'image') return;
+	            const nextAttrs = { ...node.attrs, src: url, uploadToken: null };
+	            let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+	            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+	            view.dispatch(tr2);
+	          })
+	          .catch((err) => {
+	            try {
+	              URL.revokeObjectURL(objectUrl);
+	            } catch {
+	              // ignore
+	            }
+	            showToast(err?.message || 'Не удалось загрузить изображение');
+	            // Remove placeholder if still present.
+	            try {
+	              const pos = findImagePosByUploadToken(view.state.doc, token);
+	              if (typeof pos !== 'number') return;
+	              let tr2 = view.state.tr.delete(pos, pos + 1);
+	              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+	              view.dispatch(tr2);
+	            } catch {
+	              // ignore
+	            }
+	          });
+	      };
+
+	      const handle = (view, event, items, files) => {
+	        try {
+	          const st = outlineEditModeKey?.getState?.(view.state) || null;
+	          if (!st?.editingSectionId) return false;
+	        } catch {
+	          return false;
+	        }
+	        const imgFiles = collectFiles(items, files);
+	        if (!imgFiles.length) return false;
+	        event.preventDefault();
+	        event.stopPropagation();
+	        for (const file of imgFiles) {
+	          insertUploadingImage(view, file);
+	        }
+	        return true;
+	      };
+
+	      return [
+	        new Plugin({
+	          props: {
+	            handleDOMEvents: {
+	              paste(view, event) {
+	                const items = event?.clipboardData?.items || null;
+	                const files = event?.clipboardData?.files || null;
+	                return handle(view, event, items, files);
+	              },
+	              drop(view, event) {
+	                const items = event?.dataTransfer?.items || null;
+	                const files = event?.dataTransfer?.files || null;
+	                return handle(view, event, items, files);
+	              },
+	            },
+	          },
+	        }),
+	      ];
+	    },
+	  });
+
+		  const OutlineImageResize = Extension.create({
+		    name: 'outlineImageResize',
+		    addProseMirrorPlugins() {
+		      return [
+		        new Plugin({
+		          view(view) {
+		            let session = null; // { pos, startWidth, startX, wrapper, lastWidth }
+
+		            const resolveImagePos = (wrapper, event) => {
+		              try {
+		                // Best signal: NodeSelection on image.
+		                const selNode = view.state.selection?.node || null;
+		                if (selNode?.type?.name === 'image' && typeof view.state.selection.from === 'number') {
+		                  return view.state.selection.from;
+		                }
+
+		                const tryPos = (pos) => {
+		                  if (typeof pos !== 'number') return null;
+		                  const candidates = [pos, pos - 1, pos + 1, pos - 2, pos + 2];
+		                  for (const p of candidates) {
+		                    if (p < 0) continue;
+		                    const node = view.state.doc.nodeAt(p);
+		                    if (node?.type?.name === 'image') return p;
+		                  }
+		                  return null;
+		                };
+
+		                const img = wrapper?.querySelector?.('img') || null;
+		                const posFromDom = tryPos(view.posAtDOM(wrapper, 0));
+		                if (typeof posFromDom === 'number') return posFromDom;
+		                const posFromImg = img ? tryPos(view.posAtDOM(img, 0)) : null;
+		                if (typeof posFromImg === 'number') return posFromImg;
+		                const coords =
+		                  event && typeof event.clientX === 'number' && typeof event.clientY === 'number'
+		                    ? { left: event.clientX, top: event.clientY }
+		                    : null;
+		                const hit = coords ? view.posAtCoords(coords) : null;
+		                const posFromCoords = hit && typeof hit.pos === 'number' ? tryPos(hit.pos) : null;
+		                if (typeof posFromCoords === 'number') return posFromCoords;
+		                return null;
+		              } catch {
+		                return null;
+		              }
+		            };
+
+		            const onPointerDown = (event) => {
+		              if (event.button !== 0) return;
+		              const handle = event.target?.closest?.('.resizable-image__handle');
+		              if (!handle) return;
+	              const wrapper = handle.closest('.resizable-image');
+	              if (!wrapper || !view.dom.contains(wrapper)) return;
+		              const st = outlineEditModeKey?.getState?.(view.state) || null;
+		              if (!st?.editingSectionId) return;
+
+		              const pos = resolveImagePos(wrapper, event);
+		              if (typeof pos !== 'number') return;
+		              const node = view.state.doc.nodeAt(pos);
+		              if (!node || node.type?.name !== 'image') return;
+
+	              event.preventDefault();
+	              event.stopPropagation();
+		              const rect = wrapper.getBoundingClientRect();
+		              session = {
+		                pos,
+		                startWidth: rect.width,
+		                startX: event.clientX,
+		                wrapper,
+		                lastWidth: rect.width,
+		              };
+		              wrapper.classList.add('resizable-image--resizing');
+		            };
+
+		            const onPointerMove = (event) => {
+		              if (!session) return;
+		              event.preventDefault();
+		              const delta = event.clientX - session.startX;
+		              const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		              const minWidth = rootFontSize;
+		              const viewportMax = Math.max(minWidth, document.documentElement.clientWidth - 32);
+		              let width = session.startWidth + delta;
+		              width = Math.max(minWidth, Math.min(width, viewportMax));
+		              session.lastWidth = width;
+		              session.wrapper.style.width = `${Math.round(width)}px`;
+		            };
+
+		            const onPointerEnd = () => {
+		              if (!session) return;
+		              const { pos, wrapper } = session;
+		              wrapper.classList.remove('resizable-image--resizing');
+		              const resolvedPos =
+		                view.state.doc.nodeAt(pos)?.type?.name === 'image'
+		                  ? pos
+		                  : resolveImagePos(wrapper, null);
+		              const node = typeof resolvedPos === 'number' ? view.state.doc.nodeAt(resolvedPos) : null;
+		              if (node && node.type?.name === 'image') {
+		                const width = Math.max(1, Math.round(Number(session.lastWidth || 0) || wrapper.getBoundingClientRect().width));
+		                const nextAttrs = { ...node.attrs, width };
+		                let tr = view.state.tr.setNodeMarkup(resolvedPos, undefined, nextAttrs);
+		                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		                view.dispatch(tr);
+		              }
+		              session = null;
+		            };
+
+	            view.dom.addEventListener('pointerdown', onPointerDown);
+	            document.addEventListener('pointermove', onPointerMove);
+	            document.addEventListener('pointerup', onPointerEnd);
+	            document.addEventListener('pointercancel', onPointerEnd);
+
+	            return {
+	              destroy() {
+	                view.dom.removeEventListener('pointerdown', onPointerDown);
+	                document.removeEventListener('pointermove', onPointerMove);
+	                document.removeEventListener('pointerup', onPointerEnd);
+	                document.removeEventListener('pointercancel', onPointerEnd);
+	              },
+	            };
+	          },
+	        }),
+	      ];
+	    },
+	  });
+
+	  const OutlineImagePreview = Extension.create({
+	    name: 'outlineImagePreview',
+	    addProseMirrorPlugins() {
+	      return [
+	        new Plugin({
+	          props: {
+	            handleDOMEvents: {
+	              click(view, event) {
+	                try {
+	                  const st = outlineEditModeKey?.getState?.(view.state) || null;
+	                  if (st?.editingSectionId) return false;
+	                  const img = event?.target?.closest?.('img');
+	                  if (!img) return false;
+	                  const handle = event.target?.closest?.('.resizable-image__handle');
+	                  if (handle) {
+	                    event.preventDefault();
+	                    return true;
+	                  }
+	                  event.preventDefault();
+	                  showImagePreview(img.src, img.alt || '');
+	                  return true;
+	                } catch {
+	                  return false;
+	                }
+	              },
+	            },
+	          },
+	        }),
+	      ];
+	    },
+	  });
 
   const OutlineDocument = Node.create({
     name: 'doc',
@@ -2847,23 +3233,23 @@ async function mountOutlineEditor() {
     },
   });
 
-  const parseHtmlToNodes = (html) => {
+	  const parseHtmlToNodes = (html) => {
     const normalized = (html || '').trim();
     if (!normalized) return [];
     // Для парсинга body используем обычный doc (block+), а не outline-doc.
-    const tmp = generateJSON(normalized, [
-      StarterKit.configure({ heading: false, link: false }),
-      Link.configure({
-        openOnClick: false,
-      }),
-      Image,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-    ]);
-    return Array.isArray(tmp?.content) ? tmp.content : [];
-  };
+	    const tmp = generateJSON(normalized, [
+	      StarterKit.configure({ heading: false, link: false }),
+	      Link.configure({
+	        openOnClick: false,
+	      }),
+	      ResizableImage,
+	      Table.configure({ resizable: true }),
+	      TableRow,
+	      TableHeader,
+	      TableCell,
+	    ]);
+	    return Array.isArray(tmp?.content) ? tmp.content : [];
+	  };
   outlineParseHtmlToNodes = parseHtmlToNodes;
 
   let shouldBootstrapDocJson = false;
@@ -2892,31 +3278,34 @@ async function mountOutlineEditor() {
     outlineEditorInstance = null;
   }
 
-  outlineEditorInstance = new Editor({
+	  outlineEditorInstance = new Editor({
     element: contentRoot,
-    extensions: [
-      OutlineDocument,
-      OutlineSection,
-      OutlineHeading,
-      OutlineBody,
-      OutlineChildren,
-      OutlineActiveSection,
-      OutlineEditMode,
-      UniqueID.configure({
-        types: ['outlineSection'],
-        attributeName: 'id',
-        generateID: () => safeUuid(),
-      }),
+	    extensions: [
+	      OutlineDocument,
+	      OutlineSection,
+	      OutlineHeading,
+	      OutlineBody,
+	      OutlineChildren,
+	      OutlineActiveSection,
+	      OutlineEditMode,
+	      OutlineImageUpload,
+	      OutlineImageResize,
+	      OutlineImagePreview,
+	      UniqueID.configure({
+	        types: ['outlineSection'],
+	        attributeName: 'id',
+	        generateID: () => safeUuid(),
+	      }),
       StarterKit.configure({
         document: false,
         heading: false,
         link: false,
       }),
-      Link.configure({
-        openOnClick: false,
-      }),
-      Image,
-      OutlineCommands,
+	      Link.configure({
+	        openOnClick: false,
+	      }),
+	      ResizableImage,
+	      OutlineCommands,
       // Tables (same nodes/commands as TableKit)
       Table.configure({ resizable: true }),
       TableRow,

@@ -2288,6 +2288,15 @@ button.icon-button.small {
 .block.editing .resizable-image__handle {
   opacity: 1;
 }
+
+.outline-section[data-editing="true"] .resizable-image {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+}
+
+.outline-section[data-editing="true"] .resizable-image__handle {
+  opacity: 1;
+}
 .modal-header h3 {
   margin: 0;
 }
