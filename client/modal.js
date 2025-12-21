@@ -363,6 +363,189 @@ export function showPrompt(options = {}) {
   });
 }
 
+export function showArticleLinkPrompt(options = {}) {
+  const root = ensureRoot();
+  let articleInput = null;
+  let labelInput = null;
+  let suggestions = Array.isArray(options.suggestions) ? options.suggestions : [];
+  let suggestionsBox = null;
+
+  const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
+    title: options.title || 'Ссылка на статью',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+
+      if (options.message) {
+        const msg = document.createElement('p');
+        msg.className = 'modal-body__text';
+        msg.textContent = options.message;
+        fragment.appendChild(msg);
+      }
+
+      const articleLabel = document.createElement('label');
+      articleLabel.className = 'modal-label';
+      articleLabel.textContent = options.articleLabel || 'Статья';
+      const article = document.createElement('input');
+      article.type = 'text';
+      article.className = 'modal-input';
+      article.placeholder = options.articlePlaceholder || 'ID или название…';
+      article.value = options.defaultArticleValue || '';
+      article.autocomplete = 'off';
+      articleLabel.appendChild(article);
+      fragment.appendChild(articleLabel);
+      articleInput = article;
+
+      if (suggestions.length) {
+        suggestionsBox = document.createElement('div');
+        suggestionsBox.className = 'modal-suggestions';
+        fragment.appendChild(suggestionsBox);
+      }
+
+      const linkLabel = document.createElement('label');
+      linkLabel.className = 'modal-label';
+      linkLabel.textContent = options.textLabel || 'Текст ссылки (можно пусто)';
+      const label = document.createElement('input');
+      label.type = 'text';
+      label.className = 'modal-input';
+      label.placeholder = options.textPlaceholder || '';
+      label.value = options.defaultTextValue || '';
+      label.autocomplete = 'off';
+      linkLabel.appendChild(label);
+      fragment.appendChild(linkLabel);
+      labelInput = label;
+
+      return fragment;
+    },
+  });
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const updateConfirmState = () => {
+    if (!confirmBtn || !articleInput) return;
+    const hasArticle = Boolean(articleInput.value.trim()) || Boolean(articleInput.dataset.selectedId);
+    confirmBtn.disabled = !hasArticle;
+  };
+
+  const renderSuggestions = () => {
+    if (!suggestionsBox || !articleInput) return;
+    const term = articleInput.value.trim().toLowerCase();
+    articleInput.dataset.selectedId = '';
+    const filtered = suggestions
+      .filter((item) => (item.title || '').toLowerCase().includes(term) || (item.id || '').toLowerCase().includes(term))
+      .slice(0, 8);
+    suggestionsBox.innerHTML = '';
+    if (!term || !filtered.length) {
+      suggestionsBox.classList.add('hidden');
+      return;
+    }
+    suggestionsBox.classList.remove('hidden');
+    filtered.forEach((item) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'modal-suggestion';
+      btn.textContent = item.title || item.id || '';
+      btn.addEventListener('click', () => {
+        articleInput.value = item.title || item.id || '';
+        articleInput.dataset.selectedId = item.id || '';
+        updateConfirmState();
+        renderSuggestions();
+        // If user didn't prefill label, we can suggest article title.
+        if (labelInput && !labelInput.value.trim() && !(options.lockTextValue || false)) {
+          labelInput.value = item.title || '';
+        }
+        labelInput?.focus?.({ preventScroll: true });
+        labelInput?.select?.();
+      });
+      suggestionsBox.appendChild(btn);
+    });
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+      return;
+    }
+    if (event.code === 'Enter') {
+      // Let form submit handle it.
+      return;
+    }
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.classList.remove('danger-btn');
+    confirmBtn.textContent = options.confirmText || 'Вставить';
+    cancelBtn.textContent = options.cancelText || 'Отмена';
+
+    const submitHandler = () => {
+      if (!articleInput || !labelInput) {
+        resolveResult(null);
+        return;
+      }
+      const articleValue = articleInput.value.trim();
+      const selectedId = articleInput.dataset.selectedId || '';
+      if (!articleValue && !selectedId) {
+        articleInput.focus();
+        return;
+      }
+      resolveResult({
+        articleValue,
+        selectedId: selectedId || null,
+        textValue: labelInput.value ?? '',
+      });
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitHandler();
+    });
+    confirmBtn.addEventListener('click', submitHandler);
+    cancelBtn.addEventListener('click', () => resolveResult(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+
+    if (articleInput) {
+      articleInput.dataset.selectedId = '';
+      articleInput.addEventListener('input', () => {
+        articleInput.dataset.selectedId = '';
+        updateConfirmState();
+        if (suggestions.length) renderSuggestions();
+      });
+      updateConfirmState();
+      if (suggestions.length) renderSuggestions();
+    } else {
+      updateConfirmState();
+    }
+
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      if (articleInput) {
+        articleInput.focus({ preventScroll: true });
+        articleInput.select();
+      } else {
+        card.focus({ preventScroll: true });
+      }
+    });
+  });
+}
+
 export function showPublicLinkModal(options = {}) {
   const root = ensureRoot();
   let inputRef = null;

@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { showImagePreview } from '../modal.js?v=8';
+import { showImagePreview } from '../modal.js?v=9';
 import {
   replaceArticleBlocksTree,
   updateArticleDocJson,
@@ -38,6 +38,504 @@ let outlineEditModeKey = null;
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
 const OUTLINE_ALLOW_META = 'outlineAllowMutation';
 let lastReadOnlyToastAt = 0;
+
+const OUTLINE_MD_TABLE_DEBUG_KEY = 'ttree_outline_debug_md_table';
+function mdTableDebugEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(OUTLINE_MD_TABLE_DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function mdTableDebug(...args) {
+  try {
+    if (!mdTableDebugEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[outline][md-table]', ...args);
+  } catch {
+    // ignore
+  }
+}
+
+function splitMarkdownRow(line) {
+  const raw = String(line || '').trim();
+  if (!raw.includes('|')) return null;
+  // Markdown tables often allow omitting leading/trailing pipes.
+  let core = raw;
+  if (core.startsWith('|')) core = core.slice(1);
+  if (core.endsWith('|')) core = core.slice(0, -1);
+  const parts = core.split('|').map((s) => s.trim());
+  if (parts.length < 2) return null;
+  // Disallow rows that are effectively not a table row (e.g. a single pipe in text)
+  if (parts.every((p) => !p)) return null;
+  return parts;
+}
+
+function isMarkdownSeparatorCell(cell) {
+  const s = String(cell || '').trim();
+  if (!s) return false;
+  // allow :---:, ---:, :---, ----
+  return /^:?-{3,}:?$/.test(s);
+}
+
+function parseMarkdownTableLines(lines) {
+  const normalized = (Array.isArray(lines) ? lines : [])
+    .map((l) => String(l || '').replace(/\r/g, '').trimEnd())
+    .filter((l) => l.length > 0);
+  if (normalized.length < 2) return null;
+
+  const header = splitMarkdownRow(normalized[0]);
+  const sep = splitMarkdownRow(normalized[1]);
+  if (!header || !sep) return null;
+  if (header.length !== sep.length) return null;
+  if (!sep.every(isMarkdownSeparatorCell)) return null;
+
+  const rows = [];
+  for (let i = 2; i < normalized.length; i += 1) {
+    const row = splitMarkdownRow(normalized[i]);
+    if (!row) return null;
+    if (row.length !== header.length) return null;
+    rows.push(row);
+  }
+
+  return { header, rows };
+}
+
+function parseMarkdownTableRowsOnly(lines) {
+  const normalized = (Array.isArray(lines) ? lines : [])
+    .map((l) => String(l || '').replace(/\r/g, '').trimEnd())
+    .filter((l) => l.length > 0);
+  if (normalized.length < 1) return null;
+  const first = splitMarkdownRow(normalized[0]);
+  if (!first) return null;
+  const cols = first.length;
+  if (cols < 2) return null;
+  const rows = [first];
+  for (let i = 1; i < normalized.length; i += 1) {
+    const row = splitMarkdownRow(normalized[i]);
+    if (!row) break;
+    if (row.length !== cols) break;
+    // If second line is a separator, this is actually a proper header table, let strict parser handle it.
+    if (i === 1 && row.every(isMarkdownSeparatorCell)) return null;
+    rows.push(row);
+  }
+  // Heuristic: avoid converting random text with one pipe.
+  const nonEmptyCells = rows.flat().filter((c) => String(c || '').trim().length > 0).length;
+  if (nonEmptyCells < 2) return null;
+  return { rows };
+}
+
+function normalizeLinesForMarkdownTable(text) {
+  const lines = String(text || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => String(l || '').trimEnd());
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  return lines;
+}
+
+function buildTableNodeFromMarkdown(schema, table) {
+  if (!schema || !table) return null;
+  const { header, rows, withHeader } = table;
+  const tableType = schema.nodes.table;
+  const rowType = schema.nodes.tableRow;
+  const cellType = schema.nodes.tableCell;
+  const headerType = schema.nodes.tableHeader;
+  const paragraphType = schema.nodes.paragraph;
+  // Важно: schema.text использует `this`, поэтому нельзя выдёргивать его в переменную без bind.
+  if (!tableType || !rowType || !cellType || !headerType || !paragraphType || typeof schema.text !== 'function') return null;
+
+  const cellPara = (text) => paragraphType.create({}, text ? [schema.text(String(text))] : []);
+  const mkRowCells = (row, useHeader) =>
+    row.map((cell) => (useHeader ? headerType : cellType).create({}, [cellPara(cell)]));
+  const mkRow = (row, useHeader) => rowType.create({}, mkRowCells(row, useHeader));
+
+  const allRows = [];
+  if (withHeader && Array.isArray(header) && header.length) {
+    allRows.push(mkRow(header, true));
+  }
+  (Array.isArray(rows) ? rows : []).forEach((row) => allRows.push(mkRow(row, false)));
+  if (!allRows.length) return null;
+  return tableType.create({}, allRows);
+}
+
+function convertMarkdownTablesInSection(pmState, sectionId) {
+  try {
+    if (!pmState?.doc || !sectionId) return null;
+    const sectionPos = findSectionPosById(pmState.doc, sectionId);
+    if (typeof sectionPos !== 'number') return null;
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return null;
+
+    const headingNode = sectionNode.child(0);
+    const bodyNode = sectionNode.child(1);
+    if (!bodyNode || bodyNode.type?.name !== 'outlineBody') return null;
+
+    const bodyPos = sectionPos + 1 + headingNode.nodeSize;
+    const bodyContentStart = bodyPos + 1;
+
+    const replacements = [];
+    let offset = 0;
+    let i = 0;
+    while (i < bodyNode.childCount) {
+      const first = bodyNode.child(i);
+      const firstPos = bodyContentStart + offset;
+      if (first.type?.name !== 'paragraph') {
+        offset += first.nodeSize;
+        i += 1;
+        continue;
+      }
+
+      const line0 = extractTextWithHardBreaks(first).trim();
+      // Case 1: whole table pasted into a single paragraph with hardBreaks.
+      if (line0.includes('\n') && line0.includes('|')) {
+        const lines = normalizeLinesForMarkdownTable(line0);
+        const parsed = parseMarkdownTableLines(lines);
+        const parsedRowsOnly = !parsed ? parseMarkdownTableRowsOnly(lines) : null;
+        const tableSpec = parsed
+          ? { header: parsed.header, rows: parsed.rows, withHeader: true }
+          : parsedRowsOnly
+            ? { header: null, rows: parsedRowsOnly.rows, withHeader: false }
+            : null;
+        let tableNode = null;
+        if (tableSpec) {
+          try {
+            tableNode = buildTableNodeFromMarkdown(pmState.schema, tableSpec);
+          } catch (err) {
+            mdTableDebug('convert: buildTableNode error (single)', {
+              message: String(err?.message || err || ''),
+              stack: String(err?.stack || ''),
+              schemaNodes: Object.keys(pmState.schema?.nodes || {}),
+            });
+            tableNode = null;
+          }
+        }
+        if (tableNode) {
+          const from = firstPos;
+          const to = firstPos + first.nodeSize;
+          replacements.push({ from, to, tableNode });
+          mdTableDebug('convert: single-paragraph table', { sectionId, from, to, lines });
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+      }
+
+      const header = splitMarkdownRow(line0);
+      if (!header || i + 1 >= bodyNode.childCount) {
+        // Case 2: rows-only table pasted as 1+ paragraphs without separator line.
+        if (header) {
+          const lines = [line0];
+          let runOffsetEnd = offset + first.nodeSize;
+          let j = i + 1;
+          while (j < bodyNode.childCount) {
+            const rowNode = bodyNode.child(j);
+            if (rowNode.type?.name !== 'paragraph') break;
+            const t = extractTextWithHardBreaks(rowNode).trim();
+            if (!t) break;
+            const row = splitMarkdownRow(t);
+            if (!row || row.length !== header.length) break;
+            lines.push(t);
+            runOffsetEnd += rowNode.nodeSize;
+            j += 1;
+          }
+          const parsedRowsOnly = parseMarkdownTableRowsOnly(lines);
+          const tableSpec = parsedRowsOnly ? { header: null, rows: parsedRowsOnly.rows, withHeader: false } : null;
+          let tableNode = null;
+          if (tableSpec) {
+            try {
+              tableNode = buildTableNodeFromMarkdown(pmState.schema, tableSpec);
+            } catch (err) {
+              mdTableDebug('convert: buildTableNode error (rows-only)', {
+                message: String(err?.message || err || ''),
+                stack: String(err?.stack || ''),
+                schemaNodes: Object.keys(pmState.schema?.nodes || {}),
+              });
+              tableNode = null;
+            }
+          }
+          if (tableNode) {
+            replacements.push({ from: firstPos, to: bodyContentStart + runOffsetEnd, tableNode });
+            mdTableDebug('convert: rows-only table', { sectionId, from: firstPos, to: bodyContentStart + runOffsetEnd, lines });
+            offset = runOffsetEnd;
+            i = j;
+            continue;
+          }
+        }
+        offset += first.nodeSize;
+        i += 1;
+        continue;
+      }
+
+      const sepNode = bodyNode.child(i + 1);
+      if (sepNode.type?.name !== 'paragraph') {
+        offset += first.nodeSize;
+        i += 1;
+        continue;
+      }
+
+      const line1 = extractTextWithHardBreaks(sepNode).trim();
+      const sep = splitMarkdownRow(line1);
+      if (!sep || sep.length !== header.length || !sep.every(isMarkdownSeparatorCell)) {
+        offset += first.nodeSize;
+        i += 1;
+        continue;
+      }
+
+      const lines = [line0, line1];
+      let runOffsetEnd = offset + first.nodeSize + sepNode.nodeSize;
+      let j = i + 2;
+      while (j < bodyNode.childCount) {
+        const rowNode = bodyNode.child(j);
+        if (rowNode.type?.name !== 'paragraph') break;
+        const t = extractTextWithHardBreaks(rowNode).trim();
+        if (!t) break;
+        const row = splitMarkdownRow(t);
+        if (!row || row.length !== header.length) break;
+        lines.push(t);
+        runOffsetEnd += rowNode.nodeSize;
+        j += 1;
+      }
+
+      const parsed = parseMarkdownTableLines(lines);
+      const parsedRowsOnly = !parsed ? parseMarkdownTableRowsOnly(lines) : null;
+      const tableSpec = parsed
+        ? { header: parsed.header, rows: parsed.rows, withHeader: true }
+        : parsedRowsOnly
+          ? { header: null, rows: parsedRowsOnly.rows, withHeader: false }
+          : null;
+      let tableNode = null;
+      if (tableSpec) {
+        try {
+          tableNode = buildTableNodeFromMarkdown(pmState.schema, tableSpec);
+        } catch (err) {
+          mdTableDebug('convert: buildTableNode error (multi)', {
+            message: String(err?.message || err || ''),
+            stack: String(err?.stack || ''),
+            schemaNodes: Object.keys(pmState.schema?.nodes || {}),
+          });
+          tableNode = null;
+        }
+      }
+      if (!tableNode) {
+        offset += first.nodeSize;
+        i += 1;
+        continue;
+      }
+
+      replacements.push({ from: firstPos, to: bodyContentStart + runOffsetEnd, tableNode });
+      mdTableDebug('convert: multi-paragraph table', { sectionId, from: firstPos, to: bodyContentStart + runOffsetEnd, lines });
+      offset = runOffsetEnd;
+      i = j;
+    }
+
+    if (!replacements.length) return null;
+    replacements.sort((a, b) => b.from - a.from);
+    let tr = pmState.tr;
+    for (const rep of replacements) {
+      tr = tr.replaceRangeWith(rep.from, rep.to, rep.tableNode);
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    return tr;
+  } catch {
+    return null;
+  }
+}
+
+function extractTextWithHardBreaks(node) {
+  if (!node) return '';
+  let out = '';
+  node.descendants((child) => {
+    if (child.isText) out += child.text || '';
+    else if (child.type?.name === 'hardBreak') out += '\n';
+  });
+  return out;
+}
+
+function extractParagraphTextFromJson(node) {
+  try {
+    if (!node || node.type !== 'paragraph') return '';
+    const parts = [];
+    const walk = (n) => {
+      if (!n) return;
+      if (n.type === 'text') {
+        parts.push(String(n.text || ''));
+        return;
+      }
+      if (n.type === 'hardBreak') {
+        parts.push('\n');
+        return;
+      }
+      const children = Array.isArray(n.content) ? n.content : [];
+      for (const child of children) walk(child);
+    };
+    walk(node);
+    return parts.join('');
+  } catch {
+    return '';
+  }
+}
+
+function buildTableJsonFromMarkdown(table) {
+  if (!table) return null;
+  const { header, rows } = table;
+  if (!Array.isArray(header) || header.length === 0) return null;
+  const cellPara = (text) => ({
+    type: 'paragraph',
+    content: String(text || '').length ? [{ type: 'text', text: String(text || '') }] : [],
+  });
+  const headerRow = {
+    type: 'tableRow',
+    content: header.map((cell) => ({ type: 'tableHeader', content: [cellPara(cell)] })),
+  };
+  const bodyRows = (Array.isArray(rows) ? rows : []).map((row) => ({
+    type: 'tableRow',
+    content: row.map((cell) => ({ type: 'tableCell', content: [cellPara(cell)] })),
+  }));
+  return { type: 'table', content: [headerRow, ...bodyRows] };
+}
+
+function convertMarkdownTablesInOutlineDoc(editor) {
+  if (!editor) return false;
+  try {
+    const { doc, schema } = editor.state;
+    const replacements = [];
+
+    doc.descendants((node, pos) => {
+      if (node.type?.name !== 'outlineBody') return;
+      const bodyStart = pos + 1;
+      let offset = 0;
+      let i = 0;
+      while (i < node.childCount) {
+        const first = node.child(i);
+        const firstPos = bodyStart + offset;
+        if (first.type?.name !== 'paragraph') {
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+        const line0 = extractTextWithHardBreaks(first).trim();
+
+        // Case A: whole table inside one paragraph (with hardBreaks).
+        if (line0.includes('\n') && line0.includes('|')) {
+          const lines = normalizeLinesForMarkdownTable(line0);
+          const parsed = parseMarkdownTableLines(lines);
+          const parsedRowsOnly = !parsed ? parseMarkdownTableRowsOnly(lines) : null;
+          const tableSpec = parsed
+            ? { header: parsed.header, rows: parsed.rows, withHeader: true }
+            : parsedRowsOnly
+              ? { header: null, rows: parsedRowsOnly.rows, withHeader: false }
+              : null;
+          const tableNode = tableSpec ? buildTableNodeFromMarkdown(schema, tableSpec) : null;
+          if (tableNode) {
+            replacements.push({ from: firstPos, to: firstPos + first.nodeSize, tableNode });
+            offset += first.nodeSize;
+            i += 1;
+            continue;
+          }
+        }
+
+        const header = splitMarkdownRow(line0);
+        if (!header) {
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+
+        // Case B: rows-only table spread across paragraphs (no separator).
+        if (i + 1 >= node.childCount) {
+          const parsedRowsOnly = parseMarkdownTableRowsOnly([line0]);
+          const tableSpec = parsedRowsOnly ? { header: null, rows: parsedRowsOnly.rows, withHeader: false } : null;
+          const tableNode = tableSpec ? buildTableNodeFromMarkdown(schema, tableSpec) : null;
+          if (tableNode) {
+            replacements.push({ from: firstPos, to: firstPos + first.nodeSize, tableNode });
+          }
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+
+        const nextNode = node.child(i + 1);
+        if (nextNode.type?.name !== 'paragraph') {
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+        const line1 = extractTextWithHardBreaks(nextNode).trim();
+        const maybeSep = splitMarkdownRow(line1);
+        if (!maybeSep || maybeSep.length !== header.length || !maybeSep.every(isMarkdownSeparatorCell)) {
+          const lines = [line0];
+          let runOffsetEnd = offset + first.nodeSize;
+          let j = i + 1;
+          while (j < node.childCount) {
+            const rowNode = node.child(j);
+            if (rowNode.type?.name !== 'paragraph') break;
+            const t = extractTextWithHardBreaks(rowNode).trim();
+            if (!t) break;
+            const row = splitMarkdownRow(t);
+            if (!row || row.length !== header.length) break;
+            lines.push(t);
+            runOffsetEnd += rowNode.nodeSize;
+            j += 1;
+          }
+          const parsedRowsOnly = parseMarkdownTableRowsOnly(lines);
+          const tableSpec = parsedRowsOnly ? { header: null, rows: parsedRowsOnly.rows, withHeader: false } : null;
+          const tableNode = tableSpec ? buildTableNodeFromMarkdown(schema, tableSpec) : null;
+          if (tableNode) {
+            replacements.push({ from: firstPos, to: bodyStart + runOffsetEnd, tableNode });
+            offset = runOffsetEnd;
+            i = j;
+            continue;
+          }
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+
+        const lines = [line0, line1];
+        let runOffsetEnd = offset + first.nodeSize + nextNode.nodeSize;
+        let j = i + 2;
+        while (j < node.childCount) {
+          const rowNode = node.child(j);
+          if (rowNode.type?.name !== 'paragraph') break;
+          const t = extractTextWithHardBreaks(rowNode).trim();
+          if (!t) break;
+          const row = splitMarkdownRow(t);
+          if (!row || row.length !== header.length) break;
+          lines.push(t);
+          runOffsetEnd += rowNode.nodeSize;
+          j += 1;
+        }
+
+        const parsed = parseMarkdownTableLines(lines);
+        const tableSpec = parsed ? { header: parsed.header, rows: parsed.rows, withHeader: true } : null;
+        const tableNode = tableSpec ? buildTableNodeFromMarkdown(schema, tableSpec) : null;
+        if (!tableNode) {
+          offset += first.nodeSize;
+          i += 1;
+          continue;
+        }
+
+        replacements.push({ from: firstPos, to: bodyStart + runOffsetEnd, tableNode });
+        offset = runOffsetEnd;
+        i = j;
+      }
+    });
+
+    if (!replacements.length) return false;
+    replacements.sort((a, b) => b.from - a.from);
+    let tr = editor.state.tr;
+    for (const rep of replacements) {
+      tr = tr.replaceRangeWith(rep.from, rep.to, rep.tableNode);
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function notifyReadOnlyGlobal() {
   const now = Date.now();
@@ -290,32 +788,32 @@ function mountOutlineToolbar(editor) {
 
 	  const insertHttpLink = async () => {
 	    if (!requireEditing()) return;
+	    const { from, to, empty } = editor.state.selection;
+	    const selectedText = !empty ? editor.state.doc.textBetween(from, to, ' ').trim() : '';
 	    let url = '';
+	    let label = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=8');
-	      const res = await mod.showPrompt({
+	      const mod = await import('../modal.js?v=9');
+	      const res = await mod.showLinkPrompt({
 	        title: 'Ссылка (URL)',
-	        message: 'Введите URL (http/https).',
+	        message: 'Введите ссылку (любой формат) и текст (можно пусто).',
 	        confirmText: 'Вставить',
 	        cancelText: 'Отмена',
-	        allowEmpty: false,
+	        textLabel: 'Текст ссылки (можно пусто)',
+	        urlLabel: 'Ссылка',
+	        defaultText: selectedText,
+	        defaultUrl: '',
+	        urlPlaceholder: '',
 	      });
-	      url = String(res || '');
+	      if (!res || typeof res !== 'object') return;
+	      url = String(res.url || '');
+	      label = String(res.text ?? selectedText);
 	    } catch {
-	      url = window.prompt('Введите URL (http/https)') || '';
+	      url = window.prompt('Введите ссылку') || '';
+	      label = selectedText || (window.prompt('Текст ссылки (можно пусто)') || '');
 	    }
 	    url = (url || '').trim();
 	    if (!url) return;
-	    if (!/^https?:\/\//i.test(url)) {
-	      showToast('URL должен начинаться с http:// или https://');
-	      return;
-	    }
-	    let label = '';
-	    try {
-	      label = window.prompt('Подпись (можно пусто)') || '';
-	    } catch {
-	      label = '';
-	    }
 	    insertLinkMark(url, label, { target: '_blank', rel: 'noopener noreferrer' });
 	  };
 
@@ -330,29 +828,36 @@ function mountOutlineToolbar(editor) {
 	      id: item.id,
 	      title: item.title || 'Без названия',
 	    }));
-	    let input = '';
+	    const { from, to, empty } = editor.state.selection;
+	    const selectedText = !empty ? editor.state.doc.textBetween(from, to, ' ').trim() : '';
+	    const lockTextValue = Boolean(selectedText);
+
+	    let articleInput = '';
 	    let selectedId = '';
+	    let labelInput = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=8');
-	      const result = await mod.showPrompt({
+	      const mod = await import('../modal.js?v=9');
+	      const result = await mod.showArticleLinkPrompt({
 	        title: 'Ссылка на статью',
-	        message: 'Введите ID статьи. Подсказки помогут найти нужную.',
+	        message: 'Выберите статью и задайте текст ссылки.',
 	        confirmText: 'Вставить',
 	        cancelText: 'Отмена',
 	        suggestions,
-	        returnMeta: true,
-	        hideConfirm: true,
+	        defaultTextValue: selectedText,
+	        lockTextValue,
 	      });
 	      if (result && typeof result === 'object') {
-	        input = result.value || '';
+	        articleInput = result.articleValue || '';
 	        selectedId = result.selectedId || '';
+	        labelInput = result.textValue || '';
 	      } else {
-	        input = result || '';
+	        return;
 	      }
 	    } catch {
-	      input = window.prompt('Введите ID статьи') || '';
+	      articleInput = window.prompt('Введите ID статьи') || '';
+	      labelInput = selectedText || (window.prompt('Текст ссылки (можно пусто)') || '');
 	    }
-	    const term = (input || '').trim().toLowerCase();
+	    const term = (articleInput || '').trim().toLowerCase();
 	    if (!term && !selectedId) return;
 	    const match = (Array.isArray(list) ? list : []).find((item) => {
 	      const titleLc = (item.title || '').toLowerCase();
@@ -367,12 +872,17 @@ function mountOutlineToolbar(editor) {
 	      showToast('Статья не найдена');
 	      return;
 	    }
-	    insertLinkMark(routing.article(match.id), match.title || 'Без названия', { class: 'article-link' });
+	    const label = (labelInput || '').trim() || match.title || 'Без названия';
+	    insertLinkMark(routing.article(match.id), label, { class: 'article-link' });
 	  };
 
 	  const sync = () => {
 	    if (!state.isOutlineEditing) return;
 	    if (!editor || editor.isDestroyed) return;
+
+    const editing = isEditing();
+    root.dataset.editing = editing ? 'true' : 'false';
+    if (!editing) closeAllMenus();
 
     if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
     if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
@@ -386,14 +896,17 @@ function mountOutlineToolbar(editor) {
         editor.isActive('code') ||
         editor.isActive('blockquote');
       markActive(btns.textMenuBtn, active);
+      btns.textMenuBtn.hidden = !editing;
     }
     if (btns.listsMenuBtn) {
       const active = editor.isActive('bulletList') || editor.isActive('orderedList');
       markActive(btns.listsMenuBtn, active);
+      btns.listsMenuBtn.hidden = !editing;
     }
     if (btns.tableMenuBtn) {
       const active = editor.isActive('table');
       markActive(btns.tableMenuBtn, active);
+      btns.tableMenuBtn.hidden = !editing;
     }
 
     // Menu items
@@ -639,7 +1152,7 @@ async function loadTiptap() {
   }
   // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
   // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
-  const mod = await import('./tiptap.bundle.js?v=1');
+  const mod = await import('./tiptap.bundle.js?v=3');
   tiptap = {
     core: mod.core,
     starterKitMod: mod.starterKitMod,
@@ -653,6 +1166,7 @@ async function loadTiptap() {
     tableCellMod: mod.tableCellMod,
     tableHeaderMod: mod.tableHeaderMod,
     uniqueIdMod: mod.uniqueIdMod,
+    markdownMod: mod.markdownMod,
   };
   return tiptap;
 }
@@ -963,11 +1477,9 @@ async function mountOutlineEditor() {
 	  const { Decoration, DecorationSet } = pmViewMod;
 	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
 	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
-	  const Table = tiptap.tableMod.default || tiptap.tableMod.Table || tiptap.tableMod;
-	  const TableRow = tiptap.tableRowMod.default || tiptap.tableRowMod.TableRow || tiptap.tableRowMod;
-	  const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
-	  const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
+	  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
 	  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
+	  const Markdown = tiptap.markdownMod?.Markdown || tiptap.markdownMod?.default?.Markdown || tiptap.markdownMod?.default || null;
 
 	  const parseWidthPx = (value) => {
 	    const raw = String(value || '').trim();
@@ -1066,10 +1578,7 @@ async function mountOutlineEditor() {
 	    StarterKit.configure({ heading: false, link: false }),
 	    Link.configure({ openOnClick: false }),
 	    ResizableImage,
-	    Table.configure({ resizable: true }),
-	    TableRow,
-	    TableHeader,
-	    TableCell,
+	    TableKit.configure({ table: { resizable: true } }),
 	  ];
 
 	  const findImagePosByUploadToken = (doc, token) => {
@@ -1356,6 +1865,130 @@ async function mountOutlineEditor() {
 	                } catch {
 	                  return false;
 	                }
+	              },
+	            },
+	          },
+	        }),
+	      ];
+	    },
+	  });
+
+	  const OutlineMarkdownTablePaste = Extension.create({
+	    name: 'outlineMarkdownTablePaste',
+	    addProseMirrorPlugins() {
+	      const maybeHandlePaste = (view, event) => {
+	        try {
+	          const st = outlineEditModeKey?.getState?.(view.state) || null;
+	          if (!st?.editingSectionId) return false;
+	          const text = event?.clipboardData?.getData?.('text/plain') || '';
+	          mdTableDebug('paste: text/plain', { len: text.length, sample: text.slice(0, 200) });
+	          if (!text) return false;
+	          const lines = normalizeLinesForMarkdownTable(text);
+	          const parsed = parseMarkdownTableLines(lines);
+	          mdTableDebug('paste: parsed', { ok: Boolean(parsed), lines });
+	          const parsedRowsOnly = !parsed ? parseMarkdownTableRowsOnly(lines) : null;
+	          if (!parsed && !parsedRowsOnly) return false;
+	          const tableSpec = parsed
+	            ? { header: parsed.header, rows: parsed.rows, withHeader: true }
+	            : { header: null, rows: parsedRowsOnly.rows, withHeader: false };
+
+	          let tableNode = null;
+	          try {
+	            tableNode = buildTableNodeFromMarkdown(view.state.schema, tableSpec);
+	          } catch (err) {
+	            mdTableDebug('paste: buildTableNode error', {
+	              message: String(err?.message || err || ''),
+	              stack: String(err?.stack || ''),
+	              schemaNodes: Object.keys(view.state.schema?.nodes || {}),
+	            });
+	            return false;
+	          }
+	          mdTableDebug('paste: tableNode', {
+	            ok: Boolean(tableNode),
+	            schemaNodes: mdTableDebugEnabled() ? Object.keys(view.state.schema?.nodes || {}) : undefined,
+	          });
+	          if (!tableNode) return false;
+
+	          event.preventDefault();
+	          event.stopPropagation();
+
+	          let tr = view.state.tr;
+	          if (!view.state.selection.empty) {
+	            tr = tr.deleteSelection();
+	          }
+	          try {
+	            tr = tr.replaceSelectionWith(tableNode, false);
+	          } catch (err) {
+	            mdTableDebug('paste: replaceSelectionWith error', {
+	              message: String(err?.message || err || ''),
+	              stack: String(err?.stack || ''),
+	              selection: {
+	                from: view.state.selection?.from,
+	                to: view.state.selection?.to,
+	                empty: view.state.selection?.empty,
+	                $fromParent: view.state.selection?.$from?.parent?.type?.name,
+	              },
+	            });
+	            return false;
+	          }
+	          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	          view.dispatch(tr.scrollIntoView());
+	          return true;
+	        } catch (err) {
+	          mdTableDebug('paste: unexpected error', {
+	            message: String(err?.message || err || ''),
+	            stack: String(err?.stack || ''),
+	          });
+	          return false;
+	        }
+	      };
+
+	      return [
+	        new Plugin({
+	          appendTransaction(transactions, oldState, newState) {
+	            try {
+	              const didDocChange = transactions?.some?.((tr) => tr?.docChanged);
+	              let enterSectionId = null;
+	              if (outlineEditModeKey) {
+	                for (const tr0 of transactions || []) {
+	                  const meta = tr0?.getMeta?.(outlineEditModeKey) || null;
+	                  if (meta?.type === 'enter' && meta?.sectionId) {
+	                    enterSectionId = String(meta.sectionId);
+	                    break;
+	                  }
+	                }
+	              }
+	              const didEnterEditMode = Boolean(enterSectionId);
+	              if (!didDocChange && !didEnterEditMode) return null;
+	              // Avoid loops: if one of transactions already did allow-meta conversion, skip.
+	              if (transactions.some((tr) => tr.getMeta?.(OUTLINE_ALLOW_META))) return null;
+	              const st = outlineEditModeKey?.getState?.(newState) || null;
+	              const sid = enterSectionId || st?.editingSectionId || null;
+	              if (!sid) return null;
+	              mdTableDebug('appendTransaction: try convert', { didDocChange, didEnterEditMode, sectionId: sid });
+	              const tr = convertMarkdownTablesInSection(newState, sid);
+	              if (!tr && mdTableDebugEnabled()) {
+	                // Quick hint: if current body contains pipes, but we didn't convert, log it.
+	                const sectionPos = findSectionPosById(newState.doc, sid);
+	                const sectionNode = typeof sectionPos === 'number' ? newState.doc.nodeAt(sectionPos) : null;
+	                const bodyNode = sectionNode ? sectionNode.child(1) : null;
+	                const bodyText = bodyNode ? bodyNode.textContent : '';
+	                if (String(bodyText || '').includes('|')) {
+	                  mdTableDebug('appendTransaction: saw pipes but no conversion', { sectionId: sid });
+	                }
+	              }
+	              return tr;
+	            } catch {
+	              return null;
+	            }
+	          },
+	          props: {
+	            handlePaste(view, event) {
+	              return maybeHandlePaste(view, event);
+	            },
+	            handleDOMEvents: {
+	              paste(view, event) {
+	                return maybeHandlePaste(view, event);
 	              },
 	            },
 	          },
@@ -3243,14 +3876,77 @@ async function mountOutlineEditor() {
 	        openOnClick: false,
 	      }),
 	      ResizableImage,
-	      Table.configure({ resizable: true }),
-	      TableRow,
-	      TableHeader,
-	      TableCell,
+	      TableKit.configure({ table: { resizable: true } }),
 	    ]);
-	    return Array.isArray(tmp?.content) ? tmp.content : [];
+	    const content = Array.isArray(tmp?.content) ? tmp.content : [];
+	    // Если в HTML лежит markdown-таблица как текст, конвертируем её в настоящую table node.
+	    const converted = [];
+	    for (let i = 0; i < content.length; i += 1) {
+	      const node = content[i];
+	      if (node?.type !== 'paragraph') {
+	        converted.push(node);
+	        continue;
+	      }
+	      const text = extractParagraphTextFromJson(node).trim();
+	      const maybeLine = text;
+	      const row1 = splitMarkdownRow(maybeLine);
+	      if (!row1) {
+	        converted.push(node);
+	        continue;
+	      }
+	      const lines = [];
+	      const start = i;
+	      let j = i;
+	      for (; j < content.length; j += 1) {
+	        const n = content[j];
+	        if (n?.type !== 'paragraph') break;
+	        const t = extractParagraphTextFromJson(n).trim();
+	        if (!t) break;
+	        lines.push(t);
+	      }
+	      const parsed = parseMarkdownTableLines(lines);
+	      if (!parsed) {
+	        converted.push(node);
+	        continue;
+	      }
+	      const tableNode = buildTableJsonFromMarkdown(parsed);
+	      if (!tableNode) {
+	        converted.push(node);
+	        continue;
+	      }
+	      converted.push(tableNode);
+	      i = j - 1;
+	      if (i < start) i = start;
+	    }
+	    return converted;
 	  };
   outlineParseHtmlToNodes = parseHtmlToNodes;
+
+	  const OutlineMarkdown = Extension.create({
+	    name: 'outlineMarkdown',
+	    addCommands() {
+	      return {
+	        insertMarkdown:
+	          (markdown) =>
+	          ({ editor }) => {
+	            if (!outlineEditModeKey) return false;
+	            const st = outlineEditModeKey.getState(editor.state) || {};
+	            if (!st.editingSectionId) {
+	              notifyReadOnlyGlobal();
+	              return false;
+	            }
+	            if (!editor?.storage?.markdown?.parser) {
+	              showToast('Markdown не поддерживается');
+	              return false;
+	            }
+	            const html = editor.storage.markdown.parser.parse(String(markdown || ''), { inline: true });
+	            const nodes = parseHtmlToNodes(html);
+	            if (!nodes.length) return false;
+	            return editor.chain().focus().insertContent(nodes).run();
+	          },
+	      };
+	    },
+	  });
 
   let shouldBootstrapDocJson = false;
   let content = null;
@@ -3278,6 +3974,11 @@ async function mountOutlineEditor() {
     outlineEditorInstance = null;
   }
 
+		  const markdownExtension = Markdown
+		    ? Markdown.configure({ html: true, tightLists: true, transformPastedText: false, transformCopiedText: false })
+		    : null;
+
+		  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
 	  outlineEditorInstance = new Editor({
     element: contentRoot,
 	    extensions: [
@@ -3291,6 +3992,7 @@ async function mountOutlineEditor() {
 	      OutlineImageUpload,
 	      OutlineImageResize,
 	      OutlineImagePreview,
+	      OutlineMarkdownTablePaste,
 	      UniqueID.configure({
 	        types: ['outlineSection'],
 	        attributeName: 'id',
@@ -3304,14 +4006,12 @@ async function mountOutlineEditor() {
 	      Link.configure({
 	        openOnClick: false,
 	      }),
+	      markdownExtension,
 	      ResizableImage,
 	      OutlineCommands,
-      // Tables (same nodes/commands as TableKit)
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-    ],
+	      TableKit.configure({ table: { resizable: true } }),
+	      OutlineMarkdown,
+    ].filter(Boolean),
     content,
     editorProps: {
       attributes: {
@@ -3388,6 +4088,31 @@ async function mountOutlineEditor() {
             const href = String(anchor.getAttribute('href') || '').trim();
             if (!href) return false;
 
+            const looksLikeBareDomain = (value) => {
+              const s = String(value || '').trim();
+              if (!s) return false;
+              if (s.startsWith('/') || s.startsWith('#')) return false;
+              if (/\s/.test(s)) return false;
+              if (s.includes('://')) return false;
+              // Exclude custom schemes like app:/, disk:/, mailto:, tel:
+              if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return false;
+              // Must contain a dot in the hostname part.
+              const host = s.split(/[/?#]/, 1)[0];
+              if (!host || !host.includes('.')) return false;
+              // Avoid cases like ".com" or "a..b"
+              if (host.startsWith('.') || host.endsWith('.') || host.includes('..')) return false;
+              return true;
+            };
+
+            const normalizeExternalHref = (value) => {
+              const s = String(value || '').trim();
+              if (!s) return s;
+              // protocol-relative URL
+              if (s.startsWith('//')) return `https:${s}`;
+              if (looksLikeBareDomain(s)) return `https://${s}`;
+              return s;
+            };
+
             // В view-mode клики по ссылкам должны открывать их.
             event.preventDefault();
             event.stopPropagation();
@@ -3397,11 +4122,13 @@ async function mountOutlineEditor() {
               navigate(href);
               return true;
             }
-            if (/^https?:\/\//i.test(href)) {
-              window.open(href, '_blank', 'noopener,noreferrer');
+            const normalized = normalizeExternalHref(href);
+            if (/^https?:\/\//i.test(normalized) || /^mailto:/i.test(normalized) || /^tel:/i.test(normalized)) {
+              window.open(normalized, '_blank', 'noopener,noreferrer');
               return true;
             }
-            window.open(href, '_blank');
+            // Fallback: allow whatever user stored (may be relative).
+            window.open(normalized, '_blank', 'noopener,noreferrer');
             return true;
           } catch {
             return false;
@@ -3533,6 +4260,13 @@ async function mountOutlineEditor() {
   });
 
   contentRoot.focus?.({ preventScroll: true });
+
+  // Миграция: markdown-таблицы текстом → настоящие table nodes.
+  try {
+    convertMarkdownTablesInOutlineDoc(outlineEditorInstance);
+  } catch {
+    // ignore
+  }
   })();
 
   try {
@@ -3565,19 +4299,13 @@ function serializeOutlineToBlocks() {
   const { generateHTML } = htmlMod;
   const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
   const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
-  const Table = tiptap.tableMod.default || tiptap.tableMod.Table || tiptap.tableMod;
-  const TableRow = tiptap.tableRowMod.default || tiptap.tableRowMod.TableRow || tiptap.tableRowMod;
-  const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
-  const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
+  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
 
   const htmlExtensions = [
     StarterKit.configure({ heading: false, link: false }),
     Link.configure({ openOnClick: false }),
     Image,
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableHeader,
-    TableCell,
+    TableKit.configure({ table: { resizable: true } }),
   ];
 
   const bodyNodeToHtml = (bodyNode) => {

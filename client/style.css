@@ -1048,6 +1048,11 @@ main.content {
   cursor: not-allowed;
 }
 
+.outline-toolbar[data-editing="false"] .outline-toolbar__dropdown,
+.outline-toolbar[data-editing="false"] .outline-toolbar__menu {
+  display: none;
+}
+
 .outline-menu__divider {
   height: 1px;
   margin: 6px 6px;
@@ -2369,6 +2374,9 @@ button.icon-button.small {
 
 .modal-footer.modal-footer--stacked > button {
   width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 1rem;
 }
 
 .modal-empty {

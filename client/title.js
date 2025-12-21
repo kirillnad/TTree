@@ -5,7 +5,7 @@ import { showToast } from './toast.js';
 import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
 import { navigate, routing } from './routing.js';
-import { showConfirm } from './modal.js?v=8';
+import { showConfirm } from './modal.js?v=9';
 
 let isArticleMenuOpen = false;
 

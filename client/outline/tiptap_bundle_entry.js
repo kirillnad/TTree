@@ -12,3 +12,4 @@ export * as tableCellMod from '@tiptap/extension-table-cell';
 export * as tableHeaderMod from '@tiptap/extension-table-header';
 export * as uniqueIdMod from '@tiptap/extension-unique-id';
 
+export * as markdownMod from 'tiptap-markdown';
