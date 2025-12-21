@@ -1053,6 +1053,24 @@ main.content {
   display: none;
 }
 
+.outline-toolbar[data-editing="true"] .outline-toolbar__viewbtn {
+  display: none;
+}
+
+.outline-toolbar[data-editing="false"] .outline-toolbar__viewbtn {
+  display: inline-flex;
+}
+
+.outline-toolbar__arrow {
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+}
+
 .outline-menu__divider {
   height: 1px;
   margin: 6px 6px;

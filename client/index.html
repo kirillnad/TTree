@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>Memus. Всё, что вы узнали — в одном месте. Удобно. Надёжно. Везде с вами.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/style.css?v=26" />
+    <link rel="stylesheet" href="/style.css?v=28" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#111827" />
@@ -465,6 +465,24 @@
                 </button>
                 <button id="outlineRedoBtn" class="ghost small" type="button" title="Повторить (Ctrl+Y)">
                   &#xE7A6;<span class="toolbar-label"> Повторить</span>
+                </button>
+                <button id="outlineDeleteBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Удалить блок (в корзину)" hidden>
+                  &#xE74D;<span class="toolbar-label"> Удалить</span>
+                </button>
+                <button id="outlineMoveUpBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вверх (Alt+↑)" hidden>
+                  <span class="outline-toolbar__arrow">&#xE64C;</span><span class="toolbar-label"> Вверх</span>
+                </button>
+                <button id="outlineMoveDownBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вниз (Alt+↓)" hidden>
+                  <span class="outline-toolbar__arrow">&#xE64B;</span><span class="toolbar-label"> Вниз</span>
+                </button>
+                <button id="outlineOutdentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг влево (Alt+←)" hidden>
+                  <span class="outline-toolbar__arrow">&#xE64E;</span><span class="toolbar-label"> Влево</span>
+                </button>
+                <button id="outlineIndentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг вправо (Alt+→)" hidden>
+                  <span class="outline-toolbar__arrow">&#xE64D;</span><span class="toolbar-label"> Вправо</span>
+                </button>
+                <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
+                  &#xE109;<span class="toolbar-label"> Новый</span>
                 </button>
                 <div class="outline-toolbar__dropdown">
                   <button

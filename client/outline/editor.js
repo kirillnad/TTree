@@ -652,6 +652,12 @@ function mountOutlineToolbar(editor) {
   const btns = {
     undo: refs.outlineUndoBtn,
     redo: refs.outlineRedoBtn,
+    deleteBtn: refs.outlineDeleteBtn,
+    moveUpBtn: refs.outlineMoveUpBtn,
+    moveDownBtn: refs.outlineMoveDownBtn,
+    outdentBtn: refs.outlineOutdentBtn,
+    indentBtn: refs.outlineIndentBtn,
+    newBelowBtn: refs.outlineNewBelowBtn,
     textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
     listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
     tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
@@ -884,6 +890,13 @@ function mountOutlineToolbar(editor) {
     root.dataset.editing = editing ? 'true' : 'false';
     if (!editing) closeAllMenus();
 
+    if (btns.deleteBtn) btns.deleteBtn.hidden = editing;
+    if (btns.moveUpBtn) btns.moveUpBtn.hidden = editing;
+    if (btns.moveDownBtn) btns.moveDownBtn.hidden = editing;
+    if (btns.outdentBtn) btns.outdentBtn.hidden = editing;
+    if (btns.indentBtn) btns.indentBtn.hidden = editing;
+    if (btns.newBelowBtn) btns.newBelowBtn.hidden = editing;
+
     if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
     if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
 
@@ -1015,6 +1028,230 @@ function mountOutlineToolbar(editor) {
     click(btns.undo, () => editor.chain().focus().undo().run()),
     click(btns.redo, () => editor.chain().focus().redo().run()),
   ];
+
+  const TextSelection = tiptap?.pmStateMod?.TextSelection || null;
+
+  const moveActiveSection = (dir) => {
+    try {
+      if (!TextSelection) return;
+      editor.commands.command(({ state: pmState, dispatch }) => {
+        const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+        if (typeof sectionPos !== 'number') return false;
+        const $pos = pmState.doc.resolve(sectionPos);
+        const idx = $pos.index();
+        const parent = $pos.parent;
+        if (!parent) return false;
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+
+        if (dir === 'up') {
+          if (idx <= 0) return false;
+          const prevNode = parent.child(idx - 1);
+          const prevStart = sectionPos - prevNode.nodeSize;
+          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(prevStart, sectionNode);
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(prevStart + 2), 1));
+          dispatch(tr.scrollIntoView());
+          return true;
+        }
+        if (dir === 'down') {
+          if (idx >= parent.childCount - 1) return false;
+          const nextStart = sectionPos + sectionNode.nodeSize;
+          const nextNode = pmState.doc.nodeAt(nextStart);
+          if (!nextNode) return false;
+          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+          const insertPos = sectionPos + nextNode.nodeSize;
+          tr = tr.insert(insertPos, sectionNode);
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+          dispatch(tr.scrollIntoView());
+          return true;
+        }
+        return false;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const indentActiveSection = () => {
+    try {
+      if (!TextSelection) return;
+      editor.commands.command(({ state: pmState, dispatch }) => {
+        const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+        if (typeof sectionPos !== 'number') return false;
+        const $pos = pmState.doc.resolve(sectionPos);
+        let depthCount = 0;
+        for (let d = $pos.depth; d >= 0; d -= 1) {
+          if ($pos.node(d)?.type?.name === 'outlineSection') depthCount += 1;
+        }
+        if (depthCount >= 6) return false;
+        const idx = $pos.index();
+        const parent = $pos.parent;
+        if (!parent || idx <= 0) return false;
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+
+        const prevNode = parent.child(idx - 1);
+        const prevStart = sectionPos - prevNode.nodeSize;
+        const prevSection = pmState.doc.nodeAt(prevStart);
+        if (!prevSection) return false;
+        const prevHeading = prevSection.child(0);
+        const prevBody = prevSection.child(1);
+        const prevChildren = prevSection.child(2);
+        const childrenStart = prevStart + 1 + prevHeading.nodeSize + prevBody.nodeSize;
+        const insertPos = childrenStart + prevChildren.nodeSize - 1;
+
+        let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(insertPos, sectionNode);
+        // Если новый родитель свёрнут, развернём его, чтобы переносимый блок не "исчезал".
+        const parentAfter = tr.doc.nodeAt(prevStart);
+        if (parentAfter?.type?.name === 'outlineSection' && Boolean(parentAfter.attrs?.collapsed)) {
+          tr = tr.setNodeMarkup(prevStart, undefined, { ...parentAfter.attrs, collapsed: false });
+        }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+        dispatch(tr.scrollIntoView());
+        return true;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const outdentActiveSection = () => {
+    try {
+      if (!TextSelection) return;
+      editor.commands.command(({ state: pmState, dispatch }) => {
+        const $from = pmState.selection.$from;
+        let currentDepth = null;
+        let parentDepth = null;
+        for (let d = $from.depth; d > 0; d -= 1) {
+          if ($from.node(d)?.type?.name === 'outlineSection') {
+            if (currentDepth === null) currentDepth = d;
+            else {
+              parentDepth = d;
+              break;
+            }
+          }
+        }
+        if (currentDepth === null || parentDepth === null) return false;
+        const sectionPos = $from.before(currentDepth);
+        const parentPos = $from.before(parentDepth);
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+
+        let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+        const parentAfter = tr.doc.nodeAt(parentPos);
+        if (!parentAfter) return false;
+        const insertPos = parentPos + parentAfter.nodeSize;
+        tr = tr.insert(insertPos, sectionNode);
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+        dispatch(tr.scrollIntoView());
+        return true;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const deleteActiveSection = () => {
+    try {
+      if (!TextSelection) return;
+      editor.commands.command(({ state: pmState, dispatch }) => {
+        const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+        if (typeof sectionPos !== 'number') return false;
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const $pos = pmState.doc.resolve(sectionPos);
+        const idx = $pos.index();
+        const parent = $pos.parent;
+        if (!parent) return false;
+
+        const schema = pmState.doc.type.schema;
+        if (parent.childCount <= 1) {
+          const newSection = schema.nodes.outlineSection.create(
+            { ...sectionNode.attrs, collapsed: false },
+            [
+              schema.nodes.outlineHeading.create({}, []),
+              schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+              schema.nodes.outlineChildren.create({}, []),
+            ],
+          );
+          let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+          const heading = newSection.child(0);
+          const bodyStart = sectionPos + 1 + heading.nodeSize;
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+          dispatch(tr.scrollIntoView());
+          return true;
+        }
+
+        const hasPrev = idx > 0;
+        const prevNode = hasPrev ? parent.child(idx - 1) : null;
+        const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
+
+        let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+        const targetPos = hasPrev && typeof prevStart === 'number' ? prevStart : Math.min(tr.doc.content.size, sectionPos);
+        const targetNode = tr.doc.nodeAt(targetPos);
+        if (targetNode?.type?.name === 'outlineSection') {
+          const h = targetNode.child(0);
+          const b = targetNode.child(1);
+          const bodyStart = targetPos + 1 + h.nodeSize;
+          if (!b.childCount) {
+            tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+          }
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+        }
+        dispatch(tr.scrollIntoView());
+        return true;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const insertNewSectionBelow = () => {
+    try {
+      if (!TextSelection) return;
+      editor.commands.command(({ state: pmState, dispatch }) => {
+        const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+        if (typeof sectionPos !== 'number') return false;
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const schema = pmState.doc.type.schema;
+        const insertPos = sectionPos + sectionNode.nodeSize;
+        const newId = safeUuid();
+        const newSection = schema.nodes.outlineSection.create(
+          { id: newId, collapsed: false },
+          [
+            schema.nodes.outlineHeading.create({}, []),
+            schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+            schema.nodes.outlineChildren.create({}, []),
+          ],
+        );
+        let tr = pmState.tr.insert(insertPos, newSection);
+        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+        if (outlineEditModeKey) {
+          tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+        }
+        dispatch(tr.scrollIntoView());
+        return true;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  cleanups.push(click(btns.deleteBtn, () => deleteActiveSection()));
+  cleanups.push(click(btns.moveUpBtn, () => moveActiveSection('up')));
+  cleanups.push(click(btns.moveDownBtn, () => moveActiveSection('down')));
+  cleanups.push(click(btns.outdentBtn, () => outdentActiveSection()));
+  cleanups.push(click(btns.indentBtn, () => indentActiveSection()));
+  cleanups.push(click(btns.newBelowBtn, () => insertNewSectionBelow()));
 
   for (const btn of dropdownBtns) {
     cleanups.push(click(btn, () => toggleMenu(btn)));
@@ -2622,7 +2859,10 @@ async function mountOutlineEditor() {
             if (idx <= 0) return false;
             const prevNode = parent.child(idx - 1);
             const prevStart = sectionPos - prevNode.nodeSize;
-            const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(prevStart, sectionNode);
+            const tr = pmState.tr
+              .delete(sectionPos, sectionPos + sectionNode.nodeSize)
+              .insert(prevStart, sectionNode)
+              .setMeta(OUTLINE_ALLOW_META, true);
             const sel = TextSelection.near(tr.doc.resolve(prevStart + 2), 1);
             tr.setSelection(sel);
             dispatch(tr.scrollIntoView());
@@ -2633,7 +2873,7 @@ async function mountOutlineEditor() {
             const nextStart = sectionPos + sectionNode.nodeSize;
             const nextNode = pmState.doc.nodeAt(nextStart);
             if (!nextNode) return false;
-            const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+            const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
             const insertPos = sectionPos + nextNode.nodeSize;
             tr.insert(insertPos, sectionNode);
             const sel = TextSelection.near(tr.doc.resolve(insertPos + 2), 1);
@@ -2813,7 +3053,10 @@ async function mountOutlineEditor() {
           const prevChildren = prevSection.child(2);
           const childrenStart = prevStart + 1 + prevHeading.nodeSize + prevBody.nodeSize;
           const insertPos = childrenStart + prevChildren.nodeSize - 1;
-          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(insertPos, sectionNode);
+          let tr = pmState.tr
+            .delete(sectionPos, sectionPos + sectionNode.nodeSize)
+            .insert(insertPos, sectionNode)
+            .setMeta(OUTLINE_ALLOW_META, true);
           // Если новый родитель свёрнут, развернём его, чтобы переносимый блок не "исчезал".
           const parentAfter = tr.doc.nodeAt(prevStart);
           if (parentAfter?.type?.name === 'outlineSection' && Boolean(parentAfter.attrs?.collapsed)) {
@@ -2844,7 +3087,7 @@ async function mountOutlineEditor() {
           const parentPos = $from.before(parentDepth);
           const sectionNode = pmState.doc.nodeAt(sectionPos);
           if (!sectionNode) return false;
-          const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+          const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
           const parentAfter = tr.doc.nodeAt(parentPos);
           if (!parentAfter) return false;
           const insertPos = parentPos + parentAfter.nodeSize;
