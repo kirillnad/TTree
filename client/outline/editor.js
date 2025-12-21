@@ -2,9 +2,16 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { replaceArticleBlocksTree, updateArticleDocJson, generateOutlineTitle, proofreadOutlineHtml } from '../api.js?v=7';
+import {
+  replaceArticleBlocksTree,
+  updateArticleDocJson,
+  generateOutlineTitle,
+  proofreadOutlineHtml,
+  fetchArticlesIndex,
+} from '../api.js?v=7';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
+import { navigate, routing } from '../routing.js';
 
 let mounted = false;
 let tiptap = null;
@@ -27,6 +34,19 @@ let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
+const OUTLINE_ALLOW_META = 'outlineAllowMutation';
+let lastReadOnlyToastAt = 0;
+
+function notifyReadOnlyGlobal() {
+  const now = Date.now();
+  if (now - lastReadOnlyToastAt < 900) return;
+  lastReadOnlyToastAt = now;
+  try {
+    showToast('Для редактирования нажмите Enter или двойной клик мышкой. Esc для выхода.');
+  } catch {
+    // ignore
+  }
+}
 
 function readAutosaveQueue() {
   try {
@@ -185,20 +205,21 @@ function mountOutlineToolbar(editor) {
     }
   };
 
-  const runAction = (action) => {
-    if (!action) return false;
-    try {
-      const chain = editor.chain().focus();
-      if (action === 'toggleBold') return chain.toggleBold().run();
-      if (action === 'toggleItalic') return chain.toggleItalic().run();
-      if (action === 'toggleStrike') return chain.toggleStrike().run();
-      if (action === 'toggleCode') return chain.toggleCode().run();
-      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
-      if (action === 'toggleBulletList') {
-        // UX: allow switching ordered -> bullet in one click.
-        if (editor.isActive('orderedList')) {
-          return chain.toggleOrderedList().toggleBulletList().run();
-        }
+	  const runAction = (action) => {
+	    if (!action) return false;
+	    try {
+	      const chain = editor.chain().focus();
+	      if (action === 'toggleBold') return chain.toggleBold().run();
+	      if (action === 'toggleItalic') return chain.toggleItalic().run();
+	      if (action === 'toggleStrike') return chain.toggleStrike().run();
+	      if (action === 'toggleCode') return chain.toggleCode().run();
+	      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
+	      if (action === 'unsetLink') return chain.unsetLink().run();
+	      if (action === 'toggleBulletList') {
+	        // UX: allow switching ordered -> bullet in one click.
+	        if (editor.isActive('orderedList')) {
+	          return chain.toggleOrderedList().toggleBulletList().run();
+	        }
         return chain.toggleBulletList().run();
       }
       if (action === 'toggleOrderedList') {
@@ -229,11 +250,127 @@ function mountOutlineToolbar(editor) {
     } catch {
       return false;
     }
-  };
+	  };
 
-  const sync = () => {
-    if (!state.isOutlineEditing) return;
-    if (!editor || editor.isDestroyed) return;
+	  const isEditing = () => {
+	    try {
+	      const st = outlineEditModeKey?.getState?.(editor.state) || null;
+	      return Boolean(st?.editingSectionId);
+	    } catch {
+	      return false;
+	    }
+	  };
+
+	  const requireEditing = () => {
+	    if (isEditing()) return true;
+	    notifyReadOnlyGlobal();
+	    return false;
+	  };
+
+	  const insertLinkMark = (href, label, attrs = {}) => {
+	    const url = String(href || '').trim();
+	    if (!url) return false;
+	    const text = String(label || '').trim() || url;
+	    const { from, to, empty } = editor.state.selection;
+	    const linkAttrs = { href: url, ...attrs };
+	    const chain = editor.chain().focus();
+	    if (!empty && from !== to) {
+	      return chain.setLink(linkAttrs).run();
+	    }
+	    return chain
+	      .insertContent({
+	        type: 'text',
+	        text,
+	        marks: [{ type: 'link', attrs: linkAttrs }],
+	      })
+	      .run();
+	  };
+
+	  const insertHttpLink = async () => {
+	    if (!requireEditing()) return;
+	    let url = '';
+	    try {
+	      const mod = await import('../modal.js?v=8');
+	      const res = await mod.showPrompt({
+	        title: 'Ссылка (URL)',
+	        message: 'Введите URL (http/https).',
+	        confirmText: 'Вставить',
+	        cancelText: 'Отмена',
+	        allowEmpty: false,
+	      });
+	      url = String(res || '');
+	    } catch {
+	      url = window.prompt('Введите URL (http/https)') || '';
+	    }
+	    url = (url || '').trim();
+	    if (!url) return;
+	    if (!/^https?:\/\//i.test(url)) {
+	      showToast('URL должен начинаться с http:// или https://');
+	      return;
+	    }
+	    let label = '';
+	    try {
+	      label = window.prompt('Подпись (можно пусто)') || '';
+	    } catch {
+	      label = '';
+	    }
+	    insertLinkMark(url, label, { target: '_blank', rel: 'noopener noreferrer' });
+	  };
+
+	  const insertArticleLink = async () => {
+	    if (!requireEditing()) return;
+	    let list = Array.isArray(state.articlesIndex) ? state.articlesIndex : [];
+	    if (!list.length) {
+	      list = (await fetchArticlesIndex().catch(() => [])) || [];
+	      if (Array.isArray(list)) state.articlesIndex = list;
+	    }
+	    const suggestions = (Array.isArray(list) ? list : []).map((item) => ({
+	      id: item.id,
+	      title: item.title || 'Без названия',
+	    }));
+	    let input = '';
+	    let selectedId = '';
+	    try {
+	      const mod = await import('../modal.js?v=8');
+	      const result = await mod.showPrompt({
+	        title: 'Ссылка на статью',
+	        message: 'Введите ID статьи. Подсказки помогут найти нужную.',
+	        confirmText: 'Вставить',
+	        cancelText: 'Отмена',
+	        suggestions,
+	        returnMeta: true,
+	        hideConfirm: true,
+	      });
+	      if (result && typeof result === 'object') {
+	        input = result.value || '';
+	        selectedId = result.selectedId || '';
+	      } else {
+	        input = result || '';
+	      }
+	    } catch {
+	      input = window.prompt('Введите ID статьи') || '';
+	    }
+	    const term = (input || '').trim().toLowerCase();
+	    if (!term && !selectedId) return;
+	    const match = (Array.isArray(list) ? list : []).find((item) => {
+	      const titleLc = (item.title || '').toLowerCase();
+	      return (
+	        (selectedId && item.id === selectedId) ||
+	        (item.id && item.id.toLowerCase() === term) ||
+	        titleLc === term ||
+	        titleLc.includes(term)
+	      );
+	    });
+	    if (!match) {
+	      showToast('Статья не найдена');
+	      return;
+	    }
+	    insertLinkMark(routing.article(match.id), match.title || 'Без названия', { class: 'article-link' });
+	  };
+
+	  const sync = () => {
+	    if (!state.isOutlineEditing) return;
+	    if (!editor || editor.isDestroyed) return;
 
     if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
     if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
@@ -277,14 +414,20 @@ function mountOutlineToolbar(editor) {
       } else if (action === 'toggleCode') {
         isActive = editor.isActive('code');
         isDisabled = !canRun((c) => c.toggleCode());
-      } else if (action === 'toggleBlockquote') {
-        isActive = editor.isActive('blockquote');
-        isDisabled = !canRun((c) => c.toggleBlockquote());
-      } else if (action === 'toggleBulletList') {
-        isActive = editor.isActive('bulletList');
-        // UX: allow switching ordered -> bullet in one click.
-        if (editor.isActive('orderedList')) {
-          isDisabled = !(canRun((c) => c.toggleOrderedList()) && canRun((c) => c.toggleBulletList()));
+	      } else if (action === 'toggleBlockquote') {
+	        isActive = editor.isActive('blockquote');
+	        isDisabled = !canRun((c) => c.toggleBlockquote());
+	      } else if (action === 'insertHttpLink' || action === 'insertArticleLink') {
+	        isActive = false;
+	        isDisabled = !isEditing();
+	      } else if (action === 'unsetLink') {
+	        isActive = editor.isActive('link');
+	        isDisabled = !canRun((c) => c.unsetLink());
+	      } else if (action === 'toggleBulletList') {
+	        isActive = editor.isActive('bulletList');
+	        // UX: allow switching ordered -> bullet in one click.
+	        if (editor.isActive('orderedList')) {
+	          isDisabled = !(canRun((c) => c.toggleOrderedList()) && canRun((c) => c.toggleBulletList()));
         } else {
           isDisabled = !canRun((c) => c.toggleBulletList());
         }
@@ -361,16 +504,26 @@ function mountOutlineToolbar(editor) {
   for (const btn of dropdownBtns) {
     cleanups.push(click(btn, () => toggleMenu(btn)));
   }
-  for (const item of actionButtons) {
-    cleanups.push(
-      click(item, () => {
-        const action = item.dataset.outlineAction || '';
-        const ok = runAction(action);
-        closeAllMenus();
-        if (ok) scheduleSync();
-      }),
-    );
-  }
+	  for (const item of actionButtons) {
+	    cleanups.push(
+	      click(item, () => {
+	        const action = item.dataset.outlineAction || '';
+	        if (action === 'insertHttpLink') {
+	          closeAllMenus();
+	          void insertHttpLink().finally(() => scheduleSync());
+	          return;
+	        }
+	        if (action === 'insertArticleLink') {
+	          closeAllMenus();
+	          void insertArticleLink().finally(() => scheduleSync());
+	          return;
+	        }
+	        const ok = runAction(action);
+	        closeAllMenus();
+	        if (ok) scheduleSync();
+	      }),
+	    );
+	  }
 
   const onDocPointerDown = (event) => {
     if (!state.isOutlineEditing) return;
@@ -606,7 +759,9 @@ function applyBodyHtmlToSection(editor, sectionId, html) {
     nodes = [schema.nodes.paragraph.create({}, [])];
   }
   const newBody = schema.nodes.outlineBody.create({}, nodes);
-  const tr = editor.state.tr.replaceWith(bodyPos, bodyPos + bodyNode.nodeSize, newBody);
+  const tr = editor.state.tr
+    .replaceWith(bodyPos, bodyPos + bodyNode.nodeSize, newBody)
+    .setMeta(OUTLINE_ALLOW_META, true);
   editor.view.dispatch(tr);
   return true;
 }
@@ -631,7 +786,7 @@ function applyGeneratedHeading(editor, sectionId, titleText) {
   const title = String(titleText || '').trim();
   if (!title) return false;
   const safe = title.length > 200 ? title.slice(0, 200) : title;
-  const tr = editor.state.tr.insertText(safe, from, to);
+  const tr = editor.state.tr.insertText(safe, from, to).setMeta(OUTLINE_ALLOW_META, true);
   editor.view.dispatch(tr);
   return true;
 }
@@ -811,7 +966,6 @@ async function mountOutlineEditor() {
   const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
   const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
   const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
-  const OUTLINE_ALLOW_META = 'outlineAllowMutation';
 
   outlineGenerateHTML = generateHTML;
   outlineHtmlExtensions = [
@@ -1192,7 +1346,8 @@ async function mountOutlineEditor() {
               schema.nodes.outlineChildren.create({}, []),
             ],
           );
-          const tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+          let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
           // После очистки последней секции ставим курсор в начало body.
           const heading = newSection.child(0);
           const bodyStart = sectionPos + 1 + heading.nodeSize;
@@ -1232,6 +1387,7 @@ async function mountOutlineEditor() {
             tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
           }
         }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
         dispatch(tr.scrollIntoView());
         return true;
       };
@@ -1245,12 +1401,14 @@ async function mountOutlineEditor() {
         if (!parent || idx <= 0) return false;
         const prevNode = parent.child(idx - 1);
         const prevStart = sectionPos - prevNode.nodeSize;
+        const currentHeading = sectionNode.child(0);
         const currentBody = sectionNode.child(1);
         const currentChildren = sectionNode.child(2);
 
         let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
         const prevSection = tr.doc.nodeAt(prevStart);
         if (!prevSection) {
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
           dispatch(tr.scrollIntoView());
           return true;
         }
@@ -1259,7 +1417,19 @@ async function mountOutlineEditor() {
         const prevBody = prevSection.child(1);
         const prevChildren = prevSection.child(2);
 
-        const mergedBodyContent = prevBody.content.append(currentBody.content);
+        // При merge заголовок текущей секции не должен пропадать:
+        // переносим его в body предыдущей секции отдельным абзацем (если не пустой),
+        // затем добавляем body текущей секции.
+        const extraBlocks = [];
+        const headingText = (currentHeading?.textContent || '').replace(/\u00a0/g, ' ').trim();
+        if (headingText) {
+          extraBlocks.push(schema.nodes.paragraph.create({}, [schema.text(headingText)]));
+        }
+        currentBody?.content?.forEach?.((node) => {
+          extraBlocks.push(node);
+        });
+        const extraFragment = extraBlocks.length ? schema.nodes.outlineBody.create({}, extraBlocks).content : null;
+        const mergedBodyContent = extraFragment ? prevBody.content.append(extraFragment) : prevBody.content;
         const mergedChildrenContent = prevChildren.content.append(currentChildren.content);
         const newPrevSection = schema.nodes.outlineSection.create(
           prevSection.attrs,
@@ -1278,6 +1448,7 @@ async function mountOutlineEditor() {
           const bodyEnd = bodyStart + body.nodeSize - 1;
           tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
         }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
         dispatch(tr.scrollIntoView());
         return true;
       };
@@ -1313,6 +1484,7 @@ async function mountOutlineEditor() {
         let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
         const parentAfter = tr.doc.nodeAt(parentPos);
         if (!parentAfter) {
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
           dispatch(tr.scrollIntoView());
           return true;
         }
@@ -1360,6 +1532,58 @@ async function mountOutlineEditor() {
           const bodyEnd = bodyStart + body.nodeSize - 1;
           tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
         }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+        dispatch(tr.scrollIntoView());
+        return true;
+      };
+
+      const mergeSectionWithNextSibling = (pmState, dispatch, sectionPos) => {
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const $pos = pmState.doc.resolve(sectionPos);
+        const idx = $pos.index();
+        const parent = $pos.parent;
+        if (!parent) return false;
+        if (idx >= parent.childCount - 1) return false;
+
+        const nextStart = sectionPos + sectionNode.nodeSize;
+        const nextNode = pmState.doc.nodeAt(nextStart);
+        if (!nextNode || nextNode.type?.name !== 'outlineSection') return false;
+
+        const schema = pmState.doc.type.schema;
+        const headingNode = sectionNode.child(0);
+        const bodyNode = sectionNode.child(1);
+        const childrenNode = sectionNode.child(2);
+        const nextBody = nextNode.child(1);
+        const nextChildren = nextNode.child(2);
+
+        const mergedBodyContent = bodyNode.content.append(nextBody.content);
+        const mergedChildrenContent = childrenNode.content.append(nextChildren.content);
+        const newSection = schema.nodes.outlineSection.create(
+          { ...sectionNode.attrs, collapsed: false },
+          [
+            headingNode,
+            schema.nodes.outlineBody.create({}, mergedBodyContent),
+            schema.nodes.outlineChildren.create({}, mergedChildrenContent),
+          ],
+        );
+
+        let tr = pmState.tr;
+        // 1) удалить next sibling
+        tr = tr.delete(nextStart, nextStart + nextNode.nodeSize);
+        // 2) заменить текущую секцию на объединённую
+        tr = tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+
+        // 3) курсор в конец body (перед children)
+        const updated = tr.doc.nodeAt(sectionPos);
+        if (updated) {
+          const h = updated.child(0);
+          const b = updated.child(1);
+          const bodyStart = sectionPos + 1 + h.nodeSize;
+          const bodyEnd = bodyStart + b.nodeSize - 1;
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+        }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
         dispatch(tr.scrollIntoView());
         return true;
       };
@@ -1416,8 +1640,9 @@ async function mountOutlineEditor() {
           // (ничего не переносим и не "split" содержимое).
           if (Boolean(sectionNode.attrs?.collapsed)) {
             const insertPos = sectionPos + sectionNode.nodeSize;
+            const newId = safeUuid();
             const newSection = schema.nodes.outlineSection.create(
-              { id: safeUuid(), collapsed: false },
+              { id: newId, collapsed: false },
               [
                 schema.nodes.outlineHeading.create({}, []),
                 schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
@@ -1426,6 +1651,10 @@ async function mountOutlineEditor() {
             );
             let tr = pmState.tr.insert(insertPos, newSection);
             tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+            if (outlineEditModeKey) {
+              tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+            }
             dispatch(tr.scrollIntoView());
             return true;
           }
@@ -1461,6 +1690,10 @@ async function mountOutlineEditor() {
             const insertPos = sectionPos + (leftAfter ? leftAfter.nodeSize : leftSection.nodeSize);
             tr = tr.insert(insertPos, rightSection);
             tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+            if (outlineEditModeKey) {
+              tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+            }
             dispatch(tr.scrollIntoView());
             return true;
           }
@@ -1518,8 +1751,9 @@ async function mountOutlineEditor() {
             tailFragment && tailFragment.childCount
               ? schema.nodes.outlineBody.create({}, tailFragment)
               : schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+          const newId = safeUuid();
           const newSection = schema.nodes.outlineSection.create(
-            { id: safeUuid(), collapsed: false },
+            { id: newId, collapsed: false },
             [schema.nodes.outlineHeading.create({}, []), tailBody, currentChildren],
           );
 
@@ -1527,6 +1761,10 @@ async function mountOutlineEditor() {
           const insertPos = sectionPosAfter + newCurrentSection.nodeSize;
           tr = tr.insert(insertPos, newSection);
           tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+          if (outlineEditModeKey) {
+            tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+          }
           dispatch(tr.scrollIntoView());
           return true;
         });
@@ -1768,6 +2006,24 @@ async function mountOutlineEditor() {
             if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
+
+            // Delete в конце body: объединяем с нижним sibling.
+            const bodyDepth = findDepth($from, 'outlineBody');
+            if (bodyDepth !== null) {
+              const sectionPos = findSectionPos(pmState.doc, $from);
+              if (typeof sectionPos !== 'number') return false;
+              const sectionNode = pmState.doc.nodeAt(sectionPos);
+              if (!sectionNode) return false;
+              const headingNode = sectionNode.child(0);
+              const bodyNode = sectionNode.child(1);
+              const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+              const bodyEnd = bodyStart + bodyNode.nodeSize - 1;
+              if ($from.pos === bodyEnd) {
+                return mergeSectionWithNextSibling(pmState, dispatch, sectionPos);
+              }
+              return false;
+            }
+
             if ($from.parent?.type?.name !== 'outlineHeading') return false;
             // Если удаляем в заголовке на границе — не прыгаем в следующий блок,
             // а переходим в body текущей секции.
@@ -1814,8 +2070,9 @@ async function mountOutlineEditor() {
             if (Boolean(sectionNode.attrs?.collapsed) && $from.parentOffset === headingNode.content.size) {
               const insertPos = sectionPos + sectionNode.nodeSize;
               const schema = pmState.doc.type.schema;
+              const newId = safeUuid();
               const newSection = schema.nodes.outlineSection.create(
-                { id: safeUuid(), collapsed: false },
+                { id: newId, collapsed: false },
                 [
                   schema.nodes.outlineHeading.create({}, []),
                   schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
@@ -1824,6 +2081,10 @@ async function mountOutlineEditor() {
               );
               let tr = pmState.tr.insert(insertPos, newSection);
               tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              if (outlineEditModeKey) {
+                tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+              }
               dispatch(tr.scrollIntoView());
               return true;
             }
@@ -1832,8 +2093,9 @@ async function mountOutlineEditor() {
             // и ставим курсор в начало нового заголовка.
             if ($from.parentOffset === 0) {
               const schema = pmState.doc.type.schema;
+              const newId = safeUuid();
               const newSection = schema.nodes.outlineSection.create(
-                { id: safeUuid(), collapsed: false },
+                { id: newId, collapsed: false },
                 [
                   schema.nodes.outlineHeading.create({}, []),
                   schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
@@ -1842,6 +2104,10 @@ async function mountOutlineEditor() {
               );
               let tr = pmState.tr.insert(sectionPos, newSection);
               tr = tr.setSelection(TextSelection.create(tr.doc, sectionPos + 2));
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              if (outlineEditModeKey) {
+                tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+              }
               dispatch(tr.scrollIntoView());
               return true;
             }
@@ -2202,29 +2468,38 @@ async function mountOutlineEditor() {
         }),
         new Plugin({
           props: {
-            handleKeyDown: (view, event) => {
-              if (event.key !== 'Enter') return false;
-              const { state: pmState } = view;
-              const { $from } = pmState.selection;
-              if (!pmState.selection.empty) return false;
-              const bodyDepth = findDepth($from, 'outlineBody');
-              if (bodyDepth === null) return false;
-              const paragraphDepth = findDepth($from, 'paragraph');
-              if (paragraphDepth === null) return false;
-              if ($from.node(paragraphDepth - 1)?.type?.name !== 'outlineBody') return false;
+	            handleKeyDown: (view, event) => {
+	              if (event.key !== 'Enter') return false;
+	              const { state: pmState } = view;
+	              const { $from } = pmState.selection;
+	              if (!pmState.selection.empty) return false;
+	              const bodyDepth = findDepth($from, 'outlineBody');
+	              if (bodyDepth === null) return false;
+	              const paragraphDepth = findDepth($from, 'paragraph');
+	              if (paragraphDepth === null) return false;
+	              if ($from.node(paragraphDepth - 1)?.type?.name !== 'outlineBody') return false;
 
-              const paragraph = $from.node(paragraphDepth);
-              if (!paragraph || paragraph.content.size !== 0) return false;
-              if ($from.parentOffset !== 0 && $from.parentOffset !== paragraph.content.size) {
-                return false;
-              }
-              const bodyNode = $from.node(bodyDepth);
-              const idx = $from.index(bodyDepth);
-              if (idx !== bodyNode.childCount - 1) return false;
+	              const paragraph = $from.node(paragraphDepth);
+	              if (!paragraph || paragraph.content.size !== 0) return false;
+	              if ($from.parentOffset !== 0 && $from.parentOffset !== paragraph.content.size) {
+	                return false;
+	              }
+	              const bodyNode = $from.node(bodyDepth);
+	              const idx = $from.index(bodyDepth);
+	              if (idx !== bodyNode.childCount - 1) return false;
+	              // "Умный Enter" должен срабатывать только на 3-е нажатие:
+	              // 1-е Enter создаёт пустой параграф,
+	              // 2-е Enter создаёт второй пустой параграф (чтобы можно было вставить пустую строку),
+	              // 3-е Enter (когда в конце уже 2 пустых параграфа) создаёт новый блок.
+	              if (idx < 1) return false;
+	              const prevParagraph = bodyNode.child(idx - 1);
+	              if (!prevParagraph || prevParagraph.type?.name !== 'paragraph' || prevParagraph.content.size !== 0) {
+	                return false;
+	              }
 
-              const sectionDepth = findDepth($from, 'outlineSection');
-              if (sectionDepth === null) return false;
-              const sectionPos = $from.before(sectionDepth);
+	              const sectionDepth = findDepth($from, 'outlineSection');
+	              if (sectionDepth === null) return false;
+	              const sectionPos = $from.before(sectionDepth);
 
               event.preventDefault();
               event.stopPropagation();
@@ -2266,6 +2541,10 @@ async function mountOutlineEditor() {
               );
               tr = tr.insert(insertPos, newSection);
               tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              if (outlineEditModeKey) {
+                tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+              }
               view.dispatch(tr.scrollIntoView());
               return true;
             },
@@ -2305,6 +2584,7 @@ async function mountOutlineEditor() {
     addProseMirrorPlugins() {
       const key = new PluginKey('outlineEditMode');
       outlineEditModeKey = key;
+      let pendingMerge = null; // { sectionId: string, key: 'Backspace'|'Delete', ts: number }
 
       const getActiveSectionId = (pmState) => {
         const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
@@ -2356,6 +2636,67 @@ async function mountOutlineEditor() {
         }
       };
 
+      const notifyMergeConfirm = () => {
+        try {
+          showToast('Нажмите ещё раз, чтобы объединить блоки');
+        } catch {
+          // ignore
+        }
+      };
+
+      const isMergeCandidateBackspace = (pmState) => {
+        try {
+          const { selection } = pmState;
+          if (!selection?.empty) return false;
+          const { $from } = selection;
+          if ($from.parent?.type?.name !== 'outlineHeading') return false;
+          if ($from.parentOffset !== 0) return false;
+
+          const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
+          if (typeof sectionPos !== 'number') return false;
+          const $pos = pmState.doc.resolve(sectionPos);
+          const idx = $pos.index();
+          if (idx > 0) return true; // есть previous sibling
+
+          // Нет previous sibling — merge в body родителя (если есть родитель-секция)
+          for (let d = $from.depth - 1; d > 0; d -= 1) {
+            if ($from.node(d)?.type?.name === 'outlineSection') return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      };
+
+      const isMergeCandidateDelete = (pmState, editingSectionId) => {
+        try {
+          if (!editingSectionId) return false;
+          const { selection } = pmState;
+          if (!selection?.empty) return false;
+          const { $from } = selection;
+          // Candidate: caret at the very end of current section body.
+          const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
+          if (typeof sectionPos !== 'number') return false;
+          const sectionNode = pmState.doc.nodeAt(sectionPos);
+          if (!sectionNode) return false;
+          if (String(sectionNode.attrs?.id || '') !== String(editingSectionId)) return false;
+          const headingNode = sectionNode.child(0);
+          const bodyNode = sectionNode.child(1);
+          const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+          const bodyEnd = bodyStart + bodyNode.nodeSize - 1;
+          if ($from.pos !== bodyEnd) return false;
+
+          // There must be a next sibling section to merge with.
+          const $pos = pmState.doc.resolve(sectionPos);
+          const idx = $pos.index();
+          const parent = $pos.parent;
+          if (!parent) return false;
+          return idx < parent.childCount - 1;
+        } catch {
+          return false;
+        }
+      };
+
       return [
         new Plugin({
           key,
@@ -2375,6 +2716,8 @@ async function mountOutlineEditor() {
             const st = key.getState(stateBefore) || {};
             const editingSectionId = st.editingSectionId || null;
             if (tr.getMeta(OUTLINE_ALLOW_META)) return true;
+            // Undo/redo должны работать всегда, даже в view-mode.
+            if (tr.getMeta('history$') != null || tr.getMeta('closeHistory$') != null) return true;
             if (!tr.docChanged) return true;
             return canEditChangeRanges(stateBefore, tr, editingSectionId);
           },
@@ -2399,6 +2742,12 @@ async function mountOutlineEditor() {
               const pmState = view.state;
               const st = key.getState(pmState) || {};
               const editingSectionId = st.editingSectionId || null;
+              const activeSectionId = getActiveSectionId(pmState);
+
+              // Сбрасываем pending merge при смене секции/любой другой клавише.
+              if (!pendingMerge || pendingMerge.sectionId !== activeSectionId || pendingMerge.key !== event.key) {
+                pendingMerge = null;
+              }
 
               if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
                 const sectionId = getActiveSectionId(pmState);
@@ -2419,12 +2768,46 @@ async function mountOutlineEditor() {
               if (!editingSectionId) {
                 const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
                 const isDelete = event.key === 'Backspace' || event.key === 'Delete';
-                if (isTextInput || isDelete) {
+                if (isDelete) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return true;
+                }
+                if (isTextInput) {
                   event.preventDefault();
                   event.stopPropagation();
                   notifyReadOnly();
                   return true;
                 }
+              }
+
+              // В edit-mode: merge по Backspace/Delete требует подтверждения (2 нажатия),
+              // при этом автоповтор игнорируем, чтобы не "съесть" соседние блоки.
+              const isMergeCandidate =
+                (event.key === 'Backspace' && isMergeCandidateBackspace(pmState)) ||
+                (event.key === 'Delete' && isMergeCandidateDelete(pmState, editingSectionId));
+              if (editingSectionId && (event.key === 'Backspace' || event.key === 'Delete') && isMergeCandidate) {
+                if (event.repeat) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return true;
+                }
+                const now = Date.now();
+                if (
+                  pendingMerge &&
+                  pendingMerge.sectionId === editingSectionId &&
+                  pendingMerge.key === event.key &&
+                  now - pendingMerge.ts < 1200
+                ) {
+                  pendingMerge = null;
+                  // Разрешаем штатному keymap выполнить merge.
+                  return false;
+                }
+                pendingMerge = { sectionId: editingSectionId, key: event.key, ts: now };
+                event.preventDefault();
+                event.stopPropagation();
+                notifyMergeConfirm();
+                return true;
               }
               return false;
             },
@@ -2553,6 +2936,17 @@ async function mountOutlineEditor() {
           const st = outlineEditModeKey.getState(view.state) || {};
           const editingSectionId = st.editingSectionId || null;
 
+          if (!editingSectionId) {
+            const isDelete = event.key === 'Backspace' || event.key === 'Delete';
+            const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+            if (isDelete || isTextInput) {
+              event.preventDefault();
+              event.stopPropagation();
+              notifyReadOnlyGlobal();
+              return true;
+            }
+          }
+
           if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
             const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
             if (typeof sectionPos !== 'number') return false;
@@ -2568,7 +2962,23 @@ async function mountOutlineEditor() {
           if (editingSectionId && event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
+            const sectionId = editingSectionId;
             view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
+            // Выход из режима редактирования тоже считаем "уходом" из секции
+            // для автозаголовка и proofreading (если были изменения).
+            try {
+              const tiptapEditor = outlineEditorInstance;
+              if (tiptapEditor && !tiptapEditor.isDestroyed) {
+                maybeGenerateTitleOnLeave(tiptapEditor, view.state.doc, sectionId);
+                const changed = markSectionDirtyIfChanged(view.state.doc, sectionId);
+                if (changed) {
+                  maybeProofreadOnLeave(tiptapEditor, view.state.doc, sectionId);
+                  scheduleAutosave({ delayMs: 350 });
+                }
+              }
+            } catch {
+              // ignore
+            }
             return true;
           }
         } catch {
@@ -2577,6 +2987,54 @@ async function mountOutlineEditor() {
         return false;
       },
       handleDOMEvents: {
+        click(view, event) {
+          try {
+            const anchor = event.target?.closest?.('a[href]');
+            if (!anchor) return false;
+            if (!outlineEditModeKey) return false;
+            const st = outlineEditModeKey.getState(view.state) || {};
+            const editingSectionId = st.editingSectionId || null;
+            if (editingSectionId) return false;
+
+            const href = String(anchor.getAttribute('href') || '').trim();
+            if (!href) return false;
+
+            // В view-mode клики по ссылкам должны открывать их.
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (href.startsWith('/')) {
+              // SPA navigation for internal routes.
+              navigate(href);
+              return true;
+            }
+            if (/^https?:\/\//i.test(href)) {
+              window.open(href, '_blank', 'noopener,noreferrer');
+              return true;
+            }
+            window.open(href, '_blank');
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        beforeinput(view, event) {
+          try {
+            if (!outlineEditModeKey) return false;
+            const st = outlineEditModeKey.getState(view.state) || {};
+            const editingSectionId = st.editingSectionId || null;
+            if (editingSectionId) return false;
+            const inputType = String(event?.inputType || '');
+            if (inputType.startsWith('history')) return false;
+            // В view-mode не даём менять документ никакими beforeinput.
+            event.preventDefault();
+            event.stopPropagation();
+            notifyReadOnlyGlobal();
+            return true;
+          } catch {
+            return false;
+          }
+        },
         dblclick(view, event) {
           try {
             if (!outlineEditModeKey) return false;

@@ -1048,6 +1048,12 @@ main.content {
   cursor: not-allowed;
 }
 
+.outline-menu__divider {
+  height: 1px;
+  margin: 6px 6px;
+  background: rgba(148, 163, 184, 0.45);
+}
+
 .article-toolbar .ghost.small {
   display: inline-flex;
   align-items: center;

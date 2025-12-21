@@ -76,7 +76,7 @@ import {
   showBlockHistoryModal,
 } from './modal.js?v=8';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=41';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=50';
 import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
@@ -796,7 +796,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-            const outline = await import('./outline/editor.js?v=41');
+            const outline = await import('./outline/editor.js?v=50');
             if (outline?.getOutlineActiveSectionId) {
               blockId = outline.getOutlineActiveSectionId() || blockId;
             }
@@ -847,7 +847,7 @@ export function attachEvents() {
 
         const htmlToRestore = String(choice.entry.after || '');
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=41');
+          const outline = await import('./outline/editor.js?v=50');
           if (outline?.restoreOutlineSectionFromBlockHtml) {
             outline.restoreOutlineSectionFromBlockHtml(blockId, htmlToRestore);
             showToast('Восстановлено (будет сохранено автоматически)');

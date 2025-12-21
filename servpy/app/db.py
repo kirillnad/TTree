@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any, Iterable
 
 from sqlalchemy import create_engine, event
@@ -66,8 +67,28 @@ class Database:
 
     def __init__(self, engine: Engine):
         self.engine = engine
-        self._conn = None
-        self._tx = None
+        # NOTE: This object is global (`CONN`) and used concurrently by FastAPI worker threads.
+        # Transaction/connection state must be stored per-thread, otherwise concurrent `with CONN:`
+        # will clobber shared state and crash with "ValueError: generator already executing".
+        self._local = threading.local()
+
+    def _get_local_conn(self):
+        return getattr(self._local, 'conn', None)
+
+    def _set_local_conn(self, conn):
+        setattr(self._local, 'conn', conn)
+
+    def _get_local_tx(self):
+        return getattr(self._local, 'tx', None)
+
+    def _set_local_tx(self, tx):
+        setattr(self._local, 'tx', tx)
+
+    def _get_local_depth(self) -> int:
+        return int(getattr(self._local, 'depth', 0) or 0)
+
+    def _set_local_depth(self, depth: int) -> None:
+        setattr(self._local, 'depth', int(depth))
 
     class QueryResult:
         def __init__(self, rows: list[RowMapping]):
@@ -80,17 +101,34 @@ class Database:
             return self._rows[0] if self._rows else None
 
     def __enter__(self):
-        self._tx = self.engine.begin()
-        self._conn = self._tx.__enter__()
+        depth = self._get_local_depth()
+        if depth <= 0:
+            tx = self.engine.begin()
+            conn = tx.__enter__()
+            self._set_local_tx(tx)
+            self._set_local_conn(conn)
+            self._set_local_depth(1)
+        else:
+            # Re-entrant: reuse the same transaction/connection in the same thread.
+            self._set_local_depth(depth + 1)
         return self
 
     def __exit__(self, exc_type, exc, tb):
+        depth = self._get_local_depth()
+        if depth <= 0:
+            return False
+        # Only the outermost exit commits/rollbacks.
+        if depth > 1:
+            self._set_local_depth(depth - 1)
+            return False
         try:
-            if self._tx is not None:
-                return self._tx.__exit__(exc_type, exc, tb)
+            tx = self._get_local_tx()
+            if tx is not None:
+                return tx.__exit__(exc_type, exc, tb)
         finally:
-            self._conn = None
-            self._tx = None
+            self._set_local_conn(None)
+            self._set_local_tx(None)
+            self._set_local_depth(0)
         return False
 
     def _prepare_statement(self, sql: str, params: Any | None):
@@ -114,14 +152,16 @@ class Database:
         if isinstance(sql, str) and 'DELETE FROM blocks_fts' in sql and 'WHERE article_id' not in sql:
             # Полное удаление индекса блоков — помечаем поисковые индексы как «грязные».
             mark_search_index_dirty()
-        if self._conn is not None:
-            return self._run(self._conn, sql, params)
+        conn = self._get_local_conn()
+        if conn is not None:
+            return self._run(conn, sql, params)
         with self.engine.begin() as conn:
             return self._run(conn, sql, params)
 
     def executemany(self, sql: str, seq: Iterable[Any]) -> Result | QueryResult:
-        if self._conn is not None:
-            return self._run(self._conn, sql, seq)
+        conn = self._get_local_conn()
+        if conn is not None:
+            return self._run(conn, sql, seq)
         with self.engine.begin() as conn:
             return self._run(conn, sql, seq)
 
