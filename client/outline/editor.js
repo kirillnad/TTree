@@ -24,6 +24,7 @@ let outlineHtmlExtensions = null;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
 let outlineToolbarCleanup = null;
+let outlineEditModeKey = null;
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
 
@@ -435,6 +436,47 @@ function setOutlineStatus(text = '') {
   el.textContent = text || '';
 }
 
+function moveCursorToSectionBodyStart(editor, sectionPos) {
+  if (!editor) return false;
+  if (typeof sectionPos !== 'number') return false;
+  try {
+    const pmState = editor.state;
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const heading = sectionNode.child(0);
+    const body = sectionNode.child(1);
+    const bodyStart = sectionPos + 1 + heading.nodeSize;
+    // Ensure there is at least one paragraph so selection can be placed inside.
+    let tr = pmState.tr;
+    if (!body.childCount) {
+      const schema = pmState.doc.type.schema;
+      tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+    }
+    const { TextSelection } = tiptap?.pmStateMod || {};
+    if (!TextSelection) return false;
+    tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+    editor.view.dispatch(tr);
+    editor.view.focus?.({ preventScroll: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveCursorToActiveSectionBodyStart(editor) {
+  if (!editor) return false;
+  try {
+    const pmState = editor.state;
+    const { selection } = pmState;
+    if (!selection) return false;
+    const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, selection.$from);
+    if (typeof sectionPos !== 'number') return false;
+    return moveCursorToSectionBodyStart(editor, sectionPos);
+  } catch {
+    return false;
+  }
+}
+
 async function loadTiptap() {
   if (tiptap) return tiptap;
   if (typeof window === 'undefined') {
@@ -760,7 +802,7 @@ async function mountOutlineEditor() {
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
-  const { Plugin } = pmStateMod;
+  const { Plugin, PluginKey } = pmStateMod;
   const { Decoration, DecorationSet } = pmViewMod;
   const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
   const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
@@ -769,6 +811,7 @@ async function mountOutlineEditor() {
   const TableCell = tiptap.tableCellMod.default || tiptap.tableCellMod.TableCell || tiptap.tableCellMod;
   const TableHeader = tiptap.tableHeaderMod.default || tiptap.tableHeaderMod.TableHeader || tiptap.tableHeaderMod;
   const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
+  const OUTLINE_ALLOW_META = 'outlineAllowMutation';
 
   outlineGenerateHTML = generateHTML;
   outlineHtmlExtensions = [
@@ -863,6 +906,7 @@ async function mountOutlineEditor() {
             ...sectionNode.attrs,
             collapsed: next,
           });
+          tr.setMeta(OUTLINE_ALLOW_META, true);
           editor.view.dispatch(tr);
           editor.view.focus();
         });
@@ -1067,6 +1111,22 @@ async function mountOutlineEditor() {
         return true;
       };
 
+      const moveSelectionToSectionBodyStart = (pmState, dispatch, sectionPos) => {
+        const sectionNode = pmState.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+        const heading = sectionNode.child(0);
+        const body = sectionNode.child(1);
+        const bodyStart = sectionPos + 1 + heading.nodeSize;
+        let tr = pmState.tr;
+        if (!body.childCount) {
+          const schema = pmState.doc.type.schema;
+          tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+        }
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+        dispatch(tr.scrollIntoView());
+        return true;
+      };
+
       const moveSelectionToSectionEnd = (pmState, dispatch, sectionPos) => {
         const sectionNode = pmState.doc.nodeAt(sectionPos);
         if (!sectionNode) return false;
@@ -1133,7 +1193,10 @@ async function mountOutlineEditor() {
             ],
           );
           const tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
-          dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(sectionPos + 2), 1)).scrollIntoView());
+          // После очистки последней секции ставим курсор в начало body.
+          const heading = newSection.child(0);
+          const bodyStart = sectionPos + 1 + heading.nodeSize;
+          dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
           return true;
         }
 
@@ -1149,13 +1212,24 @@ async function mountOutlineEditor() {
             const prevHeading = prevSection.child(0);
             const prevBody = prevSection.child(1);
             const bodyStart = prevStart + 1 + prevHeading.nodeSize;
-            const bodyEnd = bodyStart + prevBody.nodeSize - 1;
-            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+            if (!prevBody.childCount) {
+              const schema = tr.doc.type.schema;
+              tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+            }
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
           }
         } else {
-          const nextSection = tr.doc.nodeAt(sectionPos < tr.doc.content.size ? sectionPos : nextStart);
+          const nextPos = sectionPos < tr.doc.content.size ? sectionPos : nextStart;
+          const nextSection = tr.doc.nodeAt(nextPos);
           if (nextSection) {
-            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(sectionPos + 2), 1));
+            const nextHeading = nextSection.child(0);
+            const nextBody = nextSection.child(1);
+            const bodyStart = nextPos + 1 + nextHeading.nodeSize;
+            if (!nextBody.childCount) {
+              const schema = tr.doc.type.schema;
+              tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+            }
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
           }
         }
         dispatch(tr.scrollIntoView());
@@ -1531,7 +1605,9 @@ async function mountOutlineEditor() {
           const sectionNode = pmState.doc.nodeAt(sectionPos);
           if (!sectionNode) return false;
           const next = typeof collapsed === 'boolean' ? collapsed : !Boolean(sectionNode.attrs?.collapsed);
-          const tr = pmState.tr.setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next });
+          const tr = pmState.tr
+            .setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next })
+            .setMeta(OUTLINE_ALLOW_META, true);
           dispatch(tr);
           return true;
         });
@@ -1578,6 +1654,7 @@ async function mountOutlineEditor() {
           if (Boolean(node.attrs?.collapsed) === next) continue;
           tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
         }
+        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
         dispatch(tr);
       };
 
@@ -1598,6 +1675,7 @@ async function mountOutlineEditor() {
             if (Boolean(node.attrs?.collapsed) === true) continue;
             tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: true });
           }
+          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
 
           // После схлопывания переносим курсор в заголовок targetPos,
           // иначе selection может оказаться "внутри" скрытых детей.
@@ -2222,6 +2300,170 @@ async function mountOutlineEditor() {
     },
   });
 
+  const OutlineEditMode = Extension.create({
+    name: 'outlineEditMode',
+    addProseMirrorPlugins() {
+      const key = new PluginKey('outlineEditMode');
+      outlineEditModeKey = key;
+
+      const getActiveSectionId = (pmState) => {
+        const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+        if (typeof sectionPos !== 'number') return null;
+        const node = pmState.doc.nodeAt(sectionPos);
+        const id = String(node?.attrs?.id || '');
+        return id || null;
+      };
+
+      const canEditChangeRanges = (stateBefore, tr, editingSectionId) => {
+        if (!tr.docChanged) return true;
+        if (!editingSectionId) return false;
+        const sectionPos = findSectionPosById(stateBefore.doc, editingSectionId);
+        if (typeof sectionPos !== 'number') return false;
+        const sectionNode = stateBefore.doc.nodeAt(sectionPos);
+        if (!sectionNode) return false;
+
+        const headingNode = sectionNode.child(0);
+        const bodyNode = sectionNode.child(1);
+        const headingStart = sectionPos + 1;
+        const headingFrom = headingStart + 1;
+        const headingTo = headingStart + headingNode.nodeSize - 1;
+        const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+        const bodyFrom = bodyStart + 1;
+        const bodyTo = bodyStart + bodyNode.nodeSize - 1;
+
+        const isAllowed = (from, to) => {
+          const withinHeading = from >= headingFrom && to <= headingTo;
+          const withinBody = from >= bodyFrom && to <= bodyTo;
+          return withinHeading || withinBody;
+        };
+
+        for (const step of tr.steps) {
+          const map = step.getMap();
+          let ok = true;
+          map.forEach((from, to) => {
+            if (!isAllowed(from, to)) ok = false;
+          });
+          if (!ok) return false;
+        }
+        return true;
+      };
+
+      const notifyReadOnly = () => {
+        try {
+          showToast('Для редактирования нажмите Enter или двойной клик мышкой. Esc для выхода.');
+        } catch {
+          // ignore
+        }
+      };
+
+      return [
+        new Plugin({
+          key,
+          state: {
+            init() {
+              return { editingSectionId: null };
+            },
+            apply(tr, prev) {
+              const meta = tr.getMeta(key);
+              if (!meta) return prev;
+              if (meta.type === 'enter') return { editingSectionId: meta.sectionId || null };
+              if (meta.type === 'exit') return { editingSectionId: null };
+              return prev;
+            },
+          },
+          filterTransaction(tr, stateBefore) {
+            const st = key.getState(stateBefore) || {};
+            const editingSectionId = st.editingSectionId || null;
+            if (tr.getMeta(OUTLINE_ALLOW_META)) return true;
+            if (!tr.docChanged) return true;
+            return canEditChangeRanges(stateBefore, tr, editingSectionId);
+          },
+          props: {
+            decorations(pmState) {
+              try {
+                const st = key.getState(pmState) || {};
+                const editingSectionId = st.editingSectionId || null;
+                if (!editingSectionId) return null;
+                const pos = findSectionPosById(pmState.doc, editingSectionId);
+                if (typeof pos !== 'number') return null;
+                const node = pmState.doc.nodeAt(pos);
+                if (!node) return null;
+                return DecorationSet.create(pmState.doc, [
+                  Decoration.node(pos, pos + node.nodeSize, { 'data-editing': 'true' }),
+                ]);
+              } catch {
+                return null;
+              }
+            },
+            handleKeyDown(view, event) {
+              const pmState = view.state;
+              const st = key.getState(pmState) || {};
+              const editingSectionId = st.editingSectionId || null;
+
+              if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+                const sectionId = getActiveSectionId(pmState);
+                if (!sectionId) return false;
+                event.preventDefault();
+                event.stopPropagation();
+                view.dispatch(pmState.tr.setMeta(key, { type: 'enter', sectionId }));
+                return true;
+              }
+
+              if (editingSectionId && event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                view.dispatch(pmState.tr.setMeta(key, { type: 'exit' }));
+                return true;
+              }
+
+              if (!editingSectionId) {
+                const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+                const isDelete = event.key === 'Backspace' || event.key === 'Delete';
+                if (isTextInput || isDelete) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  notifyReadOnly();
+                  return true;
+                }
+              }
+              return false;
+            },
+            handleTextInput() {
+              // ProseMirror вызывает handleTextInput(view, from, to, text).
+              // Здесь важно читать состояние плагина из `view.state`, а не из `this`.
+              // eslint-disable-next-line prefer-rest-params
+              const view = arguments[0];
+              const st = view?.state ? key.getState(view.state) : null;
+              if (st && st.editingSectionId) return false;
+              notifyReadOnly();
+              return true;
+            },
+            handleDOMEvents: {
+              paste(view, event) {
+                const pmState = view.state;
+                const st = key.getState(pmState) || {};
+                if (st.editingSectionId) return false;
+                event.preventDefault();
+                event.stopPropagation();
+                notifyReadOnly();
+                return true;
+              },
+              drop(view, event) {
+                const pmState = view.state;
+                const st = key.getState(pmState) || {};
+                if (st.editingSectionId) return false;
+                event.preventDefault();
+                event.stopPropagation();
+                notifyReadOnly();
+                return true;
+              },
+            },
+          },
+        }),
+      ];
+    },
+  });
+
   const parseHtmlToNodes = (html) => {
     const normalized = (html || '').trim();
     if (!normalized) return [];
@@ -2276,6 +2518,7 @@ async function mountOutlineEditor() {
       OutlineBody,
       OutlineChildren,
       OutlineActiveSection,
+      OutlineEditMode,
       UniqueID.configure({
         types: ['outlineSection'],
         attributeName: 'id',
@@ -2301,6 +2544,74 @@ async function mountOutlineEditor() {
     editorProps: {
       attributes: {
         class: 'outline-prosemirror',
+      },
+      handleKeyDown(view, event) {
+        // В view-mode Enter/F2 должны ВСЕГДА включать режим редактирования текущей секции,
+        // даже когда курсор стоит внутри listItem (иначе list keymap "съедает" Enter).
+        try {
+          if (!outlineEditModeKey) return false;
+          const st = outlineEditModeKey.getState(view.state) || {};
+          const editingSectionId = st.editingSectionId || null;
+
+          if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
+            if (typeof sectionPos !== 'number') return false;
+            const sectionNode = view.state.doc.nodeAt(sectionPos);
+            const sectionId = String(sectionNode?.attrs?.id || '');
+            if (!sectionId) return false;
+            event.preventDefault();
+            event.stopPropagation();
+            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId }));
+            return true;
+          }
+
+          if (editingSectionId && event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
+            return true;
+          }
+        } catch {
+          // ignore
+        }
+        return false;
+      },
+      handleDOMEvents: {
+        dblclick(view, event) {
+          try {
+            if (!outlineEditModeKey) return false;
+            const st = outlineEditModeKey.getState(view.state) || {};
+            const editingSectionId = st.editingSectionId || null;
+            if (editingSectionId) return false;
+
+            const coords = { left: event.clientX, top: event.clientY };
+            const hit = view.posAtCoords(coords);
+            const pos = hit && typeof hit.pos === 'number' ? hit.pos : null;
+            if (typeof pos !== 'number') return false;
+
+            const $from = view.state.doc.resolve(Math.max(0, Math.min(view.state.doc.content.size, pos)));
+            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, $from);
+            if (typeof sectionPos !== 'number') return false;
+            const sectionNode = view.state.doc.nodeAt(sectionPos);
+            const sectionId = String(sectionNode?.attrs?.id || '');
+            if (!sectionId) return false;
+
+            // Не мешаем стандартному выделению слова по dblclick:
+            // включаем edit-mode сразу после того, как ProseMirror обработает событие.
+            window.setTimeout(() => {
+              try {
+                const st2 = outlineEditModeKey.getState(view.state) || {};
+                if (st2.editingSectionId) return;
+                view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId }));
+              } catch {
+                // ignore
+              }
+            }, 0);
+          } catch {
+            // ignore
+          }
+          return false;
+        },
       },
     },
     onCreate: ({ editor }) => {
@@ -2341,6 +2652,18 @@ async function mountOutlineEditor() {
       const sectionNode = pmState.doc.nodeAt(sectionPos);
       const sectionId = String(sectionNode?.attrs?.id || '');
       if (!sectionId) return;
+
+      // Если были в режиме редактирования и ушли в другую секцию — выходим в просмотр.
+      try {
+        const st = outlineEditModeKey?.getState?.(pmState) || null;
+        const editingSectionId = st?.editingSectionId || null;
+        if (editingSectionId && editingSectionId !== sectionId) {
+          editor.view.dispatch(pmState.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
+        }
+      } catch {
+        // ignore
+      }
+
       if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
         try {
           maybeGenerateTitleOnLeave(editor, pmState.doc, lastActiveSectionId);
@@ -2603,6 +2926,13 @@ export async function openOutlineEditor() {
     } catch {
       // ignore
     }
+    // При входе в outline ставим курсор в начало body текущей секции,
+    // чтобы не приходилось "тыкать мышкой".
+    try {
+      moveCursorToActiveSectionBodyStart(outlineEditorInstance);
+    } catch {
+      // ignore
+    }
     const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
     if (loading) loading.classList.add('hidden');
     setOutlineStatus('Сохраняется автоматически');
@@ -2638,6 +2968,7 @@ export async function openOutlineEditor() {
 export function closeOutlineEditor() {
   state.isOutlineEditing = false;
   unmountOutlineToolbar();
+  outlineEditModeKey = null;
   if (refs.outlineToolbar) refs.outlineToolbar.classList.add('hidden');
   if (refs.articleToolbar) refs.articleToolbar.classList.remove('hidden');
   if (autosaveTimer) {

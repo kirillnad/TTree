@@ -1828,7 +1828,7 @@ button.icon-button.small {
   --outline-bar-border: rgba(148, 163, 184, 0.5);
   --outline-bar-text: rgba(15, 23, 42, 0.92);
   --outline-bar-subtext: rgba(51, 65, 85, 0.75);
-  --outline-card-bg: #ffffff;
+  --outline-card-bg: #f8fafc;
   --outline-card-border: rgba(148, 163, 184, 0.5);
   --outline-card-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   --outline-toggle-bg: #f8fafc;
@@ -1903,6 +1903,14 @@ button.icon-button.small {
   margin: 2px 0;
   background: var(--outline-card-bg);
   box-shadow: var(--outline-card-shadow);
+}
+.outline-section[data-editing="true"] {
+  background: #eef2f7;
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
+}
+.outline-section[data-editing="true"] > .outline-body {
+  background: rgba(255, 255, 255, 0.92);
 }
 .outline-section[data-collapsed="true"] > .outline-body,
 .outline-section[data-collapsed="true"] > .outline-children {
@@ -2029,6 +2037,90 @@ button.icon-button.small {
   background-color: #f1f5f9;
   font-weight: 650;
 }
+.outline-body > * + * {
+  margin-top: 0.65em;
+}
+.outline-body p {
+  margin: 0;
+  line-height: 1.6;
+}
+.outline-body ul,
+.outline-body ol {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+.outline-body li + li {
+  margin-top: 0.4em;
+}
+.outline-body li p {
+  margin: 0;
+}
+.outline-body blockquote {
+  margin: 0.6em 0;
+  padding-left: 14px;
+  border-left: 4px solid rgba(148, 163, 184, 0.65);
+  color: rgba(51, 65, 85, 0.95);
+}
+.outline-body code {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.95em;
+}
+.outline-body pre {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  line-height: 1.5;
+  margin: 0.8em 0;
+}
+.outline-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.95em;
+}
+.outline-body a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.outline-body a:hover {
+  color: #1d4ed8;
+}
+.outline-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* TipTap tables: selection + resize handle */
+.outline-body .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(37, 99, 235, 0.12);
+  pointer-events: none;
+}
+.outline-body .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: rgba(37, 99, 235, 0.35);
+  pointer-events: none;
+}
+.outline-body td,
+.outline-body th {
+  position: relative;
+}
 .outline-editor__loading {
   margin-top: 10px;
   color: rgba(51, 65, 85, 0.75);
@@ -2053,8 +2145,11 @@ button.icon-button.small {
 .outline-section[data-active="true"] > .outline-heading ~ .outline-children {
   border-left: 2px solid rgba(37, 99, 235, 0.22);
 }
-.outline-section[data-active="true"] > .outline-body {
-  background: rgba(37, 99, 235, 0.06);
+.outline-section[data-active="true"]:not([data-editing="true"]) > .outline-body {
+    background: rgb(43 235 37 / 6%);
+}
+.outline-section[data-editing="true"] > .outline-body {
+  background: rgba(255, 255, 255, 0.92);
 }
 .outline-section > .outline-body {
   transition: background-color 0.15s ease;
