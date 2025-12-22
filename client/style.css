@@ -3563,13 +3563,6 @@ main.content {
     border-radius: 0;
     box-shadow: none;
   }
-  body.export-page .panel.export-panel {
-    margin: 0;
-    padding: 0;
-    max-width: 100%;
-    border-radius: 0;
-    box-shadow: none;
-  }
   .blocks {
     padding: 0;
     /* gap: 0.35rem; */
@@ -3699,54 +3692,54 @@ h4 {
 }
 
 /* Абзацы и текст */
-body.export-page p {
+body.export-static p {
   margin: 0 0 1em;
 }
 
-body.export-page strong {
+body.export-static strong {
   font-weight: 600;
   color: #111827;
 }
 
-body.export-page em {
+body.export-static em {
   font-style: italic;
 }
 
 /* Списки (в руководстве их много) */
-body.export-page ul,
-body.export-page ol {
+body.export-static ul,
+body.export-static ol {
   margin: 1em 0;
   padding-left: 2em;
 }
 
-body.export-page li + li {
+body.export-static li + li {
   margin-top: 0.5em;
 }
 
 /* Таблицы (сравнения, как про блоки vs обычный текст) */
-body.export-page table {
+body.export-static table {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
   font-size: 0.95rem;
 }
 
-body.export-page th,
-body.export-page td {
+body.export-static th,
+body.export-static td {
   padding: 8px 12px;
   border: 1px solid #dddddd;
   text-align: left;
   vertical-align: top;
 }
 
-body.export-page thead tr {
+body.export-static thead tr {
   background-color: #f5f5f5;
   font-weight: bold;
 }
 
 /* Горячие клавиши и код */
-body.export-page code,
-body.export-page kbd {
+body.export-static code,
+body.export-static kbd {
   font-family: 'Courier New', monospace;
   font-size: 0.95em;
   background: #f4f4f4;
@@ -3755,12 +3748,12 @@ body.export-page kbd {
   border: none;
 }
 
-body.export-page kbd {
+body.export-static kbd {
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
   font-weight: 500;
 }
 
-body.export-page pre {
+body.export-static pre {
   background: #f4f4f4;
   color: #333333;
   padding: 15px;
@@ -3772,7 +3765,7 @@ body.export-page pre {
   margin: 1em 0;
 }
 
-body.export-page blockquote {
+body.export-static blockquote {
   border-left: 4px solid #dddddd;
   margin: 1em 0;
   padding-left: 20px;
@@ -3781,12 +3774,12 @@ body.export-page blockquote {
 }
 
 /* Ссылки */
-body.export-page a {
+body.export-static a {
   color: #2563eb;
   text-decoration: none;
 }
 
-body.export-page a:hover {
+body.export-static a:hover {
   text-decoration: underline;
 }
 
@@ -3810,22 +3803,22 @@ body.export-page a:hover {
 }
 
 /* Визуальные разделители */
-body.export-page hr {
+body.export-static hr {
   border: none;
   border-top: 1px solid #e5e7eb;
   margin: 1.8em 0;
 }
 
 /* Мелкий вторичный текст */
-body.export-page .meta,
-body.export-page .muted {
+body.export-static .meta,
+body.export-static .muted {
   font-size: 0.85rem;
   color: #6b7280;
 }
 
 /* Внутри блоков оставляем компактный текст как в ORI_ux:
    отступы абзацев задаются только line-height, без margin. */
-body.export-page .block-text p {
+body.export-static .block-text p {
   line-height: 1.5;
   margin-top: 0;
   margin-bottom: 0;

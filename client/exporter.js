@@ -255,7 +255,7 @@ function buildExportBodyFromBlocks(blocks = [], { title, updatedAt, suppressRoot
     <div class="panel-header article-header">
       <div class="title-block">
         <div class="title-row">
-          <h1 class="export-title">${escapeHtml(title || 'Без названия')}</h1>
+          <h1>${escapeHtml(title || 'Без названия')}</h1>
         </div>
         ${updatedLabel ? `<p class="meta">Обновлено: ${escapeHtml(updatedLabel)}</p>` : ''}
       </div>
@@ -263,16 +263,12 @@ function buildExportBodyFromBlocks(blocks = [], { title, updatedAt, suppressRoot
   `;
 
   const bodyHtml = `
-    <div class="export-shell" aria-label="Экспорт статьи">
-      <main class="content export-content">
-        <section class="panel export-panel" aria-label="Статья">
-          ${header}
-          <div id="exportBlocksRoot" class="blocks" role="tree">
-            ${blocksHtml}
-          </div>
-        </section>
-      </main>
-    </div>
+    <section aria-label="Экспорт статьи">
+      ${header}
+      <div id="exportBlocksRoot" class="blocks" role="tree">
+        ${blocksHtml}
+      </div>
+    </section>
   `;
 
   return { bodyHtml, plainText, wordCount };
@@ -446,23 +442,6 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
     body.export-page {
       margin: 0;
       background: #eef2f8;
-      overflow: auto;
-      height: auto;
-    }
-    .export-shell {
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      background: #eef2f8;
-    }
-    .export-content {
-      padding: 1rem;
-      width: 100%;
-      max-width: 960px;
-    }
-    .export-panel {
-      min-height: auto;
-      height: auto;
     }
     .block-children.collapsed {
       display: none;
@@ -470,20 +449,8 @@ function buildDocument({ cssText, contentHtml, title, description, article, word
     .block {
       cursor: default;
     }
-    .export-title {
+    body.export-page .title-row h1 {
       margin: 0;
-    }
-    @media (max-width: 640px) {
-      body.export-page .page {
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        border-radius: 0;
-        box-shadow: none;
-      }
-      body.export-page .export-content {
-        padding: 0.1rem;
-      }
     }
   `;
 
@@ -510,7 +477,7 @@ ${extraCss}
 ${JSON.stringify(jsonLd, null, 2)}
   </script>
 </head>
-<body class="export-page">
+<body class="export-page export-static">
 <div class="page">
 <script type="application/json" id="memus-export">
 ${JSON.stringify(exportPayload || null, null, 2)}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import html as html_mod
+import json
 import os
 import re
 from datetime import datetime
@@ -9,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from .db import CONN
-from .doc_json_render import render_outline_doc_json_html
 
 # Вынесено из app/main.py → app/public_render.py
 
@@ -56,6 +56,78 @@ def _rewrite_internal_links_for_public(html_text: str) -> str:
         return f'<a {before_attrs}href="{href}"{after_attrs}>{inner_html}</a>'
 
     return _INTERNAL_ARTICLE_LINK_RE.sub(_replace, html_text or '')
+
+
+def _rewrite_internal_links_in_doc_json_for_public(doc_json: Any) -> Any:
+    """
+    Для публичной страницы переписываем ссылки внутри doc_json:
+    - href="/article/<uuid>" -> "/p/<public_slug>" если статья опубликована;
+    - иначе href="#" и rel+="unpublished" (клик в public-view покажет алерт).
+    """
+    if not isinstance(doc_json, dict):
+        return doc_json
+
+    # Deep copy to avoid mutating DB-loaded dicts.
+    try:
+        out: Any = json.loads(json.dumps(doc_json))
+    except Exception:  # noqa: BLE001
+        out = doc_json
+
+    cache: dict[str, str] = {}
+    href_re = re.compile(r'^/article/([0-9a-fA-F-]+)$')
+
+    def resolve_slug(article_id: str) -> str:
+        if article_id in cache:
+            return cache[article_id]
+        row = CONN.execute(
+            'SELECT public_slug FROM articles WHERE id = ? AND deleted_at IS NULL',
+            (article_id,),
+        ).fetchone()
+        slug = (row['public_slug'] or '') if row and row['public_slug'] else ''
+        cache[article_id] = slug
+        return slug
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            marks = node.get('marks')
+            if isinstance(marks, list):
+                for mark in marks:
+                    if not isinstance(mark, dict):
+                        continue
+                    if mark.get('type') != 'link':
+                        continue
+                    attrs = mark.get('attrs')
+                    if not isinstance(attrs, dict):
+                        continue
+                    href = attrs.get('href')
+                    if not isinstance(href, str):
+                        continue
+                    m = href_re.match(href.strip())
+                    if not m:
+                        continue
+                    article_id = m.group(1)
+                    slug = resolve_slug(article_id)
+                    new_attrs = dict(attrs)
+                    if slug:
+                        new_attrs['href'] = f'/p/{slug}'
+                    else:
+                        new_attrs['href'] = '#'
+                        rel = str(new_attrs.get('rel') or '').strip()
+                        parts = [p for p in rel.split() if p]
+                        if 'unpublished' not in parts:
+                            parts.append('unpublished')
+                        new_attrs['rel'] = ' '.join(parts).strip()
+                    mark['attrs'] = new_attrs
+            content = node.get('content')
+            if isinstance(content, list):
+                for child in content:
+                    walk(child)
+        elif isinstance(node, list):
+            for child in node:
+                walk(child)
+
+    walk(out)
+    return out
 
 
 def _split_public_block_sections(raw_html: str) -> tuple[str, str]:
@@ -289,17 +361,21 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     except Exception:  # noqa: BLE001
         updated_label = updated_raw or ''
 
-    # doc_json-first: render from outline TipTap JSON.
+    # Public view: mount the same outliner scripts in strict read-only mode.
+    doc_json = _rewrite_internal_links_in_doc_json_for_public(article.get('docJson'))
+    doc_json_text = json.dumps(doc_json or {}, ensure_ascii=False)
+    # Avoid breaking out of script tag.
+    doc_json_text = doc_json_text.replace('</', '<\\/')
+
     try:
-        doc_html = render_outline_doc_json_html(article.get('docJson'))
-    except Exception:
-        doc_html = ''
-    doc_html = _rewrite_internal_links_for_public(doc_html or '')
+        editor_v = int((CLIENT_DIR / 'outline' / 'editor.js').stat().st_mtime)
+    except OSError:
+        editor_v = 1
     header = f"""
     <div class="panel-header article-header">
       <div class="title-block">
         <div class="title-row">
-          <h1 class="export-title">{title}</h1>
+          <h1>{title}</h1>
         </div>
         {f'<p class="meta">Обновлено: {html_mod.escape(updated_label)}</p>' if updated_label else ''}
         <p class="meta">Публичная страница Memus (только для чтения)</p>
@@ -307,16 +383,18 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     </div>
     """
     body_inner = f"""
-    <div class="export-shell" aria-label="Публичная статья">
-      <main class="content export-content">
-        <section class="panel export-panel" aria-label="Статья">
-          {header}
-          <div id="exportBlocksRoot" class="blocks" role="tree">
-            {doc_html}
-          </div>
-        </section>
-      </main>
-    </div>
+    <section aria-label="Публичная статья">
+      {header}
+      <div id="outlineEditor" class="outline-editor"></div>
+    </section>
+    <div id="toast" class="toast hidden" aria-live="polite"></div>
+    <script type="application/json" id="publicDocJson">{doc_json_text}</script>
+    <script type="module">
+      import {{ openPublicOutlineViewer }} from "/outline/editor.js?v={editor_v}";
+      const el = document.getElementById('publicDocJson');
+      const docJson = el ? JSON.parse(el.textContent || '{{}}') : {{}};
+      openPublicOutlineViewer({{ docJson }});
+    </script>
     """
 
     # Берём тот же extraCss, что и экспорт HTML в exporter.js
@@ -327,43 +405,19 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
       overflow: auto;
       height: auto;
     }
-    .export-shell {
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      background: #eef2f8;
-    }
-    .export-content {
-      
-      width: 100%;
-      max-width: 960px;
-    }
-    .export-panel {
-      min-height: auto;
-      height: auto;
-    }
-    .block-children.collapsed {
-      display: none;
-    }
-    .block {
-      cursor: default;
-    }
-    .export-title {
+    body.export-page .title-row h1 {
       margin: 0;
     }
-    @media (max-width: 800px) {
-      body.export-page .page {
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        border-radius: 0;
-        box-shadow: none;
-      }
-      body.export-page .export-content {
-        padding: 0;
-      }
-    }
-    """
+	    @media (max-width: 800px) {
+	      body.export-page .page {
+	        margin: 0;
+	        padding: 0;
+	        max-width: 100%;
+	        border-radius: 0;
+	        box-shadow: none;
+	      }
+	    }
+	    """
 
     # Загружаем тот же style.css, что и SPA.
     try:
@@ -371,225 +425,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     except OSError:
         css_text = ''
 
-    interactions_script = """
-    <script>
-(function() {
-  var root = document.getElementById('exportBlocksRoot');
-  if (!root) return;
-  var collapseIcon = { open: '▾', closed: '▸' };
-  var firstBlock = root.querySelector('.block');
-  var currentId = firstBlock ? firstBlock.getAttribute('data-block-id') : null;
-
-  function getParentBlock(block) {
-    if (!block || !block.parentElement) return null;
-    return block.parentElement.closest('.block');
-  }
-
-  function updateBlockView(block, collapsed) {
-    block.dataset.collapsed = collapsed ? 'true' : 'false';
-    var body = block.querySelector('.block-body');
-    var noTitle = block.classList.contains('block--no-title');
-    if (body && !noTitle) {
-      body.classList.toggle('collapsed', collapsed);
-    }
-    var children = block.querySelector('.block-children');
-    if (children) children.classList.toggle('collapsed', collapsed);
-    var btn = block.querySelector('.collapse-btn');
-    if (btn) {
-      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      btn.textContent = collapsed ? collapseIcon.closed : collapseIcon.open;
-    }
-  }
-
-  function collectVisible() {
-    var result = [];
-    function walk(container) {
-      var children = container.children;
-      for (var i = 0; i < children.length; i += 1) {
-        var node = children[i];
-        if (!node.classList || !node.classList.contains('block')) continue;
-        result.push(node);
-        var isCollapsed = node.dataset.collapsed === 'true';
-        var kids = node.querySelector('.block-children');
-        if (!isCollapsed && kids) walk(kids);
-      }
-    }
-    walk(root);
-    return result;
-  }
-
-  function setCurrent(block) {
-    if (!block) return;
-    currentId = block.getAttribute('data-block-id') || null;
-    Array.prototype.forEach.call(
-      root.querySelectorAll('.block.selected'),
-      function(el) { el.classList.remove('selected'); }
-    );
-    block.classList.add('selected');
-    block.focus({ preventScroll: false });
-  }
-
-  function toggleBlock(block, desired) {
-    if (!block) return;
-    var collapsed = block.dataset.collapsed === 'true';
-    var next = typeof desired === 'boolean' ? desired : !collapsed;
-    updateBlockView(block, next);
-  }
-
-  function moveSelection(offset) {
-    if (!currentId) {
-      var first = root.querySelector('.block');
-      if (first) setCurrent(first);
-      return;
-    }
-    var ordered = collectVisible();
-    var index = -1;
-    for (var i = 0; i < ordered.length; i += 1) {
-      if (ordered[i].getAttribute('data-block-id') === currentId) {
-        index = i;
-        break;
-      }
-    }
-    if (index === -1) return;
-    var next = ordered[index + offset];
-    if (next) setCurrent(next);
-  }
-
-  function scrollCurrentBlockStep(direction) {
-    if (!currentId) return false;
-    var el =
-      root.querySelector('.block[data-block-id=\"' + currentId + '\"] > .block-surface') ||
-      root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
-    if (!el) return false;
-    var rect = el.getBoundingClientRect();
-    var margin = 24;
-    var visibleHeight = window.innerHeight - margin * 2;
-    if (visibleHeight <= 0) return false;
-    if (rect.height <= visibleHeight) return false;
-    if (direction === 'down') {
-      var bottomLimit = window.innerHeight - margin;
-      if (rect.bottom <= bottomLimit) return false;
-      var delta = rect.bottom - bottomLimit;
-      var baseStep = Math.min(Math.max(delta, 40), 160);
-      var step = Math.max(24, Math.round(baseStep / 3));
-      window.scrollBy({ top: step, behavior: 'smooth' });
-      return true;
-    }
-    if (direction === 'up') {
-      var topLimit = margin;
-      if (rect.top >= topLimit) return false;
-      var deltaUp = topLimit - rect.top;
-      var baseStepUp = Math.min(Math.max(deltaUp, 40), 160);
-      var stepUp = Math.max(24, Math.round(baseStepUp / 3));
-      window.scrollBy({ top: -stepUp, behavior: 'smooth' });
-      return true;
-    }
-    return false;
-  }
-
-  function handleArrowLeft() {
-    if (!currentId) return;
-    var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
-    if (!block) return;
-    var collapsed = block.dataset.collapsed === 'true';
-    if (!collapsed) {
-      toggleBlock(block, true);
-      return;
-    }
-    var parent = getParentBlock(block);
-    if (parent) setCurrent(parent);
-  }
-
-  function handleArrowRight() {
-    if (!currentId) return;
-    var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
-    if (!block) return;
-    var collapsed = block.dataset.collapsed === 'true';
-    var firstChild = block.querySelector('.block-children .block');
-    if (collapsed) {
-      toggleBlock(block, false);
-      if (firstChild) setCurrent(firstChild);
-      return;
-    }
-    if (firstChild) {
-      setCurrent(firstChild);
-    }
-  }
-
-  root.addEventListener('click', function(event) {
-    var unpublished = event.target.closest('a[data-unpublished=\"1\"]');
-    if (unpublished) {
-      event.preventDefault();
-      alert('Эта страница пока не опубликована');
-      return;
-    }
-    var btn = event.target.closest('.collapse-btn');
-    if (btn) {
-      var targetId = btn.getAttribute('data-block-id');
-      var block = root.querySelector('.block[data-block-id=\"' + targetId + '\"]');
-      toggleBlock(block);
-      setCurrent(block);
-      return;
-    }
-    var block = event.target.closest('.block');
-    if (block) {
-      var header = block.querySelector('.block-header');
-      var body = block.querySelector('.block-text.block-body');
-      var bodyHasNoTitle = body && body.classList.contains('block-body--no-title');
-      var clickedInHeader = header && header.contains(event.target);
-      var clickedInBody = body && body.contains(event.target);
-      var hasLogicalTitle = !!(header && !bodyHasNoTitle);
-      var isInteractive = event.target.closest('a, button, input, textarea, select');
-      var shouldToggle = false;
-      if (hasLogicalTitle && clickedInHeader) {
-        // Для заголовка всегда разрешаем сворачивание, даже если внутри есть ссылка.
-        shouldToggle = true;
-      } else if (!hasLogicalTitle && clickedInBody && !isInteractive) {
-        // Для блоков без заголовка кликаем по телу, но не по интерактивным элементам.
-        shouldToggle = true;
-      }
-      if (shouldToggle) {
-        toggleBlock(block);
-      }
-      setCurrent(block);
-    }
-  });
-
-  document.addEventListener('keydown', function(event) {
-    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', ' '].indexOf(event.code) !== -1) {
-      event.preventDefault();
-    } else {
-      return;
-    }
-    if (event.code === 'ArrowDown') {
-      var scrolledDown = scrollCurrentBlockStep('down');
-      if (!scrolledDown) moveSelection(1);
-      return;
-    }
-    if (event.code === 'ArrowUp') {
-      var scrolledUp = scrollCurrentBlockStep('up');
-      if (!scrolledUp) moveSelection(-1);
-      return;
-    }
-    if (event.code === 'ArrowLeft') {
-      handleArrowLeft();
-      return;
-    }
-    if (event.code === 'ArrowRight') {
-      handleArrowRight();
-      return;
-    }
-    if (event.code === 'Enter' || event.code === 'Space' || event.code === ' ') {
-      if (!currentId) return;
-      var block = root.querySelector('.block[data-block-id=\"' + currentId + '\"]');
-      toggleBlock(block);
-    }
-  });
-
-  if (firstBlock) setCurrent(firstBlock);
-})();
-    </script>
-    """
+    interactions_script = ""
 
     html = f"""<!doctype html>
 <html lang="ru">

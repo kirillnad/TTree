@@ -155,47 +155,25 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     <div class="panel-header article-header">
       <div class="title-block">
         <div class="title-row">
-          <h1 class="export-title">{title}</h1>
+          <h1>{title}</h1>
         </div>
         {f'<p class="meta">Обновлено: {html_mod.escape(updated_label)}</p>' if updated_label else ''}
       </div>
     </div>
     """
     body_inner = f"""
-    <div class="export-shell" aria-label="Экспорт статьи">
-      <main class="content export-content">
-        <section class="panel export-panel" aria-label="Статья">
-          {header}
-          <div id="exportBlocksRoot" class="blocks" role="tree">
-            {blocks_html}
-          </div>
-        </section>
-      </main>
-    </div>
+    <section aria-label="Экспорт статьи">
+      {header}
+      <div id="exportBlocksRoot" class="blocks" role="tree">
+        {blocks_html}
+      </div>
+    </section>
     """
 
     # Те же базовые стили, что и в публичной версии / клиентском экспорте.
     extra_css = """
     body.export-page {
-      margin: 0.1rem;
       background: #eef2f8;
-      overflow: auto;
-      height: auto;
-    }
-    .export-shell {
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      background: #eef2f8;
-    }
-    .export-content {
-      padding: 1.5rem 1rem 2rem;
-      width: 100%;
-      max-width: 960px;
-    }
-    .export-panel {
-      min-height: auto;
-      height: auto;
     }
     .block-children.collapsed {
       display: none;
@@ -203,20 +181,8 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     .block {
       cursor: default;
     }
-    .export-title {
+    body.export-page .title-row h1 {
       margin: 0;
-    }
-    @media (max-width: 800px) {
-      body.export-page .page {
-        margin: 0.1rem;
-        padding: 0;
-        max-width: 100%;
-        border-radius: 0;
-        box-shadow: none;
-      }
-      body.export-page .export-content {
-        padding: 0.1rem;
-      }
     }
     """
 
@@ -473,11 +439,11 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
 {json.dumps(json_ld, ensure_ascii=False, indent=2)}
     </script>
   </head>
-  <body class="export-page">
-    <div class="page">
-    <script type="application/json" id="memus-export">
+	  <body class="export-page export-static">
+	    <div class="page">
+	    <script type="application/json" id="memus-export">
 {json.dumps(export_payload, ensure_ascii=False, indent=2)}
-    </script>
+	    </script>
     {body_inner}
     </div>
     {interactions_script}

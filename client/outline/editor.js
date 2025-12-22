@@ -1663,6 +1663,7 @@ function markSectionDirtyIfChanged(doc, sectionId) {
 function scheduleAutosave({ delayMs = 1200 } = {}) {
   if (!state.isOutlineEditing) return;
   if (!outlineEditorInstance) return;
+  if (state.isPublicView) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => {
     autosaveTimer = null;
@@ -1673,6 +1674,7 @@ function scheduleAutosave({ delayMs = 1200 } = {}) {
 async function runAutosave({ force = false } = {}) {
   if (!state.isOutlineEditing) return;
   if (!outlineEditorInstance) return;
+  if (state.isPublicView) return;
   if (autosaveInFlight) return;
   if (!force && !docDirty && !dirtySectionIds.size) return;
   autosaveInFlight = true;
@@ -4166,11 +4168,17 @@ async function mountOutlineEditor() {
                 pendingMerge = null;
               }
 
-              if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-                const sectionId = getActiveSectionId(pmState);
-                if (!sectionId) return false;
-                event.preventDefault();
-                event.stopPropagation();
+	              if (state.isPublicView && !editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+	                event.preventDefault();
+	                event.stopPropagation();
+	                return true;
+	              }
+
+	              if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+	                const sectionId = getActiveSectionId(pmState);
+	                if (!sectionId) return false;
+	                event.preventDefault();
+	                event.stopPropagation();
                 view.dispatch(pmState.tr.setMeta(key, { type: 'enter', sectionId }));
                 return true;
               }
@@ -4435,10 +4443,16 @@ async function mountOutlineEditor() {
             }
           }
 
-          if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
-            if (typeof sectionPos !== 'number') return false;
-            const sectionNode = view.state.doc.nodeAt(sectionPos);
+	          if (state.isPublicView && !editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+	            event.preventDefault();
+	            event.stopPropagation();
+	            return true;
+	          }
+
+	          if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
+	            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
+	            if (typeof sectionPos !== 'number') return false;
+	            const sectionNode = view.state.doc.nodeAt(sectionPos);
             const sectionId = String(sectionNode?.attrs?.id || '');
             if (!sectionId) return false;
             event.preventDefault();
@@ -4484,8 +4498,23 @@ async function mountOutlineEditor() {
 	            const editingSectionId = st.editingSectionId || null;
 	            if (editingSectionId) return false;
 
-	            const href = String(anchor.getAttribute('href') || '').trim();
-	            if (!href) return false;
+		            const href = String(anchor.getAttribute('href') || '').trim();
+		            if (!href) return false;
+
+		            if (state.isPublicView) {
+		              const relRaw = String(anchor.getAttribute('rel') || '');
+		              const relParts = relRaw.split(/\s+/).filter(Boolean);
+		              const isUnpublished =
+		                anchor.getAttribute('data-unpublished') === '1' ||
+		                relParts.includes('unpublished') ||
+		                href === '#';
+		              if (isUnpublished) {
+		                alert('Эта страница пока не опубликована');
+		                event.preventDefault();
+		                event.stopPropagation();
+		                return true;
+		              }
+		            }
 
 	            if (href.startsWith('app:/') || href.startsWith('disk:/')) {
 	              event.preventDefault();
@@ -4526,11 +4555,16 @@ async function mountOutlineEditor() {
             event.preventDefault();
             event.stopPropagation();
 
-            if (href.startsWith('/')) {
-              // SPA navigation for internal routes.
-              navigate(href);
-              return true;
-            }
+	            if (href.startsWith('/')) {
+	              // Internal routes.
+	              if (state.isPublicView) {
+	                window.location.href = href;
+	                return true;
+	              }
+	              // SPA navigation for internal routes.
+	              navigate(href);
+	              return true;
+	            }
             const normalized = normalizeExternalHref(href);
             if (/^https?:\/\//i.test(normalized) || /^mailto:/i.test(normalized) || /^tel:/i.test(normalized)) {
               window.open(normalized, '_blank', 'noopener,noreferrer');
@@ -4562,6 +4596,7 @@ async function mountOutlineEditor() {
         },
         dblclick(view, event) {
           try {
+            if (state.isPublicView) return false;
             if (!outlineEditModeKey) return false;
             const st = outlineEditModeKey.getState(view.state) || {};
             const editingSectionId = st.editingSectionId || null;
@@ -4756,6 +4791,7 @@ function serializeOutlineToBlocks() {
 }
 
 async function saveOutlineEditor(options = {}) {
+  if (state.isPublicView) return;
   if (!state.articleId || !state.article) return;
   if (!outlineEditorInstance) return;
   const silent = Boolean(options.silent);
@@ -5058,4 +5094,47 @@ export async function flushOutlineAutosave() {
     autosaveTimer = null;
   }
   await runAutosave({ force: true });
+}
+
+export async function openPublicOutlineViewer({ docJson } = {}) {
+  if (!refs.outlineEditor) return;
+  if (!docJson || typeof docJson !== 'object') {
+    showToast('Публичная статья: нет документа');
+    return;
+  }
+
+  state.isPublicView = true;
+  state.isRagView = false;
+  state.isOutlineEditing = false;
+  state.articleId = null;
+  state.article = { docJson, encrypted: false };
+
+  // Важно: CSS-переменные outline (цвета/рамки) объявлены на `.outline-editor`,
+  // поэтому в публичном просмотре принудительно добавляем этот класс.
+  try {
+    refs.outlineEditor.classList.add('outline-editor');
+  } catch {
+    // ignore
+  }
+
+  refs.outlineEditor.classList.remove('hidden');
+  if (!refs.outlineEditor.querySelector('#outlineEditorContent')) {
+    renderOutlineShell({ loading: true });
+  }
+  // В публичном просмотре верхняя панель outline-редактора не нужна.
+  try {
+    const bar = refs.outlineEditor.querySelector('.outline-editor__bar');
+    if (bar) bar.classList.add('hidden');
+  } catch {
+    // ignore
+  }
+
+  try {
+    await mountOutlineEditor();
+    const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
+    if (loading) loading.classList.add('hidden');
+    setOutlineStatus('Только просмотр');
+  } catch (error) {
+    showToast(error?.message || 'Не удалось открыть публичную статью');
+  }
 }
