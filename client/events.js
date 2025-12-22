@@ -51,7 +51,7 @@ import {
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
-import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js';
+import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js?v=2';
 import {
   apiRequest,
   importArticleFromHtml,
@@ -74,9 +74,9 @@ import {
   showVersionCompareTargetPicker,
   showVersionDiffModal,
   showBlockHistoryModal,
-} from './modal.js?v=9';
+} from './modal.js?v=10';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=74';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=76';
 import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
@@ -92,6 +92,108 @@ let semanticReindexPollTimeoutId = null;
 let semanticReindexIsPolling = false;
 let semanticReindexBaseLabel = 'Переиндексировать поиск';
 let semanticReindexRunningLabel = 'Переиндексация';
+
+function outlineDocJsonToIndexTextMap(docJson) {
+  const map = new Map();
+  const order = [];
+
+  const normalize = (value) =>
+    String(value || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\r\n/g, '\n');
+
+  const joinNonEmpty = (parts, sep = '\n') => parts.map((x) => normalize(x)).filter(Boolean).join(sep);
+
+  const renderNodeText = (node) => {
+    if (!node) return '';
+    if (Array.isArray(node)) return node.map(renderNodeText).join('');
+
+    if (node.type === 'text') return normalize(node.text || '');
+    if (node.type === 'hardBreak') return '\n';
+
+    if (node.type === 'table') {
+      const rows = [];
+      (node.content || []).forEach((rowNode) => {
+        if (rowNode?.type !== 'tableRow') return;
+        const cells = [];
+        (rowNode.content || []).forEach((cellNode) => {
+          if (!cellNode || (cellNode.type !== 'tableCell' && cellNode.type !== 'tableHeader')) return;
+          cells.push(renderNodeText(cellNode).trim());
+        });
+        rows.push(cells.join('\t'));
+      });
+      return `${rows.join('\n')}\n`;
+    }
+
+    const children = Array.isArray(node.content) ? node.content : [];
+    const inner = children.map(renderNodeText).join('');
+
+    if (node.type === 'paragraph' || node.type === 'heading') return `${inner}\n`;
+
+    if (node.type === 'bulletList') {
+      const items = children
+        .filter((x) => x?.type === 'listItem')
+        .map((item) => {
+          const t = renderNodeText(item).trimEnd();
+          if (!t) return '';
+          const lines = t.split('\n');
+          lines[0] = `- ${lines[0]}`;
+          return lines.join('\n');
+        })
+        .filter(Boolean);
+      return `${items.join('\n')}\n`;
+    }
+
+    if (node.type === 'orderedList') {
+      let idx = 1;
+      const items = children
+        .filter((x) => x?.type === 'listItem')
+        .map((item) => {
+          const t = renderNodeText(item).trimEnd();
+          if (!t) return '';
+          const lines = t.split('\n');
+          lines[0] = `${idx}. ${lines[0]}`;
+          idx += 1;
+          return lines.join('\n');
+        })
+        .filter(Boolean);
+      return `${items.join('\n')}\n`;
+    }
+
+    return inner;
+  };
+
+  const visit = (node) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+
+    if (node.type === 'outlineSection') {
+      const id = String(node?.attrs?.id || node?.attrs?.sectionId || '');
+      const headingNode = (node.content || []).find((x) => x?.type === 'outlineHeading') || null;
+      const bodyNode = (node.content || []).find((x) => x?.type === 'outlineBody') || null;
+      const childrenNode = (node.content || []).find((x) => x?.type === 'outlineChildren') || null;
+
+      const titlePlain = normalize(renderNodeText(headingNode)).trim();
+      const bodyPlain = normalize(renderNodeText(bodyNode)).trim();
+      const indexText = joinNonEmpty([titlePlain, bodyPlain], '\n').trim();
+
+      if (id) {
+        map.set(id, { indexText, label: titlePlain || id });
+        order.push(id);
+      }
+      if (childrenNode?.content) visit(childrenNode.content);
+      return;
+    }
+
+    if (node.content) visit(node.content);
+  };
+
+  visit(docJson?.content || []);
+  return { map, order };
+}
 
 function updateSemanticReindexBtnLabel(task) {
   if (!refs.semanticReindexBtn) return;
@@ -588,13 +690,6 @@ export function attachEvents() {
       exportCurrentArticleAsHtml();
     });
   }
-  if (refs.outlineEditBtn) {
-    refs.outlineEditBtn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      closeArticleMenu();
-      openOutlineEditor();
-    });
-  }
   if (refs.saveVersionBtn) {
     refs.saveVersionBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
@@ -675,51 +770,22 @@ export function attachEvents() {
 
           showPersistentToast('Сравниваем…');
           const verA = await fetchArticleVersion(state.articleId, versionId);
-          const blocksA = Array.isArray(verA?.blocks) ? verA.blocks : [];
+          const docA = verA?.docJson || verA?.doc_json || null;
 
-          let blocksB = [];
+          let docB = null;
           let beforeTitle = `Версия: ${labelForVersion(versionId)}`;
           let afterTitle = 'Текущая';
           if (target.target === 'current') {
-            blocksB = Array.isArray(state.article?.blocks) ? state.article.blocks : [];
+            docB = state.article?.docJson || state.article?.doc_json || null;
           } else {
             const verB = await fetchArticleVersion(state.articleId, target.versionId);
-            blocksB = Array.isArray(verB?.blocks) ? verB.blocks : [];
+            docB = verB?.docJson || verB?.doc_json || null;
             afterTitle = `Версия: ${labelForVersion(target.versionId)}`;
           }
           hideToast();
 
-          const strip = (html = '') => {
-            const tmp = document.createElement('div');
-            tmp.innerHTML = html || '';
-            return (tmp.textContent || '').replace(/\u00a0/g, ' ').trim();
-          };
-
-          const toIndexTextMap = (blocks) => {
-            const map = new Map();
-            const order = [];
-            const visit = (arr) => {
-              (arr || []).forEach((blk) => {
-                const id = String(blk?.id || '');
-                const text = String(blk?.text || '');
-                // title/body в Memus блоках разделены <p>title</p><p><br/></p>
-                const parts = extractBlockSections(text);
-                const titlePlain = strip(parts.titleHtml || '');
-                const bodyPlain = strip(parts.bodyHtml || '');
-                const indexText = `${titlePlain}\n${bodyPlain}`.trim();
-                if (id) {
-                  map.set(id, { indexText, label: titlePlain || id });
-                  order.push(id);
-                }
-                if (Array.isArray(blk?.children) && blk.children.length) visit(blk.children);
-              });
-            };
-            visit(blocks);
-            return { map, order };
-          };
-
-          const version = toIndexTextMap(blocksA);
-          const current = toIndexTextMap(blocksB);
+          const version = outlineDocJsonToIndexTextMap(docA || {});
+          const current = outlineDocJsonToIndexTextMap(docB || {});
 
           const changes = [];
           const seen = new Set();
@@ -796,10 +862,10 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-            const outline = await import('./outline/editor.js?v=74');
-            if (outline?.getOutlineActiveSectionId) {
-              blockId = outline.getOutlineActiveSectionId() || blockId;
-            }
+            const outline = await import('./outline/editor.js?v=76');
+          if (outline?.getOutlineActiveSectionId) {
+            blockId = outline.getOutlineActiveSectionId() || blockId;
+          }
           } catch {
             // ignore
           }
@@ -814,18 +880,11 @@ export function attachEvents() {
         );
         hideToast();
         const entriesRaw = Array.isArray(result?.entries) ? result.entries : [];
-
-        const toPlain = (htmlText) => {
-          const parts = extractBlockSections(String(htmlText || ''));
-          const titleLines = htmlToLines(parts.titleHtml || '');
-          const bodyLines = htmlToLines(parts.bodyHtml || '');
-          return [...titleLines, ...bodyLines].join('\n').trim();
-        };
-
         const entries = entriesRaw.map((e) => ({
           ...e,
-          beforePlain: toPlain(e.before),
-          afterPlain: toPlain(e.after),
+          // В outline-first истории `before/after` уже plain text (не HTML).
+          beforePlain: String(e.beforePlain ?? e.before ?? ''),
+          afterPlain: String(e.afterPlain ?? e.after ?? ''),
         }));
 
         const choice = await showBlockHistoryModal({
@@ -839,22 +898,26 @@ export function attachEvents() {
 
         const ok = await showConfirm({
           title: 'Восстановить блок?',
-          message: 'Блок будет заменён на состояние до выбранного изменения.',
+          message: 'Блок будет заменён на состояние после выбранного изменения.',
           confirmText: 'Восстановить',
           cancelText: 'Отмена',
         });
         if (!ok) return;
 
-        const htmlToRestore = String(choice.entry.after || '');
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=74');
-          if (outline?.restoreOutlineSectionFromBlockHtml) {
-            outline.restoreOutlineSectionFromBlockHtml(blockId, htmlToRestore);
+          const outline = await import('./outline/editor.js?v=76');
+          const frags = {
+            heading: choice.entry.afterHeadingJson || null,
+            body: choice.entry.afterBodyJson || null,
+          };
+          if (outline?.restoreOutlineSectionFromSectionFragments) {
+            outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
             showToast('Восстановлено (будет сохранено автоматически)');
             return;
           }
         }
 
+        const htmlToRestore = String(choice.entry.after || '');
         showPersistentToast('Восстанавливаем…');
         await apiRequest(`/api/articles/${encodeURIComponent(state.articleId)}/blocks/${encodeURIComponent(blockId)}`, {
           method: 'PATCH',

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import User, get_current_user
 from ..db import CONN
-from ..data_store import ArticleNotFound, InvalidOperation, get_article, replace_article_blocks_tree
+from ..data_store import ArticleNotFound, InvalidOperation, get_article, save_article_doc_json
 from .common import _resolve_article_id_for_user
 
 router = APIRouter()
@@ -39,7 +39,7 @@ def get_article_version(article_id: str, version_id: str, current_user: User = D
         raise HTTPException(status_code=404, detail='Article not found')
     row = CONN.execute(
         '''
-        SELECT id, created_at, reason, label, blocks_json
+        SELECT id, created_at, reason, label, blocks_json, doc_json
         FROM article_versions
         WHERE id = ? AND article_id = ? AND author_id = ?
         ''',
@@ -53,6 +53,7 @@ def get_article_version(article_id: str, version_id: str, current_user: User = D
         'reason': row.get('reason'),
         'label': row.get('label'),
         'blocks': json.loads(row.get('blocks_json') or '[]'),
+        'docJson': json.loads(row.get('doc_json')) if row.get('doc_json') else None,
     }
 
 
@@ -90,7 +91,7 @@ def create_article_version(article_id: str, payload: dict[str, Any] | None = Non
                 created_at,
                 'manual',
                 label,
-                json.dumps(article.get('blocks') or []),
+                json.dumps([]),
                 doc_json_value,
             ),
         )
@@ -117,18 +118,14 @@ def restore_article_version(article_id: str, version_id: str, current_user: User
     if not row:
         raise HTTPException(status_code=404, detail='Version not found')
     try:
-        blocks = json.loads(row.get('blocks_json') or '[]')
-    except Exception:
-        blocks = []
-    if not isinstance(blocks, list):
-        raise HTTPException(status_code=400, detail='Invalid version payload')
-    try:
-        result = replace_article_blocks_tree(
+        doc_json = json.loads(row.get('doc_json')) if row.get('doc_json') else None
+        if not doc_json:
+            raise HTTPException(status_code=400, detail='Version has no docJson')
+        result = save_article_doc_json(
             article_id=real_article_id,
             author_id=current_user.id,
-            blocks=blocks,
+            doc_json=doc_json,
             create_version_if_stale_hours=None,
-            doc_json=json.loads(row.get('doc_json')) if row.get('doc_json') else None,
         )
         return result
     except (ArticleNotFound, InvalidOperation) as exc:

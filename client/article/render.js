@@ -4,7 +4,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { apiRequest, fetchArticlesIndex } from '../api.js?v=4';
 import { showToast } from '../toast.js';
-import { showPrompt } from '../modal.js?v=9';
+import { showPrompt } from '../modal.js?v=10';
 import { startEditing, saveEditing, cancelEditing, createSibling } from '../actions.js';
 import { placeCaretAtEnd, placeCaretAtStart } from '../utils.js';
 import {
@@ -500,6 +500,12 @@ export async function rerenderSingleBlock(blockId) {
 export function renderArticle() {
   const article = state.article;
   if (!article) return;
+  // Outline-only mode: blocks UI is hidden; header + sidebar still refresh.
+  if (!state.isPublicView && !state.isRagView && state.isOutlineEditing) {
+    renderSidebarArticleList();
+    updateArticleHeaderUi();
+    return;
+  }
   if (Array.isArray(article.blocks)) {
     // Страхуемся от дубликатов блоков с одинаковым id,
     // которые могли появиться из-за локальных оптимистичных операций.

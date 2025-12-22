@@ -126,6 +126,23 @@ export function updateArticleDocJson(articleId, docJson) {
   });
 }
 
+export function saveArticleDocJson(articleId, docJson, options = {}) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  if (!docJson || typeof docJson !== 'object') {
+    return Promise.reject(new Error('docJson must be object'));
+  }
+  const payload = { docJson };
+  if (options && typeof options.createVersionIfStaleHours === 'number') {
+    payload.createVersionIfStaleHours = options.createVersionIfStaleHours;
+  }
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json/save`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function generateOutlineTitle(text) {
   if (typeof text !== 'string') {
     return Promise.reject(new Error('text must be string'));

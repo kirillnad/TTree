@@ -51,9 +51,12 @@ function applyUserToUi(user) {
   if (refs.currentUserLabel) {
     refs.currentUserLabel.textContent = user?.displayName || user?.username || '';
   }
+  const isSuperuser = !!(user && user.isSuperuser);
   if (refs.openUsersViewBtn) {
-    const isSuperuser = !!(user && user.isSuperuser);
     refs.openUsersViewBtn.classList.toggle('hidden', !isSuperuser);
+  }
+  if (refs.semanticReindexBtn) {
+    refs.semanticReindexBtn.classList.toggle('hidden', !isSuperuser);
   }
 }
 

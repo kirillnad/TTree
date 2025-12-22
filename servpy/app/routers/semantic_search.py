@@ -60,6 +60,8 @@ def semantic_embed_info(current_user: User = Depends(get_current_user)):
 
 @router.post('/api/search/semantic/reindex')
 def semantic_reindex(payload: SemanticReindexRequest | None = None, current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail='Superuser required')
     try:
         # Стартует асинхронную задачу (или вернёт уже запущенную),
         # чтобы клиент не висел и не падал по таймаутам.

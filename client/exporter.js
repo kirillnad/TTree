@@ -9,35 +9,22 @@ const EXPANDED_ICON = '▾';
 const WEBP_QUALITY = 0.82;
 
 export async function exportCurrentArticleAsHtml() {
-  if (!state.article) {
+  if (!state.article || !state.articleId) {
     showToast('Нет открытой статьи для экспорта');
     return;
   }
   try {
-    showToast('Готовим экспорт...');
-    const cssText = await loadCssText();
-    const { bodyHtml, plainText, wordCount } = buildExportBody(state.article);
-    const { html: inlinedHtml, failures } = await inlineAssets(bodyHtml);
-    const description = buildDescription(plainText);
-    const exportPayload = buildExportPayload(state.article);
-    const html = buildDocument({
-      cssText,
-      contentHtml: inlinedHtml,
-      title: state.article.title || 'Без названия',
-      description,
-      article: state.article,
-      wordCount,
-      lang: document.documentElement.lang || 'ru',
-      exportPayload,
+    showToast('Готовим экспорт…');
+    const response = await fetch(`/api/articles/${encodeURIComponent(state.articleId)}/export/html`, {
+      credentials: 'include',
+      cache: 'no-store',
     });
-    triggerDownload(html, makeFileName(state.article.title || 'article'));
-    if (failures.length) {
-      showToast(`Экспорт завершён с предупреждениями: ${failures.length} вложений не удалось инлайнить`);
-      // eslint-disable-next-line no-console
-      console.warn('Inline failures', failures);
-    } else {
-      showToast('HTML сохранён');
+    if (!response.ok) {
+      throw new Error(`Не удалось выгрузить HTML (HTTP ${response.status})`);
     }
+    const html = await response.text();
+    triggerDownload(html, makeFileName(state.article.title || 'article'));
+    showToast('HTML сохранён');
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Export failed', error);
@@ -46,6 +33,10 @@ export async function exportCurrentArticleAsHtml() {
 }
 
 export async function exportCurrentBlockAsHtml(blockId) {
+  if (state.article?.docJson || state.isOutlineEditing) {
+    showToast('Экспорт фрагмента пока недоступен в outline режиме');
+    return;
+  }
   if (!state.article) {
     showToast('Нет открытой статьи для экспорта');
     return;

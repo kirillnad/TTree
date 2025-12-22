@@ -2,14 +2,16 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { showImagePreview } from '../modal.js?v=9';
+import { showImagePreview } from '../modal.js?v=10';
 import {
   replaceArticleBlocksTree,
   updateArticleDocJson,
+  saveArticleDocJson,
   generateOutlineTitle,
   proofreadOutlineHtml,
   fetchArticlesIndex,
   uploadImageFile,
+  uploadFileToYandexDisk,
 } from '../api.js?v=7';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
@@ -34,8 +36,9 @@ const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: b
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
 let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
+let dropGuardCleanup = null;
 
-const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_v1';
+const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 const OUTLINE_ALLOW_META = 'outlineAllowMutation';
 let lastReadOnlyToastAt = 0;
 
@@ -565,25 +568,25 @@ function writeAutosaveQueue(queue) {
   }
 }
 
-function setQueuedBlocks(articleId, blocksPlain) {
+function setQueuedDocJson(articleId, docJson) {
   if (!articleId) return;
   if (state.article?.encrypted) return; // не сохраняем plaintext зашифрованных статей в localStorage
   const queue = readAutosaveQueue();
   queue[String(articleId)] = {
-    blocks: Array.isArray(blocksPlain) ? blocksPlain : [],
+    docJson: docJson && typeof docJson === 'object' ? docJson : null,
     queuedAt: Date.now(),
   };
   writeAutosaveQueue(queue);
 }
 
-function getQueuedBlocks(articleId) {
+function getQueuedDocJson(articleId) {
   const queue = readAutosaveQueue();
   const entry = queue && articleId ? queue[String(articleId)] : null;
-  if (!entry || !Array.isArray(entry.blocks)) return null;
-  return entry.blocks;
+  if (!entry || !entry.docJson || typeof entry.docJson !== 'object') return null;
+  return entry.docJson;
 }
 
-function clearQueuedBlocks(articleId) {
+function clearQueuedDocJson(articleId) {
   if (!articleId) return;
   const queue = readAutosaveQueue();
   if (queue && Object.prototype.hasOwnProperty.call(queue, String(articleId))) {
@@ -799,7 +802,7 @@ function mountOutlineToolbar(editor) {
 	    let url = '';
 	    let label = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=9');
+	      const mod = await import('../modal.js?v=10');
 	      const res = await mod.showLinkPrompt({
 	        title: 'Ссылка (URL)',
 	        message: 'Введите ссылку (любой формат) и текст (можно пусто).',
@@ -842,7 +845,7 @@ function mountOutlineToolbar(editor) {
 	    let selectedId = '';
 	    let labelInput = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=9');
+	      const mod = await import('../modal.js?v=10');
 	      const result = await mod.showArticleLinkPrompt({
 	        title: 'Ссылка на статью',
 	        message: 'Выберите статью и задайте текст ссылки.',
@@ -2110,7 +2113,7 @@ async function mountOutlineEditor() {
 	    },
 	  });
 
-	  const OutlineMarkdownTablePaste = Extension.create({
+		  const OutlineMarkdownTablePaste = Extension.create({
 	    name: 'outlineMarkdownTablePaste',
 	    addProseMirrorPlugins() {
 	      const maybeHandlePaste = (view, event) => {
@@ -2232,9 +2235,161 @@ async function mountOutlineEditor() {
 	        }),
 	      ];
 	    },
-	  });
+		  });
 
-  const OutlineDocument = Node.create({
+		  const resolveYandexDiskHref = (rawPath = '') => {
+		    const raw = String(rawPath || '').trim();
+		    if (!raw) return '';
+		    if (raw.startsWith('app:/') || raw.startsWith('disk:/')) {
+		      const encoded = encodeURIComponent(raw);
+		      return `/api/yandex/disk/file?path=${encoded}`;
+		    }
+		    return raw;
+		  };
+
+		  const OutlineAttachmentUpload = Extension.create({
+		    name: 'outlineAttachmentUpload',
+		    addProseMirrorPlugins() {
+		      const isNonImageFile = (file) => {
+		        const t = String(file?.type || '');
+		        return !(t && t.startsWith('image/'));
+		      };
+
+		      const collectNonImageFiles = (items, files) => {
+		        const out = [];
+		        try {
+		          const list = [];
+		          if (files && typeof files.length === 'number') {
+		            list.push(...Array.from(files || []));
+		          } else if (items && typeof items.length === 'number') {
+		            for (const it of Array.from(items || [])) {
+		              if (!it || it.kind !== 'file') continue;
+		              const f = it.getAsFile?.();
+		              if (f) list.push(f);
+		            }
+		          }
+		          for (const f of list) {
+		            if (!f) continue;
+		            if (isNonImageFile(f)) out.push(f);
+		          }
+		        } catch {
+		          // ignore
+		        }
+		        return out;
+		      };
+
+		      const pendingHrefFor = (token) => `pending-attachment:${String(token || '')}`;
+
+		      const findAttachmentRangeByToken = (doc, token) => {
+		        const pendingHref = pendingHrefFor(token);
+		        const linkType = doc?.type?.schema?.marks?.link || null;
+		        if (!linkType) return null;
+		        let found = null;
+		        doc.descendants((node, pos) => {
+		          if (found) return false;
+		          if (!node || !node.isText) return;
+		          const marks = Array.isArray(node.marks) ? node.marks : [];
+		          const has = marks.find((m) => m?.type === linkType && String(m?.attrs?.href || '') === pendingHref);
+		          if (!has) return;
+		          found = { from: pos, to: pos + node.nodeSize };
+		        });
+		        return found;
+		      };
+
+		      const insertUploadingAttachment = (view, file) => {
+		        const schema = view?.state?.schema;
+		        const linkType = schema?.marks?.link || null;
+		        if (!schema || !linkType) {
+		          showToast('Не удалось вставить вложение: нет схемы ссылок');
+		          return;
+		        }
+		        if (!state.articleId) {
+		          showToast('Сначала откройте статью');
+		          return;
+		        }
+
+		        const token = safeUuid();
+		        const pendingHref = pendingHrefFor(token);
+		        const safeName = String(file?.name || 'файл');
+		        const placeholderText = `${safeName} (загрузка...)`;
+
+		        const { from, to } = view.state.selection;
+		        let tr = view.state.tr.insertText(placeholderText, from, to);
+		        tr = tr.addMark(from, from + placeholderText.length, linkType.create({ href: pendingHref }));
+		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		        view.dispatch(tr.scrollIntoView());
+
+		        uploadFileToYandexDisk(state.articleId, file)
+		          .then((attachment) => {
+		            const hrefRaw = String(attachment?.storedPath || attachment?.url || attachment?.path || '').trim();
+		            if (!hrefRaw) throw new Error('Не удалось получить ссылку на файл');
+		            const finalName = String(attachment?.originalName || file?.name || 'файл');
+		            const range = findAttachmentRangeByToken(view.state.doc, token);
+		            if (!range) return;
+		            let tr2 = view.state.tr.insertText(finalName, range.from, range.to);
+		            tr2 = tr2.addMark(range.from, range.from + finalName.length, linkType.create({ href: hrefRaw }));
+		            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+		            view.dispatch(tr2);
+		          })
+		          .catch((err) => {
+		            const range = findAttachmentRangeByToken(view.state.doc, token);
+		            if (range) {
+		              const errorText = `${safeName} (ошибка загрузки)`;
+		              let tr2 = view.state.tr.insertText(errorText, range.from, range.to);
+		              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+		              view.dispatch(tr2);
+		            }
+		            showToast(err?.message || 'Не удалось загрузить файл на Яндекс.Диск');
+		          });
+		      };
+
+		      const handle = (view, event, items, files) => {
+		        const nonImgFiles = collectNonImageFiles(items, files);
+		        if (!nonImgFiles.length) return false;
+
+		        // Always prevent default file drop (browser may navigate away/open new tab).
+		        event.preventDefault();
+		        event.stopPropagation();
+
+		        try {
+		          const st = outlineEditModeKey?.getState?.(view.state) || null;
+		          if (!st?.editingSectionId) {
+		            notifyReadOnlyGlobal();
+		            return true;
+		          }
+		        } catch {
+		          notifyReadOnlyGlobal();
+		          return true;
+		        }
+
+		        for (const f of nonImgFiles) {
+		          insertUploadingAttachment(view, f);
+		        }
+		        return true;
+		      };
+
+		      return [
+		        new Plugin({
+		          props: {
+		            handleDOMEvents: {
+		              drop(view, event) {
+		                const items = event?.dataTransfer?.items || null;
+		                const files = event?.dataTransfer?.files || null;
+		                return handle(view, event, items, files);
+		              },
+		              paste(view, event) {
+		                const items = event?.clipboardData?.items || null;
+		                const files = event?.clipboardData?.files || null;
+		                return handle(view, event, items, files);
+		              },
+		            },
+		          },
+		        }),
+		      ];
+		    },
+		  });
+
+	  const OutlineDocument = Node.create({
     name: 'doc',
     topNode: true,
     content: 'outlineSection+',
@@ -4230,10 +4385,11 @@ async function mountOutlineEditor() {
 	      OutlineHeading,
 	      OutlineBody,
 	      OutlineChildren,
-	      OutlineActiveSection,
-	      OutlineEditMode,
-	      OutlineImageUpload,
-	      OutlineImageResize,
+		      OutlineActiveSection,
+		      OutlineEditMode,
+		      OutlineImageUpload,
+		      OutlineAttachmentUpload,
+		      OutlineImageResize,
 	      OutlineImagePreview,
 	      OutlineMarkdownTablePaste,
 	      UniqueID.configure({
@@ -4319,33 +4475,43 @@ async function mountOutlineEditor() {
         return false;
       },
       handleDOMEvents: {
-        click(view, event) {
-          try {
-            const anchor = event.target?.closest?.('a[href]');
-            if (!anchor) return false;
-            if (!outlineEditModeKey) return false;
-            const st = outlineEditModeKey.getState(view.state) || {};
-            const editingSectionId = st.editingSectionId || null;
-            if (editingSectionId) return false;
+	        click(view, event) {
+	          try {
+	            const anchor = event.target?.closest?.('a[href]');
+	            if (!anchor) return false;
+	            if (!outlineEditModeKey) return false;
+	            const st = outlineEditModeKey.getState(view.state) || {};
+	            const editingSectionId = st.editingSectionId || null;
+	            if (editingSectionId) return false;
 
-            const href = String(anchor.getAttribute('href') || '').trim();
-            if (!href) return false;
+	            const href = String(anchor.getAttribute('href') || '').trim();
+	            if (!href) return false;
 
-            const looksLikeBareDomain = (value) => {
-              const s = String(value || '').trim();
-              if (!s) return false;
-              if (s.startsWith('/') || s.startsWith('#')) return false;
-              if (/\s/.test(s)) return false;
-              if (s.includes('://')) return false;
-              // Exclude custom schemes like app:/, disk:/, mailto:, tel:
-              if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return false;
-              // Must contain a dot in the hostname part.
-              const host = s.split(/[/?#]/, 1)[0];
-              if (!host || !host.includes('.')) return false;
-              // Avoid cases like ".com" or "a..b"
-              if (host.startsWith('.') || host.endsWith('.') || host.includes('..')) return false;
-              return true;
-            };
+	            if (href.startsWith('app:/') || href.startsWith('disk:/')) {
+	              event.preventDefault();
+	              event.stopPropagation();
+	              const resolved = resolveYandexDiskHref(href);
+	              if (resolved) {
+	                window.open(resolved, '_blank', 'noopener,noreferrer');
+	                return true;
+	              }
+	            }
+
+	            const looksLikeBareDomain = (value) => {
+	              const s = String(value || '').trim();
+	              if (!s) return false;
+	              if (s.startsWith('/') || s.startsWith('#')) return false;
+	              if (/\s/.test(s)) return false;
+	              if (s.includes('://')) return false;
+	              // Exclude custom schemes like app:/, disk:/, mailto:, tel:
+	              if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return false;
+	              // Must contain a dot in the hostname part.
+	              const host = s.split(/[/?#]/, 1)[0];
+	              if (!host || !host.includes('.')) return false;
+	              // Avoid cases like ".com" or "a..b"
+	              if (host.startsWith('.') || host.endsWith('.') || host.includes('..')) return false;
+	              return true;
+	            };
 
             const normalizeExternalHref = (value) => {
               const s = String(value || '').trim();
@@ -4595,34 +4761,18 @@ async function saveOutlineEditor(options = {}) {
   const silent = Boolean(options.silent);
   try {
     if (!silent) showPersistentToast('Сохраняем outline…');
-    const blocksPlain = serializeOutlineToBlocks();
-    if (!blocksPlain.length) {
+    if (state.article.encrypted) {
       if (!silent) {
         hideToast();
-        showToast('Нечего сохранять');
+        showToast('Outline-сохранение docJson недоступно для зашифрованных статей');
       }
       return;
     }
-    const blocksForServer = JSON.parse(JSON.stringify(blocksPlain));
-    if (state.article.encrypted) {
-      const key = state.articleEncryptionKeys?.[state.articleId] || null;
-      if (!key) {
-        if (!silent) {
-          hideToast();
-          showToast('Не найден ключ шифрования для статьи');
-        }
-        return;
-      }
-      await encryptBlockTree(blocksForServer, key);
-    }
-    const result = await replaceArticleBlocksTree(state.articleId, blocksForServer, {
-      createVersionIfStaleHours: 12,
-      // Никогда не отправляем plaintext docJson для зашифрованных статей.
-      docJson: state.article.encrypted ? null : outlineEditorInstance.getJSON(),
-    });
+    const docJson = outlineEditorInstance.getJSON();
+    const result = await saveArticleDocJson(state.articleId, docJson, { createVersionIfStaleHours: 12 });
     if (!silent) hideToast();
     if (state.article) {
-      state.article.blocks = blocksPlain;
+      state.article.docJson = docJson;
       if (result?.updatedAt) {
         state.article.updatedAt = result.updatedAt;
       }
@@ -4639,7 +4789,7 @@ async function saveOutlineEditor(options = {}) {
       // ignore
     }
     docDirty = false;
-    clearQueuedBlocks(state.articleId);
+    clearQueuedDocJson(state.articleId);
     outlineLastSavedAt = new Date();
     setOutlineStatus(`Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
   } catch (error) {
@@ -4651,8 +4801,8 @@ async function saveOutlineEditor(options = {}) {
     }
     // Сохраняем в локальную очередь, чтобы догнать позже.
     try {
-      const blocksPlain = serializeOutlineToBlocks();
-      if (blocksPlain?.length) setQueuedBlocks(state.articleId, blocksPlain);
+      const docJson = outlineEditorInstance.getJSON();
+      if (docJson && typeof docJson === 'object') setQueuedDocJson(state.articleId, docJson);
     } catch {
       // ignore
     }
@@ -4711,6 +4861,64 @@ export function restoreOutlineSectionFromBlockHtml(sectionId, htmlText) {
   return true;
 }
 
+export function restoreOutlineSectionFromSectionFragments(sectionId, fragments) {
+  if (!outlineEditorInstance) return false;
+  const sid = String(sectionId || '');
+  if (!sid) return false;
+  const pos = findSectionPosById(outlineEditorInstance.state.doc, sid);
+  if (typeof pos !== 'number') return false;
+  const sectionNode = outlineEditorInstance.state.doc.nodeAt(pos);
+  if (!sectionNode) return false;
+
+  const frag = fragments && typeof fragments === 'object' ? fragments : {};
+  const schema = outlineEditorInstance.state.doc.type.schema;
+
+  let headingNode = null;
+  let bodyNode = null;
+  try {
+    if (frag.heading && typeof frag.heading === 'object') {
+      headingNode = schema.nodeFromJSON(frag.heading);
+    }
+  } catch {
+    headingNode = null;
+  }
+  try {
+    if (frag.body && typeof frag.body === 'object') {
+      bodyNode = schema.nodeFromJSON(frag.body);
+    }
+  } catch {
+    bodyNode = null;
+  }
+
+  if (!headingNode || headingNode.type?.name !== 'outlineHeading') {
+    headingNode = schema.nodes.outlineHeading.create({}, []);
+  }
+  if (!bodyNode || bodyNode.type?.name !== 'outlineBody') {
+    bodyNode = schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+  }
+  if (!bodyNode.childCount) {
+    bodyNode = schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+  }
+
+  const childrenNode = sectionNode.child(2);
+  const nextSection = schema.nodes.outlineSection.create(sectionNode.attrs, [headingNode, bodyNode, childrenNode]);
+
+  let tr = outlineEditorInstance.state.tr.replaceWith(pos, pos + sectionNode.nodeSize, nextSection);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      tr = tr.setSelection(TextSelection.create(tr.doc, pos + 2));
+    }
+  } catch {
+    // ignore
+  }
+  outlineEditorInstance.view.dispatch(tr);
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return true;
+}
+
 export async function openOutlineEditor() {
   if (state.isPublicView || state.isRagView) {
     showToast('Outline-редактор недоступен в этом режиме');
@@ -4732,13 +4940,13 @@ export async function openOutlineEditor() {
   renderOutlineShell({ loading: true });
 
   // Если есть отложенный черновик (предыдущий автосейв не ушёл) — подхватываем.
-  const queued = getQueuedBlocks(state.articleId);
-  if (queued && Array.isArray(queued) && queued.length && state.article && !state.article.encrypted) {
-    state.article.blocks = queued;
+  const queuedDoc = getQueuedDocJson(state.articleId);
+  if (queuedDoc && typeof queuedDoc === 'object' && state.article && !state.article.encrypted) {
+    state.article.docJson = queuedDoc;
   }
 
-  try {
-    await mountOutlineEditor();
+	  try {
+	    await mountOutlineEditor();
     try {
       mountOutlineToolbar(outlineEditorInstance);
     } catch {
@@ -4755,7 +4963,7 @@ export async function openOutlineEditor() {
     if (loading) loading.classList.add('hidden');
     setOutlineStatus('Сохраняется автоматически');
 
-    if (!onlineHandlerAttached) {
+	    if (!onlineHandlerAttached) {
       onlineHandlerAttached = true;
       window.addEventListener('online', () => {
         if (!state.isOutlineEditing) return;
@@ -4771,12 +4979,42 @@ export async function openOutlineEditor() {
           void runAutosave({ force: true });
         }
       });
-    }
+	    }
 
-    // Если есть очередь, пробуем сохранить сразу.
-    if (getQueuedBlocks(state.articleId)) {
-      void runAutosave({ force: true });
-    }
+	    // Guard: prevent browser navigation when user drops a file outside the editor.
+	    if (!dropGuardCleanup) {
+	      const onDragOver = (event) => {
+	        if (!state.isOutlineEditing) return;
+	        const dt = event?.dataTransfer;
+	        const hasFiles = dt && ((dt.files && dt.files.length) || (dt.items && dt.items.length));
+	        if (!hasFiles) return;
+	        const target = event?.target;
+	        if (refs.outlineEditor && target && refs.outlineEditor.contains(target)) return;
+	        event.preventDefault();
+	      };
+	      const onDrop = (event) => {
+	        if (!state.isOutlineEditing) return;
+	        const dt = event?.dataTransfer;
+	        const hasFiles = dt && dt.files && dt.files.length;
+	        if (!hasFiles) return;
+	        const target = event?.target;
+	        if (refs.outlineEditor && target && refs.outlineEditor.contains(target)) return;
+	        event.preventDefault();
+	        event.stopPropagation();
+	      };
+	      window.addEventListener('dragover', onDragOver, { passive: false });
+	      window.addEventListener('drop', onDrop, { passive: false });
+	      dropGuardCleanup = () => {
+	        window.removeEventListener('dragover', onDragOver);
+	        window.removeEventListener('drop', onDrop);
+	        dropGuardCleanup = null;
+	      };
+	    }
+
+	    // Если есть очередь, пробуем сохранить сразу.
+	    if (getQueuedDocJson(state.articleId)) {
+	      void runAutosave({ force: true });
+	    }
   } catch (error) {
     showToast(error?.message || 'Не удалось загрузить outline-редактор');
     closeOutlineEditor();
@@ -4787,6 +5025,7 @@ export function closeOutlineEditor() {
   state.isOutlineEditing = false;
   unmountOutlineToolbar();
   outlineEditModeKey = null;
+  if (dropGuardCleanup) dropGuardCleanup();
   if (refs.outlineToolbar) refs.outlineToolbar.classList.add('hidden');
   if (refs.articleToolbar) refs.articleToolbar.classList.remove('hidden');
   if (autosaveTimer) {

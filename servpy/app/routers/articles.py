@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 
 from ..auth import User, get_current_user
 from ..data_store import (
@@ -21,10 +24,15 @@ from ..data_store import (
     restore_article,
     update_article_meta,
     update_article_doc_json,
+    save_article_doc_json,
 )
+from ..export_utils import _build_backup_article_html, _inline_uploads_for_backup
 from .common import _present_article, _resolve_article_id_for_user
 
 router = APIRouter()
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+CLIENT_DIR = BASE_DIR / "client"
 
 
 # Вынесено из app/main.py → app/routers/articles.py
@@ -81,6 +89,39 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
     return article
 
 
+@router.get('/api/articles/{article_id}/export/html')
+def export_article_html(article_id: str, download: bool = True, current_user: User = Depends(get_current_user)):
+    """
+    Экспорт одной статьи в HTML. Источник истины для контента — `articles.article_doc_json`.
+
+    По умолчанию возвращает attachment (скачивание). Можно открыть в браузере через `?download=0`.
+    """
+    if article_id == 'inbox':
+        article = get_or_create_user_inbox(current_user.id)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+    else:
+        real_article_id = _resolve_article_id_for_user(article_id, current_user)
+        article = get_article(real_article_id, current_user.id)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+
+    try:
+        css_text = (CLIENT_DIR / 'style.css').read_text(encoding='utf-8')
+    except OSError:
+        css_text = ''
+
+    html = _build_backup_article_html(article, css_text, lang='ru')
+    html = _inline_uploads_for_backup(html, current_user)
+
+    filename_base = re.sub(r'[\\\\/:*?"<>|]+', '', (article.get('title') or '').strip()) or 'article'
+    filename_base = filename_base[:80]
+    filename = f'{filename_base}.html'
+    disposition = 'attachment' if download else 'inline'
+    headers = {'Content-Disposition': f'{disposition}; filename=\"{filename}\"'}
+    return Response(content=html.encode('utf-8'), media_type='text/html; charset=utf-8', headers=headers)
+
+
 @router.put('/api/articles/{article_id}/doc-json')
 def put_article_doc_json(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
@@ -93,6 +134,33 @@ def put_article_doc_json(article_id: str, payload: dict[str, Any], current_user:
     if not ok:
         raise HTTPException(status_code=404, detail='Article not found')
     return {'status': 'ok'}
+
+
+@router.put('/api/articles/{article_id}/doc-json/save')
+def put_article_doc_json_save(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    """
+    Outline-first save: persist doc_json and update derived indexes (FTS/embeddings/article_links).
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    doc_json = payload.get('docJson') if payload else None
+    if doc_json is None:
+        raise HTTPException(status_code=400, detail='docJson is required')
+    if not isinstance(doc_json, dict):
+        raise HTTPException(status_code=400, detail='docJson must be object')
+    create_version_if_stale_hours = payload.get('createVersionIfStaleHours') if payload else None
+    if create_version_if_stale_hours is not None and not isinstance(create_version_if_stale_hours, (int, float)):
+        raise HTTPException(status_code=400, detail='createVersionIfStaleHours must be number')
+    try:
+        return save_article_doc_json(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            doc_json=doc_json,
+            create_version_if_stale_hours=int(create_version_if_stale_hours) if create_version_if_stale_hours is not None else None,
+        )
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # Вынесено из app/main.py → app/routers/articles.py

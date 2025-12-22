@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import threading
+import re
 from typing import Any, Iterable
 
 from sqlalchemy import create_engine, event
@@ -149,7 +150,11 @@ class Database:
         return result
 
     def execute(self, sql: str, params: Any | None = None) -> Result | QueryResult:
-        if isinstance(sql, str) and 'DELETE FROM blocks_fts' in sql and 'WHERE article_id' not in sql:
+        _maybe_blocks_kill_switch(sql)
+        if isinstance(sql, str) and (
+            ('DELETE FROM blocks_fts' in sql and 'WHERE article_id' not in sql)
+            or ('DELETE FROM outline_sections_fts' in sql and 'WHERE article_id' not in sql)
+        ):
             # Полное удаление индекса блоков — помечаем поисковые индексы как «грязные».
             mark_search_index_dirty()
         conn = self._get_local_conn()
@@ -159,6 +164,7 @@ class Database:
             return self._run(conn, sql, params)
 
     def executemany(self, sql: str, seq: Iterable[Any]) -> Result | QueryResult:
+        _maybe_blocks_kill_switch(sql)
         conn = self._get_local_conn()
         if conn is not None:
             return self._run(conn, sql, seq)
@@ -205,3 +211,38 @@ def execute(sql: str, params: Any | None = None):
 
 def executemany(sql: str, seq):
     return CONN.executemany(sql, seq)
+
+
+_BLOCKS_TABLE_RE = re.compile(r"\b(blocks_fts|blocks)\b", re.IGNORECASE)
+
+
+def _maybe_blocks_kill_switch(sql: str) -> None:
+    """
+    Debug guard: fail fast if a query touches legacy `blocks` tables.
+
+    Enable via `SERVPY_BLOCKS_KILL_SWITCH=1`.
+    Intended to validate we don't depend on `blocks.text` / `blocks_fts` anymore.
+    """
+    try:
+        flag = os.environ.get("SERVPY_BLOCKS_KILL_SWITCH", "").strip().lower()
+        if flag not in {"1", "true", "yes"}:
+            return
+        raw = str(sql or "")
+        if not raw:
+            return
+        if not _BLOCKS_TABLE_RE.search(raw):
+            return
+
+        keyword = (raw.lstrip().split(None, 1)[0] if raw.lstrip() else "").lower()
+        # Allow schema/migration DDL. We want to catch runtime reads/writes.
+        if keyword in {"create", "alter", "drop", "comment", "do"}:
+            return
+
+        snippet = raw.strip().replace("\n", " ")
+        snippet = (snippet[:240] + "…") if len(snippet) > 240 else snippet
+        raise RuntimeError(f"SERVPY_BLOCKS_KILL_SWITCH: legacy blocks table access detected: {snippet}")
+    except RuntimeError:
+        raise
+    except Exception:
+        # Guard must never break DB layer if misconfigured.
+        return

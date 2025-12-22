@@ -128,6 +128,27 @@ def _init_postgres_schema() -> None:
         ON blocks_fts USING GIN (search_vector)
         ''',
         '''
+        CREATE TABLE IF NOT EXISTS outline_sections_fts (
+            section_id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            text TEXT NOT NULL,
+            lemma TEXT NOT NULL,
+            normalized_text TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            search_vector tsvector GENERATED ALWAYS AS (
+                to_tsvector('simple', coalesce(lemma, '') || ' ' || coalesce(normalized_text, ''))
+            ) STORED
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_outline_sections_fts_article
+        ON outline_sections_fts(article_id)
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_outline_sections_fts_search
+        ON outline_sections_fts USING GIN (search_vector)
+        ''',
+        '''
         CREATE TABLE IF NOT EXISTS articles_fts (
             article_id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -178,6 +199,12 @@ def _init_postgres_schema() -> None:
             user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             created_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS schema_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
         )
         ''',
     ]
@@ -290,6 +317,23 @@ def _init_postgres_schema() -> None:
         END$$;
         """
     )
+
+    # One-time purge of legacy block history (HTML blocks mode is deprecated).
+    try:
+        row = execute("SELECT value FROM schema_meta WHERE key = 'purged_legacy_block_history_v1'").fetchone()
+        already = bool(row and (row.get('value') or '').strip())
+        if not already:
+            execute("UPDATE articles SET history = '[]', redo_history = '[]'")
+            execute(
+                """
+                INSERT INTO schema_meta(key, value)
+                VALUES ('purged_legacy_block_history_v1', '1')
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                """
+            )
+            logger.info("Purged legacy block history (articles.history/redo_history cleared).")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to purge legacy block history: %r", exc)
 
     # Семантический поиск (pgvector) — опционально.
     # Если расширение/права недоступны, core-функциональность не должна падать.

@@ -5,9 +5,24 @@ import { fetchArticle } from '../api.js?v=6';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { showToast } from '../toast.js';
 import { upsertArticleIndex } from '../sidebar.js';
-import { findBlock, flattenVisible, expandCollapsedAncestors } from '../block.js';
 import { ensureArticleDecrypted } from './encryption.js';
 import { updatePublicToggleLabel } from './header.js';
+
+function firstOutlineSectionId(docJson) {
+  try {
+    const content = docJson?.content;
+    if (!Array.isArray(content)) return null;
+    for (const node of content) {
+      if (node?.type === 'outlineSection') {
+        const id = String(node?.attrs?.id || '');
+        if (id) return id;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function loadArticle(id, options = {}) {
   const { desiredBlockId, resetUndoStacks, editBlockId } = options;
@@ -15,7 +30,7 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle && state.isOutlineEditing) {
     try {
-      const outline = await import('../outline/editor.js?v=74');
+      const outline = await import('../outline/editor.js?v=76');
       if (outline?.flushOutlineAutosave) {
         await outline.flushOutlineAutosave();
       }
@@ -47,33 +62,28 @@ export async function loadArticle(id, options = {}) {
     hydrateUndoRedoFromArticle(article);
   }
 
-  const autoEditTarget = editBlockId || state.pendingEditBlockId || null;
+  // Outline-only UX: pick section id from docJson (or fallback to legacy blocks tree).
+  const primaryTarget = desiredBlockId || editBlockId || state.pendingEditBlockId || null;
   state.pendingEditBlockId = null;
-  const primaryTarget = desiredBlockId || autoEditTarget || null;
-
-  let targetSet = false;
-  if (primaryTarget) {
-    const desired = findBlock(primaryTarget);
-    if (desired) {
-      await expandCollapsedAncestors(desired.block.id);
-      state.currentBlockId = desired.block.id;
-      targetSet = true;
-    }
-  }
-  if (!targetSet && (switchingArticle || !findBlock(state.currentBlockId))) {
-    const firstBlock = flattenVisible(article.blocks)[0];
-    state.currentBlockId = firstBlock ? firstBlock.id : null;
-  }
-
-  if (autoEditTarget && findBlock(autoEditTarget)) {
-    state.mode = 'edit';
-    state.editingBlockId = autoEditTarget;
-  } else {
-    state.mode = 'view';
-    state.editingBlockId = null;
-  }
+  const defaultId = firstOutlineSectionId(article.docJson) || (article.blocks?.[0]?.id || null);
+  state.currentBlockId = primaryTarget || defaultId;
+  state.mode = 'view';
+  state.editingBlockId = null;
 
   upsertArticleIndex(article);
   updatePublicToggleLabel();
+
+  // Outline is the only editor mode now: auto-open after load.
+  if (!state.isPublicView && !state.isRagView && !article.encrypted) {
+    try {
+      state.isOutlineEditing = true;
+      const outline = await import('../outline/editor.js?v=76');
+      if (outline?.openOutlineEditor) {
+        await outline.openOutlineEditor();
+      }
+    } catch {
+      // ignore
+    }
+  }
   return article;
 }

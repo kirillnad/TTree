@@ -15,7 +15,17 @@ from .db import CONN, mark_search_index_clean
 from .schema import init_schema
 from .html_sanitizer import sanitize_html
 from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
-from .semantic_search import delete_block_embeddings, upsert_block_embedding, upsert_embeddings_for_block_tree
+from .outline_doc_json import (
+    build_outline_section_internal_links_map,
+    build_outline_section_plain_text_map,
+    build_outline_section_fragments_map,
+)
+from .semantic_search import (
+    delete_block_embeddings,
+    upsert_block_embedding,
+    upsert_embeddings_for_block_tree,
+    upsert_embeddings_for_plain_texts,
+)
 from .telegram_notify import notify_user
 
 init_schema()
@@ -250,12 +260,34 @@ def _extract_article_links_from_blocks(blocks: List[Dict[str, Any]]) -> List[str
     return list(ids)
 
 
-def _rebuild_article_links_for_article_id(article_id: str) -> None:
+def _rebuild_article_links_for_article_id(article_id: str, *, doc_json: Any | None = None) -> None:
     """
     Пересобирает связи article_links для статьи по всем её блокам
     (используется при инкрементальном редактировании блоков).
     """
     if not article_id:
+        return
+
+    # doc_json-first: extract links from outline sections (heading+body, without children).
+    if doc_json is not None:
+        CONN.execute('DELETE FROM article_links WHERE from_id = ?', (article_id,))
+        values: list[tuple[str, str, str, str]] = []
+        try:
+            link_map = build_outline_section_internal_links_map(doc_json)
+        except Exception:
+            link_map = {}
+        for section_id, targets in (link_map or {}).items():
+            for target_id in targets or set():
+                if target_id and target_id != article_id:
+                    values.append((article_id, section_id, target_id, 'internal'))
+        if values:
+            CONN.executemany(
+                '''
+                INSERT INTO article_links (from_id, block_id, to_id, kind)
+                VALUES (?, ?, ?, ?)
+                ''',
+                values,
+            )
         return
 
     rows = CONN.execute(
@@ -377,6 +409,39 @@ def upsert_block_search_index(
         ''',
         (block_rowid, article_id, text, lemma, normalized_text),
     )
+
+
+def upsert_outline_section_search_index(
+    section_id: str,
+    article_id: str,
+    text: str,
+    lemma: str,
+    normalized_text: str,
+    updated_at: str,
+) -> None:
+    if not section_id:
+        return
+    CONN.execute(
+        '''
+        INSERT INTO outline_sections_fts (section_id, article_id, text, lemma, normalized_text, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (section_id) DO UPDATE
+        SET article_id = EXCLUDED.article_id,
+            text = EXCLUDED.text,
+            lemma = EXCLUDED.lemma,
+            normalized_text = EXCLUDED.normalized_text,
+            updated_at = EXCLUDED.updated_at
+        ''',
+        (section_id, article_id, text, lemma, normalized_text, updated_at),
+    )
+
+
+def delete_outline_sections_search_index(section_ids: list[str]) -> None:
+    ids = [s for s in (section_ids or []) if s]
+    if not ids:
+        return
+    placeholders = ','.join('?' for _ in ids)
+    CONN.execute(f'DELETE FROM outline_sections_fts WHERE section_id IN ({placeholders})', tuple(ids))
 
 
 def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
@@ -704,6 +769,7 @@ def delete_article(article_id: str, force: bool = False) -> bool:
             return False
         if force:
             CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
+            CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM articles_fts WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
@@ -761,6 +827,167 @@ def update_article_doc_json(article_id: str, author_id: str, doc_json: Any) -> b
             return False
         CONN.execute('UPDATE articles SET article_doc_json = ? WHERE id = ?', (doc_json_str, article_id))
     return True
+
+
+def save_article_doc_json(
+    *,
+    article_id: str,
+    author_id: str,
+    doc_json: Any,
+    create_version_if_stale_hours: int | None = None,
+) -> dict[str, Any]:
+    """
+    Outline-first save: persist `articles.article_doc_json` and update derived indexes:
+    - outline_sections_fts (FTS),
+    - block_embeddings (semantic),
+    - article_links (internal links).
+
+    Also updates `articles.updated_at`, clears redo history, and appends per-section history entries
+    (plain text before/after).
+    """
+    if not article_id or not author_id:
+        raise ArticleNotFound('Article not found')
+    if doc_json is None:
+        raise InvalidOperation('doc_json is required')
+
+    now = iso_now()
+    now_dt = datetime.utcnow()
+
+    article_row = CONN.execute(
+        'SELECT id, author_id, title, updated_at, history, redo_history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
+        (article_id,),
+    ).fetchone()
+    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+        raise ArticleNotFound('Article not found')
+
+    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+    )
+    if encrypted_flag:
+        # For encrypted articles we don't accept plaintext doc_json.
+        raise InvalidOperation('Encrypted articles are not supported in outline save')
+
+    history = deserialize_history(article_row.get('history'))
+    history_entries_added: list[dict[str, Any]] = []
+
+    # Auto-version "before first edit after N hours".
+    if create_version_if_stale_hours:
+        try:
+            hours = int(create_version_if_stale_hours)
+        except Exception:
+            hours = 0
+        if hours > 0:
+            updated_at_raw = (article_row.get('updated_at') or '').strip()
+            if updated_at_raw:
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at_raw)
+                    age_seconds = (now_dt - updated_dt).total_seconds()
+                    if age_seconds >= hours * 3600:
+                        CONN.execute(
+                            '''
+                            INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            ''',
+                            (
+                                str(uuid.uuid4()),
+                                article_id,
+                                author_id,
+                                now,
+                                f'auto-{hours}h',
+                                None,
+                                json.dumps([]),
+                                article_row.get('article_doc_json'),
+                            ),
+                        )
+                except Exception:
+                    pass
+
+    # Diff sections based on plain text (heading+body).
+    prev_map: dict[str, str] = {}
+    prev_frags: dict[str, dict[str, Any]] = {}
+    raw_prev = article_row.get('article_doc_json') or ''
+    if raw_prev:
+        try:
+            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+            prev_map = build_outline_section_plain_text_map(prev_doc)
+            prev_frags = build_outline_section_fragments_map(prev_doc)
+        except Exception:
+            prev_map = {}
+            prev_frags = {}
+    next_map = build_outline_section_plain_text_map(doc_json)
+    next_frags = build_outline_section_fragments_map(doc_json)
+
+    removed_ids = set(prev_map.keys()) - set(next_map.keys())
+    changed_ids: set[str] = set()
+    for sid, new_text in next_map.items():
+        if prev_map.get(sid, '') != (new_text or ''):
+            changed_ids.add(sid)
+
+    def _push_history(section_id: str, before_plain: str, after_plain: str) -> None:
+        if before_plain == after_plain:
+            return
+        before_frag = prev_frags.get(section_id) or {}
+        after_frag = next_frags.get(section_id) or {}
+        entry = {
+            'id': str(uuid.uuid4()),
+            'blockId': section_id,
+            'before': before_plain,
+            'after': after_plain,
+            'beforeHeadingJson': before_frag.get('heading'),
+            'beforeBodyJson': before_frag.get('body'),
+            'afterHeadingJson': after_frag.get('heading'),
+            'afterBodyJson': after_frag.get('body'),
+            'timestamp': now,
+        }
+        history.append(entry)
+        history_entries_added.append(entry)
+
+    for sid in sorted(changed_ids):
+        _push_history(sid, prev_map.get(sid, ''), next_map.get(sid, ''))
+
+    # Persist article_doc_json and metadata.
+    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            (now, serialize_history(history), '[]', doc_json_str, article_id),
+        )
+
+        # Rebuild internal links from doc_json.
+        _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
+
+        # Rebuild section FTS for the whole article.
+        CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
+        for sid, plain in (next_map or {}).items():
+            text = (plain or '').strip()
+            lemma = build_lemma(text)
+            normalized = build_normalized_tokens(text)
+            upsert_outline_section_search_index(sid, article_id, text, lemma, normalized, now)
+
+    # Semantic embeddings updates after transaction.
+    try:
+        if removed_ids:
+            delete_block_embeddings(list(removed_ids))
+        if changed_ids:
+            changed_plain = {sid: next_map.get(sid, '') for sid in changed_ids}
+            upsert_embeddings_for_plain_texts(
+                author_id=author_id,
+                article_id=article_id,
+                article_title=article_row.get('title') or '',
+                block_texts=changed_plain,
+                updated_at=now,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Failed to update semantic embeddings after save_article_doc_json: %r', exc)
+
+    return {
+        'status': 'ok',
+        'articleId': article_id,
+        'updatedAt': now,
+        'changedBlockIds': sorted(changed_ids),
+        'removedBlockIds': sorted(list(removed_ids)),
+        'historyEntriesAdded': history_entries_added,
+    }
 
 
 def get_block_text_history(article_id: str, author_id: str, block_id: str, limit: int = 100) -> dict[str, Any]:
@@ -1546,7 +1773,11 @@ def replace_article_blocks_tree(
             'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = COALESCE(?, article_doc_json) WHERE id = ?',
             (now, serialize_history(history), '[]', doc_json_str, article_id),
         )
-        _rebuild_article_links_for_article_id(article_id)
+        # Prefer doc_json for link extraction in outline-first mode.
+        if doc_json is not None and not article_row.get('is_encrypted'):
+            _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
+        else:
+            _rebuild_article_links_for_article_id(article_id)
 
     # Семантические embeddings обновляем после транзакции.
     try:
@@ -1554,15 +1785,51 @@ def replace_article_blocks_tree(
             delete_block_embeddings(list(removed_ids))
         if changed_for_embeddings:
             # Обновляем embeddings только для блоков, где поменялся текст (или блок новый).
-            upsert_embeddings_for_block_tree(
-                author_id=author_id,
-                article_id=article_id,
-                article_title=article_row.get('title') or '',
-                blocks=changed_for_embeddings,
-                updated_at=now,
-            )
+            # Источник истины: TipTap `doc_json` (outlineSection heading+body, без детей).
+            if doc_json is not None and not article_row.get('is_encrypted'):
+                section_map = build_outline_section_plain_text_map(doc_json)
+                changed_ids = [str(b.get('id') or '') for b in changed_for_embeddings if b.get('id')]
+                changed_plain = {bid: section_map.get(bid, '') for bid in changed_ids if bid}
+                upsert_embeddings_for_plain_texts(
+                    author_id=author_id,
+                    article_id=article_id,
+                    article_title=article_row.get('title') or '',
+                    block_texts=changed_plain,
+                    updated_at=now,
+                )
+            else:
+                # Fallback for legacy/unknown content.
+                upsert_embeddings_for_block_tree(
+                    author_id=author_id,
+                    article_id=article_id,
+                    article_title=article_row.get('title') or '',
+                    blocks=changed_for_embeddings,
+                    updated_at=now,
+                )
     except Exception as exc:  # noqa: BLE001
         logger.warning('Failed to update semantic embeddings after replace_article_blocks_tree: %r', exc)
+
+    # FTS по секциям outline (doc_json-first).
+    try:
+        if doc_json is not None and not article_row.get('is_encrypted'):
+            # replace-tree заменяет структуру статьи целиком → пересобираем индекс целиком,
+            # чтобы не зависеть от эвристик "что поменялось" на уровне legacy HTML.
+            CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
+            section_map = build_outline_section_plain_text_map(doc_json)
+            for sid, plain in (section_map or {}).items():
+                text = (plain or '').strip()
+                lemma = build_lemma(text)
+                normalized = build_normalized_tokens(text)
+                upsert_outline_section_search_index(
+                    sid,
+                    article_id,
+                    text,
+                    lemma,
+                    normalized,
+                    now,
+                )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Failed to update outline sections FTS after replace_article_blocks_tree: %r', exc)
 
     return {
         'status': 'ok',
@@ -2434,23 +2701,22 @@ def search_blocks(query: str, limit: int = 20, author_id: Optional[str] = None) 
         return []
     base_sql = '''
         SELECT
-            blocks.id AS blockId,
+            outline_sections_fts.section_id AS blockId,
             articles.id AS articleId,
             articles.title AS articleTitle,
-            ts_headline('simple', blocks_fts.text, to_tsquery('simple', ?)) AS snippet,
-            blocks.text AS blockText,
-            ts_rank_cd(blocks_fts.search_vector, to_tsquery('simple', ?)) AS rank
-        FROM blocks_fts
-        JOIN blocks ON blocks.block_rowid = blocks_fts.block_rowid
-        JOIN articles ON articles.id = blocks.article_id
+            ts_headline('simple', outline_sections_fts.text, to_tsquery('simple', ?)) AS snippet,
+            outline_sections_fts.text AS blockText,
+            ts_rank_cd(outline_sections_fts.search_vector, to_tsquery('simple', ?)) AS rank
+        FROM outline_sections_fts
+        JOIN articles ON articles.id = outline_sections_fts.article_id
         WHERE articles.deleted_at IS NULL
-          AND blocks_fts.search_vector @@ to_tsquery('simple', ?)
+          AND outline_sections_fts.search_vector @@ to_tsquery('simple', ?)
     '''
     params: List[Any] = [ts_query, ts_query, ts_query]
     if author_id is not None:
         base_sql += ' AND articles.author_id = ?'
         params.append(author_id)
-    base_sql += ' ORDER BY rank DESC, blocks.updated_at DESC LIMIT ?'
+    base_sql += ' ORDER BY rank DESC, outline_sections_fts.updated_at DESC LIMIT ?'
     params.append(limit)
     rows = CONN.execute(base_sql, tuple(params)).fetchall()
     results: List[Dict[str, Any]] = []
@@ -2492,6 +2758,7 @@ def rebuild_search_indexes() -> None:
     """
     with CONN:
         CONN.execute('DELETE FROM blocks_fts')
+        CONN.execute('DELETE FROM outline_sections_fts')
         CONN.execute('DELETE FROM articles_fts')
     block_rows = CONN.execute(
         'SELECT block_rowid, article_id, text, normalized_text FROM blocks'
@@ -2512,4 +2779,34 @@ def rebuild_search_indexes() -> None:
     with CONN:
         for row in article_rows:
             upsert_article_search_index(row['id'], row['title'] or '', use_transaction=False)
+
+    # Outline sections index (doc_json-first).
+    article_rows = CONN.execute(
+        '''
+        SELECT id, title, updated_at, is_encrypted, encryption_salt, encryption_verifier, article_doc_json
+        FROM articles
+        WHERE deleted_at IS NULL
+        '''
+    ).fetchall()
+    with CONN:
+        for row in article_rows:
+            encrypted_flag = bool(row.get('is_encrypted', 0)) or (
+                bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+            )
+            if encrypted_flag:
+                continue
+            raw_doc = row.get('article_doc_json') or ''
+            if not raw_doc:
+                continue
+            try:
+                doc = json.loads(raw_doc) if isinstance(raw_doc, str) else raw_doc
+            except Exception:
+                continue
+            section_map = build_outline_section_plain_text_map(doc)
+            updated_at = str(row.get('updated_at') or '') or iso_now()
+            for sid, plain in (section_map or {}).items():
+                text = (plain or '').strip()
+                lemma = build_lemma(text)
+                normalized = build_normalized_tokens(text)
+                upsert_outline_section_search_index(sid, row['id'], text, lemma, normalized, updated_at)
     mark_search_index_clean()

@@ -10,7 +10,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .auth import User
-from .public_render import _render_public_block
+from .doc_json_render import render_outline_doc_json_html
+from .outline_doc_json import build_outline_section_plain_text_map
 
 # Вынесено из app/main.py → app/export_utils.py
 
@@ -20,35 +21,23 @@ UPLOADS_DIR = BASE_DIR / 'uploads'
 EXPORT_DESCRIPTION_LIMIT = 160
 
 
-def _collect_plain_text_from_blocks(blocks: list[dict[str, Any]] | None) -> list[str]:
+def _collect_plain_text_from_doc_json(doc_json: Any | None) -> list[str]:
     """
-    Собирает простой текст из дерева блоков статьи:
-    - вычищает HTML-теги;
-    - схлопывает повторяющиеся пробелы.
-    Используется для описания и wordCount в экспортируемых HTML.
+    Collect plain text from outline doc_json (heading+body per section).
+    Used for description and wordCount in exported HTML.
     """
-    result: list[str] = []
-
-    def _walk(nodes: list[dict[str, Any]] | None) -> None:
-        if not nodes:
-            return
-        for blk in nodes:
-            if not isinstance(blk, dict):
-                continue
-            raw = blk.get('text') or ''
-            if raw:
-                # Грубое удаление тегов + unescape, этого достаточно для описания.
-                plain = re.sub(r'<[^>]+>', ' ', raw)
-                plain = html_mod.unescape(plain)
-                plain = ' '.join(plain.split())
-                if plain:
-                    result.append(plain)
-            children = blk.get('children') or []
-            if children:
-                _walk(children)
-
-    _walk(blocks or [])
-    return result
+    if not doc_json:
+        return []
+    out: list[str] = []
+    try:
+        m = build_outline_section_plain_text_map(doc_json)
+    except Exception:
+        return []
+    for _sid, txt in (m or {}).items():
+        plain = ' '.join(String(txt or '').split()).strip()
+        if plain:
+            out.append(plain)
+    return out
 
 
 def _build_export_description(plain_text: str | None) -> str:
@@ -93,9 +82,10 @@ def _build_export_payload_for_article(article: dict[str, Any] | None) -> dict[st
     """
     if not article:
         return {
-            'version': 1,
+            'version': 2,
             'source': 'memus',
             'article': None,
+            'docJson': None,
             'blocks': [],
         }
 
@@ -120,10 +110,12 @@ def _build_export_payload_for_article(article: dict[str, Any] | None) -> dict[st
     }
 
     return {
-        'version': 1,
+        'version': 2,
         'source': 'memus',
         'article': meta,
-        'blocks': _serialize_blocks_for_export(article.get('blocks') or []),
+        'docJson': article.get('docJson') or None,
+        # legacy field kept for backwards compatibility
+        'blocks': [],
     }
 
 
@@ -140,7 +132,7 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     created_raw = article.get('createdAt') or updated_raw or ''
 
     # Текст и статистика для description/JSON-LD.
-    plain_parts = _collect_plain_text_from_blocks(article.get('blocks') or [])
+    plain_parts = _collect_plain_text_from_doc_json(article.get('docJson'))
     plain_text = ' '.join(plain_parts).strip()
     word_count = len(plain_text.split()) if plain_text else 0
     description = _build_export_description(plain_text) or title_raw
@@ -155,8 +147,10 @@ def _build_backup_article_html(article: dict[str, Any], css_text: str, lang: str
     except Exception:  # noqa: BLE001
         updated_label = updated_raw or ''
 
-    blocks = article.get('blocks') or []
-    blocks_html = ''.join(_render_public_block(b, 1) for b in blocks)
+    try:
+        blocks_html = render_outline_doc_json_html(article.get('docJson'))
+    except Exception:  # noqa: BLE001
+        blocks_html = ''
     header = f"""
     <div class="panel-header article-header">
       <div class="title-block">
@@ -532,4 +526,3 @@ def _inline_uploads_for_backup(html_text: str, current_user: User | None) -> str
 
     pattern = re.compile(r'(src|href)=\"(/uploads/[^\"]+)\"')
     return pattern.sub(_replace, html_text or '')
-

@@ -32,10 +32,19 @@ from .common import _handle_undo_redo, _resolve_article_id_for_user
 
 router = APIRouter()
 
+def _require_superuser_for_legacy_blocks(current_user: User) -> None:
+    """
+    Legacy HTML blocks mode is disabled for regular users.
+    Outline (TipTap) editor uses replace-tree and doc_json.
+    """
+    if not getattr(current_user, 'is_superuser', False):
+        raise HTTPException(status_code=403, detail='Legacy blocks mode disabled (superuser required)')
+
 
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.patch('/api/articles/{article_id}/blocks/{block_id}')
 def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     try:
         if not get_article(real_article_id, current_user.id):
@@ -61,6 +70,7 @@ def get_block_history(article_id: str, block_id: str, limit: int = 100, current_
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.patch('/api/articles/{article_id}/collapse')
 def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -86,6 +96,7 @@ def put_replace_blocks_tree(
 
     Нужен для outline-редактора: он редактирует всю статью как один документ и сохраняет дерево целиком.
     """
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -116,6 +127,7 @@ def put_replace_blocks_tree(
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/siblings')
 def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -130,6 +142,7 @@ def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], curren
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.delete('/api/articles/{article_id}/blocks/{block_id}')
 def remove_block(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -147,6 +160,7 @@ def remove_block(article_id: str, block_id: str, current_user: User = Depends(ge
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.delete('/api/articles/{article_id}/blocks/{block_id}/permanent')
 def remove_block_permanent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     """
     Жёсткое удаление блока без помещения в корзину блоков статьи (blockTrash).
     Используется для пустых «мимолётных» блоков, которые никогда не содержали текста.
@@ -168,6 +182,7 @@ def remove_block_permanent(article_id: str, block_id: str, current_user: User = 
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/trash/clear')
 def clear_blocks_trash(article_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     """
     Очищает корзину блоков для статьи (blockTrash).
     """
@@ -184,6 +199,7 @@ def clear_blocks_trash(article_id: str, current_user: User = Depends(get_current
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/move')
 def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     direction = payload.get('direction')
     if direction not in {'up', 'down'}:
@@ -202,6 +218,7 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_u
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/indent')
 def post_indent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -216,6 +233,7 @@ def post_indent(article_id: str, block_id: str, current_user: User = Depends(get
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/outdent')
 def post_outdent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -230,6 +248,7 @@ def post_outdent(article_id: str, block_id: str, current_user: User = Depends(ge
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/relocate')
 def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -248,6 +267,7 @@ def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], curre
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/undo-text')
 def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -258,6 +278,7 @@ def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Dep
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/redo-text')
 def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -268,6 +289,7 @@ def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Dep
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/restore')
 def post_restore(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     if not get_article(article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
     block = payload.get('block')
@@ -286,6 +308,7 @@ def post_restore(article_id: str, payload: dict[str, Any], current_user: User = 
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/trash/restore')
 def post_restore_from_trash(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     if not get_article(real_article_id, current_user.id):
         raise HTTPException(status_code=404, detail='Article not found')
@@ -304,6 +327,7 @@ def post_restore_from_trash(article_id: str, payload: dict[str, Any], current_us
 # Вынесено из app/main.py → app/routers/blocks.py
 @router.post('/api/articles/{article_id}/blocks/{block_id}/move-to/{target_article_id}')
 def post_move_to(article_id: str, block_id: str, target_article_id: str, current_user: User = Depends(get_current_user)):
+    _require_superuser_for_legacy_blocks(current_user)
     try:
         src = get_article(article_id, current_user.id)
         dst = get_article(target_article_id, current_user.id)

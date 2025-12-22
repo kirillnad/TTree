@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import threading
 import logging
@@ -13,6 +14,7 @@ from .db import CONN
 from .embeddings import EmbeddingInputUnsupported, EmbeddingsUnavailable, embed_text, embed_text_batch
 from .telegram_notify import notify_user
 from .text_utils import strip_html
+from .outline_doc_json import build_outline_section_plain_text_map
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -102,6 +104,37 @@ def start_reindex_task(author_id: str, mode: str = 'all') -> dict[str, Any]:
 
     def _runner():
         try:
+            # Preload article doc_json → section_id → plain text map (per article),
+            # to avoid repeatedly parsing JSON per block.
+            article_titles: dict[str, str] = {}
+            article_section_texts: dict[str, dict[str, str]] = {}
+            try:
+                article_rows = CONN.execute(
+                    '''
+                    SELECT id, title, article_doc_json
+                    FROM articles
+                    WHERE deleted_at IS NULL AND author_id = ?
+                    ''',
+                    (author_id,),
+                ).fetchall()
+                for ar in article_rows or []:
+                    aid = str(ar.get('id') or '')
+                    if not aid:
+                        continue
+                    article_titles[aid] = str(ar.get('title') or '')
+                    raw = ar.get('article_doc_json') or ''
+                    if not raw:
+                        article_section_texts[aid] = {}
+                        continue
+                    try:
+                        doc = json.loads(raw) if isinstance(raw, str) else raw
+                        article_section_texts[aid] = build_outline_section_plain_text_map(doc)
+                    except Exception:
+                        article_section_texts[aid] = {}
+            except Exception:
+                article_titles = {}
+                article_section_texts = {}
+
             sql = '''
                 SELECT
                     b.id AS block_id,
@@ -206,7 +239,13 @@ def start_reindex_task(author_id: str, mode: str = 'all') -> dict[str, Any]:
                 plain_texts: List[str] = []
                 for r in todo_rows:
                     bid = str(r.get('block_id') or '')
-                    text = _build_embedding_text(r.get('article_title') or '', r.get('block_text') or '')
+                    article_id = str(r.get('article_id') or '')
+                    article_title = article_titles.get(article_id) or (r.get('article_title') or '')
+                    # Prefer doc_json-derived section text. Fallback to the legacy HTML.
+                    section_plain = (article_section_texts.get(article_id) or {}).get(bid) or ''
+                    if not section_plain:
+                        section_plain = strip_html(r.get('block_text') or '')
+                    text = _build_embedding_text_from_plain(article_title, section_plain)
                     if not text:
                         empty_ids.append(bid)
                         processed_local += 1
@@ -416,15 +455,23 @@ def _vector_literal(vec: List[float]) -> str:
     return '[' + ','.join(f'{x:.8f}' for x in vec) + ']'
 
 
-def _build_embedding_text(article_title: str, block_html: str) -> str:
-    plain = strip_html(block_html or '')
+def _build_embedding_text_from_plain(article_title: str, plain_block_text: str) -> str:
+    plain = (plain_block_text or '').strip()
     title = (article_title or '').strip()
     if title:
         return f'{title}\n{plain}'.strip()
     return plain.strip()
 
 
-def upsert_block_embedding(*, author_id: str, article_id: str, article_title: str, block_id: str, block_html: str, updated_at: str) -> None:
+def upsert_block_embedding(
+    *,
+    author_id: str,
+    article_id: str,
+    article_title: str,
+    block_id: str,
+    block_html: str,
+    updated_at: str,
+) -> None:
     if not author_id or not article_id or not block_id:
         return
     # Если embedding уже рассчитан для этого updated_at — ничего не делаем.
@@ -440,7 +487,26 @@ def upsert_block_embedding(*, author_id: str, article_id: str, article_title: st
     except Exception:
         # Если таблица/pgvector недоступны — пусть ниже упадёт/обработается в вызывающем коде.
         pass
-    text = _build_embedding_text(article_title, block_html)
+    # Prefer doc_json-derived section text when available (outline is the source of truth).
+    section_plain = ''
+    try:
+        row = CONN.execute(
+            'SELECT article_doc_json, is_encrypted FROM articles WHERE id = ? AND author_id = ?',
+            (article_id, author_id),
+        ).fetchone()
+        if row and not bool(row.get('is_encrypted')):
+            raw = row.get('article_doc_json') or ''
+            if raw:
+                doc = json.loads(raw) if isinstance(raw, str) else raw
+                section_plain = build_outline_section_plain_text_map(doc).get(block_id, '') or ''
+    except Exception:
+        section_plain = ''
+
+    if not section_plain:
+        # Fallback to legacy HTML (e.g., for encrypted or inconsistent articles).
+        section_plain = strip_html(block_html or '')
+
+    text = _build_embedding_text_from_plain(article_title, section_plain)
     if not text:
         # Пустые блоки не индексируем.
         CONN.execute('DELETE FROM block_embeddings WHERE block_id = ?', (block_id,))
@@ -467,6 +533,79 @@ def upsert_block_embedding(*, author_id: str, article_id: str, article_title: st
         ''',
         (block_id, author_id, article_id, article_title or '', text, vec_lit, updated_at),
     )
+
+
+def upsert_block_embedding_plain(
+    *,
+    author_id: str,
+    article_id: str,
+    article_title: str,
+    block_id: str,
+    block_plain_text: str,
+    updated_at: str,
+) -> None:
+    if not author_id or not article_id or not block_id:
+        return
+    # If embedding already matches this updated_at -> no-op.
+    try:
+        existing = CONN.execute(
+            'SELECT updated_at AS updatedAt FROM block_embeddings WHERE block_id = ?',
+            (block_id,),
+        ).fetchone()
+        existing_updated_at = (existing or {}).get('updatedAt') if existing else None
+        if existing_updated_at and updated_at and str(existing_updated_at) == str(updated_at):
+            return
+    except Exception:
+        pass
+
+    text = _build_embedding_text_from_plain(article_title, block_plain_text or '')
+    if not text:
+        CONN.execute('DELETE FROM block_embeddings WHERE block_id = ?', (block_id,))
+        return
+    try:
+        vec = embed_text(text)
+    except EmbeddingInputUnsupported:
+        CONN.execute('DELETE FROM block_embeddings WHERE block_id = ?', (block_id,))
+        return
+    vec_lit = _vector_literal(vec)
+    CONN.execute(
+        '''
+        INSERT INTO block_embeddings (block_id, author_id, article_id, article_title, plain_text, embedding, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?::vector, ?)
+        ON CONFLICT (block_id) DO UPDATE
+        SET author_id = EXCLUDED.author_id,
+            article_id = EXCLUDED.article_id,
+            article_title = EXCLUDED.article_title,
+            plain_text = EXCLUDED.plain_text,
+            embedding = EXCLUDED.embedding,
+            updated_at = EXCLUDED.updated_at
+        ''',
+        (block_id, author_id, article_id, article_title or '', text, vec_lit, updated_at),
+    )
+
+
+def upsert_embeddings_for_plain_texts(
+    *,
+    author_id: str,
+    article_id: str,
+    article_title: str,
+    block_texts: dict[str, str],
+    updated_at: str,
+) -> None:
+    for bid, plain in (block_texts or {}).items():
+        if not bid:
+            continue
+        try:
+            upsert_block_embedding_plain(
+                author_id=author_id,
+                article_id=article_id,
+                article_title=article_title,
+                block_id=bid,
+                block_plain_text=plain or '',
+                updated_at=updated_at,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Failed to upsert embedding for block %s: %r', bid, exc)
 
 
 def delete_block_embeddings(block_ids: Iterable[str]) -> None:

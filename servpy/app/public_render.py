@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .db import CONN
+from .doc_json_render import render_outline_doc_json_html
 
 # Вынесено из app/main.py → app/public_render.py
 
@@ -288,21 +289,12 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
     except Exception:  # noqa: BLE001
         updated_label = updated_raw or ''
 
-    # Перед рендерингом переписываем внутренние ссылки /article/<id> в тексте блоков.
-    def _walk_and_rewrite(blocks: list[dict[str, Any]] | None) -> None:
-        if not blocks:
-            return
-        for b in blocks:
-            if not isinstance(b, dict):
-                continue
-            text_html = b.get('text') or ''
-            if text_html:
-                b['text'] = _rewrite_internal_links_for_public(text_html)
-            _walk_and_rewrite(b.get('children'))
-
-    blocks = article.get('blocks') or []
-    _walk_and_rewrite(blocks)
-    blocks_html = ''.join(_render_public_block(b, 1) for b in blocks)
+    # doc_json-first: render from outline TipTap JSON.
+    try:
+        doc_html = render_outline_doc_json_html(article.get('docJson'))
+    except Exception:
+        doc_html = ''
+    doc_html = _rewrite_internal_links_for_public(doc_html or '')
     header = f"""
     <div class="panel-header article-header">
       <div class="title-block">
@@ -320,7 +312,7 @@ def _build_public_article_html(article: dict[str, Any]) -> str:
         <section class="panel export-panel" aria-label="Статья">
           {header}
           <div id="exportBlocksRoot" class="blocks" role="tree">
-            {blocks_html}
+            {doc_html}
           </div>
         </section>
       </main>

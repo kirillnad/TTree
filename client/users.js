@@ -1,7 +1,7 @@
 import { refs } from './refs.js';
 import { fetchUsers, deleteUser } from './api.js?v=4';
 import { showToast } from './toast.js';
-import { showPrompt } from './modal.js?v=9';
+import { showPrompt } from './modal.js?v=10';
 
 function hideAllPanels() {
   if (refs.articleListView) refs.articleListView.classList.add('hidden');

@@ -750,6 +750,8 @@ export function showVersionsPicker(options = {}) {
     },
   });
 
+  card.classList.add('modal-card--diff-light');
+
   confirmBtn.classList.remove('danger-btn');
   confirmBtn.disabled = !selectedId;
 
@@ -873,6 +875,8 @@ export function showVersionCompareTargetPicker(options = {}) {
       return fragment;
     },
   });
+
+  card.classList.add('modal-card--diff-light');
 
   confirmBtn.classList.remove('danger-btn');
   confirmBtn.disabled = !selectedId;
