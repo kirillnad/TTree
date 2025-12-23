@@ -93,6 +93,90 @@ let semanticReindexIsPolling = false;
 let semanticReindexBaseLabel = 'Переиндексировать поиск';
 let semanticReindexRunningLabel = 'Переиндексация';
 
+const SIDEBAR_SEARCH_VIEW_STORAGE_KEY = 'ttree_sidebar_search_view_v1';
+
+function normalizeSidebarSearchView(value) {
+  return value === 'search' ? 'search' : 'list';
+}
+
+function loadSidebarSearchViewFromStorage() {
+  try {
+    return normalizeSidebarSearchView(localStorage.getItem(SIDEBAR_SEARCH_VIEW_STORAGE_KEY) || '');
+  } catch (_) {
+    return 'list';
+  }
+}
+
+function saveSidebarSearchViewToStorage() {
+  try {
+    localStorage.setItem(SIDEBAR_SEARCH_VIEW_STORAGE_KEY, state.sidebarSearchView || 'list');
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function updateSidebarSearchViewUi() {
+  const view = normalizeSidebarSearchView(state.sidebarSearchView);
+  const isSearch = view === 'search';
+  const nextLabel = isSearch ? 'Фильтр' : 'Поиск';
+
+  if (refs.sidebarSearchViewToggle) {
+    refs.sidebarSearchViewToggle.dataset.view = view;
+    const labelEl = refs.sidebarSearchViewToggle.querySelector('span') || refs.sidebarSearchViewToggle;
+    // В кнопке показываем НЕ текущий режим, а следующий (что будет после клика).
+    labelEl.textContent = nextLabel;
+    const title = isSearch
+      ? 'Переключить в режим фильтра статей'
+      : 'Переключить в режим поиска';
+    refs.sidebarSearchViewToggle.setAttribute('title', title);
+    refs.sidebarSearchViewToggle.setAttribute('aria-label', title);
+    // Активная подсветка = сейчас в режиме поиска.
+    refs.sidebarSearchViewToggle.classList.toggle('search-panel__toggle--active', isSearch);
+  }
+
+  if (refs.searchModeToggle) refs.searchModeToggle.classList.toggle('hidden', !isSearch);
+  if (!isSearch) {
+    hideSearchResults();
+    if (refs.ragOpenBtn) refs.ragOpenBtn.classList.add('hidden');
+  }
+
+  if (refs.searchInput) {
+    refs.searchInput.placeholder = isSearch
+      ? state.searchMode === 'semantic'
+        ? 'Семантический поиск...'
+        : 'Поиск...'
+      : 'Фильтр статей…';
+  }
+}
+
+function setSidebarSearchView(nextView, { persist = true } = {}) {
+  const normalized = normalizeSidebarSearchView(nextView);
+  if (state.sidebarSearchView === normalized) return;
+
+  state.sidebarSearchView = normalized;
+  if (persist) saveSidebarSearchViewToStorage();
+
+  // Переключение смысла одного поля: сбрасываем неактуальные состояния.
+  if (state.sidebarSearchView === 'list') {
+    state.searchQuery = '';
+    state.searchResults = [];
+    state.searchError = '';
+    state.searchLoading = false;
+    state.searchRequestId = 0;
+  } else {
+    state.articleFilterQuery = '';
+    renderSidebarArticleList();
+    ensureSidebarSelectionVisible();
+  }
+
+  sidebarQuickFilterLastTypedAt = 0;
+  updateSidebarSearchViewUi();
+
+  if (refs.searchInput) {
+    refs.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
 function outlineDocJsonToIndexTextMap(docJson) {
   const map = new Map();
   const order = [];
@@ -236,12 +320,12 @@ function maybeHandleSidebarQuickFilterKey(event) {
   if (ctrlKey || altKey || metaKey) return false;
   const target = event.target;
   if (isEditableTarget(target)) return false;
-  if (!refs.sidebar || !refs.sidebarQuickFilterInput || !refs.sidebarQuickFilter) return false;
+  if (state.sidebarSearchView !== 'list') return false;
+  if (!refs.sidebar || !refs.searchInput) return false;
   // Работает только если виден сайдбар (колонка статей).
   if (refs.sidebar.classList.contains('hidden')) return false;
 
-  const input = refs.sidebarQuickFilterInput;
-  const wrapper = refs.sidebarQuickFilter;
+  const input = refs.searchInput;
 
   if (key === 'Escape') {
     if (!state.articleFilterQuery && !input.value) return false;
@@ -423,6 +507,9 @@ function closeListMenu() {
 }
 
 export function attachEvents() {
+  state.sidebarSearchView = loadSidebarSearchViewFromStorage();
+  updateSidebarSearchViewUi();
+
   document.addEventListener('keydown', (event) => {
     if (state.isOutlineEditing) return;
     if (maybeHandleSidebarQuickFilterKey(event)) return;
@@ -508,11 +595,40 @@ export function attachEvents() {
       toggleSidebarRecentMode();
     });
   }
+
+  const handleUnifiedSearchInput = (event) => {
+    const view = normalizeSidebarSearchView(state.sidebarSearchView);
+    if (view === 'search') {
+      handleSearchInput(event);
+      return;
+    }
+    // list mode: treat the same input as filter for the sidebar article list.
+    state.searchQuery = '';
+    state.searchResults = [];
+    state.searchError = '';
+    state.searchLoading = false;
+    state.searchRequestId = 0;
+    hideSearchResults();
+    if (refs.ragOpenBtn) refs.ragOpenBtn.classList.add('hidden');
+    handleArticleFilterInput(event);
+  };
+
   if (refs.searchInput) {
-    refs.searchInput.addEventListener('input', handleSearchInput);
+    refs.searchInput.addEventListener('input', handleUnifiedSearchInput);
     refs.searchInput.addEventListener('focus', () => {
-      if (state.searchQuery.trim()) {
+      if (state.sidebarSearchView === 'search' && state.searchQuery.trim()) {
         renderSearchResults();
+      }
+    });
+  }
+  if (refs.sidebarSearchViewToggle) {
+    refs.sidebarSearchViewToggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const next = state.sidebarSearchView === 'search' ? 'list' : 'search';
+      setSidebarSearchView(next);
+      if (refs.searchInput) {
+        refs.searchInput.focus({ preventScroll: true });
       }
     });
   }
@@ -555,9 +671,7 @@ export function attachEvents() {
       'aria-label',
       semantic ? 'Семантический поиск' : 'Классический поиск'
     );
-    if (refs.searchInput) {
-      refs.searchInput.placeholder = semantic ? 'Семантический поиск...' : 'Поиск...';
-    }
+    updateSidebarSearchViewUi();
   };
   if (refs.searchModeToggle) {
     refs.searchModeToggle.addEventListener('click', (event) => {
@@ -1251,17 +1365,18 @@ export function attachEvents() {
   if (refs.articleFilterInput) {
     refs.articleFilterInput.addEventListener('input', handleArticleFilterInput);
   }
-  if (refs.sidebarQuickFilterInput) {
-    refs.sidebarQuickFilterInput.addEventListener('input', handleArticleFilterInput);
-    refs.sidebarQuickFilterInput.addEventListener('keydown', (event) => {
+  if (refs.searchInput) {
+    refs.searchInput.addEventListener('keydown', (event) => {
+      if (state.sidebarSearchView !== 'list') return;
       if (event.key === 'Escape') {
         event.stopPropagation();
         event.preventDefault();
-        refs.sidebarQuickFilterInput.value = '';
+        refs.searchInput.value = '';
         state.articleFilterQuery = '';
-         ensureSidebarSelectionVisible();
+        ensureSidebarSelectionVisible();
         renderSidebarArticleList();
         sidebarQuickFilterLastTypedAt = 0;
+        updateSearchClearBtn();
         return;
       }
       const { key, ctrlKey, altKey, metaKey } = event;
@@ -1271,23 +1386,12 @@ export function attachEvents() {
       const idle = !sidebarQuickFilterLastTypedAt || now - sidebarQuickFilterLastTypedAt > 2000;
       if (idle) {
         // Очищаем поле перед началом нового "слова".
-        refs.sidebarQuickFilterInput.value = '';
+        refs.searchInput.value = '';
         state.articleFilterQuery = '';
         renderSidebarArticleList();
+        updateSearchClearBtn();
       }
       sidebarQuickFilterLastTypedAt = now;
-    });
-  }
-  if (refs.sidebarQuickFilterClear && refs.sidebarQuickFilterInput) {
-    refs.sidebarQuickFilterClear.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      refs.sidebarQuickFilterInput.value = '';
-      state.articleFilterQuery = '';
-      sidebarQuickFilterLastTypedAt = 0;
-      ensureSidebarSelectionVisible();
-      renderSidebarArticleList();
-      refs.sidebarQuickFilterInput.focus();
     });
   }
 

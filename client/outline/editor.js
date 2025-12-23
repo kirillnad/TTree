@@ -632,10 +632,6 @@ function safeUuid() {
 function renderOutlineShell({ loading = false } = {}) {
   if (!refs.outlineEditor) return;
   refs.outlineEditor.innerHTML = `
-    <div class="outline-editor__bar">
-      <div class="outline-editor__title">Outline редактор</div>
-      <div class="outline-editor__status" data-outline-status="true"></div>
-    </div>
     <div class="outline-editor__body">
       <div class="outline-editor__content" id="outlineEditorContent"></div>
       <div class="outline-editor__loading ${loading ? '' : 'hidden'}">Загружаем редактор…</div>
@@ -1339,9 +1335,13 @@ function formatTimeShort(date) {
 }
 
 function setOutlineStatus(text = '') {
-  const el = refs.outlineEditor?.querySelector?.('[data-outline-status="true"]');
-  if (!el) return;
-  el.textContent = text || '';
+  const value = String(text || '');
+  state.outlineStatusText = value;
+  // В режиме outline показываем статус в месте updatedAt (в меню статьи),
+  // чтобы не плодить отдельные панели и элементы интерфейса.
+  if (refs.updatedAt && state.isOutlineEditing) {
+    refs.updatedAt.textContent = value;
+  }
 }
 
 function moveCursorToSectionBodyStart(editor, sectionPos) {
@@ -4602,6 +4602,12 @@ async function mountOutlineEditor() {
             const editingSectionId = st.editingSectionId || null;
             if (editingSectionId) return false;
 
+            // Включаем edit-mode по dblclick только по заголовку секции.
+            const inHeading =
+              (event?.target && event.target.closest && event.target.closest('[data-outline-heading="true"]')) ||
+              (event?.target && event.target.closest && event.target.closest('.outline-heading'));
+            if (!inHeading) return false;
+
             const coords = { left: event.clientX, top: event.clientY };
             const hit = view.posAtCoords(coords);
             const pos = hit && typeof hit.pos === 'number' ? hit.pos : null;
@@ -4620,7 +4626,37 @@ async function mountOutlineEditor() {
               try {
                 const st2 = outlineEditModeKey.getState(view.state) || {};
                 if (st2.editingSectionId) return;
-                view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId }));
+                const currentPos = findSectionPosById(view.state.doc, sectionId);
+                const currentNode = typeof currentPos === 'number' ? view.state.doc.nodeAt(currentPos) : null;
+                const shouldExpand = Boolean(currentNode?.attrs?.collapsed);
+
+                let tr = view.state.tr;
+                if (shouldExpand && typeof currentPos === 'number' && currentNode) {
+                  tr = tr.setNodeMarkup(currentPos, undefined, { ...currentNode.attrs, collapsed: false });
+                  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                }
+
+                tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
+
+                // Ставим курсор в начало body секции.
+                try {
+                  const nodeAfter = typeof currentPos === 'number' ? tr.doc.nodeAt(currentPos) : null;
+                  if (nodeAfter && nodeAfter.type?.name === 'outlineSection') {
+                    const heading = nodeAfter.child(0);
+                    const bodyStart = currentPos + 1 + heading.nodeSize;
+                    const posInBody = Math.min(tr.doc.content.size, bodyStart + 1);
+                    tr = tr.setSelection(TextSelection.create(tr.doc, posInBody));
+                  }
+                } catch {
+                  // ignore
+                }
+
+                view.dispatch(tr.scrollIntoView());
+                try {
+                  view.focus();
+                } catch {
+                  // ignore
+                }
               } catch {
                 // ignore
               }
@@ -5120,13 +5156,6 @@ export async function openPublicOutlineViewer({ docJson } = {}) {
   refs.outlineEditor.classList.remove('hidden');
   if (!refs.outlineEditor.querySelector('#outlineEditorContent')) {
     renderOutlineShell({ loading: true });
-  }
-  // В публичном просмотре верхняя панель outline-редактора не нужна.
-  try {
-    const bar = refs.outlineEditor.querySelector('.outline-editor__bar');
-    if (bar) bar.classList.add('hidden');
-  } catch {
-    // ignore
   }
 
   try {

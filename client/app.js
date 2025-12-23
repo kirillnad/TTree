@@ -1,5 +1,5 @@
 import { initRouting, route } from './routing.js';
-import { attachEvents } from './events.js?v=12';
+import { attachEvents } from './events.js?v=15';
 import { loadLastChangeFromChangelog } from './changelog.js';
 import { initAuth, bootstrapAuth } from './auth.js';
 import { initUsersPanel } from './users.js';

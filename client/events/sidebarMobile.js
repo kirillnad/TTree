@@ -45,12 +45,12 @@ export function attachSidebarMobileHandlers() {
         ) {
           return;
         }
-        // Не закрываем мобильный сайдбар при клике по крестику очистки фильтра.
-        if (refs.sidebarQuickFilterClear && btn === refs.sidebarQuickFilterClear) {
-          return;
-        }
         // Не закрываем мобильный сайдбар при переключении режима списка в сайдбаре.
         if (refs.sidebarRecentBtn && btn === refs.sidebarRecentBtn) {
+          return;
+        }
+        // Не закрываем мобильный сайдбар при переключении режима поля (Список/Поиск).
+        if (refs.sidebarSearchViewToggle && btn === refs.sidebarSearchViewToggle) {
           return;
         }
         // Не закрываем мобильный сайдбар при переключении режима поиска.

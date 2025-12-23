@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>Memus. Всё, что вы узнали — в одном месте. Удобно. Надёжно. Везде с вами.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/style.css?v=28" />
+    <link rel="stylesheet" href="/style.css?v=34" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
     <meta name="theme-color" content="#111827" />
@@ -109,30 +109,40 @@
             <button id="openInboxBtn" class="ghost small" type="button" title="Открыть быстрые заметки">Быстрые заметки</button>
             <button id="quickNoteAddBtn" class="ghost small" type="button" title="Добавить быструю заметку">Новая</button>
           </div>
-          <div class="search-panel sidebar-section">
-            <div class="search-panel__row">
-              <div class="search-panel__input-wrap">
-                <input
-                  id="searchInput"
-                  type="text"
-                  placeholder="Поиск..."
-                  autocomplete="off"
-                />
-                <button
-                  id="searchClearBtn"
-                  class="search-panel__clear hidden"
-                  type="button"
-                  title="Очистить поиск"
-                  aria-label="Очистить поиск"
-                >
-                  ×
-                </button>
-              </div>
-              <button
-                id="ragOpenBtn"
-                class="search-panel__toggle hidden"
-                type="button"
-                title="Открыть страницу с резюме и найденными блоками"
+	          <div class="search-panel sidebar-section">
+	            <div class="search-panel__row">
+	              <div class="search-panel__input-wrap">
+	                <input
+	                  id="searchInput"
+	                  type="text"
+	                  placeholder="Поиск..."
+	                  autocomplete="off"
+	                />
+	                <button
+	                  id="searchClearBtn"
+	                  class="search-panel__clear hidden"
+	                  type="button"
+	                  title="Очистить поиск"
+	                  aria-label="Очистить поиск"
+	                >
+	                  ×
+	                </button>
+	              </div>
+	              <button
+	                id="sidebarSearchViewToggle"
+	                class="search-panel__toggle search-panel__toggle--view"
+	                type="button"
+	                title="Режим: фильтр списка статей"
+	                aria-label="Режим: фильтр списка статей"
+	                data-view="list"
+	              >
+	                <span>Поиск</span>
+	              </button>
+	              <button
+	                id="ragOpenBtn"
+	                class="search-panel__toggle hidden"
+	                type="button"
+	                title="Открыть страницу с резюме и найденными блоками"
                 aria-label="Открыть RAG страницу"
               >
                 <span>R</span>
@@ -187,10 +197,10 @@
               </div>
               <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
             </div>
-          <div class="sidebar-footer">
-            <button
-              id="userMenuBtn"
-              class="ghost icon-button sidebar-user-avatar"
+	          <div class="sidebar-footer">
+	            <button
+	              id="userMenuBtn"
+	              class="ghost icon-button sidebar-user-avatar"
               type="button"
               aria-haspopup="true"
               aria-expanded="false"
@@ -214,32 +224,12 @@
                   stroke-linecap="round"
                 />
               </svg>
-            </button>
-            <span class="sidebar-version" id="sidebarVersionLabel">CSS v7 · JS v4</span>
-            <div id="sidebarQuickFilter" class="sidebar-quick-filter">
-              <div class="sidebar-quick-filter-input-wrapper">
-                <input
-                  id="sidebarQuickFilterInput"
-                  type="text"
-                  placeholder="Фильтр статей…"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <button
-                  id="sidebarQuickFilterClear"
-                  type="button"
-                  class="sidebar-quick-filter-clear"
-                  aria-label="Очистить фильтр"
-                  title="Очистить фильтр"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <div id="userMenu" class="article-menu hidden sidebar-user-menu" role="menu">
-              <div class="sidebar-user-menu__item" aria-disabled="true">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--user" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+	            </button>
+	            <span class="sidebar-version" id="sidebarVersionLabel">CSS v7 · JS v4</span>
+	            <div id="userMenu" class="article-menu hidden sidebar-user-menu" role="menu">
+	              <div class="sidebar-user-menu__item" aria-disabled="true">
+	                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--user" aria-hidden="true">
+	                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                     <circle cx="12" cy="8" r="4" fill="currentColor" />
                     <path d="M4 18c0-3 3-5 8-5s8 2 8 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
                   </svg>
@@ -640,6 +630,6 @@
       href="https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css"
     />
     <script src="https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js"></script>
-    <script type="module" src="/app.js?v=14"></script>
+    <script type="module" src="/app.js?v=17"></script>
   </body>
 </html>

@@ -2,6 +2,8 @@ export const state = {
   mode: 'view',
   // Outline-режим редактирования всей статьи (TipTap).
   isOutlineEditing: false,
+  // Статус автосейва/outline (показываем в UI вместо updatedAt).
+  outlineStatusText: '',
   // Открыт ли публичный просмотр внутри SPA (например, когда Android открывает /p/<slug> в установленном PWA).
   isPublicView: false,
   // Специальная read-only страница для AI-резюме по результатам поиска.
@@ -26,6 +28,8 @@ export const state = {
   searchLoading: false,
   searchRequestId: 0,
   searchMode: 'classic',
+  // Режим поля в сайдбаре: 'list' фильтрует дерево статей, 'search' делает глобальный поиск.
+  sidebarSearchView: 'list',
   ragQuery: '',
   ragResults: [],
   ragBlockMap: {},

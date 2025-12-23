@@ -43,6 +43,7 @@ export const refs = {
   searchResults: document.getElementById('searchResults'),
   searchPanel: document.querySelector('.search-panel'),
   searchModeToggle: document.getElementById('searchModeToggle'),
+  sidebarSearchViewToggle: document.getElementById('sidebarSearchViewToggle'),
   ragOpenBtn: document.getElementById('ragOpenBtn'),
   articleTitleInput: document.getElementById('articleTitleInput'),
   editTitleBtn: document.getElementById('editTitleBtn'),
@@ -114,8 +115,5 @@ export const refs = {
   sidebarBackdrop: document.getElementById('sidebarBackdrop'),
   dragModeToggleBtn: document.getElementById('dragModeToggleBtn'),
   listSidebarBtn: document.getElementById('listSidebarBtn'),
-  sidebarQuickFilter: document.getElementById('sidebarQuickFilter'),
-  sidebarQuickFilterInput: document.getElementById('sidebarQuickFilterInput'),
-  sidebarQuickFilterClear: document.getElementById('sidebarQuickFilterClear'),
   outlineEditor: document.getElementById('outlineEditor'),
 };

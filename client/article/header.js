@@ -49,8 +49,13 @@ export function updateArticleHeaderUi() {
   if (refs.articleEncryptionRemoveBtn) {
     refs.articleEncryptionRemoveBtn.classList.toggle('hidden', !article.encrypted);
   }
-  if (refs.updatedAt && article.updatedAt) {
-    refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
+  if (refs.updatedAt) {
+    if (state.isOutlineEditing) {
+      refs.updatedAt.textContent = state.outlineStatusText || '';
+    } else if (article.updatedAt) {
+      refs.updatedAt.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
+    } else {
+      refs.updatedAt.textContent = '';
+    }
   }
 }
-

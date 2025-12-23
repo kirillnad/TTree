@@ -6,6 +6,14 @@ import { navigate, routing } from './routing.js';
 import { setSidebarMobileOpen } from './sidebar.js';
 import { hideToast, showPersistentToast } from './toast.js';
 
+function textToLines(text = '') {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/g, ''));
+}
+
 function highlightSnippet(snippet = '') {
   const term = state.searchQuery.trim();
   if (!term) return escapeHtml(snippet);
@@ -15,6 +23,10 @@ function highlightSnippet(snippet = '') {
 
 function updateRagOpenButton() {
   if (!refs.ragOpenBtn) return;
+  if (state.sidebarSearchView !== 'search') {
+    refs.ragOpenBtn.classList.add('hidden');
+    return;
+  }
   const shouldShow =
     state.searchMode === 'semantic' &&
     Boolean(state.searchQuery.trim()) &&
@@ -27,6 +39,12 @@ function updateRagOpenButton() {
 
 export function renderSearchResults() {
   if (!refs.searchResults) return;
+  if (state.sidebarSearchView !== 'search') {
+    refs.searchResults.classList.add('hidden');
+    refs.searchResults.innerHTML = '';
+    updateRagOpenButton();
+    return;
+  }
   const query = state.searchQuery.trim();
   if (!query) {
     refs.searchResults.classList.add('hidden');
@@ -55,15 +73,30 @@ export function renderSearchResults() {
     const isArticle = result.type === 'article';
     const item = document.createElement('div');
     item.className = 'search-result-item';
-    const titleContent = highlightSnippet(result.articleTitle || ' ');
+    let titleText = result.articleTitle || ' ';
+    let sectionTitle = '';
+    let articleTitle = result.articleTitle || '';
+    if (!isArticle) {
+      const lines = textToLines(result.blockText || '');
+      const firstNonEmptyIndex = lines.findIndex((line) => line.trim() !== '');
+      sectionTitle = firstNonEmptyIndex >= 0 ? (lines[firstNonEmptyIndex] || '').trim() : '';
+      // Для блока заголовком результата является заголовок секции (1-я строка текста).
+      titleText = sectionTitle || articleTitle || ' ';
+    }
+    const titleContent = highlightSnippet(titleText || ' ');
     const typeLabel = isArticle ? 'Статья' : 'Блок';
     let snippetContent = '';
     if (!isArticle) {
-      const lines = htmlToLines(result.blockText || '');
-      const previewLines = lines.slice(0, 2);
-      snippetContent = previewLines.length
-        ? previewLines.map((line) => highlightSnippet(line)).join('<br />')
-        : highlightSnippet(result.snippet || '');
+      const lines = textToLines(result.blockText || '');
+      const firstNonEmptyIndex = lines.findIndex((line) => line.trim() !== '');
+      const bodyLines =
+        firstNonEmptyIndex >= 0
+          ? lines.slice(firstNonEmptyIndex + 1).filter((line) => line.trim() !== '')
+          : lines.filter((line) => line.trim() !== '');
+      const previewLines = bodyLines.slice(0, 2);
+      const preview = previewLines.map((line) => highlightSnippet(line)).join('<br />');
+      const articleMeta = articleTitle ? `<div class="search-result-item__article">${escapeHtml(articleTitle)}</div>` : '';
+      snippetContent = `${articleMeta}${preview ? `<div>${preview}</div>` : ''}`;
     }
     item.innerHTML = `
       <div class="search-result-item__header">
@@ -124,6 +157,11 @@ async function clientSideSearch(query, limit = 20) {
 }
 
 export async function handleSearchInput(event) {
+  if (state.sidebarSearchView !== 'search') {
+    hideSearchResults();
+    updateRagOpenButton();
+    return;
+  }
   const value = event.target.value;
   state.searchQuery = value;
   if (!value.trim()) {

@@ -34,7 +34,7 @@ def _collect_plain_text_from_doc_json(doc_json: Any | None) -> list[str]:
     except Exception:
         return []
     for _sid, txt in (m or {}).items():
-        plain = ' '.join(String(txt or '').split()).strip()
+        plain = ' '.join(str(txt or '').split()).strip()
         if plain:
             out.append(plain)
     return out

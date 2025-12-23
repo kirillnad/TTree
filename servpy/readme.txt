@@ -9,11 +9,26 @@
 
 Для быстрого запуска в корне репозитория есть скрипт scripts/start_servpy.sh. По умолчанию он использует системный PostgreSQL (БД `ttree`) через локальный сокет и запускает uvicorn на 4500‑м порту. HOST/PORT можно переопределить переменными окружения.
 
-Чтобы сервис стартовал автоматически при логине и писал логи в файл, создан user-unit ~/.config/systemd/user/ttree.service. После любых правок не забудьте выполнить:
+## Автозапуск/устойчивость (чтобы не ловить 502 Bad Gateway)
+
+Nginx проксирует Memus на backend `uvicorn` (по умолчанию `127.0.0.1:4500`). Ошибка **502 Bad Gateway** означает, что nginx не смог достучаться до upstream (процесс упал/не запущен/завис/порт не слушает).
+
+Чтобы backend не “умирал” на часы, используем systemd user-units:
+  - `~/.config/systemd/user/ttree.service` — запускает uvicorn и перезапускает при падении;
+  - `~/.config/systemd/user/ttree-health.timer` (+ `ttree-health.service`) — периодически проверяет `http://127.0.0.1:4500/` и перезапускает `ttree.service`, если не отвечает (защита от зависаний).
+
+Команды:
     systemctl --user daemon-reload
     systemctl --user enable --now ttree.service
-    systemctl --user status ttree.service   # убедиться, что запустился
-    journalctl --user -u ttree.service -f   # для отладки; stdout/stderr также в logs/servpy.log
+    systemctl --user enable --now ttree-health.timer
+    systemctl --user status ttree.service
+    journalctl --user -u ttree.service -f
+
+ВАЖНО: systemd user-сервисы останавливаются, когда пользователь выходит из системы. Если `Linger=no`, то после logout возможен долгий 502 до следующего логина.
+Проверка:
+    loginctl show-user aadminn | grep -E '^Linger='
+Чтобы сервис работал и без активной сессии (после ребута/логаута), включите linger (нужно sudo):
+    sudo loginctl enable-linger aadminn
 
 Backend работает только с PostgreSQL. Для запуска требуется переменная окружения
     SERVPY_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname
