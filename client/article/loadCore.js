@@ -30,7 +30,7 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle && state.isOutlineEditing) {
     try {
-      const outline = await import('../outline/editor.js?v=76');
+      const outline = await import('../outline/editor.js?v=79');
       if (outline?.flushOutlineAutosave) {
         await outline.flushOutlineAutosave();
       }
@@ -77,7 +77,7 @@ export async function loadArticle(id, options = {}) {
   if (!state.isPublicView && !state.isRagView && !article.encrypted) {
     try {
       state.isOutlineEditing = true;
-      const outline = await import('../outline/editor.js?v=76');
+      const outline = await import('../outline/editor.js?v=79');
       if (outline?.openOutlineEditor) {
         await outline.openOutlineEditor();
       }

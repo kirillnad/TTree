@@ -700,27 +700,78 @@ function mountOutlineToolbar(editor) {
     }
   };
 
-  const canRun = (build) => {
-    try {
-      const chain = editor.can().chain();
-      build(chain);
-      return chain.run();
-    } catch {
-      return false;
-    }
-  };
-
-	  const runAction = (action) => {
-	    if (!action) return false;
+	  const canRun = (build) => {
 	    try {
-	      const chain = editor.chain().focus();
-	      if (action === 'toggleBold') return chain.toggleBold().run();
-	      if (action === 'toggleItalic') return chain.toggleItalic().run();
-	      if (action === 'toggleStrike') return chain.toggleStrike().run();
-	      if (action === 'toggleCode') return chain.toggleCode().run();
-	      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
-	      if (action === 'unsetLink') return chain.unsetLink().run();
-	      if (action === 'toggleBulletList') {
+	      const chain = editor.can().chain();
+	      if (isEditing()) {
+	        chain.command(({ tr }) => {
+	          tr.setMeta(OUTLINE_ALLOW_META, true);
+	          return true;
+	        });
+	      }
+	      build(chain);
+	      return chain.run();
+	    } catch {
+	      return false;
+	    }
+	  };
+
+		  const runAction = (action) => {
+		    if (!action) return false;
+		    try {
+		      const chain = editor.chain().focus();
+		      if (isEditing()) {
+		        chain.command(({ tr }) => {
+		          tr.setMeta(OUTLINE_ALLOW_META, true);
+		          return true;
+		        });
+		      }
+		      if (action === 'toggleBold') return chain.toggleBold().run();
+		      if (action === 'toggleItalic') return chain.toggleItalic().run();
+		      if (action === 'toggleStrike') return chain.toggleStrike().run();
+		      if (action === 'toggleCodeBlock') {
+		        // TipTap default `toggleCodeBlock()` converts each selected paragraph independently.
+		        // UX: if selection spans multiple blocks, merge into one codeBlock.
+		        return editor.commands.command(({ state: pmState, dispatch }) => {
+		          const codeBlockType = pmState.schema.nodes?.codeBlock || null;
+		          if (!codeBlockType) return false;
+		          const selection = pmState.selection;
+		          const { from, to } = selection;
+		          if (from === to) {
+		            const tr0 = pmState.tr.setMeta(OUTLINE_ALLOW_META, true);
+		            dispatch(tr0);
+		            return editor.commands.toggleCodeBlock();
+		          }
+
+		          const range = selection.$from?.blockRange?.(selection.$to) || null;
+		          if (!range) {
+		            const tr0 = pmState.tr.setMeta(OUTLINE_ALLOW_META, true);
+		            dispatch(tr0);
+		            return editor.commands.toggleCodeBlock();
+		          }
+
+		          if (!range.parent?.canReplaceWith?.(range.startIndex, range.endIndex, codeBlockType)) {
+		            const tr0 = pmState.tr.setMeta(OUTLINE_ALLOW_META, true);
+		            dispatch(tr0);
+		            return editor.commands.toggleCodeBlock();
+		          }
+
+		          const raw = pmState.doc.textBetween(range.start, range.end, '\n', '\n');
+		          const text = String(raw || '').replace(/\n+$/g, '').trimEnd();
+		          if (!text) return false;
+		          const node = codeBlockType.create(null, pmState.schema.text(text));
+		          let tr = pmState.tr.replaceRangeWith(range.start, range.end, node);
+		          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		          if (TextSelection) {
+		            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(range.start + 2), 1));
+		          }
+		          dispatch(tr.scrollIntoView());
+		          return true;
+		        });
+		      }
+		      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
+		      if (action === 'unsetLink') return chain.unsetLink().run();
+		      if (action === 'toggleBulletList') {
 	        // UX: allow switching ordered -> bullet in one click.
 	        if (editor.isActive('orderedList')) {
 	          return chain.toggleOrderedList().toggleBulletList().run();
@@ -772,17 +823,23 @@ function mountOutlineToolbar(editor) {
 	    return false;
 	  };
 
-	  const insertLinkMark = (href, label, attrs = {}) => {
-	    const url = String(href || '').trim();
-	    if (!url) return false;
-	    const text = String(label || '').trim() || url;
-	    const { from, to, empty } = editor.state.selection;
-	    const linkAttrs = { href: url, ...attrs };
-	    const chain = editor.chain().focus();
-	    if (!empty && from !== to) {
-	      return chain.setLink(linkAttrs).run();
-	    }
-	    return chain
+		  const insertLinkMark = (href, label, attrs = {}) => {
+		    const url = String(href || '').trim();
+		    if (!url) return false;
+		    const text = String(label || '').trim() || url;
+		    const { from, to, empty } = editor.state.selection;
+		    const linkAttrs = { href: url, ...attrs };
+		    const chain = editor.chain().focus();
+		    if (isEditing()) {
+		      chain.command(({ tr }) => {
+		        tr.setMeta(OUTLINE_ALLOW_META, true);
+		        return true;
+		      });
+		    }
+		    if (!empty && from !== to) {
+		      return chain.setLink(linkAttrs).run();
+		    }
+		    return chain
 	      .insertContent({
 	        type: 'text',
 	        text,
@@ -900,16 +957,16 @@ function mountOutlineToolbar(editor) {
     if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
 
     // Dropdown group buttons
-    if (btns.textMenuBtn) {
-      const active =
-        editor.isActive('bold') ||
-        editor.isActive('italic') ||
-        editor.isActive('strike') ||
-        editor.isActive('code') ||
-        editor.isActive('blockquote');
-      markActive(btns.textMenuBtn, active);
-      btns.textMenuBtn.hidden = !editing;
-    }
+	    if (btns.textMenuBtn) {
+	      const active =
+	        editor.isActive('bold') ||
+	        editor.isActive('italic') ||
+	        editor.isActive('strike') ||
+	        editor.isActive('codeBlock') ||
+	        editor.isActive('blockquote');
+	      markActive(btns.textMenuBtn, active);
+	      btns.textMenuBtn.hidden = !editing;
+	    }
     if (btns.listsMenuBtn) {
       const active = editor.isActive('bulletList') || editor.isActive('orderedList');
       markActive(btns.listsMenuBtn, active);
@@ -935,15 +992,16 @@ function mountOutlineToolbar(editor) {
       } else if (action === 'toggleItalic') {
         isActive = editor.isActive('italic');
         isDisabled = !canRun((c) => c.toggleItalic());
-      } else if (action === 'toggleStrike') {
-        isActive = editor.isActive('strike');
-        isDisabled = !canRun((c) => c.toggleStrike());
-      } else if (action === 'toggleCode') {
-        isActive = editor.isActive('code');
-        isDisabled = !canRun((c) => c.toggleCode());
-	      } else if (action === 'toggleBlockquote') {
-	        isActive = editor.isActive('blockquote');
-	        isDisabled = !canRun((c) => c.toggleBlockquote());
+	      } else if (action === 'toggleStrike') {
+	        isActive = editor.isActive('strike');
+	        isDisabled = !canRun((c) => c.toggleStrike());
+	      } else if (action === 'toggleCodeBlock') {
+	        isActive = editor.isActive('codeBlock');
+	        // We use a custom command for merge-into-one behavior; `can()` doesn't know about it.
+	        isDisabled = !isEditing();
+		      } else if (action === 'toggleBlockquote') {
+		        isActive = editor.isActive('blockquote');
+		        isDisabled = !canRun((c) => c.toggleBlockquote());
 	      } else if (action === 'insertHttpLink' || action === 'insertArticleLink') {
 	        isActive = false;
 	        isDisabled = !isEditing();
@@ -1566,6 +1624,101 @@ function findSectionPosById(doc, sectionId) {
     found = pos;
   });
   return found;
+}
+
+function convertInlineMultilineCodeToCodeBlockInSection(state, sectionId) {
+  try {
+    const doc = state.doc;
+    const sectionPos = findSectionPosById(doc, sectionId);
+    const sectionNode = typeof sectionPos === 'number' ? doc.nodeAt(sectionPos) : null;
+    if (!sectionNode) return null;
+
+    const schema = state.schema;
+    const codeMark = schema.marks?.code || null;
+    const codeBlockType = schema.nodes?.codeBlock || null;
+    if (!codeMark || !codeBlockType) return null;
+
+    const headingNode = sectionNode.child(0);
+    const bodyNode = sectionNode.child(1);
+    if (!headingNode || !bodyNode) return null;
+
+    const outlineBodyPos = sectionPos + 1 + headingNode.nodeSize;
+    const bodyContentStart = outlineBodyPos + 1;
+
+    const candidates = [];
+
+    bodyNode.descendants((node, pos) => {
+      if (!node || node.type?.name !== 'paragraph') return;
+
+      let hasCodeText = false;
+      let hasHardBreak = false;
+      let allCodeish = true;
+
+      for (let i = 0; i < node.childCount; i += 1) {
+        const child = node.child(i);
+        if (!child) continue;
+        if (child.type?.name === 'hardBreak') {
+          hasHardBreak = true;
+          continue;
+        }
+        if (child.isText) {
+          const text = String(child.text || '');
+          if (!text) continue;
+          const marks = Array.isArray(child.marks) ? child.marks : [];
+          const isCode = marks.some((m) => m?.type === codeMark);
+          if (!isCode) {
+            allCodeish = false;
+            break;
+          }
+          hasCodeText = true;
+          continue;
+        }
+        allCodeish = false;
+        break;
+      }
+
+      // Convert only multiline inline-code (<code> with <br>), not single-line inline code.
+      if (!allCodeish || !hasCodeText || !hasHardBreak) return;
+
+      let text = '';
+      for (let i = 0; i < node.childCount; i += 1) {
+        const child = node.child(i);
+        if (!child) continue;
+        if (child.type?.name === 'hardBreak') {
+          text += '\n';
+          continue;
+        }
+        if (child.isText) {
+          text += String(child.text || '');
+        }
+      }
+      if (!text.trim()) return;
+
+      const absFrom = bodyContentStart + pos;
+      candidates.push({ from: absFrom, to: absFrom + node.nodeSize, text });
+    });
+
+    if (!candidates.length) return null;
+
+    let tr = state.tr;
+    // Apply from bottom to top to keep positions stable.
+    for (let i = candidates.length - 1; i >= 0; i -= 1) {
+      const { from, to, text } = candidates[i];
+      const $pos = tr.doc.resolve(from);
+      const parent = $pos.parent;
+      const index = $pos.index();
+      if (!parent?.canReplaceWith?.(index, index + 1, codeBlockType)) continue;
+
+      const content = schema.text(text);
+      const codeBlock = codeBlockType.create(null, content);
+      tr = tr.replaceWith(from, to, codeBlock);
+    }
+
+    if (!tr.docChanged) return null;
+    return tr.setMeta(OUTLINE_ALLOW_META, true);
+  } catch {
+    return null;
+  }
 }
 
 function maybeGenerateTitleOnLeave(editor, doc, sectionId) {
@@ -2206,24 +2359,26 @@ async function mountOutlineEditor() {
 	              if (transactions.some((tr) => tr.getMeta?.(OUTLINE_ALLOW_META))) return null;
 	              const st = outlineEditModeKey?.getState?.(newState) || null;
 	              const sid = enterSectionId || st?.editingSectionId || null;
-	              if (!sid) return null;
-	              mdTableDebug('appendTransaction: try convert', { didDocChange, didEnterEditMode, sectionId: sid });
-	              const tr = convertMarkdownTablesInSection(newState, sid);
-	              if (!tr && mdTableDebugEnabled()) {
-	                // Quick hint: if current body contains pipes, but we didn't convert, log it.
-	                const sectionPos = findSectionPosById(newState.doc, sid);
-	                const sectionNode = typeof sectionPos === 'number' ? newState.doc.nodeAt(sectionPos) : null;
-	                const bodyNode = sectionNode ? sectionNode.child(1) : null;
-	                const bodyText = bodyNode ? bodyNode.textContent : '';
-	                if (String(bodyText || '').includes('|')) {
-	                  mdTableDebug('appendTransaction: saw pipes but no conversion', { sectionId: sid });
-	                }
-	              }
-	              return tr;
-	            } catch {
-	              return null;
-	            }
-	          },
+		              if (!sid) return null;
+			              mdTableDebug('appendTransaction: try convert', { didDocChange, didEnterEditMode, sectionId: sid });
+			              const mdTr = convertMarkdownTablesInSection(newState, sid);
+			              if (mdTr) return mdTr;
+			              if (mdTableDebugEnabled()) {
+			                // Quick hint: if current body contains pipes, but we didn't convert, log it.
+			                const sectionPos = findSectionPosById(newState.doc, sid);
+			                const sectionNode = typeof sectionPos === 'number' ? newState.doc.nodeAt(sectionPos) : null;
+			                const bodyNode = sectionNode ? sectionNode.child(1) : null;
+			                const bodyText = bodyNode ? bodyNode.textContent : '';
+			                if (String(bodyText || '').includes('|')) {
+			                  mdTableDebug('appendTransaction: saw pipes but no conversion', { sectionId: sid });
+			                }
+			              }
+			              // Also migrate legacy multiline inline-code (<code><br>..</code>) into proper codeBlock.
+			              return convertInlineMultilineCodeToCodeBlockInSection(newState, sid);
+			            } catch {
+			              return null;
+			            }
+			          },
 	          props: {
 	            handlePaste(view, event) {
 	              return maybeHandlePaste(view, event);

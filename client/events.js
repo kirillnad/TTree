@@ -76,7 +76,7 @@ import {
   showBlockHistoryModal,
 } from './modal.js?v=10';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=76';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=79';
 import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
@@ -976,7 +976,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-            const outline = await import('./outline/editor.js?v=76');
+            const outline = await import('./outline/editor.js?v=79');
           if (outline?.getOutlineActiveSectionId) {
             blockId = outline.getOutlineActiveSectionId() || blockId;
           }
@@ -1019,7 +1019,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=76');
+          const outline = await import('./outline/editor.js?v=79');
           const frags = {
             heading: choice.entry.afterHeadingJson || null,
             body: choice.entry.afterBodyJson || null,
