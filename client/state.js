@@ -1,5 +1,8 @@
 export const state = {
   mode: 'view',
+  offlineReady: false,
+  mediaStatusText: '',
+  mediaPrefetchPaused: false,
   // Outline-режим редактирования всей статьи (TipTap).
   isOutlineEditing: false,
   // Статус автосейва/outline (показываем в UI вместо updatedAt).

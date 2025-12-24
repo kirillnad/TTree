@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,7 @@ from ..data_store import (
     update_article_meta,
     update_article_doc_json,
     save_article_doc_json,
+    get_article_block_embeddings,
 )
 from ..export_utils import _build_backup_article_html, _inline_uploads_for_backup
 from .common import _present_article, _resolve_article_id_for_user
@@ -71,22 +74,95 @@ def list_deleted_articles(current_user: User = Depends(get_current_user)):
 # Вынесено из app/main.py → app/routers/articles.py
 @router.post('/api/articles')
 def post_article(payload: dict[str, Any], current_user: User = Depends(get_current_user)):
-    article = create_article(payload.get('title'), current_user.id)
+    article_id = payload.get('id') if payload else None
+    if article_id is not None and not isinstance(article_id, str):
+        raise HTTPException(status_code=400, detail='id must be string')
+    article = create_article(payload.get('title'), current_user.id, article_id=article_id)
     return article
 
 
 # Вынесено из app/main.py → app/routers/articles.py
 @router.get('/api/articles/{article_id}')
 def read_article(article_id: str, current_user: User = Depends(get_current_user)):
+    started = time.perf_counter()
     if article_id == 'inbox':
         article = get_or_create_user_inbox(current_user.id)
         if not article:
             raise HTTPException(status_code=404, detail='Article not found')
-        return _present_article(article, article_id)
-    article = get_article(article_id, current_user.id)
+        payload = {
+            'id': article.get('id'),
+            'title': article.get('title'),
+            'createdAt': article.get('createdAt'),
+            'updatedAt': article.get('updatedAt'),
+            'deletedAt': article.get('deletedAt'),
+            'parentId': article.get('parentId'),
+            'position': article.get('position') or 0,
+            'authorId': article.get('authorId'),
+            'publicSlug': article.get('publicSlug'),
+            'encrypted': bool(article.get('encrypted')),
+            'encryptionSalt': article.get('encryptionSalt'),
+            'encryptionVerifier': article.get('encryptionVerifier'),
+            'encryptionHint': article.get('encryptionHint'),
+            'docJson': article.get('docJson') or None,
+            # legacy fields kept for client compatibility (not used in outline-first UX)
+            'history': article.get('history') or [],
+            'redoHistory': article.get('redoHistory') or [],
+            'blockTrash': article.get('blockTrash') or [],
+            'blocks': [],
+        }
+        try:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            doc_bytes = len(json.dumps(payload.get('docJson') or {}, ensure_ascii=False))
+            headers = {
+                'X-Memus-Article-ms': str(elapsed_ms),
+                'X-Memus-DocJson-bytes': str(doc_bytes),
+            }
+            return Response(
+                content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+                media_type='application/json; charset=utf-8',
+                headers=headers,
+            )
+        except Exception:
+            return payload
+    # doc_json-first: return metadata + docJson without legacy blocks (faster, smaller payload).
+    article = get_article(article_id, current_user.id, include_blocks=False)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
-    return article
+    # Diagnostics: expose timing + payload size in headers (useful for devtools).
+    try:
+        payload = {
+            'id': article.get('id'),
+            'title': article.get('title'),
+            'createdAt': article.get('createdAt'),
+            'updatedAt': article.get('updatedAt'),
+            'deletedAt': article.get('deletedAt'),
+            'parentId': article.get('parentId'),
+            'position': article.get('position') or 0,
+            'authorId': article.get('authorId'),
+            'publicSlug': article.get('publicSlug'),
+            'encrypted': bool(article.get('encrypted')),
+            'encryptionSalt': article.get('encryptionSalt'),
+            'encryptionVerifier': article.get('encryptionVerifier'),
+            'encryptionHint': article.get('encryptionHint'),
+            'docJson': article.get('docJson') or None,
+            'history': article.get('history') or [],
+            'redoHistory': article.get('redoHistory') or [],
+            'blockTrash': article.get('blockTrash') or [],
+            'blocks': [],
+        }
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        doc_bytes = len(json.dumps(payload.get('docJson') or {}, ensure_ascii=False))
+        headers = {
+            'X-Memus-Article-ms': str(elapsed_ms),
+            'X-Memus-DocJson-bytes': str(doc_bytes),
+        }
+        return Response(
+            content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            media_type='application/json; charset=utf-8',
+            headers=headers,
+        )
+    except Exception:
+        return payload if 'payload' in locals() else article
 
 
 @router.get('/api/articles/{article_id}/export/html')
@@ -102,7 +178,7 @@ def export_article_html(article_id: str, download: bool = True, current_user: Us
             raise HTTPException(status_code=404, detail='Article not found')
     else:
         real_article_id = _resolve_article_id_for_user(article_id, current_user)
-        article = get_article(real_article_id, current_user.id)
+        article = get_article(real_article_id, current_user.id, include_blocks=False)
         if not article:
             raise HTTPException(status_code=404, detail='Article not found')
 
@@ -120,6 +196,26 @@ def export_article_html(article_id: str, download: bool = True, current_user: Us
     disposition = 'attachment' if download else 'inline'
     headers = {'Content-Disposition': f'{disposition}; filename=\"{filename}\"'}
     return Response(content=html.encode('utf-8'), media_type='text/html; charset=utf-8', headers=headers)
+
+@router.get('/api/articles/{article_id}/embeddings')
+def get_article_embeddings(article_id: str, since: str | None = None, ids: str | None = None, current_user: User = Depends(get_current_user)):
+    """
+    Возвращает embeddings для секций статьи (block_embeddings) для offline-first клиента.
+    `since` — iso timestamp; `ids` — comma-separated blockIds (опционально).
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    block_ids = None
+    if ids:
+        block_ids = [s.strip() for s in str(ids).split(',') if s.strip()]
+    return {
+        'articleId': real_article_id,
+        'embeddings': get_article_block_embeddings(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            since=str(since or '').strip() or None,
+            block_ids=block_ids,
+        ),
+    }
 
 
 @router.put('/api/articles/{article_id}/doc-json')

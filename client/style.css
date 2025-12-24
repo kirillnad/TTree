@@ -857,6 +857,22 @@ main.content {
   align-items: center;
 }
 
+.article-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+.article-status-row .meta {
+  margin: 0;
+  font-size: 0.85rem;
+}
+#mediaPrefetchToggleBtn.ghost.small {
+  min-height: 26px;
+  padding: 0.15rem 0.75rem;
+}
+
 /* Article view overrides: compact sticky header like VS Code topbar */
 #articleView.panel {
   padding: 0.75rem 0.3rem 0.3rem;

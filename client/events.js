@@ -74,10 +74,12 @@ import {
   showVersionCompareTargetPicker,
   showVersionDiffModal,
   showBlockHistoryModal,
+  showArticleHistoryModal,
 } from './modal.js?v=10';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=79';
-import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=4';
+import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=81';
+import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=11';
+import { getMediaProgress, isMediaPrefetchPaused, toggleMediaPrefetchPaused } from './offline/media.js';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
 // Вынесено из этого файла: обработка клавиш в режиме редактирования → `./events/editKeys.js`.
@@ -94,6 +96,8 @@ let semanticReindexBaseLabel = 'Переиндексировать поиск';
 let semanticReindexRunningLabel = 'Переиндексация';
 
 const SIDEBAR_SEARCH_VIEW_STORAGE_KEY = 'ttree_sidebar_search_view_v1';
+let mediaStatusTimerId = null;
+let mediaStatusInFlight = false;
 
 function normalizeSidebarSearchView(value) {
   return value === 'search' ? 'search' : 'list';
@@ -509,6 +513,60 @@ function closeListMenu() {
 export function attachEvents() {
   state.sidebarSearchView = loadSidebarSearchViewFromStorage();
   updateSidebarSearchViewUi();
+
+  const refreshMediaStatusOnce = async () => {
+    if (mediaStatusInFlight) return;
+    mediaStatusInFlight = true;
+    try {
+      const paused = isMediaPrefetchPaused();
+      state.mediaPrefetchPaused = paused;
+      let label = '';
+      try {
+        const { total, ok, error } = await getMediaProgress();
+        if (total > 0) {
+          label = `Медиа: ${ok}/${total}`;
+          if (error > 0) label += `, ошибок: ${error}`;
+        }
+      } catch {
+        // offline db может быть недоступна в этом браузере/профиле
+      }
+      if (!label && paused) label = 'Медиа: пауза';
+      if (label && paused) label += ' (пауза)';
+      state.mediaStatusText = label;
+      updateArticleHeaderUi();
+    } finally {
+      mediaStatusInFlight = false;
+    }
+  };
+
+  const startMediaStatusPolling = () => {
+    if (mediaStatusTimerId) return;
+    if (!refs.mediaStatusText && !refs.mediaPrefetchToggleBtn) return;
+    refreshMediaStatusOnce().catch(() => {});
+    mediaStatusTimerId = window.setInterval(() => {
+      refreshMediaStatusOnce().catch(() => {});
+    }, 2000);
+  };
+
+  startMediaStatusPolling();
+  window.addEventListener('media-prefetch-paused', () => {
+    refreshMediaStatusOnce().catch(() => {});
+  });
+  window.addEventListener('online', () => {
+    refreshMediaStatusOnce().catch(() => {});
+  });
+  window.addEventListener('offline', () => {
+    refreshMediaStatusOnce().catch(() => {});
+  });
+
+  if (refs.mediaPrefetchToggleBtn) {
+    refs.mediaPrefetchToggleBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleMediaPrefetchPaused();
+      refreshMediaStatusOnce().catch(() => {});
+    });
+  }
 
   document.addEventListener('keydown', (event) => {
     if (state.isOutlineEditing) return;
@@ -976,7 +1034,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-            const outline = await import('./outline/editor.js?v=79');
+            const outline = await import('./outline/editor.js?v=81');
           if (outline?.getOutlineActiveSectionId) {
             blockId = outline.getOutlineActiveSectionId() || blockId;
           }
@@ -1019,14 +1077,33 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=79');
+          const outline = await import('./outline/editor.js?v=81');
           const frags = {
             heading: choice.entry.afterHeadingJson || null,
             body: choice.entry.afterBodyJson || null,
           };
           if (outline?.restoreOutlineSectionFromSectionFragments) {
-            outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
-            showToast('Восстановлено (будет сохранено автоматически)');
+            const restored = outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
+            if (restored) {
+              showToast('Восстановлено (будет сохранено автоматически)');
+              return;
+            }
+            // Section might be deleted from current docJson; offer to re-insert at the end.
+            if (outline?.insertOutlineSectionFromSectionFragmentsAtEnd) {
+              const okInsert = await showConfirm({
+                title: 'Блок удалён',
+                message: 'Секция с этим ID не найдена в текущей статье. Вставить восстановленную секцию в конец статьи?',
+                confirmText: 'Вставить в конец',
+                cancelText: 'Отмена',
+              });
+              if (!okInsert) return;
+              const inserted = outline.insertOutlineSectionFromSectionFragmentsAtEnd(blockId, frags);
+              if (inserted) {
+                showToast('Вставлено в конец (будет сохранено автоматически)');
+                return;
+              }
+            }
+            showToast('Не удалось восстановить: секция не найдена');
             return;
           }
         }
@@ -1044,6 +1121,72 @@ export function attachEvents() {
       } catch (error) {
         hideToast();
         showToast(error?.message || 'Не удалось загрузить историю блока');
+      }
+    });
+  }
+  if (refs.articleHistoryBtn) {
+    refs.articleHistoryBtn.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      closeArticleMenu();
+      if (!state.articleId || !state.article) return;
+      if (state.article.encrypted) {
+        showToast('История пока недоступна для зашифрованных статей');
+        return;
+      }
+      try {
+        const history = Array.isArray(state.article.history) ? state.article.history : [];
+        // Only outline-first history entries: those contain section fragments.
+        const outlineEntries = history.filter(
+          (e) => e && (e.beforeHeadingJson || e.beforeBodyJson || e.afterHeadingJson || e.afterBodyJson),
+        );
+        const choice = await showArticleHistoryModal({
+          title: 'История статьи',
+          entries: outlineEntries,
+          canRestore: true,
+          beforeTitle: 'До',
+          afterTitle: 'После',
+        });
+        if (!choice || choice.action !== 'restore' || !choice.entry) return;
+        const entry = choice.entry;
+        const blockId = String(entry.blockId || '').trim();
+        if (!blockId) {
+          showToast('Не удалось восстановить: нет ID секции');
+          return;
+        }
+        const ok = await showConfirm({
+          title: 'Восстановить?',
+          message: 'Если секция удалена, она будет вставлена в конец статьи.',
+          confirmText: 'Восстановить',
+          cancelText: 'Отмена',
+        });
+        if (!ok) return;
+
+        if (state.isOutlineEditing) {
+          const outline = await import('./outline/editor.js?v=81');
+          const frags = {
+            heading: entry.afterHeadingJson || null,
+            body: entry.afterBodyJson || null,
+          };
+          if (outline?.restoreOutlineSectionFromSectionFragments) {
+            const restored = outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
+            if (restored) {
+              showToast('Восстановлено (будет сохранено автоматически)');
+              return;
+            }
+          }
+          if (outline?.insertOutlineSectionFromSectionFragmentsAtEnd) {
+            const inserted = outline.insertOutlineSectionFromSectionFragmentsAtEnd(blockId, frags);
+            if (inserted) {
+              showToast('Вставлено в конец (будет сохранено автоматически)');
+              return;
+            }
+          }
+          showToast('Не удалось восстановить секцию');
+          return;
+        }
+        showToast('Откройте outline-режим, чтобы восстановить секцию');
+      } catch (error) {
+        showToast(error?.message || 'Не удалось открыть историю статьи');
       }
     });
   }

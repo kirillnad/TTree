@@ -58,4 +58,23 @@ export function updateArticleHeaderUi() {
       refs.updatedAt.textContent = '';
     }
   }
+
+  if (refs.articleStatusText) {
+    if (state.isOutlineEditing) {
+      refs.articleStatusText.textContent = state.outlineStatusText || '';
+    } else if (article.updatedAt) {
+      refs.articleStatusText.textContent = `Обновлено: ${new Date(article.updatedAt).toLocaleString()}`;
+    } else {
+      refs.articleStatusText.textContent = '';
+    }
+  }
+
+  if (refs.mediaStatusText) {
+    refs.mediaStatusText.textContent = state.mediaStatusText || '';
+  }
+  if (refs.mediaPrefetchToggleBtn) {
+    const paused = Boolean(state.mediaPrefetchPaused);
+    refs.mediaPrefetchToggleBtn.textContent = paused ? 'Продолжить' : 'Пауза';
+    refs.mediaPrefetchToggleBtn.classList.toggle('is-active', paused);
+  }
 }

@@ -1,3 +1,14 @@
+import {
+  cacheArticle,
+  cacheArticlesIndex,
+  getCachedArticle,
+  getCachedArticlesIndex,
+  updateCachedArticleTreePositions,
+  updateCachedDocJson,
+} from './offline/cache.js';
+import { enqueueOp } from './offline/outbox.js';
+import { localSemanticSearch } from './offline/semantic.js';
+
 export async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
@@ -11,7 +22,20 @@ export async function apiRequest(path, options = {}) {
   if (response.status === 204) {
     return null;
   }
-  return response.json();
+  const data = await response.json();
+  try {
+    if (window?.localStorage?.getItem?.('ttree_debug_article_load_v1') === '1') {
+      const ms = response.headers.get('X-Memus-Article-ms');
+      const bytes = response.headers.get('X-Memus-DocJson-bytes');
+      if (ms || bytes) {
+        // eslint-disable-next-line no-console
+        console.log('[api]', path, { ms, docJsonBytes: bytes });
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return data;
 }
 
 export async function fetchCurrentUser() {
@@ -63,15 +87,36 @@ export async function logout() {
 }
 
 export function fetchArticlesIndex() {
-  return apiRequest('/api/articles');
+  return apiRequest('/api/articles')
+    .then(async (index) => {
+      cacheArticlesIndex(index).catch(() => {});
+      return index;
+    })
+    .catch(async (err) => {
+      const cached = await getCachedArticlesIndex().catch(() => null);
+      if (cached && cached.length) return cached;
+      throw err;
+    });
 }
 
 export function fetchDeletedArticlesIndex() {
-  return apiRequest('/api/articles/deleted');
+  return apiRequest('/api/articles/deleted').catch(async (err) => {
+    // Deleted index is not critical offline; keep empty fallback.
+    return [];
+  });
 }
 
 export function fetchArticle(id) {
-  return apiRequest(`/api/articles/${id}`);
+  return apiRequest(`/api/articles/${id}`)
+    .then(async (article) => {
+      cacheArticle(article).catch(() => {});
+      return article;
+    })
+    .catch(async (err) => {
+      const cached = await getCachedArticle(id).catch(() => null);
+      if (cached) return cached;
+      throw err;
+    });
 }
 
 export function search(query) {
@@ -79,7 +124,16 @@ export function search(query) {
 }
 
 export function semanticSearch(query) {
-  return apiRequest(`/api/search/semantic?q=${encodeURIComponent(query.trim())}`);
+  const q = (query || '').trim();
+  if (!q) return Promise.resolve([]);
+  // Client-side semantic ranking first (needs query embedding from server).
+  // If local semantic isn't available (no local embeddings / offline), fall back to classic search.
+  return localSemanticSearch(q)
+    .then((local) => {
+      if (Array.isArray(local) && local.length) return local;
+      return apiRequest(`/api/search?q=${encodeURIComponent(q)}`);
+    })
+    .catch(() => apiRequest(`/api/search?q=${encodeURIComponent(q)}`));
 }
 
 export function ragSummary(query, results) {
@@ -93,7 +147,38 @@ export function ragSummary(query, results) {
 }
 
 export function createArticle(title) {
-  return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
+  const runOnline = () => apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
+  if (navigator.onLine) {
+    return runOnline().then(async (article) => {
+      cacheArticle(article).catch(() => {});
+      return article;
+    });
+  }
+  const id =
+    globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const now = new Date().toISOString();
+  return getCachedArticlesIndex()
+    .catch(() => [])
+    .then((idx) => {
+      const root = (idx || []).filter((a) => !a.parentId);
+      const maxPos = root.reduce((acc, a) => Math.max(acc, Number(a.position || 0)), -1);
+      const localArticle = {
+        id,
+        title: title || 'Новая статья',
+        updatedAt: now,
+        createdAt: now,
+        docJson: null,
+        blocks: [],
+        encrypted: false,
+        parentId: null,
+        position: maxPos + 1,
+      };
+      cacheArticle(localArticle).catch(() => {});
+      enqueueOp('create_article', { articleId: id, payload: { id, title: localArticle.title } }).catch(() => {});
+      return localArticle;
+    });
 }
 
 export function replaceArticleBlocksTree(articleId, blocks, options = {}) {
@@ -137,9 +222,20 @@ export function saveArticleDocJson(articleId, docJson, options = {}) {
   if (options && typeof options.createVersionIfStaleHours === 'number') {
     payload.createVersionIfStaleHours = options.createVersionIfStaleHours;
   }
-  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json/save`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
+  const attempt = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json/save`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  return attempt().catch(async (err) => {
+    const now = new Date().toISOString();
+    await updateCachedDocJson(articleId, docJson, now).catch(() => {});
+    await enqueueOp('save_doc_json', {
+      articleId,
+      payload: { docJson, createVersionIfStaleHours: payload.createVersionIfStaleHours || 12, coalesceKey: articleId },
+      coalesceKey: articleId,
+    }).catch(() => {});
+    return { status: 'queued', articleId, updatedAt: now, offline: true };
   });
 }
 
@@ -409,35 +505,182 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
   });
 }
 
+function buildChildrenMap(indexRows) {
+  const map = new Map();
+  for (const a of indexRows || []) {
+    const pid = a.parentId ?? null;
+    if (!map.has(pid)) map.set(pid, []);
+    map.get(pid).push(a);
+  }
+  for (const list of map.values()) {
+    list.sort((x, y) => (x.position || 0) - (y.position || 0));
+  }
+  return map;
+}
+
+function normalizePositions(list) {
+  const changes = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const a = list[i];
+    if (!a) continue;
+    const nextPos = i;
+    if ((a.position || 0) !== nextPos) {
+      a.position = nextPos;
+      changes.push({ id: a.id, parentId: a.parentId ?? null, position: nextPos });
+    }
+  }
+  return changes;
+}
+
 export function moveArticlePosition(articleId, direction) {
   if (!articleId || !direction) return Promise.resolve(null);
-  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/move`, {
-    method: 'POST',
-    body: JSON.stringify({ direction }),
-  });
+  const attempt = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ direction }),
+    });
+  return attempt()
+    .then(async (article) => {
+      try {
+        const index = await apiRequest('/api/articles');
+        cacheArticlesIndex(index).catch(() => {});
+      } catch {
+        // ignore
+      }
+      return article;
+    })
+    .catch(async () => {
+      const idx = await getCachedArticlesIndex().catch(() => []);
+      const map = buildChildrenMap(idx);
+      const current = (idx || []).find((a) => a.id === articleId);
+      if (!current) return null;
+      const siblings = map.get(current.parentId ?? null) || [];
+      const pos = siblings.findIndex((a) => a.id === articleId);
+      if (pos === -1) return null;
+      const delta = direction === 'up' ? -1 : 1;
+      const nextIndex = pos + delta;
+      if (nextIndex < 0 || nextIndex >= siblings.length) return null;
+      const tmp = siblings[pos];
+      siblings[pos] = siblings[nextIndex];
+      siblings[nextIndex] = tmp;
+      const changes = normalizePositions(siblings);
+      updateCachedArticleTreePositions(changes).catch(() => {});
+      enqueueOp('move_article_position', { articleId, payload: { direction }, coalesceKey: `${articleId}:move` }).catch(
+        () => {},
+      );
+      return { id: articleId };
+    });
 }
 
 export function indentArticleApi(articleId) {
   if (!articleId) return Promise.resolve(null);
-  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/indent`, {
-    method: 'POST',
-    body: JSON.stringify({}),
+  const attempt = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/indent`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  return attempt().catch(async () => {
+    const idx = await getCachedArticlesIndex().catch(() => []);
+    const map = buildChildrenMap(idx);
+    const current = (idx || []).find((a) => a.id === articleId);
+    if (!current) return null;
+    const siblings = map.get(current.parentId ?? null) || [];
+    const pos = siblings.findIndex((a) => a.id === articleId);
+    if (pos <= 0) return null;
+    const newParent = siblings[pos - 1];
+    const newParentId = newParent?.id || null;
+    current.parentId = newParentId;
+    const newSiblings = map.get(newParentId) || [];
+    newSiblings.push(current);
+    const changes = [];
+    changes.push(...normalizePositions(siblings.filter((a) => a.id !== articleId)));
+    changes.push(...normalizePositions(newSiblings));
+    updateCachedArticleTreePositions(changes).catch(() => {});
+    enqueueOp('indent_article', { articleId, payload: {}, coalesceKey: `${articleId}:indent` }).catch(() => {});
+    return { id: articleId };
   });
 }
 
 export function outdentArticleApi(articleId) {
   if (!articleId) return Promise.resolve(null);
-  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/outdent`, {
-    method: 'POST',
-    body: JSON.stringify({}),
+  const attempt = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/outdent`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  return attempt().catch(async () => {
+    const idx = await getCachedArticlesIndex().catch(() => []);
+    const map = buildChildrenMap(idx);
+    const current = (idx || []).find((a) => a.id === articleId);
+    if (!current) return null;
+    const parentId = current.parentId ?? null;
+    if (!parentId) return null;
+    const parent = (idx || []).find((a) => a.id === parentId);
+    const newParentId = parent?.parentId ?? null;
+    const oldSiblings = map.get(parentId) || [];
+    const newOldSiblings = oldSiblings.filter((a) => a.id !== articleId);
+    const upperSiblings = map.get(newParentId) || [];
+    const parentPos = upperSiblings.findIndex((a) => a.id === parentId);
+    const insertAt = parentPos === -1 ? upperSiblings.length : parentPos + 1;
+    current.parentId = newParentId;
+    upperSiblings.splice(insertAt, 0, current);
+    const changes = [];
+    changes.push(...normalizePositions(newOldSiblings));
+    changes.push(...normalizePositions(upperSiblings));
+    updateCachedArticleTreePositions(changes).catch(() => {});
+    enqueueOp('outdent_article', { articleId, payload: {}, coalesceKey: `${articleId}:outdent` }).catch(() => {});
+    return { id: articleId };
   });
 }
 
 export function moveArticleTree(articleId, payload) {
   if (!articleId) return Promise.resolve(null);
-  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/move-tree`, {
-    method: 'POST',
-    body: JSON.stringify(payload || {}),
+  const attempt = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/move-tree`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  return attempt().catch(async () => {
+    const idx = await getCachedArticlesIndex().catch(() => []);
+    const map = buildChildrenMap(idx);
+    const current = (idx || []).find((a) => a.id === articleId);
+    if (!current) return null;
+
+    const placement = (payload && payload.placement) || null;
+    const anchorId = (payload && payload.anchorId) || null;
+    let targetParentId = payload ? payload.parentId ?? null : null;
+    if (placement === 'inside' && anchorId) targetParentId = anchorId;
+
+    const fromParentId = current.parentId ?? null;
+    const fromSiblings = map.get(fromParentId) || [];
+    const newFromSiblings = fromSiblings.filter((a) => a.id !== articleId);
+
+    const toSiblings = map.get(targetParentId) || [];
+    const safeToSiblings = toSiblings.filter((a) => a.id !== articleId);
+
+    let insertAt = safeToSiblings.length;
+    if (anchorId) {
+      const anchorIdx = safeToSiblings.findIndex((a) => a.id === anchorId);
+      if (anchorIdx !== -1) {
+        if (placement === 'before') insertAt = anchorIdx;
+        else if (placement === 'after') insertAt = anchorIdx + 1;
+        else if (placement === 'inside') insertAt = safeToSiblings.length;
+      }
+    }
+
+    current.parentId = targetParentId;
+    safeToSiblings.splice(insertAt, 0, current);
+
+    const changes = [];
+    changes.push(...normalizePositions(newFromSiblings));
+    changes.push(...normalizePositions(safeToSiblings));
+    updateCachedArticleTreePositions(changes).catch(() => {});
+    enqueueOp('move_article_tree', {
+      articleId,
+      payload: payload || {},
+      coalesceKey: `${articleId}:move-tree`,
+    }).catch(() => {});
+    return { id: articleId };
   });
 }
 

@@ -1,7 +1,7 @@
 // Вынесено из `block.js`: вставка изображений + ресайз изображений в редакторе.
 
 import { state } from '../state.js';
-import { uploadImageFile } from '../api.js?v=4';
+import { uploadImageFile } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 import { escapeHtml, insertHtmlAtCaret, logDebug } from '../utils.js';
 import { clearEmptyPlaceholder } from './editable.js';

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from ..auth import User, get_current_user
 from ..embeddings import EmbeddingsUnavailable, probe_embedding_info
+from ..embeddings import embed_text
 from ..rag_summary import summarize_search_results
 from ..semantic_search import get_reindex_task, request_cancel_reindex_task, start_reindex_task, try_semantic_search
 from ..telegram_notify import notify_user
@@ -24,25 +25,19 @@ class SemanticReindexRequest(BaseModel):
 
 @router.get('/api/search/semantic')
 def semantic_search(q: str = '', current_user: User = Depends(get_current_user)):
-    query = (q or '').strip()
-    if not query:
-        return []
-    try:
-        return try_semantic_search(current_user.id, query, limit=30)
-    except EmbeddingsUnavailable as exc:
-        notify_user(current_user.id, f'Семантический поиск: embeddings недоступны — {exc}', key='semantic-search')
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                'Семантический поиск недоступен: не удалось получить embeddings локально. '
-                'Настройте OpenAI embeddings '
-                '(SERVPY_OPENAI_API_KEY/OPENAI_API_KEY, SERVPY_OPENAI_EMBED_MODEL, SERVPY_EMBEDDING_DIM). '
-                f'Детали: {exc}'
-            ),
-        )
-    except Exception as exc:  # noqa: BLE001
-        notify_user(current_user.id, f'Семантический поиск: ошибка — {exc!r}', key='semantic-search')
-        raise HTTPException(status_code=503, detail=f'Семантический поиск недоступен: {exc}')
+    """
+    Deprecated: server-side semantic ranking is moved to the client to reduce server CPU/DB load.
+    Use:
+      - /api/search/semantic/query-embedding (query embedding only)
+      - /api/articles/{id}/embeddings (section embeddings sync)
+    """
+    raise HTTPException(
+        status_code=410,
+        detail=(
+            'Server-side semantic search is deprecated. '
+            'Update the client to use /api/search/semantic/query-embedding + local ranking.'
+        ),
+    )
 
 
 @router.get('/api/search/semantic/embed-info')
@@ -56,6 +51,25 @@ def semantic_embed_info(current_user: User = Depends(get_current_user)):
     except EmbeddingsUnavailable as exc:
         notify_user(current_user.id, f'Gemini embeddings: probe failed — {exc}', key='semantic-search')
         raise HTTPException(status_code=503, detail=str(exc))
+
+@router.get('/api/search/semantic/query-embedding')
+def semantic_query_embedding(q: str = '', current_user: User = Depends(get_current_user)):
+    """
+    Возвращает embedding только для запроса (без ранжирования на сервере).
+    Используется для client-side semantic search (ранжирование/поиск делается в PGlite).
+    """
+    query = (q or '').strip()
+    if not query:
+        return {'embedding': [], 'dim': 0}
+    try:
+        vec = embed_text(query)
+        return {'embedding': vec, 'dim': len(vec)}
+    except EmbeddingsUnavailable as exc:
+        notify_user(current_user.id, f'Query embedding: недоступно — {exc}', key='semantic-search')
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        notify_user(current_user.id, f'Query embedding: ошибка — {exc!r}', key='semantic-search')
+        raise HTTPException(status_code=503, detail=f'Query embedding failed: {exc!r}')
 
 
 @router.post('/api/search/semantic/reindex')

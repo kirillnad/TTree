@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { apiRequest, fetchArticlesIndex } from '../api.js?v=4';
+import { apiRequest, fetchArticlesIndex } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 import { showPrompt } from '../modal.js?v=10';
 import { startEditing, saveEditing, cancelEditing, createSibling } from '../actions.js';

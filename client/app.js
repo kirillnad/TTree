@@ -1,12 +1,25 @@
 import { initRouting, route } from './routing.js';
-import { attachEvents } from './events.js?v=18';
+import { attachEvents } from './events.js?v=22';
 import { loadLastChangeFromChangelog } from './changelog.js';
-import { initAuth, bootstrapAuth } from './auth.js';
+import { initAuth, bootstrapAuth } from './auth.js?v=2';
 import { initUsersPanel } from './users.js';
 import { initGraphView } from './graph.js';
 import { initTables } from './tables.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
 import { refs } from './refs.js';
+
+function registerUploadsServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    navigator.serviceWorker
+      .register('/uploads-sw.js', { scope: '/' })
+      .catch(() => {
+        // ignore SW registration failures
+      });
+  } catch {
+    // ignore
+  }
+}
 
 function logClient(kind, data) {
   try {
@@ -31,6 +44,7 @@ function startApp() {
   logClient('app.start', {
     ua: navigator.userAgent,
   });
+  registerUploadsServiceWorker();
   initRouting();
   attachEvents();
   initSidebarStateFromStorage();
@@ -39,30 +53,6 @@ function startApp() {
   initTables();
   loadLastChangeFromChangelog();
   route(window.location.pathname);
-  // На мобильных (и вообще в браузере) больше не используем service worker,
-  // чтобы ничего не кешировалось "поверх" обычного обновления страницы.
-  if ('serviceWorker' in navigator) {
-    const sw = navigator.serviceWorker;
-    if (sw && typeof sw.getRegistrations === 'function') {
-      sw
-        .getRegistrations()
-        .then((registrations) => {
-          registrations.forEach((registration) => {
-            registration.unregister().catch(() => {});
-          });
-        })
-        .catch(() => {});
-    } else if (sw && typeof sw.getRegistration === 'function') {
-      sw
-        .getRegistration()
-        .then((registration) => {
-          if (registration) {
-            registration.unregister().catch(() => {});
-          }
-        })
-        .catch(() => {});
-    }
-  }
 }
 
 function startPublicApp() {
@@ -71,31 +61,10 @@ function startPublicApp() {
     path: window.location.pathname,
   });
   if (refs.authOverlay) refs.authOverlay.classList.add('hidden');
+  registerUploadsServiceWorker();
   initRouting();
   attachEvents();
   route(window.location.pathname);
-  if ('serviceWorker' in navigator) {
-    const sw = navigator.serviceWorker;
-    if (sw && typeof sw.getRegistrations === 'function') {
-      sw
-        .getRegistrations()
-        .then((registrations) => {
-          registrations.forEach((registration) => {
-            registration.unregister().catch(() => {});
-          });
-        })
-        .catch(() => {});
-    } else if (sw && typeof sw.getRegistration === 'function') {
-      sw
-        .getRegistration()
-        .then((registration) => {
-          if (registration) {
-            registration.unregister().catch(() => {});
-          }
-        })
-        .catch(() => {});
-    }
-  }
 }
 
 async function init() {

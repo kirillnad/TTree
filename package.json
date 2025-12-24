@@ -5,7 +5,8 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "snap": "node scripts/snap.js",
-    "build:tiptap": "node scripts/build_tiptap_bundle.mjs"
+    "build:tiptap": "node scripts/build_tiptap_bundle.mjs",
+    "build:pglite": "node scripts/build_pglite_bundle.mjs"
   },
   "description": "",
   "license": "ISC",
@@ -17,6 +18,7 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@tiptap/core": "^3.14.0",
     "@tiptap/extension-image": "^3.14.0",
     "@tiptap/extension-link": "^3.14.0",

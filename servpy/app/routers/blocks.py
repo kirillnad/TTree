@@ -47,7 +47,7 @@ def patch_block(article_id: str, block_id: str, payload: dict[str, Any], current
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     try:
-        if not get_article(real_article_id, current_user.id):
+        if not get_article(real_article_id, current_user.id, include_blocks=False):
             raise ArticleNotFound('Article not found')
         block = update_block(real_article_id, block_id, payload)
         return block
@@ -72,7 +72,7 @@ def get_block_history(article_id: str, block_id: str, limit: int = 100, current_
 def patch_collapse(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     block_id = payload.get('blockId')
     collapsed = payload.get('collapsed')
@@ -98,7 +98,7 @@ def put_replace_blocks_tree(
     """
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     blocks = payload.get('blocks') if payload else None
     if not isinstance(blocks, list):
@@ -129,7 +129,7 @@ def put_replace_blocks_tree(
 def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     direction = payload.get('direction', 'after') if payload else 'after'
     try:
@@ -144,7 +144,7 @@ def post_sibling(article_id: str, block_id: str, payload: dict[str, Any], curren
 def remove_block(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = delete_block(real_article_id, block_id)
@@ -166,7 +166,7 @@ def remove_block_permanent(article_id: str, block_id: str, current_user: User = 
     Используется для пустых «мимолётных» блоков, которые никогда не содержали текста.
     """
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = delete_block_permanent(real_article_id, block_id)
@@ -187,7 +187,7 @@ def clear_blocks_trash(article_id: str, current_user: User = Depends(get_current
     Очищает корзину блоков для статьи (blockTrash).
     """
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         result = clear_block_trash(real_article_id)
@@ -205,7 +205,7 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_u
     if direction not in {'up', 'down'}:
         raise HTTPException(status_code=400, detail='Unknown move direction')
     try:
-        if not get_article(real_article_id, current_user.id):
+        if not get_article(real_article_id, current_user.id, include_blocks=False):
             raise ArticleNotFound('Article not found')
         result = move_block(real_article_id, block_id, direction)
         return result
@@ -220,7 +220,7 @@ def post_move(article_id: str, block_id: str, payload: dict[str, Any], current_u
 def post_indent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         return indent_block(real_article_id, block_id)
@@ -235,7 +235,7 @@ def post_indent(article_id: str, block_id: str, current_user: User = Depends(get
 def post_outdent(article_id: str, block_id: str, current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     try:
         return outdent_block(real_article_id, block_id)
@@ -250,7 +250,7 @@ def post_outdent(article_id: str, block_id: str, current_user: User = Depends(ge
 def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     target_parent_id = payload.get('parentId')
     target_index = payload.get('index')
@@ -269,7 +269,7 @@ def post_relocate(article_id: str, block_id: str, payload: dict[str, Any], curre
 def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
     return _handle_undo_redo(undo_block_text_change, real_article_id, entry_id)
@@ -280,7 +280,7 @@ def post_undo(article_id: str, payload: dict[str, Any], current_user: User = Dep
 def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     entry_id = payload.get('entryId')
     return _handle_undo_redo(redo_block_text_change, real_article_id, entry_id)
@@ -290,7 +290,7 @@ def post_redo(article_id: str, payload: dict[str, Any], current_user: User = Dep
 @router.post('/api/articles/{article_id}/blocks/restore')
 def post_restore(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
-    if not get_article(article_id, current_user.id):
+    if not get_article(article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     block = payload.get('block')
     if not block:
@@ -310,7 +310,7 @@ def post_restore(article_id: str, payload: dict[str, Any], current_user: User = 
 def post_restore_from_trash(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     block_id = payload.get('id') or payload.get('blockId')
     if not block_id:
@@ -329,8 +329,8 @@ def post_restore_from_trash(article_id: str, payload: dict[str, Any], current_us
 def post_move_to(article_id: str, block_id: str, target_article_id: str, current_user: User = Depends(get_current_user)):
     _require_superuser_for_legacy_blocks(current_user)
     try:
-        src = get_article(article_id, current_user.id)
-        dst = get_article(target_article_id, current_user.id)
+        src = get_article(article_id, current_user.id, include_blocks=False)
+        dst = get_article(target_article_id, current_user.id, include_blocks=False)
         if not src or not dst:
             raise ArticleNotFound('Article not found')
         return move_block_to_article(article_id, block_id, target_article_id)

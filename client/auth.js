@@ -1,7 +1,9 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=4';
+import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=11';
 import { showToast } from './toast.js';
+import { initOfflineForUser } from './offline/index.js';
+import { startBackgroundFullPull, startSyncLoop, tryPullBootstrap } from './offline/sync.js';
 
 let appStarted = false;
 let onAuthenticated = null;
@@ -122,8 +124,40 @@ export async function bootstrapAuth() {
     const user = await Promise.race([authCheck, timeout]);
     if (user) {
       applyUserToUi(user);
+      // ВАЖНО: не блокируем запуск приложения на инициализации offline/PGlite.
+      // Иначе на медленных устройствах/профилях оверлей “Загружаем…” может висеть очень долго,
+      // хотя сеть уже доступна и сервер отвечает 200.
       hideAuthOverlay();
       ensureAppStarted();
+      (async () => {
+        let slowToastShown = false;
+        let offlineOk = false;
+        const slowTimer = setTimeout(() => {
+          slowToastShown = true;
+          showToast('Инициализируем offline-базу… (может занять время)');
+        }, 5000);
+        try {
+          await initOfflineForUser(user);
+          await tryPullBootstrap();
+          startSyncLoop();
+          startBackgroundFullPull();
+          offlineOk = true;
+        } catch (err) {
+          // Offline в этом браузере может быть недоступен (например, нет IndexedDB),
+          // но это не должно ломать онлайн-работу.
+          showToast('Offline база недоступна в этом браузере');
+          try {
+            console.warn('[offline] init failed', err);
+          } catch {
+            // ignore
+          }
+        } finally {
+          clearTimeout(slowTimer);
+          if (slowToastShown && offlineOk) {
+            showToast('Offline-база готова');
+          }
+        }
+      })();
       return;
     }
   } catch (_) {

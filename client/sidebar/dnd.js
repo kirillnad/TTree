@@ -1,7 +1,7 @@
 // Вынесено из `sidebar.js`: Drag&Drop статей в дереве (desktop HTML5 + mobile touch/pointer).
 
 import { state } from '../state.js';
-import { fetchArticlesIndex, moveArticleTree } from '../api.js?v=4';
+import { fetchArticlesIndex, moveArticleTree } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 
 let renderSidebarArticleListCb = null;

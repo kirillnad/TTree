@@ -74,6 +74,16 @@ function buildModal({ title, message, confirmText, cancelText, renderBody }) {
 }
 
 function diffTextSegments(currentText = '', nextText = '') {
+  // LCS via DP is O(m*n) memory/time and will crash on large texts.
+  // Use a guard and let the caller fall back to non-diff rendering.
+  const m0 = String(currentText || '').length;
+  const n0 = String(nextText || '').length;
+  const DIFF_MAX_CELLS = 2_000_000; // ~2M ints -> already heavy in JS arrays
+  const DIFF_MAX_TOTAL_CHARS = 20_000;
+  if (m0 * n0 > DIFF_MAX_CELLS || m0 + n0 > DIFF_MAX_TOTAL_CHARS) {
+    return null;
+  }
+
   const a = Array.from(currentText);
   const b = Array.from(nextText);
   const m = a.length;
@@ -129,6 +139,23 @@ function diffTextSegments(currentText = '', nextText = '') {
 function renderDiffFragment({ baseText = '', nextText = '', mode = 'before' } = {}) {
   const frag = document.createDocumentFragment();
   const chunks = diffTextSegments(baseText, nextText);
+  if (!chunks) {
+    const MAX_RENDER_CHARS = 200_000;
+    const raw = mode === 'before' ? String(baseText || '') : String(nextText || '');
+    const text = raw.length > MAX_RENDER_CHARS ? `${raw.slice(0, MAX_RENDER_CHARS)}\n\n…(обрезано)` : raw;
+    const note = document.createElement('div');
+    note.className = 'meta';
+    note.style.marginBottom = '6px';
+    note.textContent = 'Diff слишком большой — показываем текст без подсветки.';
+    const pre = document.createElement('pre');
+    pre.className = 'diff-plain';
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.style.wordBreak = 'break-word';
+    pre.textContent = text;
+    frag.appendChild(note);
+    frag.appendChild(pre);
+    return frag;
+  }
   chunks.forEach((chunk) => {
     if (mode === 'before' && chunk.type === 'added') return;
     if (mode === 'after' && chunk.type === 'removed') return;
@@ -1259,6 +1286,308 @@ export function showBlockHistoryModal(options = {}) {
       cancelBtn.addEventListener('click', () =>
         resolveResult({ action: 'restore', entry: activeEntryForRestore || selected || null }),
       );
+    }
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) resolveResult(null);
+    });
+    document.addEventListener('keydown', onKeyDown);
+    root.appendChild(overlay);
+    requestAnimationFrame(() => {
+      card.focus({ preventScroll: true });
+    });
+  });
+}
+
+function extractTextFromTiptapJson(node) {
+  const out = [];
+  const visit = (n) => {
+    if (!n) return;
+    if (typeof n === 'string') {
+      out.push(n);
+      return;
+    }
+    if (Array.isArray(n)) {
+      n.forEach(visit);
+      return;
+    }
+    if (typeof n !== 'object') return;
+    if (typeof n.text === 'string') out.push(n.text);
+    const content = n.content;
+    if (Array.isArray(content)) content.forEach(visit);
+  };
+  visit(node);
+  return out.join('').replace(/\u00a0/g, ' ').trim();
+}
+
+function isOutlineHistoryEntry(entry) {
+  if (!entry || typeof entry !== 'object') return false;
+  return Boolean(
+    entry.beforeHeadingJson ||
+      entry.beforeBodyJson ||
+      entry.afterHeadingJson ||
+      entry.afterBodyJson,
+  );
+}
+
+export function showArticleHistoryModal(options = {}) {
+  const root = ensureRoot();
+  const entriesRaw = Array.isArray(options.entries) ? options.entries : [];
+  const outlineEntries = entriesRaw.filter(isOutlineHistoryEntry);
+
+  const coercePlain = (value) => String(value ?? '').replace(/\u00a0/g, ' ').trim();
+  const entries = outlineEntries.map((e) => ({
+    ...e,
+    beforePlain: coercePlain(e.beforePlain ?? e.before ?? ''),
+    afterPlain: coercePlain(e.afterPlain ?? e.after ?? ''),
+  }));
+
+  const bySection = new Map();
+  for (const entry of entries) {
+    const blockId = String(entry?.blockId || '').trim();
+    if (!blockId) continue;
+    const group = bySection.get(blockId) || { blockId, entries: [], latestAt: 0, label: '' };
+    group.entries.push(entry);
+    const ts = Date.parse(entry.timestamp || '') || 0;
+    if (ts > group.latestAt) group.latestAt = ts;
+    if (!group.label) {
+      const heading =
+        extractTextFromTiptapJson(entry.afterHeadingJson) ||
+        extractTextFromTiptapJson(entry.beforeHeadingJson) ||
+        '';
+      const fromBody = (entry.afterPlain || entry.beforePlain || '').split('\n').map((s) => s.trim()).find(Boolean) || '';
+      group.label = heading || fromBody || 'Без названия';
+    }
+    bySection.set(blockId, group);
+  }
+
+  const sectionsAll = Array.from(bySection.values())
+    .sort((a, b) => (b.latestAt || 0) - (a.latestAt || 0));
+
+  let selectedSectionId = sectionsAll[0]?.blockId || null;
+  let selectedEntryId = sectionsAll[0]?.entries?.[0]?.id || null;
+
+  const formatTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso || '');
+      return new Intl.DateTimeFormat('ru-RU', {
+        year: '2-digit',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(d);
+    } catch {
+      return String(iso || '');
+    }
+  };
+
+  const { overlay, card, confirmBtn, cancelBtn } = buildModal({
+    title: options.title || 'История статьи',
+    confirmText: 'Закрыть',
+    cancelText: options.canRestore ? 'Восстановить' : '',
+    renderBody: () => {
+      const fragment = document.createDocumentFragment();
+      const hint = document.createElement('p');
+      hint.className = 'modal-body__text';
+      hint.textContent =
+        options.message ||
+        'История изменений outline-режима. Можно восстановить выбранное состояние секции (если секция удалена — вставить в конец статьи).';
+      fragment.appendChild(hint);
+
+      if (!sectionsAll.length) {
+        const empty = document.createElement('div');
+        empty.className = 'modal-empty';
+        empty.textContent = 'История пуста.';
+        fragment.appendChild(empty);
+        return fragment;
+      }
+
+      const layout = document.createElement('div');
+      layout.className = 'diff-layout';
+
+      const sidebar = document.createElement('div');
+      sidebar.className = 'modal-list diff-sidebar';
+
+      const search = document.createElement('input');
+      search.type = 'text';
+      search.className = 'modal-input';
+      search.placeholder = 'Поиск по истории…';
+      sidebar.appendChild(search);
+
+      const list = document.createElement('div');
+      list.style.marginTop = '8px';
+      sidebar.appendChild(list);
+
+      const main = document.createElement('div');
+      main.className = 'diff-main';
+
+      const innerLayout = document.createElement('div');
+      innerLayout.className = 'diff-layout';
+
+      const eventsList = document.createElement('div');
+      eventsList.className = 'modal-list diff-sidebar';
+
+      const panes = document.createElement('div');
+      panes.className = 'diff-panes diff-panes--side';
+      const beforeWrap = document.createElement('div');
+      beforeWrap.className = 'diff-pane-wrap';
+      const afterWrap = document.createElement('div');
+      afterWrap.className = 'diff-pane-wrap';
+      const beforeTitle = document.createElement('div');
+      beforeTitle.className = 'diff-pane-title';
+      beforeTitle.textContent = options.beforeTitle || 'До';
+      const afterTitle = document.createElement('div');
+      afterTitle.className = 'diff-pane-title';
+      afterTitle.textContent = options.afterTitle || 'После';
+      const before = document.createElement('div');
+      before.className = 'diff-pane diff-pane--before';
+      const after = document.createElement('div');
+      after.className = 'diff-pane diff-pane--after';
+      beforeWrap.appendChild(beforeTitle);
+      beforeWrap.appendChild(before);
+      afterWrap.appendChild(afterTitle);
+      afterWrap.appendChild(after);
+      panes.appendChild(beforeWrap);
+      panes.appendChild(afterWrap);
+
+      innerLayout.appendChild(eventsList);
+      innerLayout.appendChild(panes);
+      main.appendChild(innerLayout);
+
+      layout.appendChild(sidebar);
+      layout.appendChild(main);
+      fragment.appendChild(layout);
+
+      const renderSections = () => {
+        const term = search.value.trim().toLowerCase();
+        const visible = term
+          ? sectionsAll.filter((s) => {
+              if ((s.label || '').toLowerCase().includes(term)) return true;
+              return (s.entries || []).some((e) =>
+                `${e.beforePlain || ''}\n${e.afterPlain || ''}`.toLowerCase().includes(term),
+              );
+            })
+          : sectionsAll;
+
+        list.innerHTML = '';
+        visible.forEach((section) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const active = section.blockId === selectedSectionId;
+          btn.className = `diff-item${active ? ' diff-item--active' : ''}`;
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+          const meta = section.latestAt ? formatTime(new Date(section.latestAt).toISOString()) : '';
+          const count = Array.isArray(section.entries) ? section.entries.length : 0;
+          btn.textContent = `${section.label || 'Без названия'}${meta ? ` · ${meta}` : ''}${count ? ` · ${count}` : ''}`;
+          btn.addEventListener('click', () => {
+            selectedSectionId = section.blockId;
+            selectedEntryId = section.entries?.[0]?.id || null;
+            renderSections();
+            renderEvents();
+            renderPanes();
+          });
+          list.appendChild(btn);
+        });
+
+        if (selectedSectionId && !visible.some((s) => s.blockId === selectedSectionId)) {
+          selectedSectionId = visible[0]?.blockId || null;
+          selectedEntryId = visible[0]?.entries?.[0]?.id || null;
+          renderEvents();
+          renderPanes();
+        }
+      };
+
+      const renderEvents = () => {
+        const section = selectedSectionId ? bySection.get(selectedSectionId) : null;
+        const ev = Array.isArray(section?.entries) ? section.entries.slice() : [];
+        ev.sort((a, b) => (Date.parse(b.timestamp || '') || 0) - (Date.parse(a.timestamp || '') || 0));
+        if (!selectedEntryId) selectedEntryId = ev[0]?.id || null;
+
+        eventsList.innerHTML = '';
+        ev.forEach((e) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const active = String(e.id || '') === String(selectedEntryId || '');
+          btn.className = `diff-item${active ? ' diff-item--active' : ''}`;
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+          const time = formatTime(e.timestamp);
+          const preview = (e.afterPlain || e.beforePlain || '').slice(0, 64).trim();
+          btn.textContent = `${time ? `≠ ${time}` : `≠ ${e.id || ''}`}${preview ? ` · ${preview}` : ''}`;
+          btn.addEventListener('click', () => {
+            selectedEntryId = e.id || null;
+            renderEvents();
+            renderPanes();
+          });
+          eventsList.appendChild(btn);
+        });
+      };
+
+      const renderPanes = () => {
+        const section = selectedSectionId ? bySection.get(selectedSectionId) : null;
+        const ev = Array.isArray(section?.entries) ? section.entries : [];
+        const selected = ev.find((e) => String(e?.id || '') === String(selectedEntryId || '')) || ev[0] || null;
+        const base = selected?.beforePlain || '';
+        const next = selected?.afterPlain || '';
+        before.innerHTML = '';
+        after.innerHTML = '';
+        before.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'before' }));
+        after.appendChild(renderDiffFragment({ baseText: base, nextText: next, mode: 'after' }));
+      };
+
+      search.addEventListener('input', () => {
+        renderSections();
+      });
+
+      renderSections();
+      renderEvents();
+      renderPanes();
+      return fragment;
+    },
+  });
+
+  card.classList.add('modal-card--fullscreen');
+  card.classList.add('modal-card--diff-light');
+
+  confirmBtn.classList.remove('danger-btn');
+  if (!options.canRestore && cancelBtn) cancelBtn.style.display = 'none';
+  if (cancelBtn) cancelBtn.classList.add('danger-btn');
+
+  let resolved = false;
+  let resolvePromise = () => {};
+
+  const cleanup = () => {
+    overlay.classList.add('modal-overlay--hide');
+    setTimeout(() => overlay.remove(), 150);
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const resolveResult = (value) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolvePromise(value);
+  };
+
+  const onKeyDown = (event) => {
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      resolveResult(null);
+    }
+  };
+
+  const getSelectedEntry = () => {
+    const section = selectedSectionId ? bySection.get(selectedSectionId) : null;
+    const ev = Array.isArray(section?.entries) ? section.entries : [];
+    return ev.find((e) => String(e?.id || '') === String(selectedEntryId || '')) || ev[0] || null;
+  };
+
+  return new Promise((resolver) => {
+    resolvePromise = resolver;
+    confirmBtn.addEventListener('click', () => resolveResult(null));
+    if (cancelBtn && options.canRestore) {
+      cancelBtn.addEventListener('click', () => resolveResult({ action: 'restore', entry: getSelectedEntry() }));
     }
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) resolveResult(null);

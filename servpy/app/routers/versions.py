@@ -17,7 +17,7 @@ router = APIRouter()
 @router.get('/api/articles/{article_id}/versions')
 def get_article_versions(article_id: str, current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     rows = CONN.execute(
         '''
@@ -35,7 +35,7 @@ def get_article_versions(article_id: str, current_user: User = Depends(get_curre
 @router.get('/api/articles/{article_id}/versions/{version_id}')
 def get_article_version(article_id: str, version_id: str, current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
     row = CONN.execute(
         '''
@@ -60,7 +60,7 @@ def get_article_version(article_id: str, version_id: str, current_user: User = D
 @router.post('/api/articles/{article_id}/versions')
 def create_article_version(article_id: str, payload: dict[str, Any] | None = None, current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    article = get_article(real_article_id, current_user.id)
+    article = get_article(real_article_id, current_user.id, include_blocks=False)
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
     label = None
@@ -104,7 +104,7 @@ def create_article_version(article_id: str, payload: dict[str, Any] | None = Non
 @router.post('/api/articles/{article_id}/versions/{version_id}/restore')
 def restore_article_version(article_id: str, version_id: str, current_user: User = Depends(get_current_user)):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
-    if not get_article(real_article_id, current_user.id):
+    if not get_article(real_article_id, current_user.id, include_blocks=False):
         raise HTTPException(status_code=404, detail='Article not found')
 
     row = CONN.execute(

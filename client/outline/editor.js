@@ -12,10 +12,11 @@ import {
   fetchArticlesIndex,
   uploadImageFile,
   uploadFileToYandexDisk,
-} from '../api.js?v=7';
+} from '../api.js?v=11';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { navigate, routing } from '../routing.js';
+import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
 
 let mounted = false;
 let tiptap = null;
@@ -583,7 +584,7 @@ function getQueuedDocJson(articleId) {
   const queue = readAutosaveQueue();
   const entry = queue && articleId ? queue[String(articleId)] : null;
   if (!entry || !entry.docJson || typeof entry.docJson !== 'object') return null;
-  return entry.docJson;
+  return { docJson: entry.docJson, queuedAt: Number(entry.queuedAt || 0) || 0 };
 }
 
 function clearQueuedDocJson(articleId) {
@@ -1971,7 +1972,7 @@ async function mountOutlineEditor() {
 	  outlineGenerateHTML = generateHTML;
 	  outlineHtmlExtensions = [
 	    StarterKit.configure({ heading: false, link: false }),
-	    Link.configure({ openOnClick: false }),
+	    Link.configure({ openOnClick: false, protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS }),
 	    ResizableImage,
 	    TableKit.configure({ table: { resizable: true } }),
 	  ];
@@ -4435,6 +4436,7 @@ async function mountOutlineEditor() {
 	      StarterKit.configure({ heading: false, link: false }),
 	      Link.configure({
 	        openOnClick: false,
+	        protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS,
 	      }),
 	      ResizableImage,
 	      TableKit.configure({ table: { resizable: true } }),
@@ -4567,6 +4569,7 @@ async function mountOutlineEditor() {
       }),
 	      Link.configure({
 	        openOnClick: false,
+	        protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS,
 	      }),
 	      markdownExtension,
 	      ResizableImage,
@@ -4938,7 +4941,7 @@ function serializeOutlineToBlocks() {
 
   const htmlExtensions = [
     StarterKit.configure({ heading: false, link: false }),
-    Link.configure({ openOnClick: false }),
+    Link.configure({ openOnClick: false, protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS }),
     Image,
     TableKit.configure({ table: { resizable: true } }),
   ];
@@ -4998,6 +5001,7 @@ async function saveOutlineEditor(options = {}) {
     const docJson = outlineEditorInstance.getJSON();
     const result = await saveArticleDocJson(state.articleId, docJson, { createVersionIfStaleHours: 12 });
     if (!silent) hideToast();
+    const isQueued = Boolean(result?.offline) || String(result?.status || '') === 'queued';
     if (state.article) {
       state.article.docJson = docJson;
       if (result?.updatedAt) {
@@ -5018,7 +5022,7 @@ async function saveOutlineEditor(options = {}) {
     docDirty = false;
     clearQueuedDocJson(state.articleId);
     outlineLastSavedAt = new Date();
-    setOutlineStatus(`Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
+    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
   } catch (error) {
     if (!silent) {
       hideToast();
@@ -5146,6 +5150,69 @@ export function restoreOutlineSectionFromSectionFragments(sectionId, fragments) 
   return true;
 }
 
+export function insertOutlineSectionFromSectionFragmentsAtEnd(sectionId, fragments) {
+  if (!outlineEditorInstance) return false;
+  const sid = String(sectionId || '').trim();
+  if (!sid) return false;
+  const exists = findSectionPosById(outlineEditorInstance.state.doc, sid);
+  if (typeof exists === 'number') return false;
+
+  const frag = fragments && typeof fragments === 'object' ? fragments : {};
+  const schema = outlineEditorInstance.state.doc.type.schema;
+
+  let headingNode = null;
+  let bodyNode = null;
+  try {
+    if (frag.heading && typeof frag.heading === 'object') {
+      headingNode = schema.nodeFromJSON(frag.heading);
+    }
+  } catch {
+    headingNode = null;
+  }
+  try {
+    if (frag.body && typeof frag.body === 'object') {
+      bodyNode = schema.nodeFromJSON(frag.body);
+    }
+  } catch {
+    bodyNode = null;
+  }
+
+  if (!headingNode || headingNode.type?.name !== 'outlineHeading') {
+    headingNode = schema.nodes.outlineHeading.create({}, []);
+  }
+  if (!bodyNode || bodyNode.type?.name !== 'outlineBody') {
+    bodyNode = schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+  }
+  if (!bodyNode.childCount) {
+    bodyNode = schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]);
+  }
+
+  const childrenNode = schema.nodes.outlineChildren.create({}, []);
+  const sectionNode = schema.nodes.outlineSection.create({ id: sid, collapsed: false }, [
+    headingNode,
+    bodyNode,
+    childrenNode,
+  ]);
+
+  const insertPos = outlineEditorInstance.state.doc.content.size;
+  let tr = outlineEditorInstance.state.tr.insert(insertPos, sectionNode);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      const nextPos = Math.min(tr.doc.content.size, insertPos + 2);
+      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.max(0, nextPos)), 1));
+    }
+  } catch {
+    // ignore
+  }
+  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+  outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return true;
+}
+
 export async function openOutlineEditor() {
   if (state.isPublicView || state.isRagView) {
     showToast('Outline-редактор недоступен в этом режиме');
@@ -5167,9 +5234,22 @@ export async function openOutlineEditor() {
   renderOutlineShell({ loading: true });
 
   // Если есть отложенный черновик (предыдущий автосейв не ушёл) — подхватываем.
-  const queuedDoc = getQueuedDocJson(state.articleId);
-  if (queuedDoc && typeof queuedDoc === 'object' && state.article && !state.article.encrypted) {
-    state.article.docJson = queuedDoc;
+  const queued = getQueuedDocJson(state.articleId);
+  if (queued && state.article && !state.article.encrypted) {
+    const serverUpdatedAt = Date.parse(state.article.updatedAt || '') || 0;
+    const hasServerDoc =
+      state.article.docJson &&
+      typeof state.article.docJson === 'object' &&
+      Array.isArray(state.article.docJson.content) &&
+      state.article.docJson.content.length > 0;
+    const shouldApply =
+      !hasServerDoc || (queued.queuedAt && serverUpdatedAt && queued.queuedAt > serverUpdatedAt);
+    if (shouldApply && queued.docJson && typeof queued.docJson === 'object') {
+      state.article.docJson = queued.docJson;
+    } else if (queued.queuedAt && serverUpdatedAt && queued.queuedAt <= serverUpdatedAt) {
+      // Stale local draft: don't let it override server content.
+      clearQueuedDocJson(state.articleId);
+    }
   }
 
 	  try {

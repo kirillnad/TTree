@@ -20,6 +20,7 @@ from .outline_doc_json import (
     build_outline_section_plain_text_map,
     build_outline_section_fragments_map,
 )
+from .blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
 from .semantic_search import (
     delete_block_embeddings,
     upsert_block_embedding,
@@ -67,6 +68,96 @@ class InvalidOperation(DataStoreError):
 
 
 logger = logging.getLogger('uvicorn.error')
+
+
+def _coerce_embedding_to_list(value: Any) -> list[float]:
+    """
+    Converts pgvector/driver embedding values into a JSON-serializable list[float].
+    Handles cases where driver returns:
+      - list[float]
+      - tuple[float]
+      - string like '[0.1, 0.2, ...]'
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        try:
+            return [float(x) for x in value]
+        except Exception:
+            return []
+    if isinstance(value, tuple):
+        try:
+            return [float(x) for x in value]
+        except Exception:
+            return []
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return []
+        # pgvector often renders as '[..]'. Sometimes as '(..)'.
+        if raw[0] == '(' and raw[-1] == ')':
+            raw = '[' + raw[1:-1] + ']'
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [float(x) for x in parsed]
+        except Exception:
+            pass
+        # fallback: split by comma
+        if raw.startswith('[') and raw.endswith(']'):
+            raw = raw[1:-1]
+        parts = [p.strip() for p in raw.split(',') if p.strip()]
+        try:
+            return [float(p) for p in parts]
+        except Exception:
+            return []
+    return []
+
+
+def get_article_block_embeddings(
+    *,
+    article_id: str,
+    author_id: str,
+    since: str | None = None,
+    block_ids: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Returns embeddings for outline sections (block_id == section_id) for a given article.
+    Used for offline-first client to perform semantic ranking locally.
+    """
+    if not article_id or not author_id:
+        return []
+    ids = [str(x) for x in (block_ids or []) if str(x)]
+    sql = (
+        'SELECT be.block_id AS blockId, be.article_id AS articleId, be.updated_at AS updatedAt, be.embedding AS embedding '
+        'FROM block_embeddings be '
+        'JOIN articles a ON a.id = be.article_id '
+        'WHERE a.deleted_at IS NULL AND be.article_id = ? AND be.author_id = ?'
+    )
+    params: list[Any] = [article_id, author_id]
+    if since:
+        sql += ' AND be.updated_at > ?'
+        params.append(since)
+    if ids:
+        placeholders = ','.join('?' for _ in ids)
+        sql += f' AND be.block_id IN ({placeholders})'
+        params.extend(ids)
+    sql += ' ORDER BY be.updated_at DESC'
+    rows = CONN.execute(sql, tuple(params)).fetchall()
+    out: list[dict[str, Any]] = []
+    for row in rows or []:
+        mapping = getattr(row, '_mapping', row)
+        bid = _mapping_get_first(mapping, 'blockId', 'blockid', 'block_id') or ''
+        updated_at = _mapping_get_first(mapping, 'updatedAt', 'updated_at') or ''
+        emb = _mapping_get_first(mapping, 'embedding')  # may be list/str
+        out.append(
+            {
+                'blockId': bid,
+                'updatedAt': updated_at,
+                'embedding': _coerce_embedding_to_list(emb),
+            }
+        )
+    return out
 
 
 _PIPE_TABLE_RE = re.compile(
@@ -473,7 +564,7 @@ def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
     return roots
 
 
-def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
+def build_article_from_row(row: RowMapping | None, *, include_blocks: bool = True) -> Optional[Dict[str, Any]]:
     if not row:
         return None
     raw_encrypted_flag = bool(row.get('is_encrypted', 0))
@@ -492,11 +583,21 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         raw_doc_json = row.get('article_doc_json')
         if raw_doc_json:
             try:
-                doc_json_value = json.loads(raw_doc_json)
+                parsed = json.loads(raw_doc_json)
+                # Treat empty/invalid outline docs as missing to enable self-heal from legacy blocks/versions.
+                if (
+                    isinstance(parsed, dict)
+                    and parsed.get('type') == 'doc'
+                    and isinstance(parsed.get('content'), list)
+                    and len(parsed.get('content') or []) > 0
+                ):
+                    doc_json_value = parsed
+                else:
+                    doc_json_value = None
             except Exception:
                 doc_json_value = None
 
-    return {
+    article = {
         'id': row['id'],
         'title': row['title'],
         'createdAt': row['created_at'],
@@ -514,8 +615,12 @@ def build_article_from_row(row: RowMapping | None) -> Optional[Dict[str, Any]]:
         'encryptionVerifier': row.get('encryption_verifier'),
         'encryptionHint': row.get('encryption_hint'),
         'docJson': doc_json_value,
-        'blocks': rows_to_tree(row['id']),
     }
+    if include_blocks:
+        article['blocks'] = rows_to_tree(row['id'])
+    else:
+        article['blocks'] = []
+    return article
 
 
 def get_articles(author_id: str) -> List[Dict[str, Any]]:
@@ -523,7 +628,7 @@ def get_articles(author_id: str) -> List[Dict[str, Any]]:
         'SELECT * FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY parent_id IS NOT NULL, parent_id, position, updated_at DESC',
         (author_id,),
     ).fetchall()
-    return [build_article_from_row(row) for row in rows if row]
+    return [build_article_from_row(row, include_blocks=False) for row in rows if row]
 
 
 def get_deleted_articles(author_id: str) -> List[Dict[str, Any]]:
@@ -531,7 +636,7 @@ def get_deleted_articles(author_id: str) -> List[Dict[str, Any]]:
         'SELECT * FROM articles WHERE deleted_at IS NOT NULL AND author_id = ? ORDER BY deleted_at DESC',
         (author_id,),
     ).fetchall()
-    return [build_article_from_row(row) for row in rows if row]
+    return [build_article_from_row(row, include_blocks=False) for row in rows if row]
 
 
 def _fetch_article_siblings(parent_id: Optional[str], author_id: str) -> list[RowMapping]:
@@ -749,7 +854,13 @@ def outdent_article(article_id: str, author_id: str) -> Dict[str, Any]:
     return get_article(article_id, author_id)
 
 
-def get_article(article_id: str, author_id: Optional[str] = None, include_deleted: bool = False) -> Optional[Dict[str, Any]]:
+def get_article(
+    article_id: str,
+    author_id: Optional[str] = None,
+    include_deleted: bool = False,
+    *,
+    include_blocks: bool = True,
+) -> Optional[Dict[str, Any]]:
     sql = 'SELECT * FROM articles WHERE id = ?'
     params: List[Any] = [article_id]
     if author_id is not None:
@@ -758,7 +869,45 @@ def get_article(article_id: str, author_id: Optional[str] = None, include_delete
     if not include_deleted:
         sql += ' AND deleted_at IS NULL'
     row = CONN.execute(sql, tuple(params)).fetchone()
-    return build_article_from_row(row)
+    article = build_article_from_row(row, include_blocks=include_blocks)
+    if not row or not article:
+        return article
+    try:
+        encrypted_flag = bool(row.get('is_encrypted', 0)) or (
+            bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+        )
+        raw_doc = row.get('article_doc_json') or ''
+        has_doc_json = bool(article.get('docJson'))
+
+        # Self-heal: if doc_json is missing/invalid but legacy blocks exist, rebuild it once.
+        if (not encrypted_flag) and (not has_doc_json):
+            blocks = (rows_to_tree(article_id) if not include_blocks else (article.get('blocks') or [])) or []
+            if isinstance(blocks, list) and blocks:
+                doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article_id))
+                # author_id param can be None; use row author_id for recovery.
+                update_article_doc_json(article_id, str(row.get('author_id') or ''), doc_json)
+                row2 = CONN.execute(sql, tuple(params)).fetchone()
+                article2 = build_article_from_row(row2, include_blocks=include_blocks)
+                return article2 or article
+            # If blocks are also gone (or empty), try to restore doc_json from the latest version.
+            try:
+                ver = CONN.execute(
+                    'SELECT doc_json FROM article_versions WHERE article_id = ? AND doc_json IS NOT NULL ORDER BY created_at DESC LIMIT 1',
+                    (article_id,),
+                ).fetchone()
+                raw_ver = (ver.get('doc_json') if ver else None) or ''
+                if raw_ver:
+                    vj = json.loads(raw_ver)
+                    if isinstance(vj, dict) and vj.get('content'):
+                        update_article_doc_json(article_id, str(row.get('author_id') or ''), vj)
+                        row2 = CONN.execute(sql, tuple(params)).fetchone()
+                        article2 = build_article_from_row(row2, include_blocks=include_blocks)
+                        return article2 or article
+            except Exception:
+                pass
+    except Exception:
+        return article
+    return article
 
 
 def delete_article(article_id: str, force: bool = False) -> bool:
@@ -1204,10 +1353,10 @@ def get_or_create_user_inbox(author_id: str) -> Dict[str, Any]:
     return article
 
 
-def create_article(title: Optional[str] = None, author_id: Optional[str] = None) -> Dict[str, Any]:
+def create_article(title: Optional[str] = None, author_id: Optional[str] = None, article_id: Optional[str] = None) -> Dict[str, Any]:
     now = iso_now()
     article = {
-        'id': str(uuid.uuid4()),
+        'id': str(article_id or uuid.uuid4()),
         'title': title or 'Новая статья',
         'createdAt': now,
         'updatedAt': now,

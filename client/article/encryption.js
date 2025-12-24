@@ -1,7 +1,7 @@
 // Вынесено из `article.js`: шифрование/расшифровка статьи и управление ключами.
 
 import { state } from '../state.js';
-import { apiRequest } from '../api.js?v=4';
+import { apiRequest } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 import { showPrompt, showConfirm, showPasswordWithHintPrompt } from '../modal.js?v=10';
 import { logDebug } from '../utils.js';
