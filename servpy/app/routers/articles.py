@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
 from ..auth import User, get_current_user
@@ -83,7 +83,7 @@ def post_article(payload: dict[str, Any], current_user: User = Depends(get_curre
 
 # Вынесено из app/main.py → app/routers/articles.py
 @router.get('/api/articles/{article_id}')
-def read_article(article_id: str, current_user: User = Depends(get_current_user)):
+def read_article(article_id: str, request: Request, current_user: User = Depends(get_current_user)):
     started = time.perf_counter()
     if article_id == 'inbox':
         article = get_or_create_user_inbox(current_user.id)
@@ -113,9 +113,13 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
         try:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             doc_bytes = len(json.dumps(payload.get('docJson') or {}, ensure_ascii=False))
+            etag = f'W/"{payload.get("updatedAt") or ""}:{doc_bytes}"'
+            if request.headers.get('if-none-match') == etag:
+                return Response(status_code=304, headers={'ETag': etag})
             headers = {
                 'X-Memus-Article-ms': str(elapsed_ms),
                 'X-Memus-DocJson-bytes': str(doc_bytes),
+                'ETag': etag,
             }
             return Response(
                 content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
@@ -152,9 +156,13 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
         }
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         doc_bytes = len(json.dumps(payload.get('docJson') or {}, ensure_ascii=False))
+        etag = f'W/"{payload.get("updatedAt") or ""}:{doc_bytes}"'
+        if request.headers.get('if-none-match') == etag:
+            return Response(status_code=304, headers={'ETag': etag})
         headers = {
             'X-Memus-Article-ms': str(elapsed_ms),
             'X-Memus-DocJson-bytes': str(doc_bytes),
+            'ETag': etag,
         }
         return Response(
             content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
@@ -163,6 +171,48 @@ def read_article(article_id: str, current_user: User = Depends(get_current_user)
         )
     except Exception:
         return payload if 'payload' in locals() else article
+
+
+@router.get('/api/articles/{article_id}/meta')
+def read_article_meta(article_id: str, request: Request, current_user: User = Depends(get_current_user)):
+    """
+    Lightweight article metadata for offline-first client decisions.
+    Returns updatedAt + docJsonBytes so the client can avoid downloading full docJson when unchanged.
+    """
+    started = time.perf_counter()
+    if article_id == 'inbox':
+        article = get_or_create_user_inbox(current_user.id)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+        doc_json = article.get('docJson') or None
+        updated_at = article.get('updatedAt')
+    else:
+        article = get_article(article_id, current_user.id, include_blocks=False)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+        doc_json = article.get('docJson') or None
+        updated_at = article.get('updatedAt')
+
+    try:
+        doc_bytes = len(json.dumps(doc_json or {}, ensure_ascii=False))
+    except Exception:
+        doc_bytes = 0
+
+    etag = f'W/"{updated_at or ""}:{doc_bytes}"'
+    if request.headers.get('if-none-match') == etag:
+        return Response(status_code=304, headers={'ETag': etag})
+
+    payload = {'id': article_id, 'updatedAt': updated_at, 'docJsonBytes': doc_bytes}
+    try:
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        headers = {'X-Memus-Article-ms': str(elapsed_ms), 'ETag': etag}
+        return Response(
+            content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            media_type='application/json; charset=utf-8',
+            headers=headers,
+        )
+    except Exception:
+        return payload
 
 
 @router.get('/api/articles/{article_id}/export/html')

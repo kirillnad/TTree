@@ -46,6 +46,27 @@ export async function getMediaProgress() {
   return { total, ok, error };
 }
 
+export async function getMediaProgressForArticle(articleId) {
+  const id = String(articleId || '').trim();
+  if (!id) return { total: 0, ok: 0, error: 0 };
+  const db = await getOfflineDbReady();
+  const res = await db.query(
+    'SELECT ' +
+      'COUNT(1) AS total, ' +
+      "SUM(CASE WHEN ma.status = 'ok' THEN 1 ELSE 0 END) AS ok, " +
+      "SUM(CASE WHEN ma.status = 'error' THEN 1 ELSE 0 END) AS error " +
+      'FROM media_refs mr ' +
+      'LEFT JOIN media_assets ma ON ma.url = mr.url ' +
+      'WHERE mr.article_id = $1',
+    [id],
+  );
+  const row = res?.rows?.[0] || {};
+  const total = Number(row.total || 0);
+  const ok = Number(row.ok || 0);
+  const error = Number(row.error || 0);
+  return { total, ok, error };
+}
+
 function normalizeUploadsUrl(url) {
   const raw = String(url || '').trim();
   if (!raw) return null;

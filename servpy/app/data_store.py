@@ -1350,6 +1350,14 @@ def get_or_create_user_inbox(author_id: str) -> Dict[str, Any]:
         'authorId': author_id,
     }
     save_article(article)
+    # Outline-first: ensure inbox has docJson immediately (otherwise UI opens it as "empty").
+    try:
+        doc_json = convert_blocks_to_outline_doc_json(article.get('blocks') or [], fallback_id=inbox_id)
+        update_article_doc_json(inbox_id, author_id, doc_json)
+        article['docJson'] = doc_json
+    except Exception:
+        # Self-heal will still catch missing docJson later; keep inbox creation resilient.
+        pass
     return article
 
 

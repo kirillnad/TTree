@@ -2669,6 +2669,22 @@ button.icon-button.small {
   .diff-pane {
     max-height: 38vh;
   }
+
+  /* Article history modal: keep revisions list visible on narrow screens. */
+  .diff-layout--article-history-inner .diff-revisions {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+  }
+  .diff-layout--article-history-inner .diff-revisions .diff-item {
+    flex: 0 0 auto;
+    min-width: min(320px, 78vw);
+    scroll-snap-align: start;
+  }
 }
 
 /* Заголовки блоков по уровням вложенности */
@@ -2890,10 +2906,33 @@ h4.block-title {
   justify-content: center;
   font-size: 0.95rem;
   font-weight: 600;
+  position: relative;
 }
 
 .sidebar-user-avatar__icon {
   pointer-events: none;
+}
+
+.sidebar-user-avatar[data-offline="ok"]::after,
+.sidebar-user-avatar[data-offline="loading"]::after,
+.sidebar-user-avatar[data-offline="off"]::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 2px solid #0f172a;
+}
+.sidebar-user-avatar[data-offline="ok"]::after {
+  background: #22c55e;
+}
+.sidebar-user-avatar[data-offline="loading"]::after {
+  background: #eab308;
+}
+.sidebar-user-avatar[data-offline="off"]::after {
+  background: #94a3b8;
 }
 
 .sidebar-user-menu {

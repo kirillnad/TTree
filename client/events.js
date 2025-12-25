@@ -79,7 +79,10 @@ import {
 import { loadArticle } from './article.js';
 import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=81';
 import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=11';
-import { getMediaProgress, isMediaPrefetchPaused, toggleMediaPrefetchPaused } from './offline/media.js';
+import { getMediaProgressForArticle, isMediaPrefetchPaused, toggleMediaPrefetchPaused } from './offline/media.js';
+import { setMediaPrefetchPaused } from './offline/media.js';
+import { getOfflineCoverageSummary } from './offline/status.js';
+import { startBackgroundFullPull, getBackgroundFullPullStatus } from './offline/sync.js';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
 // Вынесено из этого файла: обработка клавиш в режиме редактирования → `./events/editKeys.js`.
@@ -522,7 +525,7 @@ export function attachEvents() {
       state.mediaPrefetchPaused = paused;
       let label = '';
       try {
-        const { total, ok, error } = await getMediaProgress();
+        const { total, ok, error } = await getMediaProgressForArticle(state.articleId);
         if (total > 0) {
           label = `Медиа: ${ok}/${total}`;
           if (error > 0) label += `, ошибок: ${error}`;
@@ -549,14 +552,123 @@ export function attachEvents() {
   };
 
   startMediaStatusPolling();
+  let offlineStatusInFlight = false;
+  let lastOfflineInitWarnAt = 0;
+  const refreshOfflineStatusOnce = async () => {
+    if (offlineStatusInFlight) return;
+    if (!refs.userMenuBtn && !refs.offlineStatusLabel && !refs.offlineFetchBtn) return;
+    offlineStatusInFlight = true;
+    try {
+      const setBtnState = (stateId, title) => {
+        if (refs.userMenuBtn) {
+          refs.userMenuBtn.dataset.offline = stateId;
+          if (title) refs.userMenuBtn.title = title;
+        }
+      };
+
+      if (!state.offlineReady) {
+        const initStatus = String(state.offlineInitStatus || 'idle');
+        const errText = String(state.offlineInitError || '').trim();
+        if (initStatus === 'initializing') {
+          const startedAt = Number(state.offlineInitStartedAt || 0) || 0;
+          const now = Date.now();
+          const ms = startedAt ? now - startedAt : 0;
+          if (ms > 8000 && now - lastOfflineInitWarnAt > 8000) {
+            lastOfflineInitWarnAt = now;
+            try {
+              // eslint-disable-next-line no-console
+              console.warn('[offline] still initializing', { ms });
+            } catch {
+              // ignore
+            }
+          }
+          if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: инициализация…';
+          if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+          setBtnState('loading', 'Аккаунт · Оффлайн: инициализация…');
+          return;
+        }
+        const label = errText ? `Оффлайн: недоступно (${errText})` : 'Оффлайн: недоступно';
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        setBtnState('off', `Аккаунт · ${label}`);
+        return;
+      }
+
+      let summary = null;
+      try {
+        summary = await getOfflineCoverageSummary();
+      } catch {
+        summary = null;
+      }
+      if (!summary) {
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: …';
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.remove('hidden');
+        setBtnState('loading', 'Аккаунт · Оффлайн: …');
+        return;
+      }
+
+      const articlesTotal = Number(summary.articles?.total || 0);
+      const articlesWithDoc = Number(summary.articles?.withDoc || 0);
+      const mediaTotal = Number(summary.media?.total || 0);
+      const mediaOk = Number(summary.media?.ok || 0);
+      const mediaError = Number(summary.media?.error || 0);
+
+      const articlesOk = articlesTotal === 0 ? true : articlesWithDoc >= articlesTotal;
+      const mediaOkAll = mediaTotal === 0 ? true : mediaOk >= mediaTotal;
+      const ok = articlesOk && mediaOkAll && mediaError === 0;
+
+      const pull = getBackgroundFullPullStatus?.() || null;
+      const pullRunning = Boolean(pull?.running);
+      const pullProcessed = Number(pull?.processed || 0);
+      const pullTotal = Number(pull?.total || 0);
+      const pullErrors = Number(pull?.errors || 0);
+      const pullLastError = String(pull?.lastError || '').trim();
+
+      if (ok) {
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн OK';
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        setBtnState('ok', 'Аккаунт · Оффлайн OK');
+      } else {
+        const parts = [];
+        if (pullRunning) {
+          parts.push(`докачка: ${pullProcessed}/${pullTotal || '…'}`);
+          if (pullErrors > 0) parts.push(`ошибок: ${pullErrors}`);
+        } else if (pullLastError) {
+          parts.push(`ошибка: ${pullLastError}`);
+        }
+        if (!articlesOk) parts.push(`статьи: ${articlesWithDoc}/${articlesTotal}`);
+        if (!mediaOkAll) parts.push(`картинки: ${mediaOk}/${mediaTotal}`);
+        if (mediaError > 0) parts.push(`ошибок: ${mediaError}`);
+        const label = parts.length ? `Оффлайн: ${parts.join(' · ')}` : 'Оффлайн: докачка…';
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.toggle('hidden', pullRunning);
+        setBtnState('loading', `Аккаунт · ${label}`);
+      }
+    } finally {
+      offlineStatusInFlight = false;
+    }
+  };
+
+  refreshOfflineStatusOnce().catch(() => {});
+  window.setInterval(() => {
+    refreshOfflineStatusOnce().catch(() => {});
+  }, 4000);
+
+  window.addEventListener('offline-full-pull-status', () => {
+    refreshOfflineStatusOnce().catch(() => {});
+  });
+
   window.addEventListener('media-prefetch-paused', () => {
     refreshMediaStatusOnce().catch(() => {});
+    refreshOfflineStatusOnce().catch(() => {});
   });
   window.addEventListener('online', () => {
     refreshMediaStatusOnce().catch(() => {});
+    refreshOfflineStatusOnce().catch(() => {});
   });
   window.addEventListener('offline', () => {
     refreshMediaStatusOnce().catch(() => {});
+    refreshOfflineStatusOnce().catch(() => {});
   });
 
   if (refs.mediaPrefetchToggleBtn) {
@@ -565,6 +677,27 @@ export function attachEvents() {
       event.stopPropagation();
       toggleMediaPrefetchPaused();
       refreshMediaStatusOnce().catch(() => {});
+    });
+  }
+
+  if (refs.offlineFetchBtn) {
+    refs.offlineFetchBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        if (!state.offlineReady) {
+          showToast('Offline база недоступна в этом браузере');
+          return;
+        }
+        setMediaPrefetchPaused(false);
+        startBackgroundFullPull({ force: true });
+        showToast('Докачиваем офлайн‑картинки в фоне…');
+        refs.userMenu?.classList.add('hidden');
+        refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
+        refreshOfflineStatusOnce().catch(() => {});
+      } catch (err) {
+        showToast(err?.message || 'Не удалось запустить докачку');
+      }
     });
   }
 

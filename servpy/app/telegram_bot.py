@@ -14,7 +14,15 @@ from uuid import uuid4
 
 from .auth import User, get_user_by_id
 from .db import CONN
-from .data_store import create_attachment, get_or_create_user_inbox, insert_block, save_article
+from .blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
+from .data_store import (
+    create_attachment,
+    get_article,
+    get_or_create_user_inbox,
+    insert_block,
+    save_article,
+    update_article_doc_json,
+)
 from .import_assets import _save_image_bytes_for_user
 from .yandex_disk_utils import _upload_bytes_to_yandex_for_user
 
@@ -319,6 +327,11 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
         except Exception as exc:  # noqa: BLE001
             logger.error('Telegram bot: failed to save inbox article directly: %r', exc)
             return
+        try:
+            doc_json = convert_blocks_to_outline_doc_json(inbox_article.get('blocks') or [], fallback_id=str(article_id))
+            update_article_doc_json(article_id, user.id, doc_json)
+        except Exception as exc:  # noqa: BLE001
+            logger.error('Telegram bot: failed to rebuild inbox docJson: %r', exc)
         if chat_id is not None:
             _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')
         return
@@ -338,6 +351,13 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.error('Telegram bot: insert_block failed: %r', exc)
         return
+    try:
+        fresh = get_article(article_id, author_id=user.id, include_blocks=True) or {}
+        blocks = fresh.get('blocks') or []
+        doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article_id))
+        update_article_doc_json(article_id, user.id, doc_json)
+    except Exception as exc:  # noqa: BLE001
+        logger.error('Telegram bot: failed to rebuild inbox docJson after insert: %r', exc)
 
     if chat_id is not None:
         _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')

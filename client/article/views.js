@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { apiRequest, fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=11';
+import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 import { showPrompt } from '../modal.js?v=10';
 import { navigate, routing } from '../routing.js';
@@ -357,34 +357,54 @@ export async function createArticle() {
 }
 
 export async function openInboxArticle() {
+  // `navigate()` already triggers routing and loads the view.
   navigate(routing.article('inbox'));
-  await loadArticleView('inbox');
 }
 
 export async function createInboxNote() {
   try {
-    await loadArticle('inbox', { resetUndoStacks: true });
-    const blocks = state.article?.blocks || [];
-    const anchorId = blocks.length ? blocks[blocks.length - 1].id : null;
-    let newBlockId = null;
-    if (anchorId) {
-      const res = await apiRequest(`/api/articles/inbox/blocks/${anchorId}/siblings`, {
-        method: 'POST',
-        body: JSON.stringify({ direction: 'after' }),
-      });
-      newBlockId = res?.block?.id || null;
+    const inboxPath = routing.article('inbox');
+    const alreadyOnInbox = state.articleId === 'inbox' && window.location.pathname === inboxPath;
+    if (!alreadyOnInbox) {
+      // Important: `navigate()` already starts async `loadArticleView()` via routing.
+      // Do not call `loadArticle()` in parallel, otherwise the second load can overwrite
+      // the just-created draft section and it "disappears".
+      navigate(inboxPath);
     }
-    if (!newBlockId) {
+    const outline = await import('../outline/editor.js?v=81');
+    let newSectionId = null;
+    const deadline = performance.now() + 15000;
+    while (!newSectionId && performance.now() < deadline) {
+      const isInboxLoaded =
+        state.articleId === 'inbox' &&
+        state.article &&
+        String(state.article.id || '').startsWith('inbox-') &&
+        String(state.article.title || '') === 'Быстрые заметки';
+      if (!isInboxLoaded) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        continue;
+      }
+      if (state.article?.encrypted) {
+        showToast('Не удалось создать заметку (инбокс зашифрован)');
+        return;
+      }
+      newSectionId = outline?.insertNewOutlineSectionAtStart?.({ enterEditMode: true }) || null;
+      if (!newSectionId) {
+        // Outline редактор может инициализироваться асинхронно сразу после загрузки статьи.
+        // Делаем короткий retry вместо того, чтобы фейлить создание заметки.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+    if (!newSectionId) {
       showToast('Не удалось создать заметку');
       return;
     }
-    state.pendingEditBlockId = newBlockId;
-    state.scrollTargetBlockId = newBlockId;
-    state.mode = 'edit';
-    state.editingBlockId = newBlockId;
-    navigate(routing.article('inbox'));
-    await loadArticle('inbox', { desiredBlockId: newBlockId, editBlockId: newBlockId });
-    renderArticle();
+    state.currentBlockId = newSectionId;
+    try {
+      outline?.enterOutlineSectionEditMode?.(newSectionId, { focusBody: true });
+    } catch {
+      // ignore
+    }
   } catch (error) {
     showToast(error.message || 'Не удалось создать заметку');
   }

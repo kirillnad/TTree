@@ -28,12 +28,12 @@ function setCurrentArticleKey(key) {
 export async function ensureArticleDecrypted(article) {
   if (!article || !article.encrypted) {
     if (article) {
-      logDebug('ensureArticleDecrypted: skip (not encrypted)', {
-        id: article.id,
-        encrypted: article.encrypted,
-        hasSalt: Boolean(article.encryptionSalt),
-        hasVerifier: Boolean(article.encryptionVerifier),
-      });
+      // logDebug('ensureArticleDecrypted: skip (not encrypted)', {
+      //   id: article.id,
+      //   encrypted: article.encrypted,
+      //   hasSalt: Boolean(article.encryptionSalt),
+      //   hasVerifier: Boolean(article.encryptionVerifier),
+      // });
     }
     return article;
   }
@@ -41,10 +41,10 @@ export async function ensureArticleDecrypted(article) {
   // Уже есть ключ в памяти — просто расшифровываем без повторного запроса пароля.
   const existingKey = state.articleEncryptionKeys?.[article.id] || null;
   if (existingKey) {
-    logDebug('ensureArticleDecrypted: using cached key', {
-      id: article.id,
-      encrypted: article.encrypted,
-    });
+    // logDebug('ensureArticleDecrypted: using cached key', {
+    //   id: article.id,
+    //   encrypted: article.encrypted,
+    // });
     await decryptArticleBlocks(article, existingKey);
     return article;
   }
@@ -93,10 +93,10 @@ export async function ensureArticleDecrypted(article) {
       // eslint-disable-next-line no-await-in-loop
       await decryptArticleBlocks(article, key);
       setCurrentArticleKey(key);
-      logDebug('ensureArticleDecrypted: decrypted with password', {
-        id: article.id,
-        encrypted: article.encrypted,
-      });
+      // logDebug('ensureArticleDecrypted: decrypted with password', {
+      //   id: article.id,
+      //   encrypted: article.encrypted,
+      // });
       return article;
     } catch (error) {
       if (attempts >= 3) {

@@ -38,6 +38,7 @@ const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: 
 let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 let dropGuardCleanup = null;
+let outlineArticleId = null;
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 const OUTLINE_ALLOW_META = 'outlineAllowMutation';
@@ -56,6 +57,24 @@ function mdTableDebug(...args) {
     if (!mdTableDebugEnabled()) return;
     // eslint-disable-next-line no-console
     console.log('[outline][md-table]', ...args);
+  } catch {
+    // ignore
+  }
+}
+
+const PERF_KEY = 'ttree_profile_v1';
+function perfEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(PERF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function perfLog(label, data = {}) {
+  try {
+    if (!perfEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[perf][outline]', label, data);
   } catch {
     // ignore
   }
@@ -1451,7 +1470,9 @@ async function loadTiptap() {
   }
   // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
   // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
+  const t0 = perfEnabled() ? performance.now() : 0;
   const mod = await import('./tiptap.bundle.js?v=3');
+  if (t0) perfLog('import tiptap.bundle.js', { ms: Math.round(performance.now() - t0) });
   tiptap = {
     core: mod.core,
     starterKitMod: mod.starterKitMod,
@@ -1818,6 +1839,7 @@ function scheduleAutosave({ delayMs = 1200 } = {}) {
   if (!state.isOutlineEditing) return;
   if (!outlineEditorInstance) return;
   if (state.isPublicView) return;
+  if (outlineArticleId && state.articleId && outlineArticleId !== state.articleId) return;
   if (autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => {
     autosaveTimer = null;
@@ -1829,6 +1851,7 @@ async function runAutosave({ force = false } = {}) {
   if (!state.isOutlineEditing) return;
   if (!outlineEditorInstance) return;
   if (state.isPublicView) return;
+  if (outlineArticleId && state.articleId && outlineArticleId !== state.articleId) return;
   if (autosaveInFlight) return;
   if (!force && !docDirty && !dirtySectionIds.size) return;
   autosaveInFlight = true;
@@ -1864,13 +1887,16 @@ async function mountOutlineEditor() {
   // Защита от двойного mount (например, если юзер кликнул дважды пока грузим tiptap).
   if (mountPromise) return mountPromise;
   mountPromise = (async () => {
+  const mountStart = perfEnabled() ? performance.now() : 0;
+  const loadStart = perfEnabled() ? performance.now() : 0;
   const { core, starterKitMod, htmlMod, pmStateMod, pmViewMod } = await loadTiptap();
+  if (loadStart) perfLog('loadTiptap()', { ms: Math.round(performance.now() - loadStart) });
   const { Editor, Node, Extension, mergeAttributes } = core;
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
   const { Plugin, PluginKey } = pmStateMod;
-	  const { Decoration, DecorationSet } = pmViewMod;
+		  const { Decoration, DecorationSet } = pmViewMod;
 	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
 	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
 	  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
@@ -4513,6 +4539,7 @@ async function mountOutlineEditor() {
 
   let shouldBootstrapDocJson = false;
   let content = null;
+  const contentStart = perfEnabled() ? performance.now() : 0;
   const candidate = state.article?.docJson || null;
   if (candidate && typeof candidate === 'object') {
     // TipTap can accept JSON content directly.
@@ -4527,6 +4554,7 @@ async function mountOutlineEditor() {
     });
     shouldBootstrapDocJson = Boolean(state.article && !state.article?.docJson && !state.article?.encrypted);
   }
+  if (contentStart) perfLog('build initial content', { ms: Math.round(performance.now() - contentStart) });
 
   if (outlineEditorInstance) {
     try {
@@ -4542,9 +4570,10 @@ async function mountOutlineEditor() {
 		    : null;
 
 		  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
-	  outlineEditorInstance = new Editor({
-    element: contentRoot,
-	    extensions: [
+		  const createStart = perfEnabled() ? performance.now() : 0;
+		  outlineEditorInstance = new Editor({
+	    element: contentRoot,
+		    extensions: [
 	      OutlineDocument,
 	      OutlineSection,
 	      OutlineHeading,
@@ -4895,16 +4924,20 @@ async function mountOutlineEditor() {
       }
       lastActiveSectionId = sectionId;
     },
-  });
+	  });
+		  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
 
   contentRoot.focus?.({ preventScroll: true });
 
   // Миграция: markdown-таблицы текстом → настоящие table nodes.
   try {
+    const convertStart = perfEnabled() ? performance.now() : 0;
     convertMarkdownTablesInOutlineDoc(outlineEditorInstance);
+    if (convertStart) perfLog('convertMarkdownTablesInOutlineDoc()', { ms: Math.round(performance.now() - convertStart) });
   } catch {
     // ignore
   }
+  if (mountStart) perfLog('mountOutlineEditor() total', { ms: Math.round(performance.now() - mountStart) });
   })();
 
   try {
@@ -4988,6 +5021,8 @@ async function saveOutlineEditor(options = {}) {
   if (state.isPublicView) return;
   if (!state.articleId || !state.article) return;
   if (!outlineEditorInstance) return;
+  const targetArticleId = outlineArticleId || state.articleId;
+  if (!targetArticleId) return;
   const silent = Boolean(options.silent);
   try {
     if (!silent) showPersistentToast('Сохраняем outline…');
@@ -4999,7 +5034,18 @@ async function saveOutlineEditor(options = {}) {
       return;
     }
     const docJson = outlineEditorInstance.getJSON();
-    const result = await saveArticleDocJson(state.articleId, docJson, { createVersionIfStaleHours: 12 });
+    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
+    if (state.articleId && targetArticleId !== state.articleId) {
+      try {
+        setQueuedDocJson(targetArticleId, docJson);
+      } catch {
+        // ignore
+      }
+      if (!silent) hideToast();
+      setOutlineStatus('Оффлайн: черновик сохранён локально');
+      return;
+    }
+    const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
     if (!silent) hideToast();
     const isQueued = Boolean(result?.offline) || String(result?.status || '') === 'queued';
     if (state.article) {
@@ -5020,7 +5066,7 @@ async function saveOutlineEditor(options = {}) {
       // ignore
     }
     docDirty = false;
-    clearQueuedDocJson(state.articleId);
+    clearQueuedDocJson(targetArticleId);
     outlineLastSavedAt = new Date();
     setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
   } catch (error) {
@@ -5033,7 +5079,7 @@ async function saveOutlineEditor(options = {}) {
     // Сохраняем в локальную очередь, чтобы догнать позже.
     try {
       const docJson = outlineEditorInstance.getJSON();
-      if (docJson && typeof docJson === 'object') setQueuedDocJson(state.articleId, docJson);
+      if (docJson && typeof docJson === 'object') setQueuedDocJson(targetArticleId, docJson);
     } catch {
       // ignore
     }
@@ -5213,6 +5259,126 @@ export function insertOutlineSectionFromSectionFragmentsAtEnd(sectionId, fragmen
   return true;
 }
 
+export function insertNewOutlineSectionAtEnd({ enterEditMode = true } = {}) {
+  if (!outlineEditorInstance) return null;
+  const schema = outlineEditorInstance.state.doc.type.schema;
+  const insertPos = outlineEditorInstance.state.doc.content.size;
+  const sectionId = safeUuid();
+
+  const sectionNode = schema.nodes.outlineSection.create(
+    { id: sectionId, collapsed: false },
+    [
+      schema.nodes.outlineHeading.create({}, []),
+      schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+      schema.nodes.outlineChildren.create({}, []),
+    ],
+  );
+
+  let tr = outlineEditorInstance.state.tr.insert(insertPos, sectionNode);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      const sectionPos = findSectionPosById(tr.doc, sectionId);
+      const bodyStart = typeof sectionPos === 'number' ? findOutlineSectionBodyStartPos(tr.doc, sectionPos) : null;
+      if (typeof bodyStart === 'number') {
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, bodyStart + 2)), 1));
+      } else {
+        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+  if (enterEditMode && outlineEditModeKey) {
+    tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
+  }
+  outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return sectionId;
+}
+
+function findOutlineSectionBodyStartPos(doc, sectionPos) {
+  try {
+    const sectionNode = doc.nodeAt(sectionPos);
+    if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return null;
+    const headingNode = sectionNode.child(0);
+    return sectionPos + 1 + headingNode.nodeSize;
+  } catch {
+    return null;
+  }
+}
+
+export function enterOutlineSectionEditMode(sectionId, { focusBody = true } = {}) {
+  if (!outlineEditorInstance) return false;
+  if (!outlineEditModeKey) return false;
+  const sid = String(sectionId || '').trim();
+  if (!sid) return false;
+  const sectionPos = findSectionPosById(outlineEditorInstance.state.doc, sid);
+  if (typeof sectionPos !== 'number') return false;
+
+  let tr = outlineEditorInstance.state.tr;
+  if (focusBody) {
+    try {
+      const TextSelection = tiptap?.pmStateMod?.TextSelection;
+      const bodyStart = findOutlineSectionBodyStartPos(tr.doc, sectionPos);
+      if (TextSelection && typeof bodyStart === 'number') {
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, bodyStart + 2)), 1));
+      }
+    } catch {
+      // ignore
+    }
+  }
+  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+  tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: sid });
+  outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+  outlineEditorInstance.view.focus();
+  return true;
+}
+
+export function insertNewOutlineSectionAtStart({ enterEditMode = true } = {}) {
+  if (!outlineEditorInstance) return null;
+  const schema = outlineEditorInstance.state.doc.type.schema;
+  const insertPos = 0;
+  const sectionId = safeUuid();
+
+  const sectionNode = schema.nodes.outlineSection.create(
+    { id: sectionId, collapsed: false },
+    [
+      schema.nodes.outlineHeading.create({}, []),
+      schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+      schema.nodes.outlineChildren.create({}, []),
+    ],
+  );
+
+  let tr = outlineEditorInstance.state.tr.insert(insertPos, sectionNode);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      const sectionPos = findSectionPosById(tr.doc, sectionId);
+      const bodyStart = typeof sectionPos === 'number' ? findOutlineSectionBodyStartPos(tr.doc, sectionPos) : null;
+      if (typeof bodyStart === 'number') {
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, bodyStart + 2)), 1));
+      } else {
+        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+  if (enterEditMode && outlineEditModeKey) {
+    tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
+  }
+  outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return sectionId;
+}
+
 export async function openOutlineEditor() {
   if (state.isPublicView || state.isRagView) {
     showToast('Outline-редактор недоступен в этом режиме');
@@ -5222,6 +5388,7 @@ export async function openOutlineEditor() {
     showToast('Сначала откройте статью');
     return;
   }
+  outlineArticleId = state.articleId;
   if (!refs.outlineEditor || !refs.blocksContainer) {
     showToast('Не удалось открыть outline-редактор');
     return;
@@ -5234,7 +5401,7 @@ export async function openOutlineEditor() {
   renderOutlineShell({ loading: true });
 
   // Если есть отложенный черновик (предыдущий автосейв не ушёл) — подхватываем.
-  const queued = getQueuedDocJson(state.articleId);
+  const queued = getQueuedDocJson(outlineArticleId);
   if (queued && state.article && !state.article.encrypted) {
     const serverUpdatedAt = Date.parse(state.article.updatedAt || '') || 0;
     const hasServerDoc =
@@ -5248,7 +5415,7 @@ export async function openOutlineEditor() {
       state.article.docJson = queued.docJson;
     } else if (queued.queuedAt && serverUpdatedAt && queued.queuedAt <= serverUpdatedAt) {
       // Stale local draft: don't let it override server content.
-      clearQueuedDocJson(state.articleId);
+      clearQueuedDocJson(outlineArticleId);
     }
   }
 
@@ -5319,9 +5486,9 @@ export async function openOutlineEditor() {
 	    }
 
 	    // Если есть очередь, пробуем сохранить сразу.
-	    if (getQueuedDocJson(state.articleId)) {
-	      void runAutosave({ force: true });
-	    }
+		    if (outlineArticleId && getQueuedDocJson(outlineArticleId)) {
+		      void runAutosave({ force: true });
+		    }
   } catch (error) {
     showToast(error?.message || 'Не удалось загрузить outline-редактор');
     closeOutlineEditor();
@@ -5332,6 +5499,7 @@ export function closeOutlineEditor() {
   state.isOutlineEditing = false;
   unmountOutlineToolbar();
   outlineEditModeKey = null;
+  outlineArticleId = null;
   if (dropGuardCleanup) dropGuardCleanup();
   if (refs.outlineToolbar) refs.outlineToolbar.classList.add('hidden');
   if (refs.articleToolbar) refs.articleToolbar.classList.remove('hidden');
@@ -5357,14 +5525,38 @@ export function closeOutlineEditor() {
   if (refs.blocksContainer) refs.blocksContainer.classList.remove('hidden');
 }
 
-export async function flushOutlineAutosave() {
-  if (!state.isOutlineEditing) return;
+export async function flushOutlineAutosave(options = {}) {
+  const mode = options && typeof options.mode === 'string' ? options.mode : 'network';
+  const timeoutMs =
+    options && typeof options.timeoutMs === 'number' ? Math.max(0, Math.floor(options.timeoutMs)) : 0;
   if (!outlineEditorInstance) return;
   if (autosaveTimer) {
     clearTimeout(autosaveTimer);
     autosaveTimer = null;
   }
-  await runAutosave({ force: true });
+
+  // Queue current draft locally first (fast, no network), so navigation won't lose edits.
+  try {
+    const targetArticleId = outlineArticleId || state.articleId;
+    if (targetArticleId && !state.article?.encrypted) {
+      const docJson = outlineEditorInstance.getJSON();
+      if (docJson && typeof docJson === 'object') {
+        setQueuedDocJson(targetArticleId, docJson);
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // Navigation path: don't block on slow network saves; outbox will sync later.
+  if (mode === 'queue') return;
+
+  const p = runAutosave({ force: true, silent: true });
+  if (timeoutMs > 0) {
+    await Promise.race([p, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+    return;
+  }
+  await p;
 }
 
 export async function openPublicOutlineViewer({ docJson } = {}) {

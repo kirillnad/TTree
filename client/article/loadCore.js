@@ -9,9 +9,17 @@ import { ensureArticleDecrypted } from './encryption.js';
 import { updatePublicToggleLabel } from './header.js';
 
 const DEBUG_KEY = 'ttree_debug_article_load_v1';
+const PERF_KEY = 'ttree_profile_v1';
 function debugEnabled() {
   try {
     return window?.localStorage?.getItem?.(DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function perfEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(PERF_KEY) === '1';
   } catch {
     return false;
   }
@@ -48,11 +56,12 @@ export async function loadArticle(id, options = {}) {
 
   debugLog('load.start', { id, switchingArticle, mode: state.mode, isOutlineEditing: state.isOutlineEditing });
 
-  if (switchingArticle && state.isOutlineEditing) {
+  if (switchingArticle) {
     try {
       const outline = await import('../outline/editor.js?v=81');
       if (outline?.flushOutlineAutosave) {
-        await outline.flushOutlineAutosave();
+        // Don't block navigation on slow saves: store draft locally and let outbox sync later.
+        await outline.flushOutlineAutosave({ mode: 'queue' });
       }
       if (outline?.closeOutlineEditor) {
         outline.closeOutlineEditor();
@@ -65,9 +74,17 @@ export async function loadArticle(id, options = {}) {
   state.articleId = id;
   state.isEditingTitle = false;
   state.pendingTextPreview = null;
+  // Important: while fetching the next article, clear the previous one so UI doesn't keep
+  // rendering stale content under the new route/title.
+  state.article = null;
+  state.currentBlockId = null;
 
   const fetchStartedAt = performance.now();
   const rawArticle = await fetchArticle(id);
+  if (perfEnabled()) {
+    // eslint-disable-next-line no-console
+    console.log('[perf][article-load] fetchArticle', { id, ms: Math.round(performance.now() - fetchStartedAt) });
+  }
   debugLog('load.fetched', {
     id,
     ms: Math.round(performance.now() - fetchStartedAt),
@@ -108,8 +125,15 @@ export async function loadArticle(id, options = {}) {
       const outline = await import('../outline/editor.js?v=81');
       if (outline?.openOutlineEditor) {
         debugLog('outline.open.start', { id });
-        await outline.openOutlineEditor();
-        debugLog('outline.open.done', { id, isOutlineEditing: state.isOutlineEditing });
+        // Don't block article navigation on TipTap mount: on mobile this can take seconds.
+        // `openOutlineEditor()` shows its own loading skeleton; we'll let it finish in background.
+        const outlineStart = perfEnabled() ? performance.now() : 0;
+        void outline.openOutlineEditor();
+        if (outlineStart) {
+          // eslint-disable-next-line no-console
+          console.log('[perf][article-load] outline.open scheduled', { id, ms: Math.round(performance.now() - outlineStart) });
+        }
+        debugLog('outline.open.scheduled', { id, isOutlineEditing: state.isOutlineEditing });
       }
     } catch (err) {
       // Do not fail silently: otherwise /article becomes blank (blocks may be empty in doc_json-first mode).

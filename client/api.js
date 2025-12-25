@@ -9,20 +9,50 @@ import {
 import { enqueueOp } from './offline/outbox.js';
 import { localSemanticSearch } from './offline/semantic.js';
 
+const PERF_KEY = 'ttree_profile_v1';
+function perfEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(PERF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export async function apiRequest(path, options = {}) {
+  const perfStart = perfEnabled() ? performance.now() : 0;
+  const perfFetchStart = perfStart ? performance.now() : 0;
   const response = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     credentials: 'include',
     ...options,
   });
+  const perfHeadersAt = perfFetchStart ? performance.now() : 0;
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
+    if (perfStart) {
+      // eslint-disable-next-line no-console
+      console.log('[perf][api]', path, {
+        status: response.status,
+        ms: Math.round(performance.now() - perfStart),
+        fetchMs: perfHeadersAt ? Math.round(perfHeadersAt - perfFetchStart) : null,
+      });
+    }
     throw new Error(details.detail || 'Request failed');
   }
   if (response.status === 204) {
+    if (perfStart) {
+      // eslint-disable-next-line no-console
+      console.log('[perf][api]', path, {
+        status: 204,
+        ms: Math.round(performance.now() - perfStart),
+        fetchMs: perfHeadersAt ? Math.round(perfHeadersAt - perfFetchStart) : null,
+      });
+    }
     return null;
   }
+  const perfJsonStart = perfStart ? performance.now() : 0;
   const data = await response.json();
+  const perfDone = perfStart ? performance.now() : 0;
   try {
     if (window?.localStorage?.getItem?.('ttree_debug_article_load_v1') === '1') {
       const ms = response.headers.get('X-Memus-Article-ms');
@@ -34,6 +64,21 @@ export async function apiRequest(path, options = {}) {
     }
   } catch {
     // ignore
+  }
+  if (perfStart) {
+    const serverMs = response.headers.get('X-Memus-Article-ms');
+    const docBytes = response.headers.get('X-Memus-DocJson-bytes');
+    const contentLength = response.headers.get('Content-Length');
+    // eslint-disable-next-line no-console
+    console.log('[perf][api]', path, {
+      status: response.status,
+      ms: Math.round(perfDone - perfStart),
+      fetchMs: perfHeadersAt ? Math.round(perfHeadersAt - perfFetchStart) : null,
+      jsonMs: perfJsonStart ? Math.round(perfDone - perfJsonStart) : null,
+      serverMs: serverMs ? Number(serverMs) : null,
+      docJsonBytes: docBytes ? Number(docBytes) : null,
+      contentLength: contentLength ? Number(contentLength) : null,
+    });
   }
   return data;
 }
@@ -106,17 +151,59 @@ export function fetchDeletedArticlesIndex() {
   });
 }
 
-export function fetchArticle(id) {
-  return apiRequest(`/api/articles/${id}`)
-    .then(async (article) => {
-      cacheArticle(article).catch(() => {});
-      return article;
-    })
-    .catch(async (err) => {
-      const cached = await getCachedArticle(id).catch(() => null);
-      if (cached) return cached;
-      throw err;
+export function fetchArticle(id, options = {}) {
+  const cacheTimeoutMs =
+    options && typeof options.cacheTimeoutMs === 'number' ? Math.max(0, Math.floor(options.cacheTimeoutMs)) : 150;
+  const cachedPromise = Promise.race([
+    getCachedArticle(id).catch(() => null),
+    new Promise((resolve) => setTimeout(() => resolve(null), cacheTimeoutMs)),
+  ]);
+
+  const fetchOnline = () =>
+    apiRequest(`/api/articles/${id}`, options)
+      .then(async (article) => {
+        cacheArticle(article).catch(() => {});
+        return article;
+      })
+      .catch(async (err) => {
+        const cached = await getCachedArticle(id).catch(() => null);
+        if (cached) return cached;
+        throw err;
+      });
+
+  const fetchMeta = () =>
+    apiRequest(`/api/articles/${encodeURIComponent(id)}/meta`, {
+      method: 'GET',
+      headers: { ...(options.headers || {}) },
     });
+
+  // Offline-first + version-aware:
+  // - If cached exists: compare versions via lightweight /meta.
+  //   - unchanged => return cached, skip full GET
+  //   - changed/unknown => fetch full article
+  // - If no cached: fetch full article
+  return cachedPromise.then(async (cached) => {
+    if (!cached) return fetchOnline();
+    if (!navigator.onLine) return cached;
+
+    const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
+    if (!cachedUpdatedAt) {
+      return fetchOnline();
+    }
+
+    try {
+      const meta = await fetchMeta();
+      const serverUpdatedAt = String(meta?.updatedAt || '').trim();
+      if (serverUpdatedAt && serverUpdatedAt === cachedUpdatedAt) {
+        return cached;
+      }
+      return fetchOnline();
+    } catch {
+      // If meta check fails, fall back to cached quickly and refresh in background.
+      fetchOnline().catch(() => {});
+      return cached;
+    }
+  });
 }
 
 export function search(query) {

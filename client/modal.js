@@ -1405,10 +1405,11 @@ export function showArticleHistoryModal(options = {}) {
       }
 
       const layout = document.createElement('div');
-      layout.className = 'diff-layout';
+      layout.className = 'diff-layout diff-layout--article-history';
 
       const sidebar = document.createElement('div');
       sidebar.className = 'modal-list diff-sidebar';
+      sidebar.classList.add('diff-sections');
 
       const search = document.createElement('input');
       search.type = 'text';
@@ -1424,10 +1425,11 @@ export function showArticleHistoryModal(options = {}) {
       main.className = 'diff-main';
 
       const innerLayout = document.createElement('div');
-      innerLayout.className = 'diff-layout';
+      innerLayout.className = 'diff-layout diff-layout--article-history-inner';
 
       const eventsList = document.createElement('div');
       eventsList.className = 'modal-list diff-sidebar';
+      eventsList.classList.add('diff-revisions');
 
       const panes = document.createElement('div');
       panes.className = 'diff-panes diff-panes--side';

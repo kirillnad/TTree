@@ -1,6 +1,9 @@
 export const state = {
   mode: 'view',
   offlineReady: false,
+  offlineInitStatus: 'idle', // idle | initializing | ready | error
+  offlineInitError: '',
+  offlineInitStartedAt: null,
   mediaStatusText: '',
   mediaPrefetchPaused: false,
   // Outline-режим редактирования всей статьи (TipTap).

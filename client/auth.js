@@ -129,7 +129,19 @@ export async function bootstrapAuth() {
       // хотя сеть уже доступна и сервер отвечает 200.
       hideAuthOverlay();
       ensureAppStarted();
-      (async () => {
+      const startOfflineLater = (fn) => {
+        try {
+          if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => fn(), { timeout: 3000 });
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        setTimeout(() => fn(), 1500);
+      };
+      startOfflineLater(() => {
+        (async () => {
         let slowToastShown = false;
         let offlineOk = false;
         const slowTimer = setTimeout(() => {
@@ -157,7 +169,8 @@ export async function bootstrapAuth() {
             showToast('Offline-база готова');
           }
         }
-      })();
+        })();
+      });
       return;
     }
   } catch (_) {
