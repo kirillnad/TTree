@@ -30,6 +30,33 @@ function ensureVis() {
   return vis;
 }
 
+let visLoadingPromise = null;
+function loadVisNetwork() {
+  const existing = ensureVis();
+  if (existing) return Promise.resolve(existing);
+  if (visLoadingPromise) return visLoadingPromise;
+  visLoadingPromise = (async () => {
+    if (!navigator.onLine) {
+      throw new Error('offline');
+    }
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('vis-network load failed'));
+      document.head.appendChild(script);
+    });
+    const vis = ensureVis();
+    if (!vis) throw new Error('vis-network not available');
+    return vis;
+  })().finally(() => {
+    // allow retry if load failed
+    if (!ensureVis()) visLoadingPromise = null;
+  });
+  return visLoadingPromise;
+}
+
 function computeComponents(nodeIds, edges) {
   const adjacency = new Map();
   nodeIds.forEach((id) => {
@@ -334,9 +361,14 @@ export async function openGraphView() {
   if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.graphView.classList.remove('hidden');
 
-  const vis = ensureVis();
-  if (!vis) {
-    showToast('Не удалось загрузить библиотеку графа (vis-network)');
+  try {
+    await loadVisNetwork();
+  } catch (err) {
+    if (!navigator.onLine || err?.message === 'offline') {
+      showToast('Граф недоступен без интернета');
+    } else {
+      showToast('Не удалось загрузить библиотеку графа (vis-network)');
+    }
     return;
   }
 

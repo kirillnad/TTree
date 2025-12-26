@@ -8,6 +8,24 @@ import { initTables } from './tables.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
 import { refs } from './refs.js';
 
+function applyDebugFlagsFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    const raw = params.get('profile') ?? params.get('perf');
+    if (raw == null) return;
+    const v = String(raw).trim().toLowerCase();
+    if (v === '1' || v === 'true' || v === 'yes' || v === 'on') {
+      window.localStorage.setItem('ttree_profile_v1', '1');
+      return;
+    }
+    if (v === '0' || v === 'false' || v === 'no' || v === 'off') {
+      window.localStorage.removeItem('ttree_profile_v1');
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function registerUploadsServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
@@ -22,6 +40,7 @@ function registerUploadsServiceWorker() {
 }
 
 function logClient(kind, data) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
   try {
     fetch('/api/client/log', {
       method: 'POST',
@@ -41,6 +60,7 @@ function logClient(kind, data) {
  * Инициализация приложения
  */
 function startApp() {
+  applyDebugFlagsFromUrl();
   logClient('app.start', {
     ua: navigator.userAgent,
   });
@@ -56,6 +76,7 @@ function startApp() {
 }
 
 function startPublicApp() {
+  applyDebugFlagsFromUrl();
   logClient('app.public.start', {
     ua: navigator.userAgent,
     path: window.location.pathname,

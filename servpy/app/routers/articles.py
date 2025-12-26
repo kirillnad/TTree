@@ -17,6 +17,7 @@ from ..data_store import (
     delete_article,
     get_article,
     get_articles,
+    get_articles_index,
     get_deleted_articles,
     get_or_create_user_inbox,
     indent_article as indent_article_ds,
@@ -40,9 +41,10 @@ CLIENT_DIR = BASE_DIR / "client"
 
 # Вынесено из app/main.py → app/routers/articles.py
 @router.get('/api/articles')
-def list_articles(current_user: User = Depends(get_current_user)):
+def list_articles(response: Response, current_user: User = Depends(get_current_user)):
+    started = time.perf_counter()
     inbox_id = f'inbox-{current_user.id}'
-    return [
+    items = [
         {
             'id': article['id'],
             'title': article['title'],
@@ -52,9 +54,15 @@ def list_articles(current_user: User = Depends(get_current_user)):
             'publicSlug': article.get('publicSlug'),
             'encrypted': bool(article.get('encrypted', False)),
         }
-        for article in get_articles(current_user.id)
+        for article in get_articles_index(current_user.id)
         if article['id'] != inbox_id
     ]
+    try:
+        response.headers['X-Memus-Articles-ms'] = str(int((time.perf_counter() - started) * 1000))
+        response.headers['X-Memus-Articles-count'] = str(len(items))
+    except Exception:
+        pass
+    return items
 
 
 # Вынесено из app/main.py → app/routers/articles.py
@@ -83,7 +91,12 @@ def post_article(payload: dict[str, Any], current_user: User = Depends(get_curre
 
 # Вынесено из app/main.py → app/routers/articles.py
 @router.get('/api/articles/{article_id}')
-def read_article(article_id: str, request: Request, current_user: User = Depends(get_current_user)):
+def read_article(
+    article_id: str,
+    request: Request,
+    include_history: bool = False,
+    current_user: User = Depends(get_current_user),
+):
     started = time.perf_counter()
     if article_id == 'inbox':
         article = get_or_create_user_inbox(current_user.id)
@@ -104,10 +117,10 @@ def read_article(article_id: str, request: Request, current_user: User = Depends
             'encryptionVerifier': article.get('encryptionVerifier'),
             'encryptionHint': article.get('encryptionHint'),
             'docJson': article.get('docJson') or None,
-            # legacy fields kept for client compatibility (not used in outline-first UX)
-            'history': article.get('history') or [],
-            'redoHistory': article.get('redoHistory') or [],
-            'blockTrash': article.get('blockTrash') or [],
+            # Large arrays: load on demand via /history to avoid slow JSON.parse on mobile.
+            'history': (article.get('history') or []) if include_history else [],
+            'redoHistory': (article.get('redoHistory') or []) if include_history else [],
+            'blockTrash': (article.get('blockTrash') or []) if include_history else [],
             'blocks': [],
         }
         try:
@@ -149,9 +162,9 @@ def read_article(article_id: str, request: Request, current_user: User = Depends
             'encryptionVerifier': article.get('encryptionVerifier'),
             'encryptionHint': article.get('encryptionHint'),
             'docJson': article.get('docJson') or None,
-            'history': article.get('history') or [],
-            'redoHistory': article.get('redoHistory') or [],
-            'blockTrash': article.get('blockTrash') or [],
+            'history': (article.get('history') or []) if include_history else [],
+            'redoHistory': (article.get('redoHistory') or []) if include_history else [],
+            'blockTrash': (article.get('blockTrash') or []) if include_history else [],
             'blocks': [],
         }
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -171,6 +184,41 @@ def read_article(article_id: str, request: Request, current_user: User = Depends
         )
     except Exception:
         return payload if 'payload' in locals() else article
+
+
+@router.get('/api/articles/{article_id}/history')
+def read_article_history(article_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Heavy fields (history/redoHistory/blockTrash) are served separately so article open is fast.
+    """
+    started = time.perf_counter()
+    if article_id == 'inbox':
+        article = get_or_create_user_inbox(current_user.id)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+    else:
+        real_article_id = _resolve_article_id_for_user(article_id, current_user)
+        article = get_article(real_article_id, current_user.id, include_blocks=False)
+        if not article:
+            raise HTTPException(status_code=404, detail='Article not found')
+        article = _present_article(article, article_id)
+
+    payload = {
+        'id': article_id,
+        'history': article.get('history') or [],
+        'redoHistory': article.get('redoHistory') or [],
+        'blockTrash': article.get('blockTrash') or [],
+    }
+    try:
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        headers = {'X-Memus-Article-ms': str(elapsed_ms)}
+        return Response(
+            content=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+            media_type='application/json; charset=utf-8',
+            headers=headers,
+        )
+    except Exception:
+        return payload
 
 
 @router.get('/api/articles/{article_id}/meta')
@@ -283,10 +331,16 @@ def put_article_doc_json(article_id: str, payload: dict[str, Any], current_user:
 
 
 @router.put('/api/articles/{article_id}/doc-json/save')
-def put_article_doc_json_save(article_id: str, payload: dict[str, Any], current_user: User = Depends(get_current_user)):
+def put_article_doc_json_save(
+    article_id: str,
+    payload: dict[str, Any],
+    response: Response,
+    current_user: User = Depends(get_current_user),
+):
     """
     Outline-first save: persist doc_json and update derived indexes (FTS/embeddings/article_links).
     """
+    started = time.perf_counter()
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     doc_json = payload.get('docJson') if payload else None
     if doc_json is None:
@@ -297,12 +351,19 @@ def put_article_doc_json_save(article_id: str, payload: dict[str, Any], current_
     if create_version_if_stale_hours is not None and not isinstance(create_version_if_stale_hours, (int, float)):
         raise HTTPException(status_code=400, detail='createVersionIfStaleHours must be number')
     try:
-        return save_article_doc_json(
+        out = save_article_doc_json(
             article_id=real_article_id,
             author_id=current_user.id,
             doc_json=doc_json,
             create_version_if_stale_hours=int(create_version_if_stale_hours) if create_version_if_stale_hours is not None else None,
         )
+        try:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            response.headers['X-Memus-Server-ms'] = str(elapsed_ms)
+            response.headers['X-Memus-Save-ms'] = str(elapsed_ms)
+        except Exception:
+            pass
+        return out
     except ArticleNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidOperation as exc:

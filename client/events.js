@@ -54,6 +54,7 @@ import { navigate, routing } from './routing.js';
 import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js?v=2';
 import {
   apiRequest,
+  fetchArticleHistory,
   importArticleFromHtml,
   importArticleFromMarkdown,
   importFromLogseqArchive,
@@ -1267,7 +1268,18 @@ export function attachEvents() {
         return;
       }
       try {
-        const history = Array.isArray(state.article.history) ? state.article.history : [];
+        let history = Array.isArray(state.article.history) ? state.article.history : [];
+        if (!history.length) {
+          showPersistentToast('Загружаем историю…');
+          const res = await fetchArticleHistory(state.articleId);
+          hideToast();
+          if (state.article && state.articleId) {
+            state.article.history = Array.isArray(res?.history) ? res.history : [];
+            state.article.redoHistory = Array.isArray(res?.redoHistory) ? res.redoHistory : [];
+            state.article.blockTrash = Array.isArray(res?.blockTrash) ? res.blockTrash : [];
+          }
+          history = Array.isArray(state.article?.history) ? state.article.history : [];
+        }
         // Only outline-first history entries: those contain section fragments.
         const outlineEntries = history.filter(
           (e) => e && (e.beforeHeadingJson || e.beforeBodyJson || e.afterHeadingJson || e.afterBodyJson),

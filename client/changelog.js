@@ -14,6 +14,9 @@ export function refreshLastChangeTimestamp() {
 
 export async function loadLastChangeFromChangelog() {
   try {
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+      return;
+    }
     const resp = await fetch('/api/changelog', { cache: 'no-store' });
     if (!resp.ok) throw new Error('Не удалось загрузить changelog');
     const text = await resp.text();

@@ -1,4 +1,5 @@
 import { getOfflineDbReady } from './index.js';
+import { reqToPromise, txDone } from './idb.js';
 
 let embeddingCache = null;
 let embeddingCacheLoadedAt = 0;
@@ -28,24 +29,24 @@ export async function upsertArticleEmbeddings(articleId, embeddings) {
   if (!articleId) return;
   const db = await getOfflineDbReady();
   const items = Array.isArray(embeddings) ? embeddings : [];
-  await db.query('BEGIN');
-  try {
-    for (const item of items) {
-      const sectionId = String(item?.blockId || item?.sectionId || '');
-      const updatedAt = String(item?.updatedAt || '') || null;
-      const vec = item?.embedding;
-      if (!sectionId || !Array.isArray(vec) || !vec.length) continue;
-      await db.query(
-        'INSERT INTO section_embeddings (section_id, article_id, embedding_json, updated_at) VALUES ($1, $2, $3, $4) ' +
-          'ON CONFLICT (section_id) DO UPDATE SET article_id = EXCLUDED.article_id, embedding_json = EXCLUDED.embedding_json, updated_at = EXCLUDED.updated_at',
-        [sectionId, articleId, JSON.stringify(vec), updatedAt],
-      );
-    }
-    await db.query('COMMIT');
-  } catch (err) {
-    await db.query('ROLLBACK');
-    throw err;
+  const tx = db.transaction(['section_embeddings'], 'readwrite');
+  const store = tx.objectStore('section_embeddings');
+  for (const item of items) {
+    const sectionId = String(item?.blockId || item?.sectionId || '');
+    const updatedAt = String(item?.updatedAt || '') || null;
+    const vec = item?.embedding;
+    if (!sectionId || !Array.isArray(vec) || !vec.length) continue;
+    const normalized = normalizeEmbedding(vec);
+    await reqToPromise(
+      store.put({
+        sectionId,
+        articleId: String(articleId),
+        updatedAt,
+        vec: normalized,
+      }),
+    );
   }
+  await txDone(tx);
   invalidateEmbeddingsCache();
 }
 
@@ -53,35 +54,44 @@ export async function deleteSectionEmbeddings(sectionIds) {
   const ids = (sectionIds || []).map((x) => String(x || '')).filter(Boolean);
   if (!ids.length) return;
   const db = await getOfflineDbReady();
-  const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-  await db.query(`DELETE FROM section_embeddings WHERE section_id IN (${placeholders})`, ids);
+  const tx = db.transaction(['section_embeddings'], 'readwrite');
+  const store = tx.objectStore('section_embeddings');
+  for (const id of ids) {
+    await reqToPromise(store.delete(id));
+  }
+  await txDone(tx);
   invalidateEmbeddingsCache();
 }
 
 export async function countLocalEmbeddings() {
   const db = await getOfflineDbReady();
-  const res = await db.query('SELECT COUNT(1) AS c FROM section_embeddings');
-  return Number(res?.rows?.[0]?.c || 0);
+  const tx = db.transaction(['section_embeddings'], 'readonly');
+  const store = tx.objectStore('section_embeddings');
+  const n = await reqToPromise(store.count());
+  await txDone(tx);
+  return Number(n || 0);
 }
 
 export async function loadEmbeddingsCache() {
   if (embeddingCache) return embeddingCache;
   const db = await getOfflineDbReady();
-  const res = await db.query('SELECT section_id AS sectionId, article_id AS articleId, embedding_json AS emb FROM section_embeddings');
+  const tx = db.transaction(['section_embeddings'], 'readonly');
+  const store = tx.objectStore('section_embeddings');
+  const rows = (await reqToPromise(store.getAll()).catch(() => [])) || [];
+  await txDone(tx);
+
   const cache = [];
-  for (const row of res?.rows || []) {
+  for (const row of rows) {
+    const sectionId = String(row?.sectionId || '');
+    const articleId = String(row?.articleId || '');
+    const raw = row?.vec;
+    if (!sectionId || !articleId || !raw) continue;
     let vec = null;
-    try {
-      vec = JSON.parse(row.emb || 'null');
-    } catch {
-      vec = null;
-    }
-    if (!Array.isArray(vec) || !vec.length) continue;
-    cache.push({
-      sectionId: row.sectionId,
-      articleId: row.articleId,
-      vec: normalizeEmbedding(vec),
-    });
+    if (raw instanceof Float32Array) vec = raw;
+    else if (raw instanceof ArrayBuffer) vec = new Float32Array(raw);
+    else if (Array.isArray(raw)) vec = normalizeEmbedding(raw);
+    if (!vec || !vec.length) continue;
+    cache.push({ sectionId, articleId, vec });
   }
   embeddingCache = cache;
   embeddingCacheLoadedAt = Date.now();

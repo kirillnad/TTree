@@ -56,7 +56,7 @@ def semantic_embed_info(current_user: User = Depends(get_current_user)):
 def semantic_query_embedding(q: str = '', current_user: User = Depends(get_current_user)):
     """
     Возвращает embedding только для запроса (без ранжирования на сервере).
-    Используется для client-side semantic search (ранжирование/поиск делается в PGlite).
+    Используется для client-side semantic search (ранжирование/поиск делается в IndexedDB).
     """
     query = (q or '').strip()
     if not query:

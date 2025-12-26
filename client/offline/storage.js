@@ -1,4 +1,4 @@
-import { PGlite } from './pglite.bundle.js';
+import { openOfflineIdb } from './idb.js';
 
 let dbPromise = null;
 let dbUserKey = null;
@@ -8,11 +8,8 @@ export async function getOfflineDb({ userKey } = {}) {
   if (dbPromise && dbUserKey === nextKey) return dbPromise;
   dbUserKey = nextKey;
   dbPromise = (async () => {
-    // PGlite persistence in IndexedDB.
-    const url = `idb://memus_${String(nextKey).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-    const db = new PGlite(url);
+    const db = await openOfflineIdb({ userKey: nextKey });
     return db;
   })();
   return dbPromise;
 }
-

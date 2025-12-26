@@ -1,10 +1,28 @@
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
 import { getOfflineDb } from './storage.js';
-import { migrateOfflineDb } from './migrations.js';
+import { idbPing } from './idb.js';
 
 let initPromise = null;
 let currentUserKey = null;
+
+const PERF_KEY = 'ttree_profile_v1';
+function perfEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(PERF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function perfLog(label, data = {}) {
+  try {
+    if (!perfEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[perf][offline]', label, data);
+  } catch {
+    // ignore
+  }
+}
 
 function buildUserKey(user) {
   return (user && (user.id || user.username)) || 'anon';
@@ -15,6 +33,7 @@ export async function initOfflineForUser(user) {
   if (initPromise && currentUserKey === key) return initPromise;
   currentUserKey = key;
   initPromise = (async () => {
+    const t0 = perfEnabled() ? performance.now() : 0;
     state.offlineReady = false;
     state.offlineInitStatus = 'initializing';
     state.offlineInitError = '';
@@ -26,8 +45,13 @@ export async function initOfflineForUser(user) {
       // ignore
     }
     try {
+      const tDb = perfEnabled() ? performance.now() : 0;
       const db = await getOfflineDb({ userKey: key });
-      await migrateOfflineDb(db);
+      if (tDb) perfLog('getOfflineDb()', { ms: Math.round(performance.now() - tDb) });
+
+      const tPing = perfEnabled() ? performance.now() : 0;
+      await idbPing(db);
+      if (tPing) perfLog('idb.ping', { ms: Math.round(performance.now() - tPing) });
       try {
         if (navigator?.storage?.persist) {
           navigator.storage.persist().catch(() => {});
@@ -45,6 +69,7 @@ export async function initOfflineForUser(user) {
       } catch {
         // ignore
       }
+      if (t0) perfLog('initOfflineForUser.total', { userKey: key, ms: Math.round(performance.now() - t0) });
       return db;
     } catch (err) {
       state.offlineReady = false;

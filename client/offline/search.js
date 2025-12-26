@@ -1,4 +1,5 @@
 import { getOfflineDbReady } from './index.js';
+import { reqToPromise, txDone } from './idb.js';
 
 function normalizeQuery(q) {
   return String(q || '').trim();
@@ -8,41 +9,49 @@ export async function localClassicSearch(query, { blockLimit = 30, articleLimit 
   const q = normalizeQuery(query);
   if (!q) return [];
   const db = await getOfflineDbReady();
-  const like = `%${q.toLowerCase()}%`;
+  const needle = q.toLowerCase();
 
-  const articlesRes = await db.query(
-    'SELECT id AS articleId, title AS articleTitle FROM articles WHERE deleted_at IS NULL AND LOWER(title) LIKE $1 ORDER BY updated_at DESC LIMIT $2',
-    [like, articleLimit],
-  );
-  const articleResults = (articlesRes?.rows || []).map((row) => ({
-    type: 'article',
-    articleId: row.articleId,
-    articleTitle: row.articleTitle || '',
-    snippet: row.articleTitle || '',
-  }));
+  const tx = db.transaction(['articles', 'outline_sections'], 'readonly');
+  const articlesStore = tx.objectStore('articles');
+  const sectionsStore = tx.objectStore('outline_sections');
+
+  const allArticles = (await reqToPromise(articlesStore.getAll()).catch(() => [])) || [];
+  const articleResults = allArticles
+    .filter((a) => a && !a.deletedAt)
+    .filter((a) => String(a.title || '').toLowerCase().includes(needle))
+    .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+    .slice(0, Math.max(0, Number(articleLimit) || 0))
+    .map((a) => ({
+      type: 'article',
+      articleId: a.id,
+      articleTitle: a.title || '',
+      snippet: a.title || '',
+    }));
 
   // If we haven't pulled doc_json yet, sections table may be empty.
   try {
-    const countRes = await db.query('SELECT COUNT(1) AS c FROM outline_sections');
-    const c = Number(countRes?.rows?.[0]?.c || 0);
+    const c = Number(await reqToPromise(sectionsStore.count()).catch(() => 0));
     if (!c) {
+      await txDone(tx);
       return navigator.onLine ? null : articleResults;
     }
   } catch {
     // ignore
   }
 
-  let blockRows = [];
-  const likeRes = await db.query(
-    'SELECT s.section_id AS blockId, s.article_id AS articleId, a.title AS articleTitle, s.text AS blockText ' +
-      'FROM outline_sections s ' +
-      'JOIN articles a ON a.id = s.article_id ' +
-      'WHERE LOWER(s.text) LIKE $1 ' +
-      'ORDER BY s.updated_at DESC ' +
-      'LIMIT $2',
-    [like, blockLimit],
-  );
-  blockRows = likeRes?.rows || [];
+  const allSections = (await reqToPromise(sectionsStore.getAll()).catch(() => [])) || [];
+  const titleById = new Map(allArticles.map((a) => [a.id, a.title || '']));
+  const limit = Math.max(0, Number(blockLimit) || 0);
+  const blockRows = allSections
+    .filter((s) => String(s?.text || '').toLowerCase().includes(needle))
+    .sort((a, b) => String(b?.updatedAt || '').localeCompare(String(a?.updatedAt || '')))
+    .slice(0, limit)
+    .map((s) => ({
+      blockId: s.sectionId,
+      articleId: s.articleId,
+      articleTitle: titleById.get(s.articleId) || '',
+      blockText: s.text || '',
+    }));
 
   const blockResults = [];
   for (const row of blockRows) {
@@ -58,5 +67,6 @@ export async function localClassicSearch(query, { blockLimit = 30, articleLimit 
     });
   }
 
+  await txDone(tx);
   return [...articleResults, ...blockResults];
 }

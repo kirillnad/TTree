@@ -8,6 +8,7 @@ import {
 } from './offline/cache.js';
 import { enqueueOp } from './offline/outbox.js';
 import { localSemanticSearch } from './offline/semantic.js';
+import { state } from './state.js';
 
 const PERF_KEY = 'ttree_profile_v1';
 function perfEnabled() {
@@ -15,6 +16,15 @@ function perfEnabled() {
     return window?.localStorage?.getItem?.(PERF_KEY) === '1';
   } catch {
     return false;
+  }
+}
+function perfLog(...args) {
+  try {
+    if (!perfEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  } catch {
+    // ignore
   }
 }
 
@@ -66,8 +76,12 @@ export async function apiRequest(path, options = {}) {
     // ignore
   }
   if (perfStart) {
-    const serverMs = response.headers.get('X-Memus-Article-ms');
+    const serverMs =
+      response.headers.get('X-Memus-Article-ms') ||
+      response.headers.get('X-Memus-Articles-ms') ||
+      response.headers.get('X-Memus-Server-ms');
     const docBytes = response.headers.get('X-Memus-DocJson-bytes');
+    const articlesCount = response.headers.get('X-Memus-Articles-count');
     const contentLength = response.headers.get('Content-Length');
     // eslint-disable-next-line no-console
     console.log('[perf][api]', path, {
@@ -77,6 +91,7 @@ export async function apiRequest(path, options = {}) {
       jsonMs: perfJsonStart ? Math.round(perfDone - perfJsonStart) : null,
       serverMs: serverMs ? Number(serverMs) : null,
       docJsonBytes: docBytes ? Number(docBytes) : null,
+      articlesCount: articlesCount ? Number(articlesCount) : null,
       contentLength: contentLength ? Number(contentLength) : null,
     });
   }
@@ -132,9 +147,22 @@ export async function logout() {
 }
 
 export function fetchArticlesIndex() {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    return getCachedArticlesIndex().catch(() => []);
+  }
   return apiRequest('/api/articles')
     .then(async (index) => {
-      cacheArticlesIndex(index).catch(() => {});
+      // Do not block other IndexedDB transactions (e.g., current article open) on a big index update.
+      // Schedule in idle so article caching/read can proceed first.
+      try {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => cacheArticlesIndex(index).catch(() => {}), { timeout: 2500 });
+        } else {
+          setTimeout(() => cacheArticlesIndex(index).catch(() => {}), 250);
+        }
+      } catch {
+        cacheArticlesIndex(index).catch(() => {});
+      }
       return index;
     })
     .catch(async (err) => {
@@ -145,6 +173,9 @@ export function fetchArticlesIndex() {
 }
 
 export function fetchDeletedArticlesIndex() {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    return Promise.resolve([]);
+  }
   return apiRequest('/api/articles/deleted').catch(async (err) => {
     // Deleted index is not critical offline; keep empty fallback.
     return [];
@@ -152,15 +183,55 @@ export function fetchDeletedArticlesIndex() {
 }
 
 export function fetchArticle(id, options = {}) {
+  // IndexedDB can be briefly busy (e.g. background index caching). If offline is ready, prefer waiting a bit longer
+  // for a cache hit to avoid unnecessary network fetches.
+  const defaultCacheTimeoutMs = state?.offlineReady ? 400 : 150;
   const cacheTimeoutMs =
-    options && typeof options.cacheTimeoutMs === 'number' ? Math.max(0, Math.floor(options.cacheTimeoutMs)) : 150;
-  const cachedPromise = Promise.race([
-    getCachedArticle(id).catch(() => null),
-    new Promise((resolve) => setTimeout(() => resolve(null), cacheTimeoutMs)),
-  ]);
+    options && typeof options.cacheTimeoutMs === 'number'
+      ? Math.max(0, Math.floor(options.cacheTimeoutMs))
+      : defaultCacheTimeoutMs;
+  const metaTimeoutMs =
+    options && typeof options.metaTimeoutMs === 'number' ? Math.max(0, Math.floor(options.metaTimeoutMs)) : 350;
+  const cacheStartedAt = perfEnabled() ? performance.now() : 0;
+  let cacheTimer = null;
+  let cacheSettled = false;
+  const timeoutPromise = new Promise((resolve) => {
+    cacheTimer = setTimeout(() => {
+      if (!cacheSettled && cacheStartedAt) perfLog('[offline-first][article] cache.lookup.timeout', { id, cacheTimeoutMs });
+      resolve(null);
+    }, cacheTimeoutMs);
+  });
+  const cachedLookupPromise = getCachedArticle(id)
+    .then((article) => {
+      cacheSettled = true;
+      if (cacheTimer) clearTimeout(cacheTimer);
+      cacheTimer = null;
+      if (cacheStartedAt) {
+        perfLog('[offline-first][article] cache.lookup.done', {
+          id,
+          ms: Math.round(performance.now() - cacheStartedAt),
+          hit: Boolean(article),
+        });
+      }
+      return article;
+    })
+    .catch((err) => {
+      cacheSettled = true;
+      if (cacheTimer) clearTimeout(cacheTimer);
+      cacheTimer = null;
+      if (cacheStartedAt) {
+        perfLog('[offline-first][article] cache.lookup.failed', {
+          id,
+          ms: Math.round(performance.now() - cacheStartedAt),
+          message: err?.message || String(err || ''),
+        });
+      }
+      return null;
+    });
+  const cachedPromise = Promise.race([cachedLookupPromise, timeoutPromise]);
 
   const fetchOnline = () =>
-    apiRequest(`/api/articles/${id}`, options)
+    apiRequest(`/api/articles/${id}?include_history=0`, options)
       .then(async (article) => {
         cacheArticle(article).catch(() => {});
         return article;
@@ -176,6 +247,19 @@ export function fetchArticle(id, options = {}) {
       method: 'GET',
       headers: { ...(options.headers || {}) },
     });
+  const fetchMetaWithTimeout = () => {
+    if (!metaTimeoutMs) return fetchMeta();
+    return Promise.race([
+      fetchMeta(),
+      new Promise((_, reject) =>
+        setTimeout(() => {
+          const err = new Error('meta_timeout');
+          err.name = 'TimeoutError';
+          reject(err);
+        }, metaTimeoutMs),
+      ),
+    ]);
+  };
 
   // Offline-first + version-aware:
   // - If cached exists: compare versions via lightweight /meta.
@@ -183,27 +267,58 @@ export function fetchArticle(id, options = {}) {
   //   - changed/unknown => fetch full article
   // - If no cached: fetch full article
   return cachedPromise.then(async (cached) => {
-    if (!cached) return fetchOnline();
-    if (!navigator.onLine) return cached;
+    if (!cached) {
+      perfLog('[offline-first][article] choose.network.no-cache', { id });
+      return fetchOnline();
+    }
+    if (!navigator.onLine) {
+      perfLog('[offline-first][article] choose.cache.offline', { id, updatedAt: cached?.updatedAt || null });
+      return cached;
+    }
 
     const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
     if (!cachedUpdatedAt) {
+      perfLog('[offline-first][article] choose.network.no-cached-updatedAt', { id });
       return fetchOnline();
     }
 
     try {
-      const meta = await fetchMeta();
+      perfLog('[offline-first][article] meta.check.start', { id, cachedUpdatedAt });
+      const meta = await fetchMetaWithTimeout();
       const serverUpdatedAt = String(meta?.updatedAt || '').trim();
       if (serverUpdatedAt && serverUpdatedAt === cachedUpdatedAt) {
+        perfLog('[offline-first][article] choose.cache.meta.same', { id, cachedUpdatedAt });
         return cached;
       }
+      perfLog('[offline-first][article] choose.network.meta.diff', {
+        id,
+        cachedUpdatedAt,
+        serverUpdatedAt: serverUpdatedAt || null,
+      });
       return fetchOnline();
-    } catch {
+    } catch (err) {
       // If meta check fails, fall back to cached quickly and refresh in background.
+      if (String(err?.name || '') === 'TimeoutError' || String(err?.message || '') === 'meta_timeout') {
+        perfLog('[offline-first][article] meta.check.timeout', { id, metaTimeoutMs });
+      } else {
+        perfLog('[offline-first][article] meta.check.failed', { id, message: err?.message || String(err || '') });
+      }
       fetchOnline().catch(() => {});
+      if (String(err?.name || '') === 'TimeoutError' || String(err?.message || '') === 'meta_timeout') {
+        perfLog('[offline-first][article] choose.cache.meta.timeout', { id, cachedUpdatedAt, metaTimeoutMs });
+      } else {
+        perfLog('[offline-first][article] choose.cache.meta.failed', { id, cachedUpdatedAt });
+      }
       return cached;
     }
   });
+}
+
+export function fetchArticleHistory(articleId) {
+  if (!articleId) {
+    return Promise.reject(new Error('articleId is required'));
+  }
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/history`, { method: 'GET' });
 }
 
 export function search(query) {
@@ -372,10 +487,14 @@ export function createTelegramLinkToken() {
 }
 
 export function uploadImageFile(file) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    return Promise.reject(new Error('Нет интернета: загрузка изображений недоступна оффлайн'));
+  }
   const formData = new FormData();
   formData.append('file', file);
 
   const logToServer = (payload) => {
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
     try {
       fetch('/api/client/log', {
         method: 'POST',
@@ -538,6 +657,9 @@ export function fetchArticleVersion(articleId, versionId) {
 }
 
 export function uploadAttachmentFile(articleId, file) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    return Promise.reject(new Error('Нет интернета: загрузка файлов недоступна оффлайн'));
+  }
   const formData = new FormData();
   formData.append('file', file);
   return fetch(`/api/articles/${articleId}/attachments`, {
@@ -555,6 +677,9 @@ export function uploadAttachmentFile(articleId, file) {
 }
 
 export function uploadAttachmentFileWithProgress(articleId, file, onProgress = () => {}) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    return Promise.reject(new Error('Нет интернета: загрузка файлов недоступна оффлайн'));
+  }
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `/api/articles/${articleId}/attachments`);
@@ -772,6 +897,9 @@ export function moveArticleTree(articleId, payload) {
 }
 
 export async function getYandexUploadUrl({ articleId, filename, overwrite = false, sha256 = '', size = 0 }) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    throw new Error('Нет интернета: загрузка файлов недоступна оффлайн');
+  }
   const payload = {
     filename: filename || '',
     articleId: articleId || '',
@@ -797,6 +925,9 @@ export async function getYandexUploadUrl({ articleId, filename, overwrite = fals
 }
 
 export async function registerYandexAttachment(articleId, { path, originalName, contentType, size }) {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    throw new Error('Нет интернета: загрузка файлов недоступна оффлайн');
+  }
   const payload = {
     path: path || '',
     originalName: originalName || '',

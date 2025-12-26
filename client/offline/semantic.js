@@ -1,5 +1,6 @@
 import { getOfflineDbReady } from './index.js';
 import { countLocalEmbeddings, dot, loadEmbeddingsCache } from './embeddings.js';
+import { reqToPromise, txDone } from './idb.js';
 
 function normalizeEmbedding(vec) {
   const arr = Array.isArray(vec) ? vec : [];
@@ -39,19 +40,35 @@ async function fetchBlocksBySectionIds(sectionIds) {
   const ids = (sectionIds || []).map((x) => String(x || '')).filter(Boolean);
   if (!ids.length) return [];
   const db = await getOfflineDbReady();
-  const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-  const res = await db.query(
-    'SELECT s.section_id AS blockId, s.article_id AS articleId, a.title AS articleTitle, s.text AS blockText ' +
-      'FROM outline_sections s ' +
-      'JOIN articles a ON a.id = s.article_id ' +
-      `WHERE s.section_id IN (${placeholders})`,
-    ids,
-  );
-  return (res?.rows || []).map((row) => ({
-    blockId: row.blockId,
-    articleId: row.articleId,
-    articleTitle: row.articleTitle || '',
-    blockText: row.blockText || '',
+  const tx = db.transaction(['outline_sections', 'articles'], 'readonly');
+  const sectionStore = tx.objectStore('outline_sections');
+  const articleStore = tx.objectStore('articles');
+
+  const sections = [];
+  for (const id of ids) {
+    const row = await reqToPromise(sectionStore.get(id)).catch(() => null);
+    if (!row) continue;
+    sections.push({
+      blockId: String(row.sectionId || id),
+      articleId: String(row.articleId || ''),
+      blockText: String(row.text || ''),
+    });
+  }
+
+  const articleTitleById = new Map();
+  for (const s of sections) {
+    if (!s.articleId || articleTitleById.has(s.articleId)) continue;
+    const a = await reqToPromise(articleStore.get(s.articleId)).catch(() => null);
+    articleTitleById.set(s.articleId, String(a?.title || ''));
+  }
+
+  await txDone(tx);
+
+  return sections.map((s) => ({
+    blockId: s.blockId,
+    articleId: s.articleId,
+    articleTitle: articleTitleById.get(s.articleId) || '',
+    blockText: s.blockText,
   }));
 }
 

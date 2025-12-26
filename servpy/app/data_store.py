@@ -567,17 +567,7 @@ def rows_to_tree(article_id: str) -> List[Dict[str, Any]]:
 def build_article_from_row(row: RowMapping | None, *, include_blocks: bool = True) -> Optional[Dict[str, Any]]:
     if not row:
         return None
-    raw_encrypted_flag = bool(row.get('is_encrypted', 0))
-    has_crypto_meta = bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
-    encrypted_flag = raw_encrypted_flag or has_crypto_meta
-    if encrypted_flag and not raw_encrypted_flag:
-        # Логируем случаи, когда статья считается зашифрованной только по метаданным.
-        print(
-            '[article_encryption] inferred encrypted article without flag',
-            row['id'],
-            'salt=' if row.get('encryption_salt') else 'no-salt',
-            'verifier=' if row.get('encryption_verifier') else 'no-verifier',
-        )
+    encrypted_flag = _infer_article_encrypted_flag(row, log_inferred=True)
     doc_json_value = None
     if not encrypted_flag:
         raw_doc_json = row.get('article_doc_json')
@@ -623,12 +613,59 @@ def build_article_from_row(row: RowMapping | None, *, include_blocks: bool = Tru
     return article
 
 
+def _infer_article_encrypted_flag(row: RowMapping, *, log_inferred: bool = False) -> bool:
+    raw_encrypted_flag = bool(row.get('is_encrypted', 0))
+    has_crypto_meta = bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
+    encrypted_flag = raw_encrypted_flag or has_crypto_meta
+    if log_inferred and encrypted_flag and not raw_encrypted_flag:
+        # Логируем случаи, когда статья считается зашифрованной только по метаданным.
+        print(
+            '[article_encryption] inferred encrypted article without flag',
+            row['id'],
+            'salt=' if row.get('encryption_salt') else 'no-salt',
+            'verifier=' if row.get('encryption_verifier') else 'no-verifier',
+        )
+    return encrypted_flag
+
+
 def get_articles(author_id: str) -> List[Dict[str, Any]]:
     rows = CONN.execute(
         'SELECT * FROM articles WHERE deleted_at IS NULL AND author_id = ? ORDER BY parent_id IS NOT NULL, parent_id, position, updated_at DESC',
         (author_id,),
     ).fetchall()
     return [build_article_from_row(row, include_blocks=False) for row in rows if row]
+
+
+def get_articles_index(author_id: str) -> List[Dict[str, Any]]:
+    """
+    Лёгкий индекс статей для UI/оффлайна.
+    ВАЖНО: не парсит article_doc_json и не десериализует history, чтобы /api/articles был быстрым.
+    """
+    rows = CONN.execute(
+        """
+        SELECT id, title, updated_at, parent_id, position, public_slug, is_encrypted, encryption_salt, encryption_verifier
+        FROM articles
+        WHERE deleted_at IS NULL AND author_id = ?
+        ORDER BY parent_id IS NOT NULL, parent_id, position, updated_at DESC
+        """,
+        (author_id,),
+    ).fetchall()
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if not row:
+            continue
+        out.append(
+            {
+                'id': row['id'],
+                'title': row['title'],
+                'updatedAt': row['updated_at'],
+                'parentId': row.get('parent_id'),
+                'position': row.get('position') or 0,
+                'publicSlug': row.get('public_slug'),
+                'encrypted': _infer_article_encrypted_flag(row, log_inferred=False),
+            }
+        )
+    return out
 
 
 def get_deleted_articles(author_id: str) -> List[Dict[str, Any]]:

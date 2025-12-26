@@ -1,3 +1,5 @@
+import { reqToPromise, txDone } from './idb.js';
+
 function textFromNode(node) {
   if (!node) return '';
   if (node.type === 'text') return String(node.text || '');
@@ -55,19 +57,29 @@ export async function reindexOutlineSections(db, { articleId, docJson, updatedAt
   if (!db || !articleId) return;
   if (!docJson || typeof docJson !== 'object') return;
   const sections = extractOutlineSections(docJson);
-  await db.query('BEGIN');
-  try {
-    await db.query('DELETE FROM outline_sections WHERE article_id = $1', [articleId]);
-    for (const s of sections) {
-      await db.query(
-        'INSERT INTO outline_sections (section_id, article_id, title, text, updated_at) VALUES ($1, $2, $3, $4, $5) ' +
-          'ON CONFLICT (section_id) DO UPDATE SET article_id = EXCLUDED.article_id, title = EXCLUDED.title, text = EXCLUDED.text, updated_at = EXCLUDED.updated_at',
-        [s.sectionId, articleId, s.title || '', s.text || '', updatedAt || null],
-      );
-    }
-    await db.query('COMMIT');
-  } catch (err) {
-    await db.query('ROLLBACK');
-    throw err;
+  const tx = db.transaction(['outline_sections'], 'readwrite');
+  const store = tx.objectStore('outline_sections');
+  const idx = store.index('byArticleId');
+  const range = IDBKeyRange.only(String(articleId));
+
+  // Delete old section rows for article.
+  let cursor = await reqToPromise(idx.openCursor(range));
+  while (cursor) {
+    cursor.delete();
+    cursor = await reqToPromise(cursor.continue());
   }
+
+  // Insert new sections.
+  for (const s of sections) {
+    await reqToPromise(
+      store.put({
+        sectionId: s.sectionId,
+        articleId: String(articleId),
+        title: s.title || '',
+        text: s.text || '',
+        updatedAt: updatedAt || null,
+      }),
+    );
+  }
+  await txDone(tx);
 }

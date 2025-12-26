@@ -1,4 +1,5 @@
 import { getOfflineDbReady } from './index.js';
+import { reqToPromise, txDone } from './idb.js';
 
 const CACHE_NAME = 'memus-uploads-v1';
 const PAUSE_KEY = 'ttree_media_prefetch_paused_v1';
@@ -32,38 +33,45 @@ export function toggleMediaPrefetchPaused() {
 
 export async function getMediaProgress() {
   const db = await getOfflineDbReady();
-  const res = await db.query(
-    'SELECT ' +
-      'COUNT(1) AS total, ' +
-      "SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok, " +
-      "SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) AS error " +
-      'FROM media_assets',
-  );
-  const row = res?.rows?.[0] || {};
-  const total = Number(row.total || 0);
-  const ok = Number(row.ok || 0);
-  const error = Number(row.error || 0);
-  return { total, ok, error };
+  const tx = db.transaction(['media_assets'], 'readonly');
+  const store = tx.objectStore('media_assets');
+  const items = (await reqToPromise(store.getAll()).catch(() => [])) || [];
+  await txDone(tx);
+  let ok = 0;
+  let error = 0;
+  for (const it of items) {
+    if (it?.status === 'ok') ok += 1;
+    if (it?.status === 'error') error += 1;
+  }
+  return { total: items.length, ok, error };
 }
 
 export async function getMediaProgressForArticle(articleId) {
   const id = String(articleId || '').trim();
   if (!id) return { total: 0, ok: 0, error: 0 };
   const db = await getOfflineDbReady();
-  const res = await db.query(
-    'SELECT ' +
-      'COUNT(1) AS total, ' +
-      "SUM(CASE WHEN ma.status = 'ok' THEN 1 ELSE 0 END) AS ok, " +
-      "SUM(CASE WHEN ma.status = 'error' THEN 1 ELSE 0 END) AS error " +
-      'FROM media_refs mr ' +
-      'LEFT JOIN media_assets ma ON ma.url = mr.url ' +
-      'WHERE mr.article_id = $1',
-    [id],
-  );
-  const row = res?.rows?.[0] || {};
-  const total = Number(row.total || 0);
-  const ok = Number(row.ok || 0);
-  const error = Number(row.error || 0);
+  const tx = db.transaction(['media_refs', 'media_assets'], 'readonly');
+  const refs = tx.objectStore('media_refs');
+  const assets = tx.objectStore('media_assets');
+  const idx = refs.index('byArticleId');
+  const range = IDBKeyRange.only(id);
+
+  let total = 0;
+  let ok = 0;
+  let error = 0;
+  let cursor = await reqToPromise(idx.openCursor(range)).catch(() => null);
+  while (cursor) {
+    total += 1;
+    const url = String(cursor.value?.url || '');
+    if (url) {
+      const asset = await reqToPromise(assets.get(url)).catch(() => null);
+      if (asset?.status === 'ok') ok += 1;
+      if (asset?.status === 'error') error += 1;
+    }
+    cursor = await reqToPromise(cursor.continue()).catch(() => null);
+  }
+
+  await txDone(tx);
   return { total, ok, error };
 }
 
@@ -111,49 +119,95 @@ function extractUploadUrlsFromDocJson(docJson) {
 export async function updateMediaRefsForArticle(articleId, docJson) {
   const db = await getOfflineDbReady();
   const urls = extractUploadUrlsFromDocJson(docJson);
-  await db.query('BEGIN');
-  try {
-    await db.query('DELETE FROM media_refs WHERE article_id = $1', [articleId]);
-    for (const url of urls) {
-      await db.query(
-        'INSERT INTO media_refs (article_id, url) VALUES ($1, $2) ON CONFLICT (article_id, url) DO NOTHING',
-        [articleId, url],
-      );
-      await db.query(
-        'INSERT INTO media_assets (url, status, fetched_at, fail_count, last_error) VALUES ($1, $2, NULL, 0, NULL) ' +
-          'ON CONFLICT (url) DO NOTHING',
-        [url, 'needed'],
+  const tx = db.transaction(['media_refs', 'media_assets'], 'readwrite');
+  const refs = tx.objectStore('media_refs');
+  const assets = tx.objectStore('media_assets');
+  const idx = refs.index('byArticleId');
+  const range = IDBKeyRange.only(String(articleId));
+
+  // Remove old refs for the article.
+  let cursor = await reqToPromise(idx.openCursor(range)).catch(() => null);
+  while (cursor) {
+    cursor.delete();
+    cursor = await reqToPromise(cursor.continue()).catch(() => null);
+  }
+
+  for (const url of urls) {
+    const key = `${String(articleId)}|${String(url)}`;
+    await reqToPromise(refs.put({ key, articleId: String(articleId), url: String(url) }));
+    const existing = await reqToPromise(assets.get(url)).catch(() => null);
+    if (!existing) {
+      await reqToPromise(
+        assets.put({
+          url: String(url),
+          status: 'needed',
+          fetchedAtMs: 0,
+          failCount: 0,
+          lastError: null,
+        }),
       );
     }
-    await db.query('COMMIT');
-  } catch (err) {
-    await db.query('ROLLBACK');
-    throw err;
   }
+  await txDone(tx);
 }
 
 async function markMediaOk(db, url) {
-  await db.query(
-    'INSERT INTO media_assets (url, status, fetched_at, fail_count, last_error) VALUES ($1, $2, $3, 0, NULL) ' +
-      'ON CONFLICT (url) DO UPDATE SET status = EXCLUDED.status, fetched_at = EXCLUDED.fetched_at, fail_count = 0, last_error = NULL',
-    [url, 'ok', new Date().toISOString()],
+  const tx = db.transaction(['media_assets'], 'readwrite');
+  const store = tx.objectStore('media_assets');
+  const existing = await reqToPromise(store.get(url)).catch(() => null);
+  await reqToPromise(
+    store.put({
+      ...(existing || {}),
+      url: String(url),
+      status: 'ok',
+      fetchedAtMs: Date.now(),
+      failCount: 0,
+      lastError: null,
+    }),
   );
+  await txDone(tx);
 }
 
 async function markMediaFail(db, url, err) {
-  await db.query(
-    'INSERT INTO media_assets (url, status, fetched_at, fail_count, last_error) VALUES ($1, $2, NULL, 1, $3) ' +
-      'ON CONFLICT (url) DO UPDATE SET status = EXCLUDED.status, fail_count = media_assets.fail_count + 1, last_error = EXCLUDED.last_error',
-    [url, 'error', String(err?.message || err || 'error')],
+  const message = String(err?.message || err || 'error');
+  const tx = db.transaction(['media_assets'], 'readwrite');
+  const store = tx.objectStore('media_assets');
+  const existing = await reqToPromise(store.get(url)).catch(() => null);
+  const nextFail = Number(existing?.failCount || 0) + 1;
+  await reqToPromise(
+    store.put({
+      ...(existing || {}),
+      url: String(url),
+      status: 'error',
+      fetchedAtMs: Date.now(),
+      failCount: nextFail,
+      lastError: message,
+    }),
   );
+  await txDone(tx);
 }
 
 async function listPendingMediaUrls(db, limit) {
-  const res = await db.query(
-    'SELECT url FROM media_assets WHERE (status IS NULL OR status != $1) AND (fail_count IS NULL OR fail_count < 5) ORDER BY fetched_at NULLS FIRST LIMIT $2',
-    ['ok', limit],
-  );
-  return (res?.rows || []).map((r) => r.url).filter(Boolean);
+  const tx = db.transaction(['media_assets'], 'readonly');
+  const store = tx.objectStore('media_assets');
+  const idx = store.index('byFetchedAtMs');
+  const out = [];
+
+  let cursor = await reqToPromise(idx.openCursor()).catch(() => null);
+  while (cursor) {
+    const v = cursor.value;
+    const status = String(v?.status || '');
+    const failCount = Number(v?.failCount || 0);
+    if (status !== 'ok' && failCount < 5) {
+      const url = String(v?.url || '');
+      if (url) out.push(url);
+      if (out.length >= limit) break;
+    }
+    cursor = await reqToPromise(cursor.continue()).catch(() => null);
+  }
+
+  await txDone(tx);
+  return out;
 }
 
 async function isCached(cache, url) {
@@ -233,18 +287,34 @@ export function startMediaPrefetchLoop() {
 export async function pruneUnusedMedia() {
   const db = await getOfflineDbReady();
   const cache = await caches.open(CACHE_NAME);
-  const res = await db.query(
-    'SELECT ma.url AS url FROM media_assets ma LEFT JOIN media_refs mr ON mr.url = ma.url WHERE mr.url IS NULL LIMIT 500',
-  );
-  const urls = (res?.rows || []).map((r) => r.url).filter(Boolean);
+  const tx = db.transaction(['media_assets', 'media_refs'], 'readwrite');
+  const assets = tx.objectStore('media_assets');
+  const refs = tx.objectStore('media_refs');
+  const refsByUrl = refs.index('byUrl');
+  const urls = [];
+
+  let cursor = await reqToPromise(assets.openCursor()).catch(() => null);
+  while (cursor && urls.length < 500) {
+    const url = String(cursor.value?.url || '');
+    if (url) {
+      const refCount = await reqToPromise(refsByUrl.count(IDBKeyRange.only(url))).catch(() => 0);
+      if (!refCount) {
+        urls.push(url);
+        cursor.delete();
+      }
+    }
+    cursor = await reqToPromise(cursor.continue()).catch(() => null);
+  }
+
+  await txDone(tx);
   if (!urls.length) return 0;
+
   for (const url of urls) {
     try {
       await cache.delete(url);
     } catch {
       // ignore
     }
-    await db.query('DELETE FROM media_assets WHERE url = $1', [url]).catch(() => {});
   }
   return urls.length;
 }

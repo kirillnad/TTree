@@ -15,6 +15,8 @@ import {
 } from '../api.js?v=11';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
+import { updateCachedDocJson } from '../offline/cache.js';
+import { enqueueOp } from '../offline/outbox.js';
 import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
 
@@ -1870,7 +1872,7 @@ async function runAutosave({ force = false } = {}) {
     } catch {
       // ignore
     }
-    await saveOutlineEditor({ silent: true });
+    await saveOutlineEditor({ silent: true, mode: 'queue' });
   } finally {
     autosaveInFlight = false;
   }
@@ -4648,28 +4650,28 @@ async function mountOutlineEditor() {
             return true;
           }
 
-          if (editingSectionId && event.key === 'Escape') {
-            event.preventDefault();
-            event.stopPropagation();
-            const sectionId = editingSectionId;
-            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
-            // Выход из режима редактирования тоже считаем "уходом" из секции
-            // для автозаголовка и proofreading (если были изменения).
-            try {
-              const tiptapEditor = outlineEditorInstance;
-              if (tiptapEditor && !tiptapEditor.isDestroyed) {
-                maybeGenerateTitleOnLeave(tiptapEditor, view.state.doc, sectionId);
-                const changed = markSectionDirtyIfChanged(view.state.doc, sectionId);
-                if (changed) {
-                  maybeProofreadOnLeave(tiptapEditor, view.state.doc, sectionId);
-                  scheduleAutosave({ delayMs: 350 });
-                }
-              }
-            } catch {
-              // ignore
-            }
-            return true;
-          }
+	          if (editingSectionId && event.key === 'Escape') {
+	            event.preventDefault();
+	            event.stopPropagation();
+	            const sectionId = editingSectionId;
+	            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
+	            // Выход из режима редактирования тоже считаем "уходом" из секции
+	            // для автозаголовка и proofreading.
+	            try {
+	              const tiptapEditor = outlineEditorInstance;
+	              if (tiptapEditor && !tiptapEditor.isDestroyed) {
+	                maybeGenerateTitleOnLeave(tiptapEditor, view.state.doc, sectionId);
+	                const changed = markSectionDirtyIfChanged(view.state.doc, sectionId);
+	                // Proofread is versioned by hash; calling it here keeps spellcheck working
+	                // even if autosave already committed the section before the user pressed Esc.
+	                maybeProofreadOnLeave(tiptapEditor, view.state.doc, sectionId);
+	                if (changed) scheduleAutosave({ delayMs: 350 });
+	              }
+	            } catch {
+	              // ignore
+	            }
+	            return true;
+	          }
         } catch {
           // ignore
         }
@@ -5024,6 +5026,7 @@ async function saveOutlineEditor(options = {}) {
   const targetArticleId = outlineArticleId || state.articleId;
   if (!targetArticleId) return;
   const silent = Boolean(options.silent);
+  const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
   try {
     if (!silent) showPersistentToast('Сохраняем outline…');
     if (state.article.encrypted) {
@@ -5043,6 +5046,42 @@ async function saveOutlineEditor(options = {}) {
       }
       if (!silent) hideToast();
       setOutlineStatus('Оффлайн: черновик сохранён локально');
+      return;
+    }
+    if (mode === 'queue') {
+      try {
+        setQueuedDocJson(targetArticleId, docJson);
+      } catch {
+        // ignore
+      }
+      try {
+        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
+        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
+      } catch {
+        // ignore
+      }
+      try {
+        await enqueueOp('save_doc_json', {
+          articleId: targetArticleId,
+          payload: { docJson, createVersionIfStaleHours: 12 },
+          coalesceKey: targetArticleId,
+        });
+      } catch {
+        // ignore
+      }
+      if (!silent) hideToast();
+      if (state.article) {
+        state.article.docJson = docJson;
+      }
+      try {
+        rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
+        dirtySectionIds.clear();
+      } catch {
+        // ignore
+      }
+      docDirty = false;
+      outlineLastSavedAt = new Date();
+      setOutlineStatus('Оффлайн: в очереди на синхронизацию');
       return;
     }
     const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
@@ -5065,11 +5104,20 @@ async function saveOutlineEditor(options = {}) {
     } catch {
       // ignore
     }
-    docDirty = false;
-    clearQueuedDocJson(targetArticleId);
-    outlineLastSavedAt = new Date();
-    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
-  } catch (error) {
+	    docDirty = false;
+	    clearQueuedDocJson(targetArticleId);
+	    outlineLastSavedAt = new Date();
+	    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
+	    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
+	    try {
+	      if (outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
+	        const sid = lastActiveSectionId || null;
+	        if (sid) maybeProofreadOnLeave(outlineEditorInstance, outlineEditorInstance.state.doc, sid);
+	      }
+	    } catch {
+	      // ignore
+	    }
+	  } catch (error) {
     if (!silent) {
       hideToast();
       showToast(error?.message || 'Не удалось сохранить outline');
@@ -5485,14 +5533,42 @@ export async function openOutlineEditor() {
 	      };
 	    }
 
-	    // Если есть очередь, пробуем сохранить сразу.
+		    // Если есть очередь, пробуем сохранить сразу.
 		    if (outlineArticleId && getQueuedDocJson(outlineArticleId)) {
-		      void runAutosave({ force: true });
+		      // Не блокируем открытие статьи/редактора сетевым save.
+		      // Досинхронизацию queued docJson делаем в фоне по idle/таймеру.
+		      try {
+		        setOutlineStatus('Оффлайн: есть черновик, синхронизируем…');
+		      } catch {
+		        // ignore
+		      }
+		      const schedule = (fn) => {
+		        try {
+		          if (typeof requestIdleCallback === 'function') {
+		            requestIdleCallback(() => fn(), { timeout: 5000 });
+		            return;
+		          }
+		        } catch {
+		          // ignore
+		        }
+		        setTimeout(() => fn(), 2500);
+		      };
+		      schedule(() => {
+		        try {
+		          if (!outlineArticleId) return;
+		          if (state.articleId !== outlineArticleId) return;
+		          if (!navigator.onLine) return;
+		          if (!getQueuedDocJson(outlineArticleId)) return;
+		          void runAutosave({ force: true });
+		        } catch {
+		          // ignore
+		        }
+		      });
 		    }
-  } catch (error) {
-    showToast(error?.message || 'Не удалось загрузить outline-редактор');
-    closeOutlineEditor();
-  }
+	  } catch (error) {
+	    showToast(error?.message || 'Не удалось загрузить outline-редактор');
+	    closeOutlineEditor();
+	  }
 }
 
 export function closeOutlineEditor() {

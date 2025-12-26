@@ -57,7 +57,7 @@ async function rawApiRequest(path, options = {}) {
 export async function tryPullBootstrap() {
   try {
     const index = await rawApiRequest('/api/articles');
-    await cacheArticlesIndex(index);
+    cacheArticlesIndex(index).catch(() => {});
     return true;
   } catch {
     return false;
@@ -101,7 +101,7 @@ async function flushOp(op) {
     // Keep index in sync (lightweight pull)
     try {
       const index = await rawApiRequest('/api/articles');
-      await cacheArticlesIndex(index);
+      cacheArticlesIndex(index).catch(() => {});
     } catch {
       // ignore
     }
@@ -155,7 +155,7 @@ export async function flushOutboxOnce() {
         if (op.type !== 'save_doc_json') {
           try {
             const index = await rawApiRequest('/api/articles');
-            await cacheArticlesIndex(index);
+            cacheArticlesIndex(index).catch(() => {});
           } catch {
             // ignore
           }
@@ -235,7 +235,7 @@ export function startBackgroundFullPull(options = {}) {
       let index = [];
       try {
         index = (await rawApiRequest('/api/articles')) || [];
-        await cacheArticlesIndex(index);
+        cacheArticlesIndex(index).catch(() => {});
       } catch (err) {
         fullPullStatus = {
           ...fullPullStatus,
