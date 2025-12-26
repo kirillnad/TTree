@@ -12,6 +12,10 @@ const APP_SHELL_URLS = [
   '/icons/icon-512.png',
 ];
 
+// Avoid revalidating the same asset too often (saves bandwidth and removes "double requests" noise).
+const REVALIDATE_TTL_MS = 5 * 60 * 1000;
+const lastRevalidateAtByUrl = new Map();
+
 function isUploadsRequest(request) {
   try {
     const url = new URL(request.url);
@@ -41,6 +45,38 @@ function isSameOrigin(request) {
 
 function isNavigationRequest(request) {
   return request && request.mode === 'navigate';
+}
+
+function isImmutableAssetUrl(url) {
+  try {
+    if (!url || url.origin !== self.location.origin) return false;
+    if (url.searchParams && url.searchParams.has('v')) return true;
+    const p = url.pathname || '';
+    return (
+      p.endsWith('.ttf') ||
+      p.endsWith('.woff') ||
+      p.endsWith('.woff2') ||
+      p.endsWith('.png') ||
+      p.endsWith('.jpg') ||
+      p.endsWith('.jpeg') ||
+      p.endsWith('.gif') ||
+      p.endsWith('.webp') ||
+      p.endsWith('.ico') ||
+      p.endsWith('.webmanifest') ||
+      p.endsWith('.wasm') ||
+      p.endsWith('.data')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function shouldRevalidateNow(urlStr) {
+  const now = Date.now();
+  const last = lastRevalidateAtByUrl.get(urlStr) || 0;
+  if (now - last < REVALIDATE_TTL_MS) return false;
+  lastRevalidateAtByUrl.set(urlStr, now);
+  return true;
 }
 
 function offlineHtml() {
@@ -166,13 +202,22 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(APP_CACHE);
         const cached = await cache.match(req, { ignoreSearch: false });
         if (cached) {
-          event.waitUntil(
-            fetch(req)
-              .then((resp) => {
-                if (resp && resp.ok) cache.put(req, resp.clone());
-              })
-              .catch(() => {}),
-          );
+          // Versioned URLs (and most binaries) are immutable: no need to revalidate on every load.
+          // For others, keep stale-while-revalidate but throttle to reduce duplicate traffic on F5.
+          try {
+            const url = new URL(req.url);
+            if (!isImmutableAssetUrl(url) && shouldRevalidateNow(req.url)) {
+              event.waitUntil(
+                fetch(req)
+                  .then((resp) => {
+                    if (resp && resp.ok) cache.put(req, resp.clone());
+                  })
+                  .catch(() => {}),
+              );
+            }
+          } catch {
+            // ignore
+          }
           return cached;
         }
         try {

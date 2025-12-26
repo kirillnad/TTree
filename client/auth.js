@@ -180,9 +180,9 @@ export async function bootstrapAuth() {
         }, 5000);
         try {
           await initOfflineForUser(user);
-          await tryPullBootstrap();
+          const bootstrapIndex = await tryPullBootstrap();
           startSyncLoop();
-          startBackgroundFullPull();
+          startBackgroundFullPull({ initialIndex: bootstrapIndex || undefined });
           offlineOk = true;
         } catch (err) {
           // Offline в этом браузере может быть недоступен (например, нет IndexedDB),

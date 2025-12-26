@@ -9,6 +9,7 @@ import {
 import { listOutbox, markOutboxError, removeOutboxOp } from './outbox.js';
 import { deleteSectionEmbeddings, upsertArticleEmbeddings } from './embeddings.js';
 import { startMediaPrefetchLoop, pruneUnusedMedia, updateMediaRefsForArticle } from './media.js';
+import { fetchArticlesIndex } from '../api.js?v=11';
 
 let syncLoopStarted = false;
 let isFlushing = false;
@@ -56,11 +57,11 @@ async function rawApiRequest(path, options = {}) {
 
 export async function tryPullBootstrap() {
   try {
-    const index = await rawApiRequest('/api/articles');
+    const index = await fetchArticlesIndex();
     cacheArticlesIndex(index).catch(() => {});
-    return true;
+    return Array.isArray(index) ? index : [];
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -234,7 +235,11 @@ export function startBackgroundFullPull(options = {}) {
       }
       let index = [];
       try {
-        index = (await rawApiRequest('/api/articles')) || [];
+        if (Array.isArray(options?.initialIndex)) {
+          index = options.initialIndex;
+        } else {
+          index = (await rawApiRequest('/api/articles')) || [];
+        }
         cacheArticlesIndex(index).catch(() => {});
       } catch (err) {
         fullPullStatus = {
@@ -263,15 +268,6 @@ export function startBackgroundFullPull(options = {}) {
               if (docJson) {
                 updateMediaRefsForArticle(row.id, docJson).catch(() => {});
               }
-            } catch {
-              // ignore
-            }
-            // Ensure we at least have embeddings for semantic search.
-            try {
-              const emb = await rawApiRequest(
-                `/api/articles/${encodeURIComponent(row.id)}/embeddings?since=${encodeURIComponent(serverUpdatedAt)}`,
-              );
-              await upsertArticleEmbeddings(row.id, emb?.embeddings || []);
             } catch {
               // ignore
             }

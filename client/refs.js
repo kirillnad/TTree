@@ -100,6 +100,7 @@ export const refs = {
   articleNewBlockBtn: document.getElementById('articleNewBlockBtn'),
   articleToolbar: document.getElementById('articleToolbar'),
   outlineToolbar: document.getElementById('outlineToolbar'),
+  outlineTagsBar: document.getElementById('outlineTagsBar'),
   outlineUndoBtn: document.getElementById('outlineUndoBtn'),
   outlineRedoBtn: document.getElementById('outlineRedoBtn'),
   outlineDeleteBtn: document.getElementById('outlineDeleteBtn'),

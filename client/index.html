@@ -2,7 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <title>Memus. Всё, что вы узнали — в одном месте. Удобно. Надёжно. Везде с вами.</title>
+    <title>Memus.pro — ваша личная база знаний.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/style.css?v=38" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -408,27 +408,15 @@
                     <button id="articleEncryptionRemoveBtn" class="menu-item" type="button" role="menuitem">
                       Снять защиту
                     </button>
-                    <button id="deleteArticleBtn" class="menu-item danger" type="button" role="menuitem">
-                      Удалить статью
-                    </button>
-                  </div>
-                </div>
-                <div class="article-status-row">
-                  <span id="articleStatusText" class="meta"></span>
-                  <span id="mediaStatusText" class="meta"></span>
-                  <button
-                    id="mediaPrefetchToggleBtn"
-                    class="ghost small"
-                    type="button"
-                    title="Пауза/продолжить докачку картинок"
-                  >
-                    Пауза
-                  </button>
-                </div>
-              </div>
-              <div id="articleToolbar" class="article-toolbar">
-                <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
-                  &#xE7A7;<span class="toolbar-label"> Отменить</span>
+	                  <button id="deleteArticleBtn" class="menu-item danger" type="button" role="menuitem">
+	                      Удалить статью
+	                  </button>
+	                </div>
+	              </div>
+	            </div>
+	            <div id="articleToolbar" class="article-toolbar">
+	              <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
+	                &#xE7A7;<span class="toolbar-label"> Отменить</span>
                 </button>
                 <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
                   &#xE7A6;<span class="toolbar-label"> Повторить</span>
@@ -494,6 +482,36 @@
                 <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
                   &#xE109;<span class="toolbar-label"> Новый</span>
                 </button>
+                <div class="outline-toolbar__dropdown outline-toolbar__dropdown--view">
+                  <button
+                    id="outlineBlocksMenuBtn"
+                    class="ghost small outline-toolbar__dropdown-btn"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="outlineBlocksMenu"
+                    title="Блоки"
+                  >
+                    &#xE8F1;<span class="toolbar-label"> Блоки</span>
+                  </button>
+                  <div id="outlineBlocksMenu" class="outline-toolbar__menu hidden" role="menu">
+                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="toggleSelectMode">
+                      <span class="outline-menu__icon">✓</span><span class="outline-menu__label">Выбрать блоки</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="copy">
+                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8C8;</span><span class="outline-menu__label">Копировать</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="cut">
+                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8C6;</span><span class="outline-menu__label">Вырезать</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="paste">
+                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE77F;</span><span class="outline-menu__label">Вставить</span>
+                    </button>
+                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="clear">
+                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE74D;</span><span class="outline-menu__label">Очистить буфер</span>
+                    </button>
+                  </div>
+                </div>
                 <div class="outline-toolbar__dropdown">
                   <button
                     id="outlineTextMenuBtn"
@@ -620,6 +638,7 @@
         </div>
 
         <section id="articleView" class="panel hidden">
+          <div id="outlineTagsBar" class="outline-tags-panel hidden" aria-label="Теги статьи"></div>
           <div id="outlineEditor" class="outline-editor hidden"></div>
           <div id="blocksContainer" class="blocks"></div>
         </section>
@@ -648,10 +667,6 @@
     <div id="modal-root"></div>
     <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
 
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css"
-    />
     <script type="module" src="/app.js?v=26"></script>
   </body>
 </html>

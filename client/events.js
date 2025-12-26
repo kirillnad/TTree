@@ -1,14 +1,6 @@
 import { state, isHintVisible } from './state.js';
 import { refs } from './refs.js';
 import { handleUndoAction, handleRedoAction, clearPendingTextPreview } from './undo.js';
-  import {
-  moveCurrentBlock,
-  moveSelectedBlocks,
-  indentCurrentBlock,
-  indentSelectedBlocks,
-  outdentCurrentBlock,
-  outdentSelectedBlocks,
-} from './undo.js';
 import {
   createSibling,
   deleteCurrentBlock,
@@ -51,10 +43,13 @@ import {
 } from './sidebar.js';
 import { createArticle, openInboxArticle, createInboxNote, toggleDragMode, toggleArticleEncryption, removeArticleEncryption, renderArticle, mergeAllBlocksIntoFirst, updateArticleHeaderUi } from './article.js';
 import { navigate, routing } from './routing.js';
-import { exportCurrentArticleAsHtml, exportCurrentBlockAsHtml } from './exporter.js?v=2';
 import {
   apiRequest,
   fetchArticleHistory,
+  createArticleVersion,
+  fetchArticleVersions,
+  fetchArticleVersion,
+  restoreArticleVersion,
   importArticleFromHtml,
   importArticleFromMarkdown,
   importFromLogseqArchive,
@@ -62,7 +57,7 @@ import {
   indentArticleApi,
   outdentArticleApi,
   createTelegramLinkToken,
-} from './api.js?v=4';
+} from './api.js?v=11';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret, htmlToLines } from './utils.js';
 import {
@@ -78,8 +73,6 @@ import {
   showArticleHistoryModal,
 } from './modal.js?v=10';
 import { loadArticle } from './article.js';
-import { openOutlineEditor, closeOutlineEditor } from './outline/editor.js?v=81';
-import { createArticleVersion, fetchArticleVersions, fetchArticleVersion, restoreArticleVersion } from './api.js?v=11';
 import { getMediaProgressForArticle, isMediaPrefetchPaused, toggleMediaPrefetchPaused } from './offline/media.js';
 import { setMediaPrefetchPaused } from './offline/media.js';
 import { getOfflineCoverageSummary } from './offline/status.js';
@@ -102,6 +95,14 @@ let semanticReindexRunningLabel = 'Переиндексация';
 const SIDEBAR_SEARCH_VIEW_STORAGE_KEY = 'ttree_sidebar_search_view_v1';
 let mediaStatusTimerId = null;
 let mediaStatusInFlight = false;
+
+function loadOutlineEditorModule() {
+  return import('./outline/editor.js?v=81');
+}
+
+function loadExporterModule() {
+  return import('./exporter.js?v=2');
+}
 
 function normalizeSidebarSearchView(value) {
   return value === 'search' ? 'search' : 'list';
@@ -990,10 +991,15 @@ export function attachEvents() {
     });
   }
   if (refs.exportArticleBtn) {
-    refs.exportArticleBtn.addEventListener('click', (event) => {
+    refs.exportArticleBtn.addEventListener('click', async (event) => {
       event.stopPropagation();
       closeArticleMenu();
-      exportCurrentArticleAsHtml();
+      try {
+        const { exportCurrentArticleAsHtml } = await loadExporterModule();
+        exportCurrentArticleAsHtml?.();
+      } catch {
+        showToast('Не удалось экспортировать');
+      }
     });
   }
   if (refs.saveVersionBtn) {
@@ -1142,8 +1148,9 @@ export function attachEvents() {
         if (wasOutline) {
           // Если пользователь находится в outline-режиме, нужно пересобрать TipTap документ,
           // иначе экран останется на старом содержимом.
-          closeOutlineEditor();
-          await openOutlineEditor();
+          const { closeOutlineEditor, openOutlineEditor } = await loadOutlineEditorModule();
+          closeOutlineEditor?.();
+          await openOutlineEditor?.();
         } else {
           renderArticle();
         }
@@ -1338,7 +1345,12 @@ export function attachEvents() {
   if (refs.exportCurrentBlockBtn) {
     refs.exportCurrentBlockBtn.addEventListener('click', async (event) => {
       event.preventDefault();
-      await exportCurrentBlockAsHtml();
+      try {
+        const { exportCurrentBlockAsHtml } = await loadExporterModule();
+        await exportCurrentBlockAsHtml?.();
+      } catch {
+        showToast('Не удалось экспортировать');
+      }
     });
   }
   if (refs.exportAllHtmlZipBtn) {

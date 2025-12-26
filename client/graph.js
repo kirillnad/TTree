@@ -31,6 +31,34 @@ function ensureVis() {
 }
 
 let visLoadingPromise = null;
+let visCssLoadingPromise = null;
+
+function loadVisNetworkCss() {
+  if (visCssLoadingPromise) return visCssLoadingPromise;
+  visCssLoadingPromise = new Promise((resolve, reject) => {
+    try {
+      const existing = document.querySelector('link[data-vis-network-css="1"]');
+      if (existing) {
+        resolve();
+        return;
+      }
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css';
+      link.dataset.visNetworkCss = '1';
+      link.onload = () => resolve();
+      link.onerror = () => reject(new Error('vis-network css load failed'));
+      document.head.appendChild(link);
+    } catch (err) {
+      reject(err);
+    }
+  }).finally(() => {
+    // allow retry if load failed
+    if (!document.querySelector('link[data-vis-network-css="1"]')) visCssLoadingPromise = null;
+  });
+  return visCssLoadingPromise;
+}
+
 function loadVisNetwork() {
   const existing = ensureVis();
   if (existing) return Promise.resolve(existing);
@@ -39,6 +67,7 @@ function loadVisNetwork() {
     if (!navigator.onLine) {
       throw new Error('offline');
     }
+    await loadVisNetworkCss();
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js';

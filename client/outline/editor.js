@@ -19,6 +19,7 @@ import { updateCachedDocJson } from '../offline/cache.js';
 import { enqueueOp } from '../offline/outbox.js';
 import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
+import { parseMarkdownOutlineSections, buildOutlineSectionTree } from './structuredPaste.js';
 
 let mounted = false;
 let tiptap = null;
@@ -41,6 +42,211 @@ let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 let dropGuardCleanup = null;
 let outlineArticleId = null;
+let outlineActiveTagKey = null;
+let outlineSetActiveTagKey = null;
+let outlineTagsIndex = {
+  counts: new Map(), // tagKey -> count
+  labelByKey: new Map(), // tagKey -> display label
+  sectionIdsByKey: new Map(), // tagKey -> Set(sectionId)
+  sectionPosById: new Map(), // sectionId -> pos
+};
+let outlineSelectionMode = false;
+let outlineSelectedSectionIds = new Set();
+
+const OUTLINE_SECTION_CLIPBOARD_KEY = 'ttree_outline_section_clipboard_v1';
+
+function readOutlineSectionClipboard() {
+  try {
+    const raw = window?.localStorage?.getItem?.(OUTLINE_SECTION_CLIPBOARD_KEY) || '';
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!Array.isArray(parsed.sections)) return null;
+    const mode = parsed.mode === 'cut' ? 'cut' : 'copy';
+    return {
+      mode,
+      sourceArticleId: typeof parsed.sourceArticleId === 'string' ? parsed.sourceArticleId : null,
+      createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : null,
+      sections: parsed.sections,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeOutlineSectionClipboard(payload) {
+  try {
+    if (!payload) {
+      window?.localStorage?.removeItem?.(OUTLINE_SECTION_CLIPBOARD_KEY);
+      return;
+    }
+    window?.localStorage?.setItem?.(OUTLINE_SECTION_CLIPBOARD_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore
+  }
+}
+
+function setOutlineSelectionMode(enabled) {
+  outlineSelectionMode = Boolean(enabled);
+  if (!outlineSelectionMode) outlineSelectedSectionIds = new Set();
+  try {
+    if (refs?.outlineEditor) refs.outlineEditor.classList.toggle('outline-select-mode', outlineSelectionMode);
+  } catch {
+    // ignore
+  }
+  try {
+    refreshOutlineSectionSelectionUi();
+  } catch {
+    // ignore
+  }
+}
+
+function toggleOutlineSelectedSectionId(sectionId) {
+  const sid = String(sectionId || '').trim();
+  if (!sid) return;
+  if (outlineSelectedSectionIds.has(sid)) outlineSelectedSectionIds.delete(sid);
+  else outlineSelectedSectionIds.add(sid);
+  try {
+    refreshOutlineSectionSelectionUi();
+  } catch {
+    // ignore
+  }
+}
+
+function refreshOutlineSectionSelectionUi() {
+  if (!refs?.outlineEditor) return;
+  const btns = refs.outlineEditor.querySelectorAll('.outline-heading[data-section-id] .outline-heading__select');
+  btns.forEach((btn) => {
+    const heading = btn.closest('.outline-heading');
+    const sid = heading?.getAttribute?.('data-section-id') || '';
+    const checked = sid && outlineSelectedSectionIds.has(sid);
+    btn.setAttribute('aria-checked', checked ? 'true' : 'false');
+    btn.style.display = outlineSelectionMode ? 'inline-flex' : 'none';
+  });
+}
+
+function collectSelectedRootSections(pmDoc, selectedIds) {
+  const selected = selectedIds instanceof Set ? selectedIds : new Set();
+  const roots = [];
+  if (!pmDoc || !selected.size) return roots;
+
+  const visitSection = (sectionNode, parentSelected) => {
+    const sid = String(sectionNode?.attrs?.id || '').trim();
+    const isSel = sid && selected.has(sid);
+    if (isSel && !parentSelected) {
+      roots.push({ id: sid, node: sectionNode });
+      return;
+    }
+    const childrenNode = sectionNode?.childCount >= 3 ? sectionNode.child(2) : null;
+    if (!childrenNode) return;
+    try {
+      childrenNode.forEach((child) => {
+        if (child?.type?.name !== 'outlineSection') return;
+        visitSection(child, parentSelected || isSel);
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  try {
+    pmDoc.forEach((child) => {
+      if (child?.type?.name !== 'outlineSection') return;
+      visitSection(child, false);
+    });
+  } catch {
+    // ignore
+  }
+  return roots;
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function remapOutlineSectionIds(sectionJson, makeId) {
+  const next = cloneJson(sectionJson);
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'outlineSection') {
+      const newId = makeId();
+      if (node.attrs && typeof node.attrs === 'object') node.attrs.id = newId;
+      else node.attrs = { id: newId, collapsed: Boolean(node.attrs?.collapsed) };
+    }
+    const content = Array.isArray(node.content) ? node.content : [];
+    for (const c of content) visit(c);
+  };
+  visit(next);
+  return next;
+}
+
+async function writeTextToSystemClipboard(text) {
+  const value = String(text || '');
+  if (!value) return;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+  } catch {
+    // ignore → fallback
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = value;
+    ta.setAttribute('readonly', 'true');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch {
+    // ignore
+  }
+}
+
+function buildMarkdownFromOutlineSectionNode(sectionNode, { baseLevel = 2, depth = 0 } = {}) {
+  const node = sectionNode;
+  if (!node || node.type?.name !== 'outlineSection') return '';
+  let heading = '';
+  let body = '';
+  try {
+    const headingNode = node.child(0);
+    heading = String(headingNode?.textContent || '').trim();
+  } catch {
+    heading = '';
+  }
+  try {
+    const bodyNode = node.child(1);
+    body = bodyNode ? String(bodyNode.textBetween(0, bodyNode.content.size, '\n')).trimEnd() : '';
+  } catch {
+    body = '';
+  }
+
+  const level = Math.min(6, Math.max(1, Number(baseLevel) + Number(depth || 0)));
+  const lines = [];
+  if (heading) lines.push(`${'#'.repeat(level)} ${heading}`);
+  if (body) lines.push(body);
+
+  try {
+    const children = node.child(2);
+    if (children) {
+      const childParts = [];
+      children.forEach((child) => {
+        if (child?.type?.name !== 'outlineSection') return;
+        const t = buildMarkdownFromOutlineSectionNode(child, { baseLevel, depth: depth + 1 });
+        if (t) childParts.push(t);
+      });
+      if (childParts.length) lines.push(childParts.join('\n\n'));
+    }
+  } catch {
+    // ignore
+  }
+
+  return lines.filter(Boolean).join('\n\n').trim();
+}
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 const OUTLINE_ALLOW_META = 'outlineAllowMutation';
@@ -80,6 +286,167 @@ function perfLog(label, data = {}) {
   } catch {
     // ignore
   }
+}
+
+function normalizeTagLabel(raw) {
+  const label = String(raw || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!label) return null;
+  if (label.length > 60) return label.slice(0, 60);
+  return label;
+}
+
+function normalizeTagKey(label) {
+  return String(label || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function computeOutlineTagsIndex(pmDoc, tagNodeTypeName = 'tag') {
+  const counts = new Map();
+  const labelByKey = new Map();
+  const sectionIdsByKey = new Map();
+  const sectionPosById = new Map();
+
+  if (!pmDoc) {
+    return { counts, labelByKey, sectionIdsByKey, sectionPosById };
+  }
+
+  pmDoc.descendants((node, pos) => {
+    if (node?.type?.name !== 'outlineSection') return;
+    const sectionId = String(node.attrs?.id || '');
+    if (sectionId) sectionPosById.set(sectionId, pos);
+
+    const localKeys = new Set();
+    const scan = (root) => {
+      root?.descendants?.((n) => {
+        if (n?.type?.name !== tagNodeTypeName) return;
+        const label = normalizeTagLabel(n.attrs?.label || n.textContent || '');
+        if (!label) return;
+        const key = normalizeTagKey(n.attrs?.key || label);
+        if (!key) return;
+        counts.set(key, (counts.get(key) || 0) + 1);
+        labelByKey.set(key, key);
+        localKeys.add(key);
+      });
+    };
+    try {
+      scan(node.child(0)); // heading
+      scan(node.child(1)); // body
+    } catch {
+      // ignore
+    }
+    if (sectionId) {
+      for (const key of localKeys) {
+        if (!sectionIdsByKey.has(key)) sectionIdsByKey.set(key, new Set());
+        sectionIdsByKey.get(key).add(sectionId);
+      }
+    }
+    return false;
+  });
+
+  return { counts, labelByKey, sectionIdsByKey, sectionPosById };
+}
+
+function renderOutlineTagsBar() {
+  const el = refs?.outlineTagsBar;
+  if (!el) return;
+  const entries = Array.from(outlineTagsIndex.counts.entries())
+    .map(([key, count]) => ({ key, label: outlineTagsIndex.labelByKey.get(key) || key, count }))
+    .filter((x) => x.key && x.count > 0)
+    .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.label.localeCompare(b.label)));
+
+  if (!entries.length) {
+    el.innerHTML = '';
+    el.classList.add('hidden');
+    return;
+  }
+
+  el.classList.remove('hidden');
+  el.innerHTML = entries
+    .map((t) => {
+      const pressed = outlineActiveTagKey && outlineActiveTagKey === t.key ? 'true' : 'false';
+      const safeLabel = escapeHtml(t.label);
+      return `<button type="button" class="outline-tag-pill" data-tag-key="${escapeHtml(t.key)}" aria-pressed="${pressed}">${safeLabel} <span class="outline-tag-pill__count">(${t.count})</span></button>`;
+    })
+    .join('');
+}
+
+function refreshOutlineTagsFromEditor() {
+  if (!outlineEditorInstance) return;
+  outlineTagsIndex = computeOutlineTagsIndex(outlineEditorInstance.state.doc, 'tag');
+  if (outlineActiveTagKey && !outlineTagsIndex.counts.has(outlineActiveTagKey)) {
+    outlineActiveTagKey = null;
+    try {
+      outlineSetActiveTagKey?.(null);
+    } catch {
+      // ignore
+    }
+  }
+  renderOutlineTagsBar();
+}
+
+function expandSectionsForTagKey(tagKey) {
+  const key = String(tagKey || '');
+  if (!key || !outlineEditorInstance) return;
+  const ids = outlineTagsIndex.sectionIdsByKey.get(key);
+  if (!ids || !ids.size) return;
+
+  const positions = new Set();
+  for (const sectionId of ids) {
+    const pos = outlineTagsIndex.sectionPosById.get(sectionId);
+    if (typeof pos !== 'number') continue;
+    positions.add(pos);
+    try {
+      const $inside = outlineEditorInstance.state.doc.resolve(Math.min(outlineEditorInstance.state.doc.content.size, pos + 1));
+      for (let d = $inside.depth; d > 0; d -= 1) {
+        if ($inside.node(d)?.type?.name !== 'outlineSection') continue;
+        positions.add($inside.before(d));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  let tr = outlineEditorInstance.state.tr;
+  let changed = false;
+  for (const pos of positions) {
+    const node = tr.doc.nodeAt(pos);
+    if (!node || node.type?.name !== 'outlineSection') continue;
+    if (!Boolean(node.attrs?.collapsed)) continue;
+    tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: false });
+    changed = true;
+  }
+  if (changed) {
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    outlineEditorInstance.view.dispatch(tr);
+  }
+}
+
+function attachOutlineTagsBarHandlers({ setActiveTagKey }) {
+  const el = refs?.outlineTagsBar;
+  if (!el) return () => {};
+  const onClick = (e) => {
+    const btn = e.target?.closest?.('[data-tag-key]');
+    if (!btn) return;
+    const key = String(btn.getAttribute('data-tag-key') || '');
+    if (!key) return;
+    const next = outlineActiveTagKey === key ? null : key;
+    outlineActiveTagKey = next;
+    try {
+      setActiveTagKey(next);
+    } catch {
+      // ignore
+    }
+    if (next) {
+      expandSectionsForTagKey(next);
+    }
+    renderOutlineTagsBar();
+  };
+  el.addEventListener('click', onClick);
+  return () => el.removeEventListener('click', onClick);
 }
 
 function splitMarkdownRow(line) {
@@ -670,22 +1037,24 @@ function mountOutlineToolbar(editor) {
   if (!editor) return;
 
   const root = refs.outlineToolbar;
-  const btns = {
-    undo: refs.outlineUndoBtn,
-    redo: refs.outlineRedoBtn,
-    deleteBtn: refs.outlineDeleteBtn,
-    moveUpBtn: refs.outlineMoveUpBtn,
-    moveDownBtn: refs.outlineMoveDownBtn,
-    outdentBtn: refs.outlineOutdentBtn,
-    indentBtn: refs.outlineIndentBtn,
-    newBelowBtn: refs.outlineNewBelowBtn,
-    textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
-    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
-    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
-  };
+	  const btns = {
+	    undo: refs.outlineUndoBtn,
+	    redo: refs.outlineRedoBtn,
+	    deleteBtn: refs.outlineDeleteBtn,
+	    moveUpBtn: refs.outlineMoveUpBtn,
+	    moveDownBtn: refs.outlineMoveDownBtn,
+	    outdentBtn: refs.outlineOutdentBtn,
+	    indentBtn: refs.outlineIndentBtn,
+	    newBelowBtn: refs.outlineNewBelowBtn,
+	    blocksMenuBtn: root.querySelector('#outlineBlocksMenuBtn'),
+	    textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
+	    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
+	    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
+	  };
   const dropdownBtns = Array.from(root.querySelectorAll('.outline-toolbar__dropdown-btn'));
   const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
-  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
+	  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
+	  const clipboardButtons = Array.from(root.querySelectorAll('[data-outline-clipboard-action]'));
 
   const click = (el, handler) => {
     if (!el) return () => {};
@@ -704,23 +1073,36 @@ function mountOutlineToolbar(editor) {
     el.setAttribute('aria-pressed', active ? 'true' : 'false');
   };
 
-  const closeAllMenus = () => {
-    for (const menu of menus) menu.classList.add('hidden');
-    for (const btn of dropdownBtns) btn.setAttribute('aria-expanded', 'false');
-  };
+	  const closeAllMenus = () => {
+	    for (const menu of menus) menu.classList.add('hidden');
+	    for (const btn of dropdownBtns) btn.setAttribute('aria-expanded', 'false');
+	  };
 
-  const toggleMenu = (btn) => {
-    if (!btn) return;
-    const menuId = btn.getAttribute('aria-controls');
-    const menu = menuId ? root.querySelector(`#${menuId}`) : null;
-    if (!menu) return;
-    const isOpen = !menu.classList.contains('hidden');
-    closeAllMenus();
-    if (!isOpen) {
-      menu.classList.remove('hidden');
-      btn.setAttribute('aria-expanded', 'true');
-    }
-  };
+	  const syncClipboardMenuState = () => {
+	    const clip = readOutlineSectionClipboard();
+	    const canPaste = Boolean(clip && Array.isArray(clip.sections) && clip.sections.length);
+	    for (const item of clipboardButtons) {
+	      if (item?.getAttribute?.('data-outline-clipboard-action') === 'paste') {
+	        item.toggleAttribute('disabled', !canPaste);
+	      }
+	    }
+	  };
+
+	  const toggleMenu = (btn) => {
+	    if (!btn) return;
+	    const menuId = btn.getAttribute('aria-controls');
+	    const menu = menuId ? root.querySelector(`#${menuId}`) : null;
+	    if (!menu) return;
+	    const isOpen = !menu.classList.contains('hidden');
+	    closeAllMenus();
+	    if (!isOpen) {
+	      if (menuId === 'outlineBlocksMenu') {
+	        syncClipboardMenuState();
+	      }
+	      menu.classList.remove('hidden');
+	      btn.setAttribute('aria-expanded', 'true');
+	    }
+	  };
 
 	  const canRun = (build) => {
 	    try {
@@ -968,12 +1350,14 @@ function mountOutlineToolbar(editor) {
     root.dataset.editing = editing ? 'true' : 'false';
     if (!editing) closeAllMenus();
 
-    if (btns.deleteBtn) btns.deleteBtn.hidden = editing;
-    if (btns.moveUpBtn) btns.moveUpBtn.hidden = editing;
-    if (btns.moveDownBtn) btns.moveDownBtn.hidden = editing;
-    if (btns.outdentBtn) btns.outdentBtn.hidden = editing;
-    if (btns.indentBtn) btns.indentBtn.hidden = editing;
-    if (btns.newBelowBtn) btns.newBelowBtn.hidden = editing;
+	    if (btns.deleteBtn) btns.deleteBtn.hidden = editing;
+	    if (btns.moveUpBtn) btns.moveUpBtn.hidden = editing;
+	    if (btns.moveDownBtn) btns.moveDownBtn.hidden = editing;
+	    if (btns.outdentBtn) btns.outdentBtn.hidden = editing;
+	    if (btns.indentBtn) btns.indentBtn.hidden = editing;
+	    if (btns.newBelowBtn) btns.newBelowBtn.hidden = editing;
+	    if (btns.blocksMenuBtn) btns.blocksMenuBtn.hidden = editing;
+	    if (editing && outlineSelectionMode) setOutlineSelectionMode(false);
 
     if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
     if (btns.redo) btns.redo.disabled = !canRun((c) => c.redo());
@@ -1335,31 +1719,178 @@ function mountOutlineToolbar(editor) {
   for (const btn of dropdownBtns) {
     cleanups.push(click(btn, () => toggleMenu(btn)));
   }
-	  for (const item of actionButtons) {
-	    cleanups.push(
-	      click(item, () => {
-	        const action = item.dataset.outlineAction || '';
-	        if (action === 'insertHttpLink') {
-	          closeAllMenus();
-	          void insertHttpLink().finally(() => scheduleSync());
-	          return;
-	        }
-	        if (action === 'insertArticleLink') {
-	          closeAllMenus();
-	          void insertArticleLink().finally(() => scheduleSync());
-	          return;
-	        }
-	        const ok = runAction(action);
-	        closeAllMenus();
-	        if (ok) scheduleSync();
-	      }),
-	    );
-	  }
+		  for (const item of actionButtons) {
+		    cleanups.push(
+		      click(item, () => {
+		        const action = item.dataset.outlineAction || '';
+		        if (action === 'insertHttpLink') {
+		          closeAllMenus();
+		          void insertHttpLink().finally(() => scheduleSync());
+		          return;
+		        }
+		        if (action === 'insertArticleLink') {
+		          closeAllMenus();
+		          void insertArticleLink().finally(() => scheduleSync());
+		          return;
+		        }
+		        const ok = runAction(action);
+		        closeAllMenus();
+		        if (ok) scheduleSync();
+		      }),
+		    );
+		  }
 
-  const onDocPointerDown = (event) => {
-    if (!state.isOutlineEditing) return;
-    if (!root.contains(event.target)) {
-      closeAllMenus();
+		  for (const item of clipboardButtons) {
+		    cleanups.push(
+		      click(item, () => {
+		        const action = item.getAttribute('data-outline-clipboard-action') || '';
+		        if (!action) return;
+		        closeAllMenus();
+
+		        const activeId = lastActiveSectionId || null;
+		        const selected = outlineSelectedSectionIds instanceof Set ? outlineSelectedSectionIds : new Set();
+		        const effective = selected.size ? new Set(selected) : activeId ? new Set([activeId]) : new Set();
+
+		        if (action === 'toggleSelectMode') {
+		          setOutlineSelectionMode(!outlineSelectionMode);
+		          return;
+		        }
+		        if (action === 'clear') {
+		          writeOutlineSectionClipboard(null);
+		          showToast('Буфер очищен');
+		          return;
+		        }
+		        if (!outlineEditorInstance) return;
+
+		        if (action === 'copy' || action === 'cut') {
+		          if (!effective.size) {
+		            showToast('Выберите блок');
+		            return;
+		          }
+		          const roots = collectSelectedRootSections(outlineEditorInstance.state.doc, effective);
+		          if (!roots.length) {
+		            showToast('Выберите блок');
+		            return;
+		          }
+		          const sectionsJson = roots.map((r) => r.node.toJSON());
+		          try {
+		            const text = roots.map((r) => buildMarkdownFromOutlineSectionNode(r.node)).filter(Boolean).join('\n\n');
+		            void writeTextToSystemClipboard(text);
+		          } catch {
+		            // ignore
+		          }
+		          writeOutlineSectionClipboard({
+		            mode: action === 'cut' ? 'cut' : 'copy',
+		            sourceArticleId: outlineArticleId || state.articleId || null,
+		            createdAt: new Date().toISOString(),
+		            sections: sectionsJson,
+		          });
+		          if (action === 'copy') {
+		            showToast(`Скопировано блоков: ${sectionsJson.length}`);
+		            return;
+		          }
+
+		          const positions = [];
+		          for (const r of roots) {
+		            const pos = findSectionPosById(outlineEditorInstance.state.doc, r.id);
+		            const node = typeof pos === 'number' ? outlineEditorInstance.state.doc.nodeAt(pos) : null;
+		            if (typeof pos === 'number' && node) positions.push({ pos, size: node.nodeSize });
+		          }
+		          positions.sort((a, b) => b.pos - a.pos);
+		          let tr = outlineEditorInstance.state.tr;
+		          for (const { pos, size } of positions) {
+		            tr = tr.delete(pos, pos + size);
+		          }
+		          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		          outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+		          outlineEditorInstance.view.focus();
+		          docDirty = true;
+		          scheduleAutosave({ delayMs: 200 });
+		          setOutlineSelectionMode(false);
+		          showToast(`Вырезано блоков: ${sectionsJson.length}`);
+		          return;
+		        }
+
+		        if (action === 'paste') {
+		          const clip = readOutlineSectionClipboard();
+		          if (!clip || !Array.isArray(clip.sections) || !clip.sections.length) {
+		            showToast('Буфер пуст');
+		            return;
+		          }
+		          const pmState = outlineEditorInstance.state;
+		          let insertPos = pmState.doc.content.size;
+		          if (activeId) {
+		            const pos = findSectionPosById(pmState.doc, activeId);
+		            const node = typeof pos === 'number' ? pmState.doc.nodeAt(pos) : null;
+		            if (typeof pos === 'number' && node) insertPos = pos + node.nodeSize;
+		          }
+
+		          const existingIds = new Set();
+		          try {
+		            pmState.doc.descendants((n) => {
+		              if (n?.type?.name !== 'outlineSection') return;
+		              const sid = String(n.attrs?.id || '').trim();
+		              if (sid) existingIds.add(sid);
+		            });
+		          } catch {
+		            // ignore
+		          }
+
+		          const sectionJsons = [];
+		          if (clip.mode === 'copy') {
+		            for (const s of clip.sections) {
+		              sectionJsons.push(remapOutlineSectionIds(s, () => safeUuid()));
+		            }
+		          } else {
+		            for (const s of clip.sections) {
+		              const sid = String(s?.attrs?.id || '').trim();
+		              if (sid && existingIds.has(sid)) {
+		                showToast('Нельзя вставить: блок с таким id уже есть');
+		                return;
+		              }
+		              sectionJsons.push(cloneJson(s));
+		            }
+		          }
+
+		          const schema = pmState.doc.type.schema;
+		          const nodes = [];
+		          for (const j of sectionJsons) {
+		            try {
+		              const n = schema.nodeFromJSON(j);
+		              if (n?.type?.name === 'outlineSection') nodes.push(n);
+		            } catch {
+		              // ignore
+		            }
+		          }
+		          if (!nodes.length) {
+		            showToast('Не удалось вставить блоки');
+		            return;
+		          }
+		          let tr = pmState.tr;
+		          let pos = insertPos;
+		          for (const n of nodes) {
+		            tr = tr.insert(pos, n);
+		            pos += n.nodeSize;
+		          }
+		          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		          outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+		          outlineEditorInstance.view.focus();
+		          docDirty = true;
+		          scheduleAutosave({ delayMs: 200 });
+		          if (clip.mode === 'cut') {
+		            writeOutlineSectionClipboard(null);
+		          }
+		          setOutlineSelectionMode(false);
+		          showToast(`Вставлено блоков: ${nodes.length}`);
+		        }
+		      }),
+		    );
+		  }
+
+	  const onDocPointerDown = (event) => {
+	    if (!state.isOutlineEditing) return;
+	    if (!root.contains(event.target)) {
+	      closeAllMenus();
     }
   };
   const onDocKeyDown = (event) => {
@@ -1377,6 +1908,22 @@ function mountOutlineToolbar(editor) {
   const offSel = editor.on('selectionUpdate', scheduleSync);
   cleanups.push(() => offTx?.());
   cleanups.push(() => offSel?.());
+
+  // Tags bar interactions (highlight + expand).
+  try {
+    const offTags = attachOutlineTagsBarHandlers({
+      setActiveTagKey: (key) => {
+        try {
+          outlineSetActiveTagKey?.(key);
+        } catch {
+          // ignore
+        }
+      },
+    });
+    cleanups.push(() => offTags?.());
+  } catch {
+    // ignore
+  }
 
   scheduleSync();
 
@@ -1893,7 +2440,7 @@ async function mountOutlineEditor() {
   const loadStart = perfEnabled() ? performance.now() : 0;
   const { core, starterKitMod, htmlMod, pmStateMod, pmViewMod } = await loadTiptap();
   if (loadStart) perfLog('loadTiptap()', { ms: Math.round(performance.now() - loadStart) });
-  const { Editor, Node, Extension, mergeAttributes } = core;
+  const { Editor, Node, Extension, InputRule, mergeAttributes } = core;
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
@@ -1913,6 +2460,112 @@ async function mountOutlineEditor() {
 	    const num = Number.parseFloat(m[1]);
 	    return Number.isFinite(num) ? num : null;
 	  };
+
+  const outlineTagHighlighterKey = new PluginKey('outlineTagHighlighter');
+
+  const OutlineTag = Node.create({
+    name: 'tag',
+    group: 'inline',
+    inline: true,
+    atom: true,
+    selectable: false,
+    renderText({ node }) {
+      try {
+        return String(node?.attrs?.label || '').trim();
+      } catch {
+        return '';
+      }
+    },
+    addAttributes() {
+      return {
+        label: { default: '' },
+        key: { default: '' },
+      };
+    },
+    parseHTML() {
+      return [{ tag: 'span[data-tt-tag="1"]' }];
+    },
+    renderHTML({ node, HTMLAttributes }) {
+      const label = String(node?.attrs?.label || '').trim();
+      const key = String(node?.attrs?.key || '').trim();
+      return [
+        'span',
+        mergeAttributes(HTMLAttributes, {
+          'data-tt-tag': '1',
+          'data-tag-key': key,
+          class: 'tt-tag',
+        }),
+        label || key || '',
+      ];
+    },
+    addInputRules() {
+      const find = /(^|[\s([{"'«„–—-])\\([^\\\n]{1,60}?)\\$/;
+      return [
+        new InputRule({
+          find,
+          handler: ({ state: pmState, range, match }) => {
+            const prefix = String(match?.[1] || '');
+            const raw = String(match?.[2] || '');
+            const label = normalizeTagLabel(raw);
+            if (!label) return null;
+            const key = normalizeTagKey(label);
+            if (!key) return null;
+            const type = pmState.schema.nodes?.tag;
+            if (!type) return null;
+            const tagNode = type.create({ label: key, key });
+
+            let tr = pmState.tr.delete(range.from, range.to);
+            let insertPos = range.from;
+            if (prefix) {
+              tr = tr.insertText(prefix, insertPos);
+              insertPos += prefix.length;
+            }
+            tr = tr.insert(insertPos, tagNode);
+            const sel = TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, insertPos + tagNode.nodeSize)), 1);
+            tr = tr.setSelection(sel);
+            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+            return tr;
+          },
+        }),
+      ];
+    },
+  });
+
+  const OutlineTagHighlighter = Extension.create({
+    name: 'outlineTagHighlighter',
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: outlineTagHighlighterKey,
+          state: {
+            init: () => ({ activeKey: null }),
+            apply: (tr, prev) => {
+              const meta = tr.getMeta(outlineTagHighlighterKey);
+              if (meta && Object.prototype.hasOwnProperty.call(meta, 'activeKey')) {
+                return { activeKey: meta.activeKey ? String(meta.activeKey) : null };
+              }
+              return prev;
+            },
+          },
+          props: {
+            decorations(pmState) {
+              const activeKey = outlineTagHighlighterKey.getState(pmState)?.activeKey || null;
+              const decos = [];
+              pmState.doc.descendants((node, pos) => {
+                if (node?.type?.name !== 'tag') return;
+                const key = String(node.attrs?.key || '').trim();
+                if (!key) return;
+                const cls = activeKey && key === activeKey ? 'tt-tag tt-tag--active' : 'tt-tag';
+                decos.push(Decoration.node(pos, pos + node.nodeSize, { class: cls }));
+              });
+              if (!decos.length) return null;
+              return DecorationSet.create(pmState.doc, decos);
+            },
+          },
+        }),
+      ];
+    },
+  });
 
 	  const ResizableImage = Image.extend({
 	    inline: true,
@@ -2423,9 +3076,176 @@ async function mountOutlineEditor() {
 	    },
 		  });
 
-		  const resolveYandexDiskHref = (rawPath = '') => {
-		    const raw = String(rawPath || '').trim();
-		    if (!raw) return '';
+		  const OutlineStructuredSectionPaste = Extension.create({
+		    name: 'outlineStructuredSectionPaste',
+		    addProseMirrorPlugins() {
+		      const parseHtmlSections = (html) => {
+		        const normalized = String(html || '').trim();
+		        if (!normalized) return { sections: [], startsWithHeading: false, headingCount: 0 };
+		        if (!/<h[1-6][\s>]/i.test(normalized)) return { sections: [], startsWithHeading: false, headingCount: 0 };
+		        let doc = null;
+		        try {
+		          doc = new DOMParser().parseFromString(normalized, 'text/html');
+		        } catch {
+		          return { sections: [], startsWithHeading: false, headingCount: 0 };
+		        }
+		        const body = doc?.body;
+		        if (!body) return { sections: [], startsWithHeading: false, headingCount: 0 };
+
+		        let startsWithHeading = false;
+		        try {
+		          const firstEl = Array.from(body.childNodes || []).find((n) => n?.nodeType === 1 && String(n?.textContent || '').trim());
+		          startsWithHeading = Boolean(firstEl && /^H[1-6]$/.test(String(firstEl.nodeName || '')));
+		        } catch {
+		          startsWithHeading = false;
+		        }
+
+		        const sections = [];
+		        let current = null; // { level, title, nodes: Node[] }
+		        const flush = () => {
+		          if (!current) return;
+		          const container = document.createElement('div');
+		          for (const n of current.nodes) {
+		            try {
+		              container.appendChild(n.cloneNode(true));
+		            } catch {
+		              // ignore
+		            }
+		          }
+		          const bodyText = String(container.innerText || container.textContent || '').trimEnd();
+		          sections.push({ level: current.level, title: current.title, bodyText });
+		          current = null;
+		        };
+
+		        for (const child of Array.from(body.childNodes || [])) {
+		          const isEl = child?.nodeType === 1;
+		          const nodeName = isEl ? String(child.nodeName || '').toUpperCase() : '';
+		          const m = nodeName.match(/^H([1-6])$/);
+		          if (m) {
+		            flush();
+		            const level = Number(m[1]);
+		            const title = String(child.textContent || '').trim();
+		            if (!title) continue;
+		            current = { level, title, nodes: [] };
+		            continue;
+		          }
+		          if (!current) continue;
+		          current.nodes.push(child);
+		        }
+		        flush();
+		        return { sections, startsWithHeading, headingCount: sections.length };
+		      };
+
+		      const findSectionPosFromSelection = (pmState) => {
+		        const $from = pmState?.selection?.$from;
+		        if (!$from) return null;
+		        for (let d = $from.depth; d > 0; d -= 1) {
+		          if ($from.node(d)?.type?.name === 'outlineSection') return $from.before(d);
+		        }
+		        return null;
+		      };
+
+		      const buildParagraphNodes = (schema, text) => {
+		        const raw = String(text || '').replace(/\r\n/g, '\n').trimEnd();
+		        const paragraphType = schema.nodes.paragraph;
+		        if (!paragraphType) return [];
+
+		        const hardBreakType = schema.nodes.hardBreak || schema.nodes.hard_break || null;
+		        const makeParagraph = (lineText) => {
+		          const lines = String(lineText || '').split('\n');
+		          const content = [];
+		          for (let i = 0; i < lines.length; i += 1) {
+		            const t = lines[i];
+		            if (i > 0 && hardBreakType) content.push(hardBreakType.create());
+		            if (t) content.push(schema.text(t));
+		          }
+		          return paragraphType.create({}, content);
+		        };
+
+		        if (!raw.trim()) return [paragraphType.create({}, [])];
+		        const parts = raw.split(/\n{2,}/);
+		        const out = [];
+		        for (const p of parts) {
+		          const trimmed = String(p || '').trimEnd();
+		          out.push(makeParagraph(trimmed));
+		        }
+		        return out.length ? out : [paragraphType.create({}, [])];
+		      };
+
+		      const buildPmSectionFromTree = (schema, node) => {
+		        const headingNode = schema.nodes.outlineHeading.create({}, node.title ? [schema.text(node.title)] : []);
+		        const bodyContent = buildParagraphNodes(schema, node.bodyText);
+		        const bodyNode = schema.nodes.outlineBody.create({}, bodyContent);
+		        const childrenPm = (node.children || []).map((c) => buildPmSectionFromTree(schema, c));
+		        const childrenNode = schema.nodes.outlineChildren.create({}, childrenPm);
+		        return schema.nodes.outlineSection.create({ id: node.id, collapsed: false }, [headingNode, bodyNode, childrenNode]);
+		      };
+
+		      const maybeHandlePaste = (view, event) => {
+		        try {
+		          const st = outlineEditModeKey?.getState?.(view.state) || null;
+		          if (!st?.editingSectionId) return false;
+
+		          const html = event?.clipboardData?.getData?.('text/html') || '';
+		          const text = event?.clipboardData?.getData?.('text/plain') || '';
+
+		          const htmlParsed = html ? parseHtmlSections(html) : { sections: [], startsWithHeading: false, headingCount: 0 };
+		          const mdParsed = !htmlParsed.sections.length && text ? parseMarkdownOutlineSections(text) : { sections: [], startsWithHeading: false, headingCount: 0 };
+
+		          const parsed = htmlParsed.sections.length ? htmlParsed : mdParsed;
+		          if (!parsed.sections.length) return false;
+
+		          const safeToConvert = parsed.startsWithHeading || parsed.sections.length >= 2;
+		          if (!safeToConvert) return false;
+
+		          event.preventDefault();
+		          event.stopPropagation();
+
+		          const sectionPos = findSectionPosFromSelection(view.state);
+		          if (typeof sectionPos !== 'number') return false;
+		          const sectionNode = view.state.doc.nodeAt(sectionPos);
+		          if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+
+		          const roots = buildOutlineSectionTree(parsed.sections, { makeId: () => safeUuid() });
+		          if (!roots.length) return false;
+
+		          const schema = view.state.schema;
+		          const nodes = roots.map((r) => buildPmSectionFromTree(schema, r));
+
+		          let tr = view.state.tr;
+		          let insertPos = sectionPos + sectionNode.nodeSize;
+		          for (const n of nodes) {
+		            tr = tr.insert(insertPos, n);
+		            insertPos += n.nodeSize;
+		          }
+		          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+		          view.dispatch(tr.scrollIntoView());
+		          return true;
+		        } catch {
+		          return false;
+		        }
+		      };
+
+		      return [
+		        new Plugin({
+		          props: {
+		            handlePaste(view, event) {
+		              return maybeHandlePaste(view, event);
+		            },
+		            handleDOMEvents: {
+		              paste(view, event) {
+		                return maybeHandlePaste(view, event);
+		              },
+		            },
+		          },
+		        }),
+		      ];
+		    },
+		  });
+
+			  const resolveYandexDiskHref = (rawPath = '') => {
+			    const raw = String(rawPath || '').trim();
+			    if (!raw) return '';
 		    if (raw.startsWith('app:/') || raw.startsWith('disk:/')) {
 		      const encoded = encodeURIComponent(raw);
 		      return `/api/yandex/disk/file?path=${encoded}`;
@@ -2627,22 +3447,51 @@ async function mountOutlineEditor() {
         toggle.title = 'Свернуть/развернуть (Ctrl+←/→), с детьми (Ctrl+↑/↓)';
         toggle.setAttribute('aria-label', 'Свернуть/развернуть');
 
-        const contentDOM = document.createElement('div');
-        contentDOM.className = 'outline-heading__content';
+	        const contentDOM = document.createElement('div');
+	        contentDOM.className = 'outline-heading__content';
+	
+	        const selectBtn = document.createElement('button');
+	        selectBtn.type = 'button';
+	        selectBtn.className = 'outline-heading__select';
+	        selectBtn.setAttribute('role', 'checkbox');
+	        selectBtn.setAttribute('aria-checked', 'false');
+	        selectBtn.setAttribute('aria-label', 'Выбрать блок');
+	        selectBtn.textContent = '✓';
+	        selectBtn.addEventListener('pointerdown', (event) => {
+	          // Prevent long-press text selection on mobile.
+	          event.preventDefault();
+	        });
+	        selectBtn.addEventListener('click', (event) => {
+	          event.preventDefault();
+	          event.stopPropagation();
+	          if (!outlineSelectionMode) return;
+	          const headingPos = typeof getPos === 'function' ? getPos() : null;
+	          if (typeof headingPos !== 'number') return;
+	          const sectionPos = headingPos - 1;
+	          const sectionNode = editor.state.doc.nodeAt(sectionPos);
+	          const sid = String(sectionNode?.attrs?.id || '').trim();
+	          if (!sid) return;
+	          toggleOutlineSelectedSectionId(sid);
+	        });
 
-        const updateUi = () => {
-          const headingPos = typeof getPos === 'function' ? getPos() : null;
-          if (typeof headingPos !== 'number') return;
-          const sectionPos = headingPos - 1;
-          const sectionNode = editor.state.doc.nodeAt(sectionPos);
-          dom.dataset.empty = node.content.size === 0 ? 'true' : 'false';
-          const $pos = editor.state.doc.resolve(Math.max(0, sectionPos + 1));
-          let depth = 0;
-          for (let d = $pos.depth; d >= 0; d -= 1) {
-            if ($pos.node(d)?.type?.name === 'outlineSection') depth += 1;
-          }
-          dom.dataset.depth = String(Math.min(6, Math.max(1, depth || 1)));
-        };
+	        const updateUi = () => {
+	          const headingPos = typeof getPos === 'function' ? getPos() : null;
+	          if (typeof headingPos !== 'number') return;
+	          const sectionPos = headingPos - 1;
+	          const sectionNode = editor.state.doc.nodeAt(sectionPos);
+	          const sectionId = String(sectionNode?.attrs?.id || '');
+	          if (sectionId) dom.setAttribute('data-section-id', sectionId);
+	          dom.dataset.empty = node.content.size === 0 ? 'true' : 'false';
+	          const $pos = editor.state.doc.resolve(Math.max(0, sectionPos + 1));
+	          let depth = 0;
+	          for (let d = $pos.depth; d >= 0; d -= 1) {
+	            if ($pos.node(d)?.type?.name === 'outlineSection') depth += 1;
+	          }
+	          dom.dataset.depth = String(Math.min(6, Math.max(1, depth || 1)));
+	          const checked = outlineSelectionMode && sectionId && outlineSelectedSectionIds.has(sectionId);
+	          selectBtn.setAttribute('aria-checked', checked ? 'true' : 'false');
+	          selectBtn.style.display = outlineSelectionMode ? 'inline-flex' : 'none';
+	        };
 
         toggle.addEventListener('click', (event) => {
           event.preventDefault();
@@ -2662,9 +3511,10 @@ async function mountOutlineEditor() {
           editor.view.focus();
         });
 
-        dom.appendChild(toggle);
-        dom.appendChild(contentDOM);
-        updateUi();
+	        dom.appendChild(toggle);
+	        dom.appendChild(contentDOM);
+	        dom.appendChild(selectBtn);
+	        updateUi();
 
         return {
           dom,
@@ -4347,6 +5197,57 @@ async function mountOutlineEditor() {
               const editingSectionId = st.editingSectionId || null;
               const activeSectionId = getActiveSectionId(pmState);
 
+              // Enter в заголовке секции: создавать новую секцию сверху/снизу.
+              // В начале заголовка — сверху, в конце — снизу. Если заголовок пустой — всегда снизу.
+              try {
+                if (!state.isPublicView && event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                  const sel = pmState.selection;
+                  const $from = sel?.$from || null;
+                  if (sel && sel.empty && $from && $from.parent?.type?.name === 'outlineHeading') {
+                    let sectionPos = null;
+                    for (let d = $from.depth; d > 0; d -= 1) {
+                      if ($from.node(d)?.type?.name === 'outlineSection') {
+                        sectionPos = $from.before(d);
+                        break;
+                      }
+                    }
+                    const sectionNode = typeof sectionPos === 'number' ? pmState.doc.nodeAt(sectionPos) : null;
+                    if (sectionNode && sectionNode.type?.name === 'outlineSection') {
+                      const headingNode = sectionNode.child(0);
+                      const headingText = String(headingNode?.textContent || '').trim();
+                      const headingEmpty = !headingText;
+                      const atStart = $from.parentOffset === 0;
+                      const atEnd = $from.parentOffset === $from.parent.content.size;
+                      const insertAbove = atStart && !headingEmpty;
+                      const insertBelow = !insertAbove && (headingEmpty || atEnd);
+                      if (insertAbove || insertBelow) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const insertPos = insertAbove ? sectionPos : sectionPos + sectionNode.nodeSize;
+                        const schema = pmState.schema;
+                        const newId = safeUuid();
+                        const newSection = schema.nodes.outlineSection.create(
+                          { id: newId, collapsed: false },
+                          [
+                            schema.nodes.outlineHeading.create({}, []),
+                            schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+                            schema.nodes.outlineChildren.create({}, []),
+                          ],
+                        );
+                        let tr = pmState.tr.insert(insertPos, newSection);
+                        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+                        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                        tr = tr.setMeta(key, { type: 'enter', sectionId: newId });
+                        view.dispatch(tr.scrollIntoView());
+                        return true;
+                      }
+                    }
+                  }
+                }
+              } catch {
+                // ignore
+              }
+
               // Сбрасываем pending merge при смене секции/любой другой клавише.
               if (!pendingMerge || pendingMerge.sectionId !== activeSectionId || pendingMerge.key !== event.key) {
                 pendingMerge = null;
@@ -4573,25 +5474,28 @@ async function mountOutlineEditor() {
 
 		  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
 		  const createStart = perfEnabled() ? performance.now() : 0;
-		  outlineEditorInstance = new Editor({
+  outlineEditorInstance = new Editor({
 	    element: contentRoot,
-		    extensions: [
-	      OutlineDocument,
-	      OutlineSection,
-	      OutlineHeading,
-	      OutlineBody,
-	      OutlineChildren,
-		      OutlineActiveSection,
-		      OutlineEditMode,
-		      OutlineImageUpload,
-		      OutlineAttachmentUpload,
-		      OutlineImageResize,
-	      OutlineImagePreview,
-	      OutlineMarkdownTablePaste,
-	      UniqueID.configure({
-	        types: ['outlineSection'],
-	        attributeName: 'id',
-	        generateID: () => safeUuid(),
+			    extensions: [
+		      OutlineDocument,
+		      OutlineSection,
+		      OutlineHeading,
+		      OutlineBody,
+		      OutlineChildren,
+	        OutlineTag,
+	        OutlineTagHighlighter,
+			      OutlineActiveSection,
+			      OutlineEditMode,
+			      OutlineImageUpload,
+			      OutlineAttachmentUpload,
+			      OutlineImageResize,
+		      OutlineImagePreview,
+		      OutlineStructuredSectionPaste,
+		      OutlineMarkdownTablePaste,
+		      UniqueID.configure({
+		        types: ['outlineSection'],
+		        attributeName: 'id',
+		        generateID: () => safeUuid(),
 	      }),
       StarterKit.configure({
         document: false,
@@ -4609,16 +5513,49 @@ async function mountOutlineEditor() {
 	      OutlineMarkdown,
     ].filter(Boolean),
     content,
-    editorProps: {
-      attributes: {
-        class: 'outline-prosemirror',
-      },
-      handleKeyDown(view, event) {
-        // В view-mode Enter/F2 должны ВСЕГДА включать режим редактирования текущей секции,
-        // даже когда курсор стоит внутри listItem (иначе list keymap "съедает" Enter).
-        try {
-          if (!outlineEditModeKey) return false;
-          const st = outlineEditModeKey.getState(view.state) || {};
+	    editorProps: {
+	      attributes: {
+	        class: 'outline-prosemirror',
+	      },
+	      handleKeyDown(view, event) {
+	        // Ctrl/⌘+A inside outlineBody должен выделять только тело текущей секции,
+	        // а не весь документ (иначе легко случайно удалить структуру).
+	        try {
+	          const isModA = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key || '').toLowerCase() === 'a';
+	          if (isModA && outlineEditModeKey) {
+	            const st = outlineEditModeKey.getState(view.state) || {};
+	            if (st.editingSectionId) {
+	              const $from = view.state.selection?.$from || null;
+	              if ($from) {
+	                let bodyDepth = null;
+	                for (let d = $from.depth; d > 0; d -= 1) {
+	                  if ($from.node(d)?.type?.name === 'outlineBody') {
+	                    bodyDepth = d;
+	                    break;
+	                  }
+	                }
+	                if (bodyDepth !== null) {
+	                  event.preventDefault();
+	                  event.stopPropagation();
+	                  const from = $from.start(bodyDepth);
+	                  const to = $from.end(bodyDepth);
+	                  const nextSel = TextSelection.create(view.state.doc, from, to);
+	                  const tr = view.state.tr.setSelection(nextSel);
+	                  view.dispatch(tr);
+	                  return true;
+	                }
+	              }
+	            }
+	          }
+	        } catch {
+	          // ignore
+	        }
+
+	        // В view-mode Enter/F2 должны ВСЕГДА включать режим редактирования текущей секции,
+	        // даже когда курсор стоит внутри listItem (иначе list keymap "съедает" Enter).
+	        try {
+	          if (!outlineEditModeKey) return false;
+	          const st = outlineEditModeKey.getState(view.state) || {};
           const editingSectionId = st.editingSectionId || null;
 
           if (!editingSectionId) {
@@ -4931,6 +5868,22 @@ async function mountOutlineEditor() {
 
   contentRoot.focus?.({ preventScroll: true });
 
+  // Tags: compute initial index and wire toolbar interactions.
+  outlineSetActiveTagKey = (activeKey) => {
+    try {
+      if (!outlineEditorInstance) return;
+      const tr = outlineEditorInstance.state.tr.setMeta(outlineTagHighlighterKey, { activeKey: activeKey || null });
+      outlineEditorInstance.view.dispatch(tr);
+    } catch {
+      // ignore
+    }
+  };
+  try {
+    refreshOutlineTagsFromEditor();
+  } catch {
+    // ignore
+  }
+
   // Миграция: markdown-таблицы текстом → настоящие table nodes.
   try {
     const convertStart = perfEnabled() ? performance.now() : 0;
@@ -5082,6 +6035,11 @@ async function saveOutlineEditor(options = {}) {
       docDirty = false;
       outlineLastSavedAt = new Date();
       setOutlineStatus('Оффлайн: в очереди на синхронизацию');
+      try {
+        refreshOutlineTagsFromEditor();
+      } catch {
+        // ignore
+      }
       return;
     }
     const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
@@ -5108,6 +6066,11 @@ async function saveOutlineEditor(options = {}) {
 	    clearQueuedDocJson(targetArticleId);
 	    outlineLastSavedAt = new Date();
 	    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
+      try {
+        refreshOutlineTagsFromEditor();
+      } catch {
+        // ignore
+      }
 	    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
 	    try {
 	      if (outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
@@ -5444,6 +6407,7 @@ export async function openOutlineEditor() {
   state.isOutlineEditing = true;
   if (refs.articleToolbar) refs.articleToolbar.classList.add('hidden');
   if (refs.outlineToolbar) refs.outlineToolbar.classList.remove('hidden');
+  if (refs.outlineTagsBar) refs.outlineTagsBar.classList.remove('hidden');
   refs.outlineEditor.classList.remove('hidden');
   refs.blocksContainer.classList.add('hidden');
   renderOutlineShell({ loading: true });
@@ -5576,7 +6540,24 @@ export function closeOutlineEditor() {
   unmountOutlineToolbar();
   outlineEditModeKey = null;
   outlineArticleId = null;
-  if (dropGuardCleanup) dropGuardCleanup();
+  outlineActiveTagKey = null;
+  outlineSetActiveTagKey = null;
+  outlineTagsIndex = {
+    counts: new Map(),
+    labelByKey: new Map(),
+    sectionIdsByKey: new Map(),
+    sectionPosById: new Map(),
+  };
+	  try {
+	    if (refs.outlineTagsBar) {
+	      refs.outlineTagsBar.innerHTML = '';
+	      refs.outlineTagsBar.classList.add('hidden');
+	    }
+	  } catch {
+	    // ignore
+	  }
+	  setOutlineSelectionMode(false);
+	  if (dropGuardCleanup) dropGuardCleanup();
   if (refs.outlineToolbar) refs.outlineToolbar.classList.add('hidden');
   if (refs.articleToolbar) refs.articleToolbar.classList.remove('hidden');
   if (autosaveTimer) {

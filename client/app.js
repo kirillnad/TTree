@@ -1,10 +1,6 @@
 import { initRouting, route } from './routing.js';
 import { attachEvents } from './events.js?v=22';
-import { loadLastChangeFromChangelog } from './changelog.js';
 import { initAuth, bootstrapAuth } from './auth.js?v=2';
-import { initUsersPanel } from './users.js';
-import { initGraphView } from './graph.js';
-import { initTables } from './tables.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
 import { refs } from './refs.js';
 
@@ -41,6 +37,12 @@ function registerUploadsServiceWorker() {
 
 function logClient(kind, data) {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+  // Disable noisy client logging by default; enable only for debugging.
+  try {
+    if (window?.localStorage?.getItem?.('ttree_client_log_v1') !== '1') return;
+  } catch {
+    return;
+  }
   try {
     fetch('/api/client/log', {
       method: 'POST',
@@ -56,6 +58,65 @@ function logClient(kind, data) {
   }
 }
 
+function runOnIdle(fn, { timeout = 3000, fallbackDelay = 1200 } = {}) {
+  try {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => fn(), { timeout });
+      return;
+    }
+  } catch {
+    // ignore
+  }
+  setTimeout(() => fn(), fallbackDelay);
+}
+
+function attachLazyGraphInit() {
+  if (!refs.graphToggleBtn) return;
+  let inFlight = null;
+
+  const onClickCapture = async () => {
+    if (inFlight) return;
+    inFlight = import('./graph.js')
+      .then((m) => {
+        refs.graphToggleBtn?.removeEventListener('click', onClickCapture, true);
+        m.initGraphView?.();
+        m.openGraphView?.();
+      })
+      .catch(() => {
+        // If module isn't cached and we're offline, allow retry on next click.
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+  };
+
+  refs.graphToggleBtn.addEventListener('click', onClickCapture, true);
+}
+
+function attachLazyUsersInit() {
+  if (!refs.openUsersViewBtn) return;
+  let inFlight = null;
+
+  const onClickCapture = async () => {
+    if (inFlight) return;
+    inFlight = import('./users.js')
+      .then((m) => {
+        refs.openUsersViewBtn?.removeEventListener('click', onClickCapture, true);
+        m.initUsersPanel?.();
+        // re-trigger click so the real handler runs
+        setTimeout(() => refs.openUsersViewBtn?.click(), 0);
+      })
+      .catch(() => {
+        // allow retry on next click
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+  };
+
+  refs.openUsersViewBtn.addEventListener('click', onClickCapture, true);
+}
+
 /**
  * Инициализация приложения
  */
@@ -68,10 +129,21 @@ function startApp() {
   initRouting();
   attachEvents();
   initSidebarStateFromStorage();
-  initUsersPanel();
-  initGraphView();
-  initTables();
-  loadLastChangeFromChangelog();
+  attachLazyGraphInit();
+  attachLazyUsersInit();
+  runOnIdle(() => {
+    import('./tables.js')
+      .then((m) => m.initTables?.())
+      .catch(() => {});
+  });
+  runOnIdle(
+    () => {
+      import('./changelog.js')
+        .then((m) => m.loadLastChangeFromChangelog?.())
+        .catch(() => {});
+    },
+    { timeout: 6000, fallbackDelay: 2500 },
+  );
   route(window.location.pathname);
 }
 
@@ -85,6 +157,7 @@ function startPublicApp() {
   registerUploadsServiceWorker();
   initRouting();
   attachEvents();
+  attachLazyGraphInit();
   route(window.location.pathname);
 }
 

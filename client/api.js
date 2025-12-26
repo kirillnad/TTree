@@ -146,11 +146,13 @@ export async function logout() {
   });
 }
 
+let fetchArticlesIndexInFlight = null;
 export function fetchArticlesIndex() {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     return getCachedArticlesIndex().catch(() => []);
   }
-  return apiRequest('/api/articles')
+  if (fetchArticlesIndexInFlight) return fetchArticlesIndexInFlight;
+  fetchArticlesIndexInFlight = apiRequest('/api/articles')
     .then(async (index) => {
       // Do not block other IndexedDB transactions (e.g., current article open) on a big index update.
       // Schedule in idle so article caching/read can proceed first.
@@ -169,7 +171,11 @@ export function fetchArticlesIndex() {
       const cached = await getCachedArticlesIndex().catch(() => null);
       if (cached && cached.length) return cached;
       throw err;
+    })
+    .finally(() => {
+      fetchArticlesIndexInFlight = null;
     });
+  return fetchArticlesIndexInFlight;
 }
 
 export function fetchDeletedArticlesIndex() {
