@@ -1,5 +1,5 @@
 const CACHE_NAME = 'memus-uploads-v1';
-const APP_CACHE = 'memus-app-shell-v1';
+const APP_CACHE = 'memus-app-shell-v2';
 
 const APP_SHELL_URLS = [
   '/',
@@ -50,7 +50,6 @@ function isNavigationRequest(request) {
 function isImmutableAssetUrl(url) {
   try {
     if (!url || url.origin !== self.location.origin) return false;
-    if (url.searchParams && url.searchParams.has('v')) return true;
     const p = url.pathname || '';
     return (
       p.endsWith('.ttf') ||
@@ -66,6 +65,16 @@ function isImmutableAssetUrl(url) {
       p.endsWith('.wasm') ||
       p.endsWith('.data')
     );
+  } catch {
+    return false;
+  }
+}
+
+function isJsOrCssUrl(url) {
+  try {
+    if (!url || url.origin !== self.location.origin) return false;
+    const p = url.pathname || '';
+    return p.endsWith('.js') || p.endsWith('.css');
   } catch {
     return false;
   }
@@ -202,10 +211,23 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(APP_CACHE);
         const cached = await cache.match(req, { ignoreSearch: false });
         if (cached) {
-          // Versioned URLs (and most binaries) are immutable: no need to revalidate on every load.
-          // For others, keep stale-while-revalidate but throttle to reduce duplicate traffic on F5.
+          // JS/CSS should update immediately on reload (otherwise SW can "pin" old code).
+          // Use network-first here to avoid duplicates and still fallback to cache offline.
           try {
             const url = new URL(req.url);
+            if (isJsOrCssUrl(url)) {
+              try {
+                const resp = await fetch(req);
+                if (resp && resp.ok) {
+                  cache.put(req, resp.clone()).catch(() => {});
+                  return resp;
+                }
+              } catch {
+                // ignore (fallback to cached)
+              }
+              return cached;
+            }
+            // For other assets: stale-while-revalidate but throttle.
             if (!isImmutableAssetUrl(url) && shouldRevalidateNow(req.url)) {
               event.waitUntil(
                 fetch(req)

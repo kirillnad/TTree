@@ -2061,14 +2061,16 @@ button.icon-button.small {
   margin: 2px 0;
   background: var(--outline-card-bg);
   box-shadow: var(--outline-card-shadow);
+  transition: background-color 0.15s ease;
 }
 .outline-section[data-editing="true"] {
-  background: #eef2f7;
+  /* В режиме редактирования фон секции (и заголовка) должен быть белым. */
+  background: #ffffff;
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
 }
 .outline-section[data-editing="true"] > .outline-body {
-  background: rgba(255, 255, 255, 0.92);
+  background: transparent;
 }
 .outline-section[data-collapsed="true"] > .outline-body,
 .outline-section[data-collapsed="true"] > .outline-children {
@@ -2330,20 +2332,15 @@ button.icon-button.small {
 .outline-section[data-active="true"] > .outline-heading::before {
   opacity: 1;
 }
-.outline-section[data-active="true"] > .outline-heading ~ .outline-body,
-.outline-section[data-active="true"] > .outline-heading ~ .outline-children {
-  border-left: 2px solid rgba(37, 99, 235, 0.22);
-}
-.outline-section[data-active="true"]:not([data-editing="true"]) > .outline-body {
+
+.outline-section[data-active="true"]:not([data-editing="true"]) {
+  /* В текущем блоке подсвечиваем ВСЮ секцию, а не только тело. */
   background: #e2e8f0;
-  border: 1px solid #94a3b8 !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-}
-.outline-section[data-editing="true"] > .outline-body {
-  background: rgba(255, 255, 255, 0.92);
+  border-color: #94a3b8;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .outline-section > .outline-body {
-  transition: background-color 0.15s ease;
+  background: transparent;
 }
 .outline-section[data-active="false"] > .outline-heading ~ .outline-body,
 .outline-section[data-active="false"] > .outline-heading ~ .outline-children {

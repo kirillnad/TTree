@@ -37,7 +37,7 @@ function setAuthMode(mode) {
     }
      if (refs.authStorageInfo) {
       refs.authStorageInfo.textContent =
-        'Текст и картинки хранятся на серверах Memus.pro, иные вложения сохраняются напрямую на ваш Яндекс.Диск или Google Drive и не проходят через сервер. В Memus сохраняется только ссылка на загруженный файл, которая доступна только вам.';
+        'Уведомление о безопасности: Тексты и картинки хранятся на серверах Memus.pro, иные загруженные файлы сохраняются напрямую на ваш Яндекс.Диск. Вы можете зашифровать приватные данные.';
       refs.authStorageInfo.classList.remove('hidden');
     }
     if (refs.authGoogleLoginBtn) {

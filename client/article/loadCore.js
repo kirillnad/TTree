@@ -58,7 +58,7 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle) {
     try {
-      const outline = await import('../outline/editor.js?v=81');
+      const outline = await import('../outline/editor.js?v=94');
       if (outline?.flushOutlineAutosave) {
         // Don't block navigation on slow saves: store draft locally and let outbox sync later.
         await outline.flushOutlineAutosave({ mode: 'queue' });
@@ -122,7 +122,7 @@ export async function loadArticle(id, options = {}) {
   // Outline is the only editor mode now: auto-open after load.
   if (!state.isPublicView && !state.isRagView && !article.encrypted) {
     try {
-      const outline = await import('../outline/editor.js?v=81');
+      const outline = await import('../outline/editor.js?v=94');
       if (outline?.openOutlineEditor) {
         debugLog('outline.open.start', { id });
         // Don't block article navigation on TipTap mount: on mobile this can take seconds.

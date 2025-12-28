@@ -97,7 +97,7 @@ let mediaStatusTimerId = null;
 let mediaStatusInFlight = false;
 
 function loadOutlineEditorModule() {
-  return import('./outline/editor.js?v=81');
+  return import('./outline/editor.js?v=94');
 }
 
 function loadExporterModule() {
@@ -1175,7 +1175,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-            const outline = await import('./outline/editor.js?v=81');
+		            const outline = await import('./outline/editor.js?v=94');
           if (outline?.getOutlineActiveSectionId) {
             blockId = outline.getOutlineActiveSectionId() || blockId;
           }
@@ -1218,7 +1218,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=81');
+          const outline = await import('./outline/editor.js?v=94');
           const frags = {
             heading: choice.entry.afterHeadingJson || null,
             body: choice.entry.afterBodyJson || null,
@@ -1314,7 +1314,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=81');
+          const outline = await import('./outline/editor.js?v=94');
           const frags = {
             heading: entry.afterHeadingJson || null,
             body: entry.afterBodyJson || null,

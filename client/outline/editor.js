@@ -552,6 +552,222 @@ function buildTableNodeFromMarkdown(schema, table) {
   return tableType.create({}, allRows);
 }
 
+function tryMergeWithPreviousTableOnBackspace(pmState, dispatch) {
+  try {
+    const sel = pmState?.selection;
+    const $from = sel?.$from;
+    if (!sel?.empty || !$from) {
+      outlineDebug('table.merge.skip', { reason: 'no-cursor' });
+      return false;
+    }
+
+    // Must be at the start of a paragraph inside the first cell of a table.
+    if ($from.parent?.type?.name !== 'paragraph') return false;
+    if ($from.parentOffset !== 0) {
+      outlineDebug('table.merge.skip', { reason: 'not-at-paragraph-start' });
+      return false;
+    }
+
+    let tableDepth = null;
+    let rowDepth = null;
+    let cellDepth = null;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      const name = $from.node(d)?.type?.name;
+      if (!cellDepth && (name === 'tableCell' || name === 'tableHeader')) cellDepth = d;
+      else if (!rowDepth && name === 'tableRow') rowDepth = d;
+      else if (!tableDepth && name === 'table') tableDepth = d;
+      if (tableDepth && rowDepth && cellDepth) break;
+    }
+    if (tableDepth == null || rowDepth == null || cellDepth == null) {
+      outlineDebug('table.merge.skip', { reason: 'not-in-table' });
+      return false;
+    }
+    const isDirectParagraphInCell = $from.depth === cellDepth + 1;
+    const rowIndex = $from.index(tableDepth);
+    const colIndex = $from.index(rowDepth);
+    const childIndexInCell = $from.index(cellDepth);
+    outlineDebug('table.merge.check', {
+      parent: $from.parent?.type?.name || null,
+      parentOffset: $from.parentOffset,
+      tableDepth,
+      rowDepth,
+      cellDepth,
+      isDirectParagraphInCell,
+      rowIndex,
+      colIndex,
+      childIndexInCell,
+    });
+    if (!isDirectParagraphInCell) {
+      outlineDebug('table.merge.skip', { reason: 'paragraph-not-direct-child-of-cell' });
+      return false;
+    }
+    if (rowIndex !== 0 || colIndex !== 0 || childIndexInCell !== 0) {
+      outlineDebug('table.merge.skip', {
+        reason: 'not-in-first-cell',
+        rowIndex,
+        colIndex,
+        childIndexInCell,
+      });
+      return false;
+    }
+
+    const tablePos = $from.before(tableDepth);
+    const tableNode = pmState.doc.nodeAt(tablePos);
+    if (!tableNode || tableNode.type?.name !== 'table') {
+      outlineDebug('table.merge.skip', { reason: 'no-current-table', tablePos });
+      return false;
+    }
+
+    const $table = pmState.doc.resolve(tablePos);
+    const idx = $table.index();
+    const parent = $table.parent;
+    if (!parent || idx <= 0) {
+      outlineDebug('table.merge.skip', { reason: 'no-prev-sibling', idx, parent: parent?.type?.name || null });
+      return false;
+    }
+
+    // Find previous meaningful sibling: allow skipping empty paragraphs between tables.
+    let prevNode = null;
+    let prevIdx = idx - 1;
+    while (prevIdx >= 0) {
+      const cand = parent.child(prevIdx);
+      if (cand?.type?.name === 'paragraph' && !String(cand.textContent || '').trim()) {
+        prevIdx -= 1;
+        continue;
+      }
+      prevNode = cand;
+      break;
+    }
+    if (!prevNode || prevNode.type?.name !== 'table') {
+      outlineDebug('table.merge.skip', { reason: 'no-prev-table' });
+      return false;
+    }
+
+    // Only merge tables with identical row schemas (same number of cells in each row).
+    const prevFirstRow = prevNode.childCount ? prevNode.child(0) : null;
+    const curFirstRow = tableNode.childCount ? tableNode.child(0) : null;
+    if (!prevFirstRow || !curFirstRow) {
+      outlineDebug('table.merge.skip', { reason: 'missing-rows' });
+      return false;
+    }
+    if (prevFirstRow.childCount !== curFirstRow.childCount) {
+      outlineDebug('table.merge.skip', {
+        reason: 'different-columns',
+        prevCols: prevFirstRow.childCount,
+        curCols: curFirstRow.childCount,
+      });
+      return false;
+    }
+    const cols = prevFirstRow.childCount;
+    const rowHasCols = (row, expected) => {
+      try {
+        return row?.type?.name === 'tableRow' && row.childCount === expected;
+      } catch {
+        return false;
+      }
+    };
+    for (let r = 0; r < prevNode.childCount; r += 1) {
+      const row = prevNode.child(r);
+      if (!rowHasCols(row, cols)) {
+        outlineDebug('table.merge.skip', { reason: 'prev-row-mismatch', rowIndex: r, colsExpected: cols, colsGot: row?.childCount ?? null });
+        return false;
+      }
+    }
+    for (let r = 0; r < tableNode.childCount; r += 1) {
+      const row = tableNode.child(r);
+      if (!rowHasCols(row, cols)) {
+        outlineDebug('table.merge.skip', { reason: 'cur-row-mismatch', rowIndex: r, colsExpected: cols, colsGot: row?.childCount ?? null });
+        return false;
+      }
+    }
+
+    // When we skipped nodes, compute prevStart by subtracting the intervening nodeSizes too.
+    let prevStart = tablePos;
+    for (let i = idx - 1; i >= prevIdx; i -= 1) {
+      prevStart -= parent.child(i).nodeSize;
+    }
+    const prevRowCount = prevNode.childCount;
+    const schema = pmState.doc.type.schema;
+
+    // Delete empty paragraphs between tables (if any), then delete current table.
+    const prevEnd = prevStart + prevNode.nodeSize;
+    let tr = pmState.tr;
+    if (tablePos > prevEnd) tr = tr.delete(prevEnd, tablePos);
+    const tablePos2 = prevEnd; // after deletion, current table shifts to directly after prev table
+    tr = tr.delete(tablePos2, tablePos2 + tableNode.nodeSize);
+    const prevAfter = tr.doc.nodeAt(prevStart);
+    if (!prevAfter || prevAfter.type?.name !== 'table') {
+      outlineDebug('table.merge.skip', { reason: 'prev-after-missing', prevStart, prevAfterType: prevAfter?.type?.name || null });
+      return false;
+    }
+
+    outlineDebug('table.merge.plan', {
+      idx,
+      prevIdx,
+      prevStart,
+      prevEnd,
+      tablePos,
+      tablePos2,
+      cols,
+      prevRowCount,
+      curRowCount: tableNode.childCount,
+    });
+
+    try {
+      const mergedRows = prevAfter.content.append(tableNode.content);
+      const mergedTable = schema.nodes.table.create(prevAfter.attrs, mergedRows, prevAfter.marks);
+      tr = tr.replaceWith(prevStart, prevStart + prevAfter.nodeSize, mergedTable);
+    } catch (err) {
+      outlineDebug('table.merge.error', { message: String(err?.message || err || ''), stack: String(err?.stack || '') });
+      return false;
+    }
+
+    // Keep cursor in the same cell (first cell of the second table), now shifted by prevRowCount.
+    const mergedAfter = tr.doc.nodeAt(prevStart);
+    outlineDebug('table.merge.afterReplace', {
+      mergedType: mergedAfter?.type?.name || null,
+      mergedRows: mergedAfter?.type?.name === 'table' ? mergedAfter.childCount : null,
+    });
+    try {
+      const TextSelection = tiptap?.pmStateMod?.TextSelection || tiptap?.pm?.state?.TextSelection || null;
+      if (mergedAfter && mergedAfter.type?.name === 'table') {
+        const rowIndex = Math.min(prevRowCount, Math.max(0, mergedAfter.childCount - 1));
+        const row = mergedAfter.child(rowIndex);
+        if (row?.childCount) {
+          const cellStart = (() => {
+            let pos = prevStart + 1; // start of table content
+            for (let r = 0; r < rowIndex; r += 1) pos += mergedAfter.child(r).nodeSize;
+            pos += 1; // start of row content
+            // first cell in row => no extra offset
+            return pos;
+          })();
+          const posInCell = Math.min(tr.doc.content.size, cellStart + 2);
+          if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(posInCell), 1));
+        }
+      }
+    } catch (err) {
+      outlineDebug('table.merge.selection.error', { message: String(err?.message || err || ''), stack: String(err?.stack || '') });
+      // If selection failed, still try to apply merge.
+    }
+
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    try {
+      dispatch(tr.scrollIntoView());
+    } catch (err) {
+      outlineDebug('table.merge.dispatch.error', { message: String(err?.message || err || ''), stack: String(err?.stack || '') });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    try {
+      outlineDebug('table.merge.exception', { message: String(err?.message || err || ''), stack: String(err?.stack || '') });
+    } catch {
+      // ignore
+    }
+    return false;
+  }
+}
+
 function convertMarkdownTablesInSection(pmState, sectionId) {
   try {
     if (!pmState?.doc || !sectionId) return null;
@@ -3557,6 +3773,234 @@ async function mountOutlineEditor() {
     },
   });
 
+  // Shared helpers used outside keymap closures (e.g. view-mode Backspace merge).
+  const outlineIsEffectivelyEmptyNodeForView = (node) => {
+    if (!node) return true;
+    const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (text) return false;
+    if (node.childCount) {
+      for (let i = 0; i < node.childCount; i += 1) {
+        const child = node.child(i);
+        if (child.type?.name !== 'paragraph') return false;
+        const childText = (child.textContent || '').replace(/\u00a0/g, ' ').trim();
+        if (childText) return false;
+      }
+    }
+    return true;
+  };
+
+  const outlineIsSectionEmptyForView = (sectionNode) => {
+    if (!sectionNode) return true;
+    try {
+      const heading = sectionNode.child(0);
+      const body = sectionNode.child(1);
+      const children = sectionNode.child(2);
+      return (
+        outlineIsEffectivelyEmptyNodeForView(heading) &&
+        outlineIsEffectivelyEmptyNodeForView(body) &&
+        (!children || children.childCount === 0)
+      );
+    } catch {
+      return true;
+    }
+  };
+
+  const outlineDeleteCurrentSectionForView = (pmState, dispatch, sectionPos) => {
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const $pos = pmState.doc.resolve(sectionPos);
+    const idx = $pos.index();
+    const parent = $pos.parent;
+    if (!parent) return false;
+    if (parent.childCount <= 1) {
+      // Нельзя удалить последнюю секцию — просто очищаем.
+      const schema = pmState.doc.type.schema;
+      const newSection = schema.nodes.outlineSection.create(
+        { ...sectionNode.attrs, collapsed: false },
+        [
+          schema.nodes.outlineHeading.create({}, []),
+          schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+          schema.nodes.outlineChildren.create({}, []),
+        ],
+      );
+      let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      const heading = newSection.child(0);
+      const bodyStart = sectionPos + 1 + heading.nodeSize;
+      dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
+      return true;
+    }
+
+    const hasPrev = idx > 0;
+    const prevNode = hasPrev ? parent.child(idx - 1) : null;
+    const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
+    const nextStart = sectionPos + sectionNode.nodeSize;
+
+    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+    if (hasPrev && typeof prevStart === 'number') {
+      const prevSection = tr.doc.nodeAt(prevStart);
+      if (prevSection) {
+        const prevHeading = prevSection.child(0);
+        const prevBody = prevSection.child(1);
+        const bodyStart = prevStart + 1 + prevHeading.nodeSize;
+        if (!prevBody.childCount) {
+          const schema = tr.doc.type.schema;
+          tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+        }
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+      }
+    } else {
+      const nextPos = sectionPos < tr.doc.content.size ? sectionPos : nextStart;
+      const nextSection = tr.doc.nodeAt(nextPos);
+      if (nextSection) {
+        const nextHeading = nextSection.child(0);
+        const nextBody = nextSection.child(1);
+        const bodyStart = nextPos + 1 + nextHeading.nodeSize;
+        if (!nextBody.childCount) {
+          const schema = tr.doc.type.schema;
+          tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+        }
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+      }
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+
+  const outlineMergeSectionIntoPreviousForView = (pmState, dispatch, sectionPos) => {
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const $pos = pmState.doc.resolve(sectionPos);
+    const idx = $pos.index();
+    const parent = $pos.parent;
+    if (!parent || idx <= 0) return false;
+    const prevNode = parent.child(idx - 1);
+    const prevStart = sectionPos - prevNode.nodeSize;
+    const currentHeading = sectionNode.child(0);
+    const currentBody = sectionNode.child(1);
+    const currentChildren = sectionNode.child(2);
+
+    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+    const prevSection = tr.doc.nodeAt(prevStart);
+    if (!prevSection) {
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    }
+    const schema = tr.doc.type.schema;
+    const prevHeading = prevSection.child(0);
+    const prevBody = prevSection.child(1);
+    const prevChildren = prevSection.child(2);
+
+    const extraBlocks = [];
+    const headingText = (currentHeading?.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (headingText) {
+      extraBlocks.push(schema.nodes.paragraph.create({}, [schema.text(headingText)]));
+    }
+    currentBody?.content?.forEach?.((node) => {
+      extraBlocks.push(node);
+    });
+    const extraFragment = extraBlocks.length ? schema.nodes.outlineBody.create({}, extraBlocks).content : null;
+    const mergedBodyContent = extraFragment ? prevBody.content.append(extraFragment) : prevBody.content;
+    const mergedChildrenContent = prevChildren.content.append(currentChildren.content);
+    const newPrevSection = schema.nodes.outlineSection.create(
+      prevSection.attrs,
+      [
+        prevHeading,
+        schema.nodes.outlineBody.create({}, mergedBodyContent),
+        schema.nodes.outlineChildren.create({}, mergedChildrenContent),
+      ],
+    );
+    tr = tr.replaceWith(prevStart, prevStart + prevSection.nodeSize, newPrevSection);
+    const newPrev = tr.doc.nodeAt(prevStart);
+    if (newPrev) {
+      const heading = newPrev.child(0);
+      const body = newPrev.child(1);
+      const bodyStart = prevStart + 1 + heading.nodeSize;
+      const bodyEnd = bodyStart + body.nodeSize - 1;
+      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+
+  const outlineMergeSectionIntoParentBodyForView = (pmState, dispatch, sectionPos) => {
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const $from = pmState.selection.$from;
+
+    let currentDepth = null;
+    let parentDepth = null;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'outlineSection') {
+        if (currentDepth === null) currentDepth = d;
+        else {
+          parentDepth = d;
+          break;
+        }
+      }
+    }
+    if (currentDepth === null || parentDepth === null) return false;
+    const parentPos = $from.before(parentDepth);
+    const parentNode = pmState.doc.nodeAt(parentPos);
+    if (!parentNode) return false;
+
+    const schema = pmState.doc.type.schema;
+    const childHeading = sectionNode.child(0);
+    const childBody = sectionNode.child(1);
+    const childChildren = sectionNode.child(2);
+
+    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+    const parentAfter = tr.doc.nodeAt(parentPos);
+    if (!parentAfter) {
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    }
+
+    const parentHeading = parentAfter.child(0);
+    const parentBody = parentAfter.child(1);
+    const parentChildren = parentAfter.child(2);
+
+    const extraBlocks = [];
+    const headingText = (childHeading?.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (headingText) {
+      extraBlocks.push(schema.nodes.paragraph.create({}, [schema.text(headingText)]));
+    }
+    childBody?.content?.forEach?.((node) => {
+      extraBlocks.push(node);
+    });
+
+    const extraFragment = extraBlocks.length ? schema.nodes.outlineBody.create({}, extraBlocks).content : null;
+    const mergedBodyContent = extraFragment ? parentBody.content.append(extraFragment) : parentBody.content;
+    const mergedChildrenContent = childChildren.content.append(parentChildren.content);
+
+    const newParentSection = schema.nodes.outlineSection.create(
+      { ...parentAfter.attrs, collapsed: false },
+      [
+        parentHeading,
+        schema.nodes.outlineBody.create({}, mergedBodyContent),
+        schema.nodes.outlineChildren.create({}, mergedChildrenContent),
+      ],
+    );
+
+    tr = tr.replaceWith(parentPos, parentPos + parentAfter.nodeSize, newParentSection);
+
+    const parentFinal = tr.doc.nodeAt(parentPos);
+    if (parentFinal) {
+      const heading = parentFinal.child(0);
+      const body = parentFinal.child(1);
+      const bodyStart = parentPos + 1 + heading.nodeSize;
+      const bodyEnd = bodyStart + body.nodeSize - 1;
+      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+
   const OutlineCommands = Extension.create({
     name: 'outlineCommands',
     addKeyboardShortcuts() {
@@ -5102,8 +5546,17 @@ async function mountOutlineEditor() {
           const { selection } = pmState;
           if (!selection?.empty) return false;
           const { $from } = selection;
-          if ($from.parent?.type?.name !== 'outlineHeading') return false;
-          if ($from.parentOffset !== 0) return false;
+          // On some platforms the resolved parent may be a text node; detect heading via depth.
+          let headingDepth = null;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            if ($from.node(d)?.type?.name === 'outlineHeading') {
+              headingDepth = d;
+              break;
+            }
+          }
+          if (headingDepth === null) return false;
+          const atHeadingStart = $from.pos === $from.start(headingDepth);
+          if (!atHeadingStart) return false;
 
           const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
           if (typeof sectionPos !== 'number') return false;
@@ -5112,8 +5565,14 @@ async function mountOutlineEditor() {
           if (idx > 0) return true; // есть previous sibling
 
           // Нет previous sibling — merge в body родителя (если есть родитель-секция)
-          for (let d = $from.depth - 1; d > 0; d -= 1) {
-            if ($from.node(d)?.type?.name === 'outlineSection') return true;
+          let seenCurrentSection = false;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            if ($from.node(d)?.type?.name !== 'outlineSection') continue;
+            if (!seenCurrentSection) {
+              seenCurrentSection = true;
+              continue;
+            }
+            return true; // found parent section
           }
           return false;
         } catch {
@@ -5195,7 +5654,30 @@ async function mountOutlineEditor() {
               const pmState = view.state;
               const st = key.getState(pmState) || {};
               const editingSectionId = st.editingSectionId || null;
+              outlineDebug('keydown', {
+                key: event?.key || null,
+                repeat: Boolean(event?.repeat),
+                editingSectionId: editingSectionId || null,
+                selection: {
+                  empty: Boolean(pmState?.selection?.empty),
+                  parent: pmState?.selection?.$from?.parent?.type?.name || null,
+                  parentOffset: pmState?.selection?.$from?.parentOffset ?? null,
+                },
+              });
               const activeSectionId = getActiveSectionId(pmState);
+
+              // Backspace at the start of the first table cell: if there is a table right before,
+              // merge the tables and keep the cursor in the same cell.
+              // Only in edit-mode.
+              if (editingSectionId && event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                const merged = tryMergeWithPreviousTableOnBackspace(pmState, view.dispatch);
+                outlineDebug('editorProps.backspace.tableMerge', { merged, editingSectionId: editingSectionId || null });
+                if (merged) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return true;
+                }
+              }
 
               // Enter в заголовке секции: создавать новую секцию сверху/снизу.
               // В начале заголовка — сверху, в конце — снизу. Если заголовок пустой — всегда снизу.
@@ -5279,6 +5761,115 @@ async function mountOutlineEditor() {
                 const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
                 const isDelete = event.key === 'Backspace' || event.key === 'Delete';
                 if (isDelete) {
+                  // Special case (view-mode): allow merging sections with Backspace at the start of heading,
+                  // without entering edit mode first. After merge, auto-enter edit mode on the target section.
+                  if (event.key === 'Backspace' && isMergeCandidateBackspace(pmState)) {
+                    try {
+                      const { selection } = pmState;
+                      const { $from } = selection;
+                      const sectionPos = findSectionPos(pmState.doc, $from);
+                      if (typeof sectionPos !== 'number') return false;
+                      const sectionNode = pmState.doc.nodeAt(sectionPos);
+                      if (!sectionNode) return false;
+                      const currentSectionId = String(sectionNode.attrs?.id || '');
+
+                      // Determine merge target id in advance (prev sibling, or parent section if no prev).
+                      let targetSectionId = null;
+                      try {
+                        const $pos = pmState.doc.resolve(sectionPos);
+                        const idx = $pos.index();
+                        const parent = $pos.parent;
+                        if (parent && idx > 0) {
+                          const prevNode = parent.child(idx - 1);
+                          const prevStart = sectionPos - prevNode.nodeSize;
+                          const prevSection = pmState.doc.nodeAt(prevStart);
+                          targetSectionId = String(prevSection?.attrs?.id || '') || null;
+                        } else {
+                          for (let d = $from.depth - 1; d > 0; d -= 1) {
+                            const n = $from.node(d);
+                            if (n?.type?.name === 'outlineSection') {
+                              const pid = String(n.attrs?.id || '');
+                              // Skip the current section itself; we need the parent section (where we merge into).
+                              if (pid && pid !== currentSectionId) {
+                                targetSectionId = pid;
+                                break;
+                              }
+                            }
+                          }
+                        }
+                      } catch {
+                        targetSectionId = null;
+                      }
+
+                      // Execute the same merge/delete logic as the Backspace shortcut, but in view-mode.
+                      let ok = false;
+                      if (outlineIsSectionEmptyForView(sectionNode)) {
+                        ok = outlineDeleteCurrentSectionForView(pmState, view.dispatch, sectionPos);
+                      } else {
+                        try {
+                          const $pos = pmState.doc.resolve(sectionPos);
+                          const idx = $pos.index();
+                          if (idx <= 0) {
+                            ok = outlineMergeSectionIntoParentBodyForView(pmState, view.dispatch, sectionPos);
+                          } else {
+                            ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                          }
+                        } catch {
+                          ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                        }
+                      }
+
+                      if (ok && targetSectionId) {
+                        window.setTimeout(() => {
+                          try {
+                            const stNow = key.getState(view.state) || {};
+                            if (stNow.editingSectionId) return;
+                            const currentPos = findSectionPosById(view.state.doc, targetSectionId);
+                            const currentNode = typeof currentPos === 'number' ? view.state.doc.nodeAt(currentPos) : null;
+                            if (!currentNode) return;
+
+                            // If target was collapsed, expand it so body is visible.
+                            let tr = view.state.tr;
+                            if (Boolean(currentNode?.attrs?.collapsed)) {
+                              tr = tr.setNodeMarkup(currentPos, undefined, { ...currentNode.attrs, collapsed: false });
+                              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                            }
+
+                            tr = tr.setMeta(key, { type: 'enter', sectionId: targetSectionId });
+
+                            // Put caret into the start of target body.
+	                            try {
+	                              const nodeAfter = tr.doc.nodeAt(currentPos);
+	                              if (nodeAfter && nodeAfter.type?.name === 'outlineSection') {
+	                                const heading = nodeAfter.child(0);
+	                                const body = nodeAfter.child(1);
+	                                const bodyStart = currentPos + 1 + heading.nodeSize;
+	                                const bodyEnd = bodyStart + body.nodeSize - 1;
+	                                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+	                              }
+	                            } catch {
+	                              // ignore
+	                            }
+
+                            view.dispatch(tr.scrollIntoView());
+                            try {
+                              view.focus();
+                            } catch {
+                              // ignore
+                            }
+                          } catch {
+                            // ignore
+                          }
+                        }, 0);
+                      }
+
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return true;
+                    } catch {
+                      // fall through to default view-mode delete handling
+                    }
+                  }
                   event.preventDefault();
                   event.stopPropagation();
                   return true;
@@ -5517,7 +6108,17 @@ async function mountOutlineEditor() {
 	      attributes: {
 	        class: 'outline-prosemirror',
 	      },
-	      handleKeyDown(view, event) {
+      handleKeyDown(view, event) {
+          outlineDebug('editorProps.keydown', {
+            key: event?.key || null,
+            repeat: Boolean(event?.repeat),
+            selection: {
+              empty: Boolean(view.state?.selection?.empty),
+              parent: view.state?.selection?.$from?.parent?.type?.name || null,
+              parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
+              pos: view.state?.selection?.$from?.pos ?? null,
+            },
+          });
 	        // Ctrl/⌘+A inside outlineBody должен выделять только тело текущей секции,
 	        // а не весь документ (иначе легко случайно удалить структуру).
 	        try {
@@ -5561,7 +6162,156 @@ async function mountOutlineEditor() {
           if (!editingSectionId) {
             const isDelete = event.key === 'Backspace' || event.key === 'Delete';
             const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
-            if (isDelete || isTextInput) {
+            if (isDelete) {
+              // View-mode: allow merge with Backspace at the very start of a section heading.
+              if (event.key === 'Backspace') {
+                try {
+                  const pmState = view.state;
+                  const sel = pmState.selection;
+                  const $from = sel?.$from || null;
+                  let headingDepth = null;
+                  try {
+                    for (let d = $from?.depth || 0; d > 0; d -= 1) {
+                      if ($from.node(d)?.type?.name === 'outlineHeading') {
+                        headingDepth = d;
+                        break;
+                      }
+                    }
+                  } catch {
+                    headingDepth = null;
+                  }
+                  const headingStart =
+                    headingDepth !== null && $from ? $from.start(headingDepth) : null;
+                  const atHeadingStart =
+                    Boolean(sel && sel.empty) &&
+                    Boolean($from) &&
+                    headingDepth !== null &&
+                    typeof headingStart === 'number' &&
+                    $from.pos === headingStart;
+                  outlineDebug('editorProps.backspace.check', {
+                    empty: Boolean(sel?.empty),
+                    headingDepth,
+                    headingStart,
+                    pos: $from?.pos ?? null,
+                    parent: $from?.parent?.type?.name || null,
+                    parentOffset: $from?.parentOffset ?? null,
+                    atHeadingStart,
+                  });
+                  if (atHeadingStart) {
+                    const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
+                    const sectionNode = typeof sectionPos === 'number' ? pmState.doc.nodeAt(sectionPos) : null;
+                    outlineDebug('editorProps.backspace.sectionPos', { sectionPos, hasNode: Boolean(sectionNode) });
+                    if (typeof sectionPos === 'number' && sectionNode) {
+                      const currentSectionId = String(sectionNode.attrs?.id || '');
+
+                      // Determine merge target id in advance (prev sibling, or parent section if no prev).
+                      let targetSectionId = null;
+                      try {
+                        const $pos = pmState.doc.resolve(sectionPos);
+                        const idx = $pos.index();
+                        const parent = $pos.parent;
+                        if (parent && idx > 0) {
+                          const prevNode = parent.child(idx - 1);
+                          const prevStart = sectionPos - prevNode.nodeSize;
+                          const prevSection = pmState.doc.nodeAt(prevStart);
+                          targetSectionId = String(prevSection?.attrs?.id || '') || null;
+                        } else {
+                          for (let d = $from.depth - 1; d > 0; d -= 1) {
+                            const n = $from.node(d);
+                            if (n?.type?.name === 'outlineSection') {
+                              const pid = String(n.attrs?.id || '');
+                              if (pid && pid !== currentSectionId) {
+                                targetSectionId = pid;
+                                break;
+                              }
+                            }
+                          }
+                        }
+                      } catch {
+                        targetSectionId = null;
+                      }
+
+                      outlineDebug('editorProps.backspace.mergeCandidate', {
+                        sectionPos,
+                        currentSectionId,
+                        targetSectionId,
+                      });
+
+                      // Execute merge/delete.
+                      let ok = false;
+                    if (outlineIsSectionEmptyForView(sectionNode)) {
+                      ok = outlineDeleteCurrentSectionForView(pmState, view.dispatch, sectionPos);
+                    } else {
+                      try {
+                        const $pos = pmState.doc.resolve(sectionPos);
+                        const idx = $pos.index();
+                        if (idx <= 0) ok = outlineMergeSectionIntoParentBodyForView(pmState, view.dispatch, sectionPos);
+                        else ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                      } catch {
+                        ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                      }
+                    }
+
+                      outlineDebug('editorProps.backspace.mergeDone', { ok, targetSectionId });
+
+                      if (ok && targetSectionId && outlineEditModeKey) {
+                        window.setTimeout(() => {
+                          try {
+                            const stNow = outlineEditModeKey.getState(view.state) || {};
+                            if (stNow.editingSectionId) return;
+                            const currentPos = findSectionPosById(view.state.doc, targetSectionId);
+                            const currentNode = typeof currentPos === 'number' ? view.state.doc.nodeAt(currentPos) : null;
+                            if (!currentNode) return;
+
+                            let tr = view.state.tr;
+                            if (Boolean(currentNode?.attrs?.collapsed)) {
+                              tr = tr.setNodeMarkup(currentPos, undefined, { ...currentNode.attrs, collapsed: false });
+                              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                            }
+
+                            tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: targetSectionId });
+
+	                          try {
+	                            const nodeAfter = tr.doc.nodeAt(currentPos);
+	                            if (nodeAfter && nodeAfter.type?.name === 'outlineSection') {
+	                              const heading = nodeAfter.child(0);
+	                              const body = nodeAfter.child(1);
+	                              const bodyStart = currentPos + 1 + heading.nodeSize;
+	                              const bodyEnd = bodyStart + body.nodeSize - 1;
+	                              tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
+	                            }
+	                          } catch {
+	                            // ignore
+	                          }
+
+                            view.dispatch(tr.scrollIntoView());
+                            try {
+                              view.focus();
+                            } catch {
+                              // ignore
+                            }
+                            outlineDebug('editorProps.backspace.enterEdit.done', { targetSectionId });
+                          } catch {
+                            // ignore
+                          }
+                        }, 0);
+                      }
+
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return true;
+                    }
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+              return true;
+            }
+            if (isTextInput) {
               event.preventDefault();
               event.stopPropagation();
               notifyReadOnlyGlobal();
@@ -5711,6 +6461,177 @@ async function mountOutlineEditor() {
             if (editingSectionId) return false;
             const inputType = String(event?.inputType || '');
             if (inputType.startsWith('history')) return false;
+            outlineDebug('beforeinput', {
+              inputType,
+              key: event?.data ?? null,
+              editingSectionId: editingSectionId || null,
+              selection: {
+                empty: Boolean(view.state?.selection?.empty),
+                parent: view.state?.selection?.$from?.parent?.type?.name || null,
+                parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
+              },
+            });
+
+            // View-mode: allow "merge into previous" by Backspace at the start of heading,
+            // even if the browser triggers deletion via beforeinput (common on some platforms).
+            if (inputType === 'deleteContentBackward') {
+              try {
+                const pmState = view.state;
+                const sel = pmState.selection;
+                const $from = sel?.$from || null;
+                let headingDepth = null;
+                try {
+                  for (let d = $from?.depth || 0; d > 0; d -= 1) {
+                    if ($from.node(d)?.type?.name === 'outlineHeading') {
+                      headingDepth = d;
+                      break;
+                    }
+                  }
+                } catch {
+                  headingDepth = null;
+                }
+                const headingStart =
+                  headingDepth !== null && $from ? $from.start(headingDepth) : null;
+                const atHeadingStart =
+                  Boolean(sel && sel.empty) &&
+                  Boolean($from) &&
+                  headingDepth !== null &&
+                  typeof headingStart === 'number' &&
+                  $from.pos === headingStart;
+                outlineDebug('beforeinput.deleteContentBackward.check', {
+                  empty: Boolean(sel?.empty),
+                  headingDepth,
+                  headingStart,
+                  pos: $from?.pos ?? null,
+                  parent: $from?.parent?.type?.name || null,
+                  parentOffset: $from?.parentOffset ?? null,
+                  atHeadingStart,
+                });
+                if (atHeadingStart) {
+                  const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
+                  const sectionNode = typeof sectionPos === 'number' ? pmState.doc.nodeAt(sectionPos) : null;
+                  if (typeof sectionPos === 'number' && sectionNode) {
+                    const currentSectionId = String(sectionNode.attrs?.id || '');
+                    outlineDebug('beforeinput.deleteContentBackward.candidate', {
+                      sectionPos,
+                      currentSectionId,
+                    });
+
+                    // Determine merge target id in advance (prev sibling, or parent section if no prev).
+                    let targetSectionId = null;
+                    try {
+                      const $pos = pmState.doc.resolve(sectionPos);
+                      const idx = $pos.index();
+                      const parent = $pos.parent;
+                      if (parent && idx > 0) {
+                        const prevNode = parent.child(idx - 1);
+                        const prevStart = sectionPos - prevNode.nodeSize;
+                        const prevSection = pmState.doc.nodeAt(prevStart);
+                        targetSectionId = String(prevSection?.attrs?.id || '') || null;
+                      } else {
+                        for (let d = $from.depth - 1; d > 0; d -= 1) {
+                          const n = $from.node(d);
+                          if (n?.type?.name === 'outlineSection') {
+                            const pid = String(n.attrs?.id || '');
+                            if (pid && pid !== currentSectionId) {
+                              targetSectionId = pid;
+                              break;
+                            }
+                          }
+                        }
+                      }
+                    } catch {
+                      targetSectionId = null;
+                    }
+
+                    // Execute merge/delete.
+                    let ok = false;
+                    if (outlineIsSectionEmptyForView(sectionNode)) {
+                      outlineDebug('beforeinput.merge', { kind: 'deleteEmpty', sectionPos });
+                      ok = outlineDeleteCurrentSectionForView(pmState, view.dispatch, sectionPos);
+                    } else {
+                      try {
+                        const $pos = pmState.doc.resolve(sectionPos);
+                        const idx = $pos.index();
+                        if (idx <= 0) {
+                          outlineDebug('beforeinput.merge', { kind: 'intoParent', sectionPos, targetSectionId });
+                          ok = outlineMergeSectionIntoParentBodyForView(pmState, view.dispatch, sectionPos);
+                        } else {
+                          outlineDebug('beforeinput.merge', { kind: 'intoPrev', sectionPos, targetSectionId });
+                          ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                        }
+                      } catch {
+                        outlineDebug('beforeinput.merge', { kind: 'intoPrev.catch', sectionPos, targetSectionId });
+                        ok = outlineMergeSectionIntoPreviousForView(pmState, view.dispatch, sectionPos);
+                      }
+                    }
+                    outlineDebug('beforeinput.merge.done', { ok, targetSectionId });
+
+                    if (ok && targetSectionId) {
+                      window.setTimeout(() => {
+                        try {
+                          const stNow = outlineEditModeKey.getState(view.state) || {};
+                          if (stNow.editingSectionId) return;
+                          const currentPos = findSectionPosById(view.state.doc, targetSectionId);
+                          const currentNode = typeof currentPos === 'number' ? view.state.doc.nodeAt(currentPos) : null;
+                          if (!currentNode) return;
+
+                          let tr = view.state.tr;
+                          if (Boolean(currentNode?.attrs?.collapsed)) {
+                            tr = tr.setNodeMarkup(currentPos, undefined, { ...currentNode.attrs, collapsed: false });
+                            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                          }
+
+                          tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: targetSectionId });
+
+                          try {
+                            const nodeAfter = view.state.doc.nodeAt(currentPos);
+                            if (nodeAfter && nodeAfter.type?.name === 'outlineSection') {
+                              const heading = nodeAfter.child(0);
+                              const bodyStart = currentPos + 1 + heading.nodeSize;
+                              const posInBody = Math.min(tr.doc.content.size, bodyStart + 2);
+                              tr = tr.setSelection(TextSelection.create(tr.doc, posInBody));
+                            }
+                          } catch {
+                            // ignore
+                          }
+
+                          view.dispatch(tr.scrollIntoView());
+                          try {
+                            view.focus();
+                          } catch {
+                            // ignore
+                          }
+                          outlineDebug('beforeinput.enterEdit.done', { targetSectionId });
+                        } catch {
+                          // ignore
+                        }
+                      }, 0);
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return true;
+                  }
+                }
+              } catch {
+                // ignore
+              }
+              // Silent block (no toast) for Backspace in view-mode when we didn't merge.
+              outlineDebug('beforeinput.deleteContentBackward.block', { inputType });
+              event.preventDefault();
+              event.stopPropagation();
+              return true;
+            }
+
+            // Silent block for any deletes in view-mode (no toast on Backspace/Delete).
+            if (inputType.startsWith('delete')) {
+              outlineDebug('beforeinput.delete.block', { inputType });
+              event.preventDefault();
+              event.stopPropagation();
+              return true;
+            }
+
             // В view-mode не даём менять документ никакими beforeinput.
             event.preventDefault();
             event.stopPropagation();
@@ -5728,11 +6649,14 @@ async function mountOutlineEditor() {
             const editingSectionId = st.editingSectionId || null;
             if (editingSectionId) return false;
 
-            // Включаем edit-mode по dblclick только по заголовку секции.
+            // Включаем edit-mode по dblclick по заголовку или по телу секции.
             const inHeading =
               (event?.target && event.target.closest && event.target.closest('[data-outline-heading="true"]')) ||
               (event?.target && event.target.closest && event.target.closest('.outline-heading'));
-            if (!inHeading) return false;
+            const inBody =
+              (event?.target && event.target.closest && event.target.closest('[data-outline-body="true"]')) ||
+              (event?.target && event.target.closest && event.target.closest('.outline-body'));
+            if (!inHeading && !inBody) return false;
 
             const coords = { left: event.clientX, top: event.clientY };
             const hit = view.posAtCoords(coords);
@@ -5764,14 +6688,15 @@ async function mountOutlineEditor() {
 
                 tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
 
-                // Ставим курсор в начало body секции.
+                // Ставим курсор в начало body секции (внутрь paragraph).
                 try {
+                  const { TextSelection } = tiptap?.pmStateMod || {};
                   const nodeAfter = typeof currentPos === 'number' ? tr.doc.nodeAt(currentPos) : null;
                   if (nodeAfter && nodeAfter.type?.name === 'outlineSection') {
                     const heading = nodeAfter.child(0);
                     const bodyStart = currentPos + 1 + heading.nodeSize;
-                    const posInBody = Math.min(tr.doc.content.size, bodyStart + 1);
-                    tr = tr.setSelection(TextSelection.create(tr.doc, posInBody));
+                    const posInBody = Math.min(tr.doc.content.size, bodyStart + 2);
+                    if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(posInBody), 1));
                   }
                 } catch {
                   // ignore
@@ -6651,3 +7576,20 @@ export async function openPublicOutlineViewer({ docJson } = {}) {
     showToast(error?.message || 'Не удалось открыть публичную статью');
   }
 }
+  const OUTLINE_DEBUG_KEY = 'ttree_debug_outline_keys_v1';
+  const outlineDebugEnabled = () => {
+    try {
+      return window?.localStorage?.getItem?.(OUTLINE_DEBUG_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+  const outlineDebug = (label, data = {}) => {
+    try {
+      if (!outlineDebugEnabled()) return;
+      // eslint-disable-next-line no-console
+      console.log('[outline][keys]', label, data);
+    } catch {
+      // ignore
+    }
+  };
