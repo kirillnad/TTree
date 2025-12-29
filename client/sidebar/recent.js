@@ -1,7 +1,8 @@
 // Вынесено из `sidebar.js`: режим "Последние" и учёт последних открытий.
 
 import { state } from '../state.js';
-import { renderSidebarArticleList } from './render.js';
+import { renderSidebarArticleList, scrollSidebarSelectionIntoView } from './render.js';
+import { ensureSidebarSelectionVisible } from './storage.js';
 
 const SIDEBAR_ARTICLES_MODE_KEY = 'ttree_sidebar_articles_mode';
 const RECENT_ARTICLES_KEY = 'ttree_recent_articles';
@@ -49,10 +50,21 @@ function saveRecentArticles() {
 }
 
 export function toggleSidebarRecentMode() {
+  const prev = state.sidebarArticlesMode;
   const next = state.sidebarArticlesMode === 'recent' ? 'tree' : 'recent';
   state.sidebarArticlesMode = next;
   saveSidebarArticlesMode();
+  if (prev === 'recent' && next === 'tree') ensureSidebarSelectionVisible();
   renderSidebarArticleList();
+  if (prev === 'recent' && next === 'tree') {
+    window.requestAnimationFrame(() => {
+      try {
+        scrollSidebarSelectionIntoView();
+      } catch {
+        // ignore
+      }
+    });
+  }
 }
 
 export function recordArticleOpened(articleId) {
@@ -66,4 +78,3 @@ export function recordArticleOpened(articleId) {
     renderSidebarArticleList();
   }
 }
-

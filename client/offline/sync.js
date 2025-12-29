@@ -15,6 +15,7 @@ let syncLoopStarted = false;
 let isFlushing = false;
 let fullPullStarted = false;
 let fullPullRunning = false;
+let outboxIntervalId = null;
 
 let fullPullStatus = {
   running: false,
@@ -47,12 +48,37 @@ async function rawApiRequest(path, options = {}) {
   });
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
-    throw new Error(details.detail || 'Request failed');
+    const err = new Error(details.detail || 'Request failed');
+    err.status = response.status;
+    err.details = details;
+    err.path = path;
+    throw err;
   }
   if (response.status === 204) {
     return null;
   }
   return response.json();
+}
+
+function isRetryableOutboxError(err) {
+  const status = Number(err?.status || 0);
+  if (!status) return true; // network / unknown
+  if (status >= 500) return true;
+  if (status === 408 || status === 429) return true;
+  // Auth problems should block the queue (user needs to re-login)
+  if (status === 401 || status === 403) return true;
+  return false;
+}
+
+function shouldDropOutboxOp(err, op) {
+  const status = Number(err?.status || 0);
+  if (status === 404 || status === 410) return true;
+  // Some client errors are permanent for a given op.
+  if (status >= 400 && status < 500 && status !== 401 && status !== 403 && status !== 408 && status !== 429) {
+    // For safety, only drop save_doc_json on 4xx besides auth/rate-limit.
+    return op?.type === 'save_doc_json';
+  }
+  return false;
 }
 
 export async function tryPullBootstrap() {
@@ -145,7 +171,8 @@ async function flushOp(op) {
 }
 
 export async function flushOutboxOnce() {
-  if (isFlushing) return;
+  if (isFlushing) return null;
+  if (!navigator.onLine) return false;
   isFlushing = true;
   try {
     const ops = await listOutbox(50);
@@ -162,14 +189,69 @@ export async function flushOutboxOnce() {
           }
         }
       } catch (err) {
-        await markOutboxError(op.id, err?.message || String(err || 'error'));
-        // stop on first error to avoid hammering the server
+        const status = Number(err?.status || 0) || null;
+        const msg = status ? `${status}: ${err?.message || 'error'}` : err?.message || String(err || 'error');
+        await markOutboxError(op.id, msg);
+
+        if (shouldDropOutboxOp(err, op)) {
+          // Permanent failure for this op (e.g. article removed): drop and continue.
+          try {
+            // eslint-disable-next-line no-console
+            console.warn('[offline][outbox] drop op', {
+              opId: op.id,
+              type: op.type,
+              articleId: op.articleId,
+              status,
+              message: err?.message || null,
+            });
+          } catch {
+            // ignore
+          }
+          try {
+            await removeOutboxOp(op.id);
+          } catch {
+            // ignore
+          }
+          continue;
+        }
+
+        // stop on retryable errors to avoid hammering the server
+        if (isRetryableOutboxError(err)) break;
+        // For unknown non-retryable errors: keep old behavior (stop).
         break;
       }
     }
   } finally {
     isFlushing = false;
   }
+  // If anything is still queued, keep/enable the fast loop.
+  try {
+    const remaining = await listOutbox(1);
+    return Array.isArray(remaining) && remaining.length > 0;
+  } catch {
+    return true;
+  }
+}
+
+function startOutboxInterval() {
+  if (outboxIntervalId) return;
+  outboxIntervalId = window.setInterval(async () => {
+    try {
+      const hasMore = await flushOutboxOnce();
+      if (hasMore === false) {
+        window.clearInterval(outboxIntervalId);
+        outboxIntervalId = null;
+      }
+    } catch {
+      // keep interval
+    }
+  }, 7000);
+}
+
+function stopOutboxInterval() {
+  if (!outboxIntervalId) return;
+  window.clearInterval(outboxIntervalId);
+  outboxIntervalId = null;
 }
 
 export function startSyncLoop() {
@@ -182,17 +264,40 @@ export function startSyncLoop() {
     // ignore
   }
   window.addEventListener('online', () => {
-    flushOutboxOnce().catch(() => {});
+    flushOutboxOnce()
+      .then((hasMore) => {
+        if (hasMore) startOutboxInterval();
+        else stopOutboxInterval();
+      })
+      .catch(() => {});
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      flushOutboxOnce().catch(() => {});
+      flushOutboxOnce()
+        .then((hasMore) => {
+          if (hasMore) startOutboxInterval();
+          else stopOutboxInterval();
+        })
+        .catch(() => {});
     }
   });
-  // periodic best-effort flush
-  setInterval(() => {
-    if (navigator.onLine) flushOutboxOnce().catch(() => {});
-  }, 15000);
+  // Start/stop fast flush loop based on actual outbox changes.
+  window.addEventListener('offline-outbox-changed', () => {
+    flushOutboxOnce()
+      .then((hasMore) => {
+        if (hasMore) startOutboxInterval();
+        else stopOutboxInterval();
+      })
+      .catch(() => {
+        startOutboxInterval();
+      });
+  });
+  // On startup, check once if we already have pending ops.
+  flushOutboxOnce()
+    .then((hasMore) => {
+      if (hasMore) startOutboxInterval();
+    })
+    .catch(() => {});
 }
 
 export function startBackgroundFullPull(options = {}) {

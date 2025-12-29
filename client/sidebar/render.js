@@ -12,7 +12,7 @@ import {
 } from '../api.js?v=11';
 import { showToast } from '../toast.js';
 import { updateTabButtons, hideHintPopover, setSidebarMobileOpen } from './layout.js';
-import { saveCollapsedArticles, saveListCollapsedArticles } from './storage.js';
+import { saveCollapsedArticles, saveListCollapsedArticles, ensureSidebarSelectionVisible } from './storage.js';
 import { attachArticleMouseDnDHandlers, attachArticleTouchDragSource } from './dnd.js';
 
 const FAVORITES_KEY = 'ttree_favorites';
@@ -90,8 +90,42 @@ export function setDeletedArticlesIndex(articles = []) {
 }
 
 export function handleArticleFilterInput(event) {
-  state.articleFilterQuery = event.target.value || '';
+  const prevTrimmed = (state.articleFilterQuery || '').trim();
+  const nextRaw = event?.target?.value || '';
+  const nextTrimmed = String(nextRaw || '').trim();
+  state.articleFilterQuery = nextRaw;
+  const shouldRevealSelection = Boolean(prevTrimmed && !nextTrimmed && state.sidebarArticlesMode !== 'recent');
+  if (shouldRevealSelection) ensureSidebarSelectionVisible();
   renderSidebarArticleList();
+  if (shouldRevealSelection) {
+    window.requestAnimationFrame(() => {
+      try {
+        scrollSidebarSelectionIntoView();
+      } catch {
+        // ignore
+      }
+    });
+  }
+}
+
+export function scrollSidebarArticleIntoView(articleId) {
+  const id = String(articleId || '').trim();
+  if (!id || !refs?.sidebarArticleList) return;
+  const row =
+    refs.sidebarArticleList.querySelector(`li.sidebar-article-item[data-article-id="${CSS.escape(id)}"]`) ||
+    refs.sidebarArticleList.querySelector(`li[data-article-id="${CSS.escape(id)}"]`);
+  if (!row) return;
+  try {
+    row.scrollIntoView({ block: 'center', inline: 'nearest' });
+  } catch {
+    // ignore
+  }
+}
+
+export function scrollSidebarSelectionIntoView() {
+  const selectedId = state.sidebarSelectedArticleId || state.articleId;
+  if (!selectedId) return;
+  scrollSidebarArticleIntoView(selectedId);
 }
 
 export function upsertArticleIndex(article) {

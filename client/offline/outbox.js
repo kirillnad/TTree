@@ -1,6 +1,14 @@
 import { getOfflineDbReady } from './index.js';
 import { reqToPromise, txDone } from './idb.js';
 
+function emitOutboxChanged() {
+  try {
+    window.dispatchEvent(new CustomEvent('offline-outbox-changed'));
+  } catch {
+    // ignore
+  }
+}
+
 function uuid() {
   if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
@@ -45,6 +53,7 @@ export async function enqueueOp(type, { articleId, payload, coalesceKey } = {}) 
     }),
   );
   await txDone(tx);
+  emitOutboxChanged();
   return opId;
 }
 
@@ -96,6 +105,7 @@ export async function markOutboxError(opId, message) {
     );
   }
   await txDone(tx);
+  emitOutboxChanged();
 }
 
 export async function removeOutboxOp(opId) {
@@ -104,4 +114,5 @@ export async function removeOutboxOp(opId) {
   const store = tx.objectStore('outbox');
   await reqToPromise(store.delete(opId));
   await txDone(tx);
+  emitOutboxChanged();
 }

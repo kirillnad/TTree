@@ -46,6 +46,8 @@ export {
   setArticlesIndex,
   setDeletedArticlesIndex,
   handleArticleFilterInput,
+  scrollSidebarArticleIntoView,
+  scrollSidebarSelectionIntoView,
   upsertArticleIndex,
   removeArticleFromIndex,
   removeArticleFromTrashIndex,
