@@ -6015,17 +6015,18 @@ async function mountOutlineEditor() {
 	              });
 	              const activeSectionId = getActiveSectionId(pmState);
 
-	              // Ctrl/Cmd+Delete in view-mode: delete current block (same as outlineDeleteBtn).
-	              // In edit-mode, keep native behavior (delete word) and do not interfere.
-	              if (
-	                !editingSectionId &&
-	                event.key === 'Delete' &&
-	                (event.ctrlKey || event.metaKey) &&
-	                !event.shiftKey &&
-	                !event.altKey
-	              ) {
-	                try {
-	                  deleteActiveSection();
+		              // Ctrl/Cmd+Delete (or Ctrl/Cmd+Backspace on laptops without a Delete key) in view-mode:
+		              // delete current block (same as outlineDeleteBtn).
+		              // In edit-mode, keep native behavior and do not interfere.
+		              if (
+		                !editingSectionId &&
+		                (event.key === 'Delete' || event.key === 'Del' || event.key === 'Backspace') &&
+		                (event.ctrlKey || event.metaKey) &&
+		                !event.shiftKey &&
+		                !event.altKey
+		              ) {
+		                try {
+		                  deleteActiveSection();
 	                } catch {
 	                  // ignore
 	                }
@@ -6488,11 +6489,11 @@ async function mountOutlineEditor() {
 	      attributes: {
 	        class: 'outline-prosemirror',
 	      },
-      handleKeyDown(view, event) {
-          outlineDebug('editorProps.keydown', {
-            key: event?.key || null,
-            repeat: Boolean(event?.repeat),
-            selection: {
+	      handleKeyDown(view, event) {
+	          outlineDebug('editorProps.keydown', {
+	            key: event?.key || null,
+	            repeat: Boolean(event?.repeat),
+	            selection: {
               empty: Boolean(view.state?.selection?.empty),
               parent: view.state?.selection?.$from?.parent?.type?.name || null,
               parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
@@ -6539,20 +6540,40 @@ async function mountOutlineEditor() {
 	          const st = outlineEditModeKey.getState(view.state) || {};
           const editingSectionId = st.editingSectionId || null;
 
-          if (!editingSectionId) {
-            const isDelete = event.key === 'Backspace' || event.key === 'Delete';
-            const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
-            const isSpace =
-              !event.metaKey &&
-              !event.ctrlKey &&
-              !event.altKey &&
-              !event.shiftKey &&
-              (event.key === ' ' || event.key === 'Spacebar');
+	          if (!editingSectionId) {
+	            const isModDelete =
+	              (event.ctrlKey || event.metaKey) &&
+	              !event.altKey &&
+	              !event.shiftKey &&
+	              (event.key === 'Delete' || event.key === 'Del' || event.key === 'Backspace');
+	            const isDelete = event.key === 'Backspace' || event.key === 'Delete';
+	            const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+	            const isSpace =
+	              !event.metaKey &&
+	              !event.ctrlKey &&
+	              !event.altKey &&
+	              !event.shiftKey &&
+	              (event.key === ' ' || event.key === 'Spacebar');
 
-            if (isSpace) {
-              // View-mode: Space toggles collapsed state of the current section.
-              // Do not allow Space to scroll the page; do not show read-only toast.
-              const active = document.activeElement;
+	            if (isModDelete) {
+	              // View-mode: Ctrl/Cmd+Delete deletes the current section (same as outlineDeleteBtn).
+	              const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
+	              let ok = false;
+	              try {
+	                if (typeof sectionPos === 'number') ok = outlineDeleteCurrentSectionForView(view.state, view.dispatch, sectionPos);
+	              } catch {
+	                ok = false;
+	              }
+	              outlineDebug('editorProps.modDelete', { ok, sectionPos });
+	              event.preventDefault();
+	              event.stopPropagation();
+	              return true;
+	            }
+
+	            if (isSpace) {
+	              // View-mode: Space toggles collapsed state of the current section.
+	              // Do not allow Space to scroll the page; do not show read-only toast.
+	              const active = document.activeElement;
               const inOutline =
                 Boolean(active && active.closest && active.closest('.outline-editor')) ||
                 Boolean(event?.target && event.target.closest && event.target.closest('.outline-editor'));
@@ -7496,6 +7517,94 @@ export function getOutlineActiveSectionId() {
   return lastActiveSectionId || null;
 }
 
+function findOutlineSectionPathById(doc, targetId) {
+  try {
+    const tid = String(targetId || '');
+    if (!doc || !tid) return null;
+    const visitSection = (node, pos, stack) => {
+      if (!node || node.type?.name !== 'outlineSection') return null;
+      const id = String(node.attrs?.id || '');
+      const nextStack = [...stack, pos];
+      if (id === tid) return nextStack;
+      const heading = node.child(0);
+      const body = node.child(1);
+      const children = node.child(2);
+      if (!children || children.type?.name !== 'outlineChildren') return null;
+      const childrenPos = pos + 1 + heading.nodeSize + body.nodeSize;
+      let offset = childrenPos + 1;
+      for (let i = 0; i < children.childCount; i += 1) {
+        const child = children.child(i);
+        const childPos = offset;
+        offset += child.nodeSize;
+        const found = visitSection(child, childPos, nextStack);
+        if (found) return found;
+      }
+      return null;
+    };
+    let offset = 0;
+    for (let i = 0; i < doc.childCount; i += 1) {
+      const child = doc.child(i);
+      const pos = offset;
+      offset += child.nodeSize;
+      const found = visitSection(child, pos, []);
+      if (found) return found;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function revealOutlineSection(sectionId, options = {}) {
+  try {
+    if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return false;
+    const sid = String(sectionId || '');
+    if (!sid) return false;
+    const { state: pmState, view } = outlineEditorInstance;
+    const path = findOutlineSectionPathById(pmState.doc, sid);
+    if (!Array.isArray(path) || !path.length) return false;
+
+    let tr = pmState.tr;
+    for (const pos of path) {
+      const node = tr.doc.nodeAt(pos);
+      if (!node || node.type?.name !== 'outlineSection') continue;
+      if (Boolean(node.attrs?.collapsed)) {
+        tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: false });
+      }
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+    // Put selection on the target section (body start) so onSelectionUpdate marks it active.
+    try {
+      const targetPos = findSectionPosById(tr.doc, sid);
+      const targetNode = typeof targetPos === 'number' ? tr.doc.nodeAt(targetPos) : null;
+      if (typeof targetPos === 'number' && targetNode?.type?.name === 'outlineSection') {
+        const heading = targetNode.child(0);
+        const bodyStart = targetPos + 1 + heading.nodeSize;
+        const posInBody = Math.min(tr.doc.content.size, bodyStart + 2);
+        if (TextSelection) {
+          tr = tr.setSelection(TextSelection.create(tr.doc, posInBody));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    view.dispatch(tr.scrollIntoView());
+
+    if (options && options.focus) {
+      try {
+        view.focus();
+      } catch {
+        // ignore
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function restoreOutlineSectionFromBlockHtml(sectionId, htmlText) {
   if (!outlineEditorInstance) return false;
   const sid = String(sectionId || '');
@@ -7895,15 +8004,25 @@ export async function openOutlineEditor() {
 
 	  try {
 	    await mountOutlineEditor();
-    try {
-      mountOutlineToolbar(outlineEditorInstance);
-    } catch {
-      // ignore
-    }
-    // При входе в outline ставим курсор в начало body текущей секции,
-    // чтобы не приходилось "тыкать мышкой".
-    try {
-      moveCursorToActiveSectionBodyStart(outlineEditorInstance);
+	    try {
+	      mountOutlineToolbar(outlineEditorInstance);
+	    } catch {
+	      // ignore
+	    }
+	    // If navigation/search requested a specific block, reveal it (expand ancestors) and scroll into view.
+	    try {
+	      const targetId = state.scrollTargetBlockId || state.currentBlockId || null;
+	      if (targetId) {
+	        revealOutlineSection(targetId, { focus: false });
+	        state.scrollTargetBlockId = null;
+	      }
+	    } catch {
+	      // ignore
+	    }
+	    // При входе в outline ставим курсор в начало body текущей секции,
+	    // чтобы не приходилось "тыкать мышкой".
+	    try {
+	      moveCursorToActiveSectionBodyStart(outlineEditorInstance);
     } catch {
       // ignore
     }
