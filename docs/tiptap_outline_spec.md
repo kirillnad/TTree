@@ -75,7 +75,7 @@
   - `article_links` пересчитывается из `article_doc_json` (link mark href `/article/<id>`) при сохранении outline;
   - FTS по содержимому работает через `outline_sections_fts`;
   - semantic embeddings берутся из `article_doc_json`.
-  Для таблиц используем `TableKit` из `@tiptap/extension-table` (resizable columns) и команды: вставка таблицы 2×2, add/delete row/column (до/после), toggle header row/column, merge/split cell (если применимо).
+  Для таблиц используем `TableKit` из `@tiptap/extension-table` (resizable columns) и команды: вставка таблицы 2×2, add/delete row/column (до/после), toggle header row/column, merge/split cell (если применимо), **“отменить таблицу” → преобразовать таблицу в обычный текст** (каждая ячейка становится отдельным абзацем).
 
 ## Markdown
 - Официальный `@tiptap/extension-markdown` в публичном npm недоступен, используем community-пакет `tiptap-markdown` (Tiptap v3).
@@ -240,6 +240,7 @@ iOS Safari/WKWebView может **автоматически очищать** In
 - `Ctrl+→/←`: collapse/expand текущей секции.
 - `Ctrl+↑`: схлопнуть **родительскую** секцию (и всех детей внутри неё).
 - `Ctrl+↓`: развернуть **текущую** секцию (и всех её детей).
+- `Space` (только view-mode, когда фокус внутри outline): toggle collapsed у текущей секции.
 
 Примечания:
 - Если текущая секция свернута — `Ctrl+→` разворачивает, `Ctrl+←` сворачивает (направления можно инвертировать, но должны быть консистентны).

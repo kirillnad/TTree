@@ -1496,15 +1496,16 @@ function mountOutlineToolbar(editor) {
       if (action === 'addRowAfter') return chain.addRowAfter().run();
       if (action === 'deleteRow') return chain.deleteRow().run();
       if (action === 'addColumnBefore') return chain.addColumnBefore().run();
-      if (action === 'addColumnAfter') return chain.addColumnAfter().run();
-      if (action === 'deleteColumn') return chain.deleteColumn().run();
-      if (action === 'mergeCells') return chain.mergeCells().run();
-      if (action === 'splitCell') return chain.splitCell().run();
-      if (action === 'deleteTable') return chain.deleteTable().run();
-      return false;
-    } catch {
-      return false;
-    }
+	      if (action === 'addColumnAfter') return chain.addColumnAfter().run();
+	      if (action === 'deleteColumn') return chain.deleteColumn().run();
+	      if (action === 'mergeCells') return chain.mergeCells().run();
+	      if (action === 'splitCell') return chain.splitCell().run();
+	      if (action === 'cancelTable') return cancelTableToText();
+	      if (action === 'deleteTable') return chain.deleteTable().run();
+	      return false;
+	    } catch {
+	      return false;
+	    }
 	  };
 
 	  const isEditing = () => {
@@ -1516,16 +1517,98 @@ function mountOutlineToolbar(editor) {
 	    }
 	  };
 
-	  const requireEditing = () => {
-	    if (isEditing()) return true;
-	    notifyReadOnlyGlobal();
-	    return false;
-	  };
+		  const requireEditing = () => {
+		    if (isEditing()) return true;
+		    notifyReadOnlyGlobal();
+		    return false;
+		  };
 
-		  const insertLinkMark = (href, label, attrs = {}) => {
-		    const url = String(href || '').trim();
-		    if (!url) return false;
-		    const text = String(label || '').trim() || url;
+		  const cancelTableToText = () => {
+		    if (!requireEditing()) return false;
+		    try {
+		      const { state: pmState, view } = editor;
+		      const { schema, selection } = pmState;
+		      const $from = selection?.$from;
+		      if (!$from) return false;
+
+		      let tableDepth = null;
+		      let rowDepth = null;
+		      let cellDepth = null;
+		      for (let d = $from.depth; d >= 0; d -= 1) {
+		        const node = $from.node(d);
+		        if (!node) continue;
+		        const name = node.type?.name;
+		        if (cellDepth == null && (name === 'tableCell' || name === 'tableHeader')) cellDepth = d;
+		        if (rowDepth == null && name === 'tableRow') rowDepth = d;
+		        if (name === 'table') {
+		          tableDepth = d;
+		          break;
+		        }
+		      }
+		      if (tableDepth == null) return false;
+
+		      const tablePos = $from.before(tableDepth);
+		      const tableNode = pmState.doc.nodeAt(tablePos);
+		      if (!tableNode || tableNode.type?.name !== 'table') return false;
+
+		      const targetRowIndex = rowDepth != null ? $from.index(tableDepth) : null;
+		      const targetColIndex = rowDepth != null && cellDepth != null ? $from.index(rowDepth) : null;
+		      let targetFlatIndex = null;
+		      if (typeof targetRowIndex === 'number' && typeof targetColIndex === 'number') {
+		        const cols = tableNode.childCount ? tableNode.child(0)?.childCount || 0 : 0;
+		        if (cols > 0) targetFlatIndex = targetRowIndex * cols + targetColIndex;
+		      }
+
+		      const paragraphs = [];
+		      let flatIndex = 0;
+		      let selectionParagraphIndex = 0;
+		      for (let r = 0; r < tableNode.childCount; r += 1) {
+		        const row = tableNode.child(r);
+		        for (let c = 0; c < row.childCount; c += 1) {
+		          const cell = row.child(c);
+		          const text = String(cell?.textContent || '');
+		          const normalized = text.replace(/\u00a0/g, ' ');
+		          const para =
+		            normalized && normalized.trim()
+		              ? schema.nodes.paragraph.create(null, schema.text(normalized))
+		              : schema.nodes.paragraph.create(null, []);
+		          if (targetFlatIndex != null && flatIndex === targetFlatIndex) selectionParagraphIndex = paragraphs.length;
+		          paragraphs.push(para);
+		          flatIndex += 1;
+		        }
+		      }
+		      if (!paragraphs.length) return false;
+
+		      const fragment = schema.nodes.outlineBody
+		        ? schema.nodes.outlineBody.create({}, paragraphs).content
+		        : schema.nodes.doc.create({}, paragraphs).content;
+
+		      let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, fragment);
+		      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+		      try {
+		        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+		        if (TextSelection) {
+		          let cursorPos = tablePos;
+		          for (let i = 0; i < selectionParagraphIndex; i += 1) cursorPos += paragraphs[i].nodeSize;
+		          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos + 1), 1));
+		        }
+		      } catch {
+		        // ignore
+		      }
+
+		      view.dispatch(tr.scrollIntoView());
+		      view.focus?.();
+		      return true;
+		    } catch {
+		      return false;
+		    }
+		  };
+
+			  const insertLinkMark = (href, label, attrs = {}) => {
+			    const url = String(href || '').trim();
+			    if (!url) return false;
+			    const text = String(label || '').trim() || url;
 		    const { from, to, empty } = editor.state.selection;
 		    const linkAttrs = { href: url, ...attrs };
 		    const chain = editor.chain().focus();
@@ -1760,13 +1843,16 @@ function mountOutlineToolbar(editor) {
       } else if (action === 'mergeCells') {
         isActive = false;
         isDisabled = !canRun((c) => c.mergeCells());
-      } else if (action === 'splitCell') {
-        isActive = false;
-        isDisabled = !canRun((c) => c.splitCell());
-      } else if (action === 'deleteTable') {
-        isActive = false;
-        isDisabled = !canRun((c) => c.deleteTable());
-      }
+	      } else if (action === 'splitCell') {
+	        isActive = false;
+	        isDisabled = !canRun((c) => c.splitCell());
+	      } else if (action === 'cancelTable') {
+	        isActive = false;
+	        isDisabled = !isEditing() || !editor.isActive('table');
+	      } else if (action === 'deleteTable') {
+	        isActive = false;
+	        isDisabled = !canRun((c) => c.deleteTable());
+	      }
 
       el.disabled = Boolean(isDisabled);
       el.classList.toggle('is-active', Boolean(isActive));
@@ -2625,6 +2711,20 @@ function maybeGenerateTitleOnLeave(editor, doc, sectionId) {
     .finally(() => {
       titleGenState.set(sectionId, { bodyHash, inFlight: false });
     });
+}
+
+function maybeGenerateTitlesAfterSave(editor, doc, sectionIds) {
+  if (!editor || !doc) return;
+  if (!Array.isArray(sectionIds) || !sectionIds.length) return;
+  if (state.article?.encrypted) return;
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+  for (const sectionId of sectionIds) {
+    try {
+      maybeGenerateTitleOnLeave(editor, doc, sectionId);
+    } catch {
+      // ignore
+    }
+  }
 }
 
 function maybeProofreadOnLeave(editor, doc, sectionId) {
@@ -3696,29 +3796,63 @@ async function mountOutlineEditor() {
     content: 'outlineSection+',
   });
 
-  const OutlineChildren = Node.create({
-    name: 'outlineChildren',
-    content: 'outlineSection*',
-    defining: true,
-    renderHTML() {
-      return ['div', { class: 'outline-children', 'data-outline-children': 'true' }, 0];
-    },
-    parseHTML() {
-      return [{ tag: 'div[data-outline-children]' }];
-    },
-  });
+	  const OutlineChildren = Node.create({
+	    name: 'outlineChildren',
+	    content: 'outlineSection*',
+	    defining: true,
+	    renderHTML() {
+	      return ['div', { class: 'outline-children', 'data-outline-children': 'true' }, 0];
+	    },
+	    parseHTML() {
+	      return [{ tag: 'div[data-outline-children]' }];
+	    },
+	  });
 
-  const OutlineBody = Node.create({
-    name: 'outlineBody',
-    content: 'block*',
-    defining: true,
-    renderHTML() {
-      return ['div', { class: 'outline-body', 'data-outline-body': 'true' }, 0];
-    },
-    parseHTML() {
-      return [{ tag: 'div[data-outline-body]' }];
-    },
-  });
+	  const isOutlineBodyEffectivelyEmpty = (bodyNode) => {
+	    try {
+	      if (!bodyNode) return true;
+	      if (bodyNode.childCount === 0) return true;
+	      if (
+	        bodyNode.childCount === 1 &&
+	        bodyNode.child(0)?.type?.name === 'paragraph' &&
+	        bodyNode.child(0).content.size === 0
+	      ) {
+	        return true;
+	      }
+	      let hasMeaningful = false;
+	      bodyNode.descendants((n) => {
+	        if (hasMeaningful) return false;
+	        if (n.type?.name === 'image' || n.type?.name === 'table') {
+	          hasMeaningful = true;
+	          return false;
+	        }
+	        if (n.isText) {
+	          const t = String(n.text || '').replace(/\u00a0/g, ' ');
+	          if (t.trim()) {
+	            hasMeaningful = true;
+	            return false;
+	          }
+	        }
+	        return true;
+	      });
+	      return !hasMeaningful;
+	    } catch {
+	      return false;
+	    }
+	  };
+
+	  const OutlineBody = Node.create({
+	    name: 'outlineBody',
+	    content: 'block*',
+	    defining: true,
+	    renderHTML({ node }) {
+	      const empty = isOutlineBodyEffectivelyEmpty(node);
+	      return ['div', { class: 'outline-body', 'data-outline-body': 'true', 'data-empty': empty ? 'true' : 'false' }, 0];
+	    },
+	    parseHTML() {
+	      return [{ tag: 'div[data-outline-body]' }];
+	    },
+	  });
 
   const OutlineHeading = Node.create({
     name: 'outlineHeading',
@@ -5761,10 +5895,10 @@ async function mountOutlineEditor() {
                 return null;
               }
             },
-            handleKeyDown(view, event) {
-              const pmState = view.state;
-              const st = key.getState(pmState) || {};
-              const editingSectionId = st.editingSectionId || null;
+	            handleKeyDown(view, event) {
+	              const pmState = view.state;
+	              const st = key.getState(pmState) || {};
+	              const editingSectionId = st.editingSectionId || null;
               outlineDebug('keydown', {
                 key: event?.key || null,
                 repeat: Boolean(event?.repeat),
@@ -5774,11 +5908,30 @@ async function mountOutlineEditor() {
                   parent: pmState?.selection?.$from?.parent?.type?.name || null,
                   parentOffset: pmState?.selection?.$from?.parentOffset ?? null,
                 },
-              });
-              const activeSectionId = getActiveSectionId(pmState);
+	              });
+	              const activeSectionId = getActiveSectionId(pmState);
 
-	              // Backspace at the start of the first table cell: if there is a table right before,
-	              // merge the tables and keep the cursor in the same cell.
+	              // Ctrl/Cmd+Delete in view-mode: delete current block (same as outlineDeleteBtn).
+	              // In edit-mode, keep native behavior (delete word) and do not interfere.
+	              if (
+	                !editingSectionId &&
+	                event.key === 'Delete' &&
+	                (event.ctrlKey || event.metaKey) &&
+	                !event.shiftKey &&
+	                !event.altKey
+	              ) {
+	                try {
+	                  deleteActiveSection();
+	                } catch {
+	                  // ignore
+	                }
+	                event.preventDefault();
+	                event.stopPropagation();
+	                return true;
+	              }
+
+		              // Backspace at the start of the first table cell: if there is a table right before,
+		              // merge the tables and keep the cursor in the same cell.
 	              // Only in edit-mode.
 	              if (editingSectionId && event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey) {
 	                const promoted = tryPromoteBodyFirstLineToHeadingOnBackspace(
@@ -6285,6 +6438,68 @@ async function mountOutlineEditor() {
           if (!editingSectionId) {
             const isDelete = event.key === 'Backspace' || event.key === 'Delete';
             const isTextInput = event.key && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+            const isSpace =
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.altKey &&
+              !event.shiftKey &&
+              (event.key === ' ' || event.key === 'Spacebar');
+
+            if (isSpace) {
+              // View-mode: Space toggles collapsed state of the current section.
+              // Do not allow Space to scroll the page; do not show read-only toast.
+              const active = document.activeElement;
+              const inOutline =
+                Boolean(active && active.closest && active.closest('.outline-editor')) ||
+                Boolean(event?.target && event.target.closest && event.target.closest('.outline-editor'));
+
+              if (!inOutline) return false;
+              if (event.repeat) {
+                event.preventDefault();
+                event.stopPropagation();
+                return true;
+              }
+              // Don't hijack Space on interactive controls (a11y: Space "clicks" buttons).
+              const target = event?.target || null;
+              const tag = String(target?.tagName || '').toLowerCase();
+              if (tag === 'button' || tag === 'input' || tag === 'textarea' || tag === 'select') return false;
+              if (target?.closest?.('button, a[href], input, textarea, select')) return false;
+              // ProseMirror root is contenteditable even in view-mode; allow Space there.
+              const isOutlineProseMirror = Boolean(target?.closest?.('.outline-prosemirror'));
+              if (!isOutlineProseMirror && target?.closest?.('[contenteditable="true"]')) return false;
+
+              const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
+              if (typeof sectionPos !== 'number') {
+                event.preventDefault();
+                event.stopPropagation();
+                return true;
+              }
+              const sectionNode = view.state.doc.nodeAt(sectionPos);
+              if (!sectionNode) {
+                event.preventDefault();
+                event.stopPropagation();
+                return true;
+              }
+              const next = !Boolean(sectionNode.attrs?.collapsed);
+              let tr = view.state.tr.setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next });
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+              // Put selection into heading so it doesn't end up inside hidden body after collapse.
+              try {
+                const heading = sectionNode.child(0);
+                const headingStart = sectionPos + 1;
+                const headingEnd = headingStart + heading.nodeSize - 1;
+                const { TextSelection } = tiptap?.pmStateMod || {};
+                if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingEnd), -1));
+              } catch {
+                // ignore
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+              view.dispatch(tr.scrollIntoView());
+              return true;
+            }
             if (isDelete) {
               // View-mode: allow merge with Backspace at the very start of a section heading.
               if (event.key === 'Backspace') {
@@ -6467,21 +6682,20 @@ async function mountOutlineEditor() {
             return true;
           }
 
-	          if (editingSectionId && event.key === 'Escape') {
-	            event.preventDefault();
-	            event.stopPropagation();
-	            const sectionId = editingSectionId;
-	            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
-	            // Выход из режима редактирования тоже считаем "уходом" из секции
-	            // для автозаголовка и proofreading.
-	            try {
-	              const tiptapEditor = outlineEditorInstance;
-	              if (tiptapEditor && !tiptapEditor.isDestroyed) {
-	                maybeGenerateTitleOnLeave(tiptapEditor, view.state.doc, sectionId);
-	                const changed = markSectionDirtyIfChanged(view.state.doc, sectionId);
-	                // Proofread is versioned by hash; calling it here keeps spellcheck working
-	                // even if autosave already committed the section before the user pressed Esc.
-	                maybeProofreadOnLeave(tiptapEditor, view.state.doc, sectionId);
+		          if (editingSectionId && event.key === 'Escape') {
+		            event.preventDefault();
+		            event.stopPropagation();
+		            const sectionId = editingSectionId;
+		            view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'exit' }));
+		            // Выход из режима редактирования тоже считаем "уходом" из секции
+		            // для proofreading (заголовок генерируем только после сохранения).
+		            try {
+		              const tiptapEditor = outlineEditorInstance;
+		              if (tiptapEditor && !tiptapEditor.isDestroyed) {
+		                const changed = markSectionDirtyIfChanged(view.state.doc, sectionId);
+		                // Proofread is versioned by hash; calling it here keeps spellcheck working
+		                // even if autosave already committed the section before the user pressed Esc.
+		                maybeProofreadOnLeave(tiptapEditor, view.state.doc, sectionId);
 	                if (changed) scheduleAutosave({ delayMs: 350 });
 	              }
 	            } catch {
@@ -6910,16 +7124,11 @@ async function mountOutlineEditor() {
         // ignore
       }
 
-      if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
-        try {
-          maybeGenerateTitleOnLeave(editor, pmState.doc, lastActiveSectionId);
-        } catch {
-          // ignore
-        }
-        const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
-        if (changed) {
-          try {
-            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
+	      if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
+	        const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
+	        if (changed) {
+	          try {
+	            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
           } catch {
             // ignore
           }
@@ -7046,6 +7255,7 @@ async function saveOutlineEditor(options = {}) {
   if (!targetArticleId) return;
   const silent = Boolean(options.silent);
   const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
+  const postSaveTitleSectionIds = Array.from(new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)));
   try {
     if (!silent) showPersistentToast('Сохраняем outline…');
     if (state.article.encrypted) {
@@ -7106,6 +7316,11 @@ async function saveOutlineEditor(options = {}) {
       } catch {
         // ignore
       }
+      try {
+        maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
+      } catch {
+        // ignore
+      }
       return;
     }
     const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
@@ -7131,16 +7346,23 @@ async function saveOutlineEditor(options = {}) {
 	    docDirty = false;
 	    clearQueuedDocJson(targetArticleId);
 	    outlineLastSavedAt = new Date();
-	    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
-      try {
-        refreshOutlineTagsFromEditor();
-      } catch {
-        // ignore
-      }
-	    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
-	    try {
-	      if (outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
-	        const sid = lastActiveSectionId || null;
+		    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
+	      try {
+	        refreshOutlineTagsFromEditor();
+	      } catch {
+	        // ignore
+	      }
+	      try {
+	        if (!isQueued) {
+	          maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
+	        }
+	      } catch {
+	        // ignore
+	      }
+		    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
+		    try {
+		      if (outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
+		        const sid = lastActiveSectionId || null;
 	        if (sid) maybeProofreadOnLeave(outlineEditorInstance, outlineEditorInstance.state.doc, sid);
 	      }
 	    } catch {

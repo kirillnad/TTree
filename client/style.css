@@ -1143,6 +1143,9 @@ main.content {
   left: 0;
   z-index: 1200;
   min-width: 220px;
+  max-height: min(70vh, calc(100vh - 140px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: 12px;
@@ -2076,6 +2079,9 @@ button.icon-button.small {
 .outline-section[data-collapsed="true"] > .outline-children {
   display: none;
 }
+.outline-section:not([data-editing="true"]) > .outline-body[data-empty="true"] {
+  display: none;
+}
 .outline-heading {
   display: flex;
   align-items: flex-start;
@@ -2349,7 +2355,7 @@ button.icon-button.small {
 .outline-section > .outline-body,
 .outline-section > .outline-children {
   padding-left: 1rem;
-  padding-top: 0.3em;
+  /* padding-top: 0.3em; */
   padding-bottom: 0.3em;
   padding-right: 8px;
   margin-top: 0.3rem;
