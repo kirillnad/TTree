@@ -371,14 +371,14 @@ export async function createInboxNote() {
       // the just-created draft section and it "disappears".
       navigate(inboxPath);
     }
-    const outline = await import('../outline/editor.js?v=94');
+    const outline = await import('../outline/editor.js?v=95');
     let newSectionId = null;
     const deadline = performance.now() + 15000;
     while (!newSectionId && performance.now() < deadline) {
       const isInboxLoaded =
         state.articleId === 'inbox' &&
         state.article &&
-        String(state.article.id || '').startsWith('inbox-') &&
+        (String(state.article.id || '') === 'inbox' || String(state.article.id || '').startsWith('inbox-')) &&
         String(state.article.title || '') === 'Быстрые заметки';
       if (!isInboxLoaded) {
         await new Promise((resolve) => setTimeout(resolve, 50));

@@ -1,5 +1,6 @@
 import {
   cacheArticle,
+  cacheArticleUnderId,
   cacheArticlesIndex,
   getCachedArticle,
   getCachedArticlesIndex,
@@ -189,15 +190,17 @@ export function fetchDeletedArticlesIndex() {
 }
 
 export function fetchArticle(id, options = {}) {
+  const { cacheTimeoutMs: _cacheTimeoutMs, metaTimeoutMs: _metaTimeoutMs, ...apiOptions } = options || {};
+
   // IndexedDB can be briefly busy (e.g. background index caching). If offline is ready, prefer waiting a bit longer
   // for a cache hit to avoid unnecessary network fetches.
   const defaultCacheTimeoutMs = state?.offlineReady ? 400 : 150;
   const cacheTimeoutMs =
-    options && typeof options.cacheTimeoutMs === 'number'
-      ? Math.max(0, Math.floor(options.cacheTimeoutMs))
+    typeof _cacheTimeoutMs === 'number'
+      ? Math.max(0, Math.floor(_cacheTimeoutMs))
       : defaultCacheTimeoutMs;
   const metaTimeoutMs =
-    options && typeof options.metaTimeoutMs === 'number' ? Math.max(0, Math.floor(options.metaTimeoutMs)) : 350;
+    typeof _metaTimeoutMs === 'number' ? Math.max(0, Math.floor(_metaTimeoutMs)) : 350;
   const cacheStartedAt = perfEnabled() ? performance.now() : 0;
   let cacheTimer = null;
   let cacheSettled = false;
@@ -237,9 +240,12 @@ export function fetchArticle(id, options = {}) {
   const cachedPromise = Promise.race([cachedLookupPromise, timeoutPromise]);
 
   const fetchOnline = () =>
-    apiRequest(`/api/articles/${id}?include_history=0`, options)
+    apiRequest(`/api/articles/${id}?include_history=0`, apiOptions)
       .then(async (article) => {
         cacheArticle(article).catch(() => {});
+        if (article && article.id && String(article.id) !== String(id)) {
+          cacheArticleUnderId(article, id).catch(() => {});
+        }
         return article;
       })
       .catch(async (err) => {
@@ -248,10 +254,61 @@ export function fetchArticle(id, options = {}) {
         throw err;
       });
 
+  const buildLocalInboxArticle = () => {
+    const now = new Date().toISOString();
+    const safeUuid =
+      (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+        ? () => globalThis.crypto.randomUUID()
+        : () => `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+    // Offline fallback for inbox: if user created quick notes in boot mode, they live in outline queue.
+    let docJson = null;
+    try {
+      const raw = window.localStorage.getItem('ttree_outline_autosave_queue_docjson_v1') || '';
+      if (raw) {
+        const queue = JSON.parse(raw);
+        const entry = queue && typeof queue === 'object' ? queue.inbox : null;
+        if (entry && entry.docJson && typeof entry.docJson === 'object') docJson = entry.docJson;
+      }
+    } catch {
+      docJson = null;
+    }
+    if (!docJson) {
+      docJson = {
+        type: 'doc',
+        content: [
+          {
+            type: 'outlineSection',
+            attrs: { id: safeUuid(), collapsed: false },
+            content: [
+              { type: 'outlineHeading', content: [] },
+              { type: 'outlineBody', content: [{ type: 'paragraph' }] },
+              { type: 'outlineChildren', content: [] },
+            ],
+          },
+        ],
+      };
+    }
+    return {
+      id: 'inbox',
+      title: 'Быстрые заметки',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      parentId: null,
+      position: 0,
+      authorId: null,
+      publicSlug: null,
+      encrypted: false,
+      docJson,
+      history: [],
+    };
+  };
+
   const fetchMeta = () =>
     apiRequest(`/api/articles/${encodeURIComponent(id)}/meta`, {
       method: 'GET',
-      headers: { ...(options.headers || {}) },
+      headers: { ...(apiOptions.headers || {}) },
     });
   const fetchMetaWithTimeout = () => {
     if (!metaTimeoutMs) return fetchMeta();
@@ -274,6 +331,10 @@ export function fetchArticle(id, options = {}) {
   // - If no cached: fetch full article
   return cachedPromise.then(async (cached) => {
     if (!cached) {
+      if (!navigator.onLine && String(id) === 'inbox') {
+        perfLog('[offline-first][article] choose.local.inbox.offline', { id });
+        return buildLocalInboxArticle();
+      }
       perfLog('[offline-first][article] choose.network.no-cache', { id });
       return fetchOnline();
     }
@@ -285,7 +346,7 @@ export function fetchArticle(id, options = {}) {
     const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
     if (!cachedUpdatedAt) {
       perfLog('[offline-first][article] choose.network.no-cached-updatedAt', { id });
-      return fetchOnline();
+      return withPendingQuickNotesOverlay(await fetchOnline());
     }
 
     try {

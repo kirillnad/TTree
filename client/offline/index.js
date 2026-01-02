@@ -7,9 +7,17 @@ let initPromise = null;
 let currentUserKey = null;
 
 const PERF_KEY = 'ttree_profile_v1';
+const DEBUG_OFFLINE_KEY = 'ttree_debug_offline_v1';
 function perfEnabled() {
   try {
     return window?.localStorage?.getItem?.(PERF_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function debugOfflineEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(DEBUG_OFFLINE_KEY) === '1';
   } catch {
     return false;
   }
@@ -39,8 +47,10 @@ export async function initOfflineForUser(user) {
     state.offlineInitError = '';
     state.offlineInitStartedAt = Date.now();
     try {
-      // eslint-disable-next-line no-console
-      console.log('[offline] init start', { userKey: key });
+      if (debugOfflineEnabled()) {
+        // eslint-disable-next-line no-console
+        console.log('[offline] init start', { userKey: key });
+      }
     } catch {
       // ignore
     }
@@ -64,8 +74,10 @@ export async function initOfflineForUser(user) {
       state.offlineInitError = '';
       state.offlineInitStartedAt = null;
       try {
-        // eslint-disable-next-line no-console
-        console.log('[offline] init ready');
+        if (debugOfflineEnabled()) {
+          // eslint-disable-next-line no-console
+          console.log('[offline] init ready');
+        }
       } catch {
         // ignore
       }

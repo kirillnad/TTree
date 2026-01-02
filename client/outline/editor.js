@@ -768,6 +768,85 @@ function tryMergeWithPreviousTableOnBackspace(pmState, dispatch) {
   }
 }
 
+function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionId, TextSelection) {
+  try {
+    if (!sectionId) return false;
+    if (!TextSelection) return false;
+    const sel = pmState?.selection;
+    if (!sel?.empty) return false;
+
+    const sectionPos = findSectionPosById(pmState.doc, sectionId);
+    if (typeof sectionPos !== 'number') return false;
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+
+    const headingNode = sectionNode.child(0);
+    const bodyNode = sectionNode.child(1);
+    if (!headingNode || headingNode.type?.name !== 'outlineHeading') return false;
+    if (!bodyNode || bodyNode.type?.name !== 'outlineBody') return false;
+
+    const headingText = String(headingNode.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (headingText) return false;
+
+    if (!bodyNode.childCount) return false;
+    const firstBodyChild = bodyNode.child(0);
+    if (!firstBodyChild || firstBodyChild.type?.name !== 'paragraph') return false;
+
+    const headingPos = sectionPos + 1;
+    const bodyPos = sectionPos + 1 + headingNode.nodeSize;
+    const firstParagraphPos = bodyPos + 1; // first child of outlineBody
+    const paragraphTextStart = firstParagraphPos + 1; // inside paragraph
+
+    // Must be exactly at the very start of the first paragraph in body.
+    if (sel.from !== paragraphTextStart) return false;
+
+    // Find first hardBreak inside the first paragraph to define "first line".
+    let offset = 0;
+    let breakOffset = null;
+    for (let i = 0; i < firstBodyChild.childCount; i += 1) {
+      const node = firstBodyChild.child(i);
+      if (node.type?.name === 'hardBreak') {
+        breakOffset = offset;
+        break;
+      }
+      offset += node.nodeSize;
+    }
+
+    const sliceTo = paragraphTextStart + (breakOffset == null ? firstBodyChild.content.size : breakOffset);
+    if (sliceTo <= paragraphTextStart) return false;
+
+    const slice = pmState.doc.slice(paragraphTextStart, sliceTo);
+    if (!slice?.content || slice.content.size <= 0) return false;
+
+    const deleteTo = breakOffset == null ? sliceTo : sliceTo + 1; // remove hardBreak too
+    const headingContentFrom = headingPos + 1;
+    const headingContentTo = headingPos + headingNode.nodeSize - 1;
+
+    let tr = pmState.tr.replaceRange(headingContentFrom, headingContentTo, slice.content);
+
+    const delFromMapped = tr.mapping.map(paragraphTextStart, 1);
+    const delToMapped = tr.mapping.map(deleteTo, -1);
+    tr = tr.delete(delFromMapped, delToMapped);
+
+    // Place caret at end of heading.
+    const newSectionPos = findSectionPosById(tr.doc, sectionId);
+    if (typeof newSectionPos === 'number') {
+      const newSectionNode = tr.doc.nodeAt(newSectionPos);
+      const newHeading = newSectionNode?.type?.name === 'outlineSection' ? newSectionNode.child(0) : null;
+      if (newHeading) {
+        const newHeadingPos = newSectionPos + 1;
+        const endPos = newHeadingPos + newHeading.nodeSize - 1;
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(endPos), -1));
+      }
+    }
+
+    dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function convertMarkdownTablesInSection(pmState, sectionId) {
   try {
     if (!pmState?.doc || !sectionId) return null;
@@ -5666,15 +5745,27 @@ async function mountOutlineEditor() {
               });
               const activeSectionId = getActiveSectionId(pmState);
 
-              // Backspace at the start of the first table cell: if there is a table right before,
-              // merge the tables and keep the cursor in the same cell.
-              // Only in edit-mode.
-              if (editingSectionId && event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                const merged = tryMergeWithPreviousTableOnBackspace(pmState, view.dispatch);
-                outlineDebug('editorProps.backspace.tableMerge', { merged, editingSectionId: editingSectionId || null });
-                if (merged) {
-                  event.preventDefault();
-                  event.stopPropagation();
+	              // Backspace at the start of the first table cell: if there is a table right before,
+	              // merge the tables and keep the cursor in the same cell.
+	              // Only in edit-mode.
+	              if (editingSectionId && event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+	                const promoted = tryPromoteBodyFirstLineToHeadingOnBackspace(
+	                  pmState,
+	                  view.dispatch,
+	                  editingSectionId,
+	                  TextSelection,
+	                );
+	                outlineDebug('editorProps.backspace.bodyToHeading', { promoted, editingSectionId });
+	                if (promoted) {
+	                  event.preventDefault();
+	                  event.stopPropagation();
+	                  return true;
+	                }
+	                const merged = tryMergeWithPreviousTableOnBackspace(pmState, view.dispatch);
+	                outlineDebug('editorProps.backspace.tableMerge', { merged, editingSectionId: editingSectionId || null });
+	                if (merged) {
+	                  event.preventDefault();
+	                  event.stopPropagation();
                   return true;
                 }
               }
@@ -7313,6 +7404,72 @@ export function insertNewOutlineSectionAtStart({ enterEditMode = true } = {}) {
   docDirty = true;
   scheduleAutosave({ delayMs: 200 });
   return sectionId;
+}
+
+export function insertOutlineSectionFromPlainTextAtStart(sectionId, text, { enterEditMode = false } = {}) {
+  if (!outlineEditorInstance) return false;
+  const sid = String(sectionId || '').trim();
+  if (!sid) return false;
+  const exists = findSectionPosById(outlineEditorInstance.state.doc, sid);
+  if (typeof exists === 'number') return false;
+
+  const schema = outlineEditorInstance.state.doc.type.schema;
+  const paragraphType = schema.nodes.paragraph;
+  const hardBreakType = schema.nodes.hardBreak || schema.nodes.hard_break || null;
+  const raw = String(text || '').replace(/\r\n/g, '\n').trimEnd();
+
+  const buildParagraphNodes = () => {
+    if (!paragraphType) return [];
+    if (!raw.trim()) return [paragraphType.create({}, [])];
+    const parts = raw.split(/\n{2,}/);
+    const out = [];
+    for (const p of parts) {
+      const lines = String(p || '').split('\n');
+      const content = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        const t = lines[i];
+        if (i > 0 && hardBreakType) content.push(hardBreakType.create());
+        if (t) content.push(schema.text(t));
+      }
+      out.push(paragraphType.create({}, content));
+    }
+    return out.length ? out : [paragraphType.create({}, [])];
+  };
+
+  const headingNode = schema.nodes.outlineHeading.create({}, []);
+  const bodyNode = schema.nodes.outlineBody.create({}, buildParagraphNodes());
+  const childrenNode = schema.nodes.outlineChildren.create({}, []);
+  const sectionNode = schema.nodes.outlineSection.create({ id: sid, collapsed: false }, [
+    headingNode,
+    bodyNode,
+    childrenNode,
+  ]);
+
+  const insertPos = 0;
+  let tr = outlineEditorInstance.state.tr.insert(insertPos, sectionNode);
+  try {
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    if (TextSelection) {
+      const sectionPos = findSectionPosById(tr.doc, sid);
+      const bodyStart = typeof sectionPos === 'number' ? findOutlineSectionBodyStartPos(tr.doc, sectionPos) : null;
+      if (typeof bodyStart === 'number') {
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, bodyStart + 2)), 1));
+      } else {
+        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+  if (enterEditMode && outlineEditModeKey) {
+    tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: sid });
+  }
+  outlineEditorInstance.view.dispatch(tr.scrollIntoView());
+  outlineEditorInstance.view.focus();
+  docDirty = true;
+  scheduleAutosave({ delayMs: 200 });
+  return true;
 }
 
 export async function openOutlineEditor() {

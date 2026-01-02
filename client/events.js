@@ -97,7 +97,7 @@ let mediaStatusTimerId = null;
 let mediaStatusInFlight = false;
 
 function loadOutlineEditorModule() {
-  return import('./outline/editor.js?v=94');
+  return import('./outline/editor.js?v=95');
 }
 
 function loadExporterModule() {
@@ -556,6 +556,13 @@ export function attachEvents() {
   startMediaStatusPolling();
   let offlineStatusInFlight = false;
   let lastOfflineInitWarnAt = 0;
+  const offlineDebugEnabled = () => {
+    try {
+      return window?.localStorage?.getItem?.('ttree_debug_offline_v1') === '1';
+    } catch {
+      return false;
+    }
+  };
   const refreshOfflineStatusOnce = async () => {
     if (offlineStatusInFlight) return;
     if (!refs.userMenuBtn && !refs.offlineStatusLabel && !refs.offlineFetchBtn) return;
@@ -578,8 +585,10 @@ export function attachEvents() {
           if (ms > 8000 && now - lastOfflineInitWarnAt > 8000) {
             lastOfflineInitWarnAt = now;
             try {
-              // eslint-disable-next-line no-console
-              console.warn('[offline] still initializing', { ms });
+              if (offlineDebugEnabled()) {
+                // eslint-disable-next-line no-console
+                console.warn('[offline] still initializing', { ms });
+              }
             } catch {
               // ignore
             }
@@ -1175,7 +1184,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-		            const outline = await import('./outline/editor.js?v=94');
+		            const outline = await import('./outline/editor.js?v=95');
           if (outline?.getOutlineActiveSectionId) {
             blockId = outline.getOutlineActiveSectionId() || blockId;
           }
@@ -1218,7 +1227,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=94');
+          const outline = await import('./outline/editor.js?v=95');
           const frags = {
             heading: choice.entry.afterHeadingJson || null,
             body: choice.entry.afterBodyJson || null,
@@ -1314,7 +1323,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=94');
+          const outline = await import('./outline/editor.js?v=95');
           const frags = {
             heading: entry.afterHeadingJson || null,
             body: entry.afterBodyJson || null,

@@ -1,11 +1,12 @@
 const CACHE_NAME = 'memus-uploads-v1';
-const APP_CACHE = 'memus-app-shell-v2';
+const APP_CACHE = 'memus-app-shell-v5';
 
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
   '/style.css?v=38',
-  '/app.js?v=26',
+  '/boot.js?v=5',
+  '/app.js?v=27',
   '/manifest.webmanifest',
   '/icons/favicon.ico',
   '/icons/icon-192.png',

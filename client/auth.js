@@ -5,6 +5,92 @@ import { showToast } from './toast.js';
 import { initOfflineForUser } from './offline/index.js';
 import { startBackgroundFullPull, startSyncLoop, tryPullBootstrap } from './offline/sync.js';
 
+const QUICK_NOTES_DEBUG_KEY = 'ttree_debug_quick_notes_v1';
+function quickNotesDebugEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(QUICK_NOTES_DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function qlog(...args) {
+  try {
+    if (!quickNotesDebugEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[quick-notes][auth]', ...args);
+  } catch {
+    // ignore
+  }
+}
+
+let pendingQuickNotesListenerAttached = false;
+function attachPendingQuickNotesFlushListener() {
+  if (pendingQuickNotesListenerAttached) return;
+  pendingQuickNotesListenerAttached = true;
+  let timer = null;
+  let inFlight = null;
+
+  const tryInsertNoteIntoOpenInbox = async (note) => {
+    try {
+      const noteId = String(note?.id || '').trim();
+      const text = String(note?.text || '').trim();
+      if (!noteId || !text) return false;
+      if (String(state.articleId || '') !== 'inbox') return false;
+      if (!state.article) return false;
+      // Insert into the currently open outline editor (so user sees it immediately).
+      const outline = await import('./outline/editor.js?v=95');
+      if (!outline?.insertOutlineSectionFromPlainTextAtStart) return false;
+      const ok = outline.insertOutlineSectionFromPlainTextAtStart(noteId, text);
+      if (ok) {
+        qlog('inbox.inserted', { noteId });
+      }
+      return Boolean(ok);
+    } catch {
+      return false;
+    }
+  };
+
+  const scheduleSyncLater = () => {
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+    if (inFlight) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      try {
+        qlog('sync.start');
+        inFlight = import('./quickNotes/queuedInbox.js')
+          .then((m) => m.syncQueuedInboxToServer?.())
+          .then((res) => {
+            qlog('sync.done', res || null);
+          })
+          .catch(() => {})
+          .finally(() => {
+            inFlight = null;
+          });
+      } catch {
+        inFlight = null;
+      }
+    }, 7000);
+  };
+
+  const schedule = (event) => {
+    const note = event?.detail?.note;
+    if (note) {
+      // If inbox is already open, insert immediately so user sees it right away.
+      tryInsertNoteIntoOpenInbox(note).catch(() => {});
+    }
+    // Sync queued inbox in background after a delay (when app is likely fully loaded).
+    scheduleSyncLater();
+  };
+
+  try {
+    window.addEventListener('memus:queued-inbox-changed', schedule);
+    qlog('listener.attached');
+  } catch {
+    // ignore
+  }
+}
+
 let appStarted = false;
 let onAuthenticated = null;
 const LAST_USER_KEY = 'ttree_last_user_v1';
@@ -147,6 +233,17 @@ export async function bootstrapAuth() {
       // хотя сеть уже доступна и сервер отвечает 200.
       hideAuthOverlay();
       ensureAppStarted();
+      attachPendingQuickNotesFlushListener();
+      // Sync queued inbox (boot modal) in background.
+      try {
+        setTimeout(() => {
+          import('./quickNotes/queuedInbox.js')
+            .then((m) => m.syncQueuedInboxToServer?.())
+            .catch(() => {});
+        }, 50);
+      } catch {
+        // ignore
+      }
       // Warm up TipTap bundle on idle so first article open doesn't spend seconds on parsing/initialization.
       // This is especially noticeable on mobile after Ctrl-F5 when caches are cold.
       try {

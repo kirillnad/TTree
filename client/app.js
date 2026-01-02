@@ -4,6 +4,13 @@ import { initAuth, bootstrapAuth } from './auth.js?v=2';
 import { initSidebarStateFromStorage } from './sidebar.js';
 import { refs } from './refs.js';
 
+// Used by `boot.js` to detect "slow boot" (app module didn't start quickly).
+try {
+  window.__memusAppStarted = true;
+} catch {
+  // ignore
+}
+
 function applyDebugFlagsFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search || '');
