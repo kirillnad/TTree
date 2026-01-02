@@ -38,7 +38,7 @@ function attachPendingQuickNotesFlushListener() {
       if (String(state.articleId || '') !== 'inbox') return false;
       if (!state.article) return false;
       // Insert into the currently open outline editor (so user sees it immediately).
-      const outline = await import('./outline/editor.js?v=95');
+      const outline = await import('./outline/editor.js?v=96');
       if (!outline?.insertOutlineSectionFromPlainTextAtStart) return false;
       const ok = outline.insertOutlineSectionFromPlainTextAtStart(noteId, text);
       if (ok) {

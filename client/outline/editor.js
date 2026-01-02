@@ -3797,10 +3797,21 @@ async function mountOutlineEditor() {
           const sectionNode = editor.state.doc.nodeAt(sectionPos);
           if (!sectionNode) return;
           const next = !Boolean(sectionNode.attrs?.collapsed);
-          const tr = editor.state.tr.setNodeMarkup(sectionPos, undefined, {
+          let tr = editor.state.tr.setNodeMarkup(sectionPos, undefined, {
             ...sectionNode.attrs,
             collapsed: next,
           });
+          // If we're collapsing anything while in edit mode, exit edit mode first.
+          try {
+            if (next && outlineEditModeKey) {
+              const st = outlineEditModeKey.getState(editor.state) || {};
+              if (st.editingSectionId) {
+                tr = tr.setMeta(outlineEditModeKey, { type: 'exit' });
+              }
+            }
+          } catch {
+            // ignore
+          }
           tr.setMeta(OUTLINE_ALLOW_META, true);
           editor.view.dispatch(tr);
           editor.view.focus();
@@ -4819,9 +4830,20 @@ async function mountOutlineEditor() {
           const sectionNode = pmState.doc.nodeAt(sectionPos);
           if (!sectionNode) return false;
           const next = typeof collapsed === 'boolean' ? collapsed : !Boolean(sectionNode.attrs?.collapsed);
-          const tr = pmState.tr
+          let tr = pmState.tr
             .setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next })
             .setMeta(OUTLINE_ALLOW_META, true);
+          // Collapsing while editing should exit edit-mode so a hidden body isn't editable.
+          try {
+            if (next && outlineEditModeKey) {
+              const st = outlineEditModeKey.getState(pmState) || {};
+              if (st.editingSectionId) {
+                tr = tr.setMeta(outlineEditModeKey, { type: 'exit' });
+              }
+            }
+          } catch {
+            // ignore
+          }
           dispatch(tr);
           return true;
         });
@@ -4869,6 +4891,16 @@ async function mountOutlineEditor() {
           tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
         }
         tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+        try {
+          if (next && outlineEditModeKey) {
+            const st = outlineEditModeKey.getState(pmState) || {};
+            if (st.editingSectionId) {
+              tr = tr.setMeta(outlineEditModeKey, { type: 'exit' });
+            }
+          }
+        } catch {
+          // ignore
+        }
         dispatch(tr);
       };
 
@@ -6424,6 +6456,13 @@ async function mountOutlineEditor() {
             if (!sectionId) return false;
             event.preventDefault();
             event.stopPropagation();
+            // Collapsed sections must not enter edit mode; expand instead.
+            if (Boolean(sectionNode?.attrs?.collapsed)) {
+              const tr = view.state.tr.setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: false });
+              tr.setMeta(OUTLINE_ALLOW_META, true);
+              view.dispatch(tr.scrollIntoView());
+              return true;
+            }
             view.dispatch(view.state.tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId }));
             return true;
           }
@@ -6775,6 +6814,17 @@ async function mountOutlineEditor() {
                 if (shouldExpand && typeof currentPos === 'number' && currentNode) {
                   tr = tr.setNodeMarkup(currentPos, undefined, { ...currentNode.attrs, collapsed: false });
                   tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                }
+
+                // Collapsed sections must not enter edit mode.
+                if (shouldExpand) {
+                  view.dispatch(tr.scrollIntoView());
+                  try {
+                    view.focus();
+                  } catch {
+                    // ignore
+                  }
+                  return;
                 }
 
                 tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
@@ -7345,6 +7395,9 @@ export function enterOutlineSectionEditMode(sectionId, { focusBody = true } = {}
   if (!sid) return false;
   const sectionPos = findSectionPosById(outlineEditorInstance.state.doc, sid);
   if (typeof sectionPos !== 'number') return false;
+  const sectionNode = outlineEditorInstance.state.doc.nodeAt(sectionPos);
+  // Do not enter edit mode for collapsed sections (must be expanded first by user action).
+  if (Boolean(sectionNode?.attrs?.collapsed)) return false;
 
   let tr = outlineEditorInstance.state.tr;
   if (focusBody) {
