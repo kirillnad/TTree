@@ -371,7 +371,7 @@ export async function createInboxNote() {
       // the just-created draft section and it "disappears".
       navigate(inboxPath);
     }
-    const outline = await import('../outline/editor.js?v=104');
+    const outline = await import('../outline/editor.js?v=106');
     let newSectionId = null;
     const deadline = performance.now() + 15000;
     while (!newSectionId && performance.now() < deadline) {

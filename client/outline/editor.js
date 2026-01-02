@@ -907,10 +907,9 @@ function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionI
     const delToMapped = tr.mapping.map(deleteTo, -1);
     tr = tr.delete(delFromMapped, delToMapped);
 
-    // Place caret at end of the original heading (i.e. start of the moved text).
+    // Place caret at the start of the moved text (not at the end of heading).
     try {
-      const caretPos = tr.mapping.map(caretAnchorBeforeInsert, -1);
-      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(caretPos), -1));
+      tr = tr.setSelection(TextSelection.create(tr.doc, caretAnchorBeforeInsert));
     } catch {
       // ignore
     }
@@ -1613,79 +1612,106 @@ function mountOutlineToolbar(editor) {
 		    return false;
 		  };
 
-		  const cancelTableToText = () => {
-		    if (!requireEditing()) return false;
-		    try {
-		      const { state: pmState, view } = editor;
-		      const { schema, selection } = pmState;
-		      const $from = selection?.$from;
-		      if (!$from) return false;
+			  const cancelTableToText = () => {
+			    if (!requireEditing()) return false;
+			    try {
+			      const { state: pmState, view } = editor;
+			      const { schema, selection } = pmState;
+			      const $from = selection?.$from;
+			      if (!$from) return false;
 
-		      let tableDepth = null;
-		      let rowDepth = null;
-		      let cellDepth = null;
-		      for (let d = $from.depth; d >= 0; d -= 1) {
-		        const node = $from.node(d);
-		        if (!node) continue;
-		        const name = node.type?.name;
-		        if (cellDepth == null && (name === 'tableCell' || name === 'tableHeader')) cellDepth = d;
-		        if (rowDepth == null && name === 'tableRow') rowDepth = d;
-		        if (name === 'table') {
-		          tableDepth = d;
-		          break;
-		        }
-		      }
-		      if (tableDepth == null) return false;
+			      // Unwrap ONLY the outermost table that contains the current selection.
+			      // (Nested tables should remain as-is.)
+			      let tableDepth = null;
+			      for (let d = $from.depth; d >= 0; d -= 1) {
+			        const node = $from.node(d);
+			        if (node?.type?.name === 'table') tableDepth = d;
+			      }
+			      if (tableDepth == null) return false;
 
-		      const tablePos = $from.before(tableDepth);
-		      const tableNode = pmState.doc.nodeAt(tablePos);
-		      if (!tableNode || tableNode.type?.name !== 'table') return false;
+			      // Find the row/cell belonging to that outermost table (shallowest tableRow/tableCell after tableDepth).
+			      let rowDepth = null;
+			      let cellDepth = null;
+			      for (let d = tableDepth + 1; d <= $from.depth; d += 1) {
+			        const node = $from.node(d);
+			        const name = node?.type?.name;
+			        if (rowDepth == null && name === 'tableRow') rowDepth = d;
+			        if (cellDepth == null && (name === 'tableCell' || name === 'tableHeader')) cellDepth = d;
+			        if (rowDepth != null && cellDepth != null) break;
+			      }
 
-		      const targetRowIndex = rowDepth != null ? $from.index(tableDepth) : null;
-		      const targetColIndex = rowDepth != null && cellDepth != null ? $from.index(rowDepth) : null;
-		      let targetFlatIndex = null;
-		      if (typeof targetRowIndex === 'number' && typeof targetColIndex === 'number') {
-		        const cols = tableNode.childCount ? tableNode.child(0)?.childCount || 0 : 0;
-		        if (cols > 0) targetFlatIndex = targetRowIndex * cols + targetColIndex;
-		      }
+			      const tablePos = $from.before(tableDepth);
+			      const tableNode = pmState.doc.nodeAt(tablePos);
+			      if (!tableNode || tableNode.type?.name !== 'table') return false;
 
-		      const paragraphs = [];
-		      let flatIndex = 0;
-		      let selectionParagraphIndex = 0;
-		      for (let r = 0; r < tableNode.childCount; r += 1) {
-		        const row = tableNode.child(r);
-		        for (let c = 0; c < row.childCount; c += 1) {
-		          const cell = row.child(c);
-		          const text = String(cell?.textContent || '');
-		          const normalized = text.replace(/\u00a0/g, ' ');
-		          const para =
-		            normalized && normalized.trim()
-		              ? schema.nodes.paragraph.create(null, schema.text(normalized))
-		              : schema.nodes.paragraph.create(null, []);
-		          if (targetFlatIndex != null && flatIndex === targetFlatIndex) selectionParagraphIndex = paragraphs.length;
-		          paragraphs.push(para);
-		          flatIndex += 1;
-		        }
-		      }
-		      if (!paragraphs.length) return false;
+			      const targetRowIndex = rowDepth != null ? $from.index(tableDepth) : null;
+			      const targetColIndex = rowDepth != null && cellDepth != null ? $from.index(rowDepth) : null;
+			      let targetFlatIndex = null;
+			      if (typeof targetRowIndex === 'number' && typeof targetColIndex === 'number') {
+			        const cols = tableNode.childCount ? tableNode.child(0)?.childCount || 0 : 0;
+			        if (cols > 0) targetFlatIndex = targetRowIndex * cols + targetColIndex;
+			      }
 
-		      const fragment = schema.nodes.outlineBody
-		        ? schema.nodes.outlineBody.create({}, paragraphs).content
-		        : schema.nodes.doc.create({}, paragraphs).content;
+			      // Build replacement blocks: each cell becomes its original block content (unchanged).
+			      // Images (inline atoms) and nested tables remain intact because we keep nodes, not textContent.
+			      const blocks = [];
+			      let flatIndex = 0;
+			      let selectionBlockIndex = 0;
+			      for (let r = 0; r < tableNode.childCount; r += 1) {
+			        const row = tableNode.child(r);
+			        for (let c = 0; c < row.childCount; c += 1) {
+			          const cell = row.child(c);
+			          const cellBlocks = [];
+			          try {
+			            for (let i = 0; i < (cell?.content?.childCount || 0); i += 1) {
+			              const child = cell.content.child(i);
+			              if (child) cellBlocks.push(child);
+			            }
+			          } catch {
+			            // ignore
+			          }
 
-		      let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, fragment);
-		      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			          if (!cellBlocks.length) {
+			            // Keep an empty paragraph to represent an empty cell.
+			            cellBlocks.push(schema.nodes.paragraph.create(null, []));
+			          }
 
-		      try {
-		        const TextSelection = tiptap?.pmStateMod?.TextSelection;
-		        if (TextSelection) {
-		          let cursorPos = tablePos;
-		          for (let i = 0; i < selectionParagraphIndex; i += 1) cursorPos += paragraphs[i].nodeSize;
-		          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos + 1), 1));
-		        }
-		      } catch {
-		        // ignore
-		      }
+			          if (targetFlatIndex != null && flatIndex === targetFlatIndex) selectionBlockIndex = blocks.length;
+			          blocks.push(...cellBlocks);
+			          flatIndex += 1;
+			        }
+			      }
+			      if (!blocks.length) return false;
+
+			      const fragment = schema.nodes.outlineBody
+			        ? schema.nodes.outlineBody.create({}, blocks).content
+			        : schema.nodes.doc.create({}, blocks).content;
+
+			      let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, fragment);
+			      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+			      try {
+			        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+			        if (TextSelection) {
+			          let cursorPos = tablePos;
+			          for (let i = 0; i < selectionBlockIndex; i += 1) cursorPos += blocks[i].nodeSize;
+			          let found = null;
+			          const from = Math.min(tr.doc.content.size, cursorPos);
+			          const to = Math.min(tr.doc.content.size, cursorPos + 20000);
+			          tr.doc.nodesBetween(from, to, (node, pos) => {
+			            if (found != null) return false;
+			            if (node?.isTextblock) {
+			              found = pos + 1;
+			              return false;
+			            }
+			            return true;
+			          });
+			          const anchor = found != null ? found : Math.min(tr.doc.content.size, cursorPos + 1);
+			          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+			        }
+			      } catch {
+			        // ignore
+			      }
 
 		      view.dispatch(tr.scrollIntoView());
 		      view.focus?.();
