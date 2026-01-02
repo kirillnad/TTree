@@ -6526,38 +6526,106 @@ async function mountOutlineEditor() {
               pos: view.state?.selection?.$from?.pos ?? null,
             },
           });
-	        // Ctrl/⌘+A inside outlineBody должен выделять только тело текущей секции,
-	        // а не весь документ (иначе легко случайно удалить структуру).
-	        try {
-	          const isModA = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key || '').toLowerCase() === 'a';
-	          if (isModA && outlineEditModeKey) {
-	            const st = outlineEditModeKey.getState(view.state) || {};
-	            if (st.editingSectionId) {
-	              const $from = view.state.selection?.$from || null;
-	              if ($from) {
-	                let bodyDepth = null;
-	                for (let d = $from.depth; d > 0; d -= 1) {
-	                  if ($from.node(d)?.type?.name === 'outlineBody') {
-	                    bodyDepth = d;
-	                    break;
-	                  }
-	                }
-	                if (bodyDepth !== null) {
-	                  event.preventDefault();
-	                  event.stopPropagation();
-	                  const from = $from.start(bodyDepth);
-	                  const to = $from.end(bodyDepth);
-	                  const nextSel = TextSelection.create(view.state.doc, from, to);
-	                  const tr = view.state.tr.setSelection(nextSel);
-	                  view.dispatch(tr);
-	                  return true;
-	                }
-	              }
-	            }
-	          }
-	        } catch {
-	          // ignore
-	        }
+		        // Ctrl/⌘+A внутри блока должен выделять весь блок (заголовок+тело).
+		        // Повторное Ctrl/⌘+A на заголовке — выделяет всю статью (дефолтное поведение).
+		        try {
+		          // IMPORTANT: `event.key` depends on keyboard layout (e.g. RU layout -> 'ф'),
+		          // so detect Mod+A primarily via `event.code === 'KeyA'`.
+		          const isModA =
+		            (event.ctrlKey || event.metaKey) &&
+		            !event.altKey &&
+		            !event.shiftKey &&
+		            (event.code === 'KeyA' || String(event.key || '').toLowerCase() === 'a');
+		          if (isModA) {
+		            const TextSelection = tiptap?.pmStateMod?.TextSelection;
+		            if (!TextSelection) {
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'no-TextSelection' });
+		              return false;
+		            }
+		            const pmState = view.state;
+		            const sel = pmState.selection;
+		            const $from = sel?.$from || null;
+		            if (!$from) {
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'no-$from' });
+		              return false;
+		            }
+
+		            const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
+		            if (typeof sectionPos !== 'number') {
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'no-sectionPos' });
+		              return false;
+		            }
+		            const sectionNode = pmState.doc.nodeAt(sectionPos);
+		            if (!sectionNode || sectionNode.type?.name !== 'outlineSection') {
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'not-outlineSection' });
+		              return false;
+		            }
+
+		            const headingNode = sectionNode.child(0);
+		            const bodyNode = sectionNode.child(1);
+		            if (!headingNode || !bodyNode) {
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'missing-heading/body' });
+		              return false;
+		            }
+
+		            const headingPos = sectionPos + 1;
+		            const headingFrom = headingPos + 1;
+		            const headingTo = headingPos + headingNode.nodeSize - 1;
+		            const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+		            const bodyFrom = bodyStart + 1;
+		            const bodyTo = bodyStart + bodyNode.nodeSize - 1;
+
+		            // Find a safe "to" position inside the last textblock in body.
+		            let blockTo = bodyTo;
+		            try {
+		              let last = null;
+		              pmState.doc.nodesBetween(bodyFrom, Math.min(pmState.doc.content.size, bodyTo), (node, pos) => {
+		                if (node?.isTextblock) last = pos + node.nodeSize - 1;
+		              });
+		              if (typeof last === 'number') blockTo = last;
+		            } catch {
+		              // ignore
+		            }
+		            if (blockTo < bodyFrom) {
+		              // No textblocks in body; fall back to end of heading.
+		              blockTo = headingTo;
+		            }
+
+		            const blockFrom = headingFrom;
+		            const isInHeading = (() => {
+		              try {
+		                for (let d = $from.depth; d > 0; d -= 1) {
+		                  if ($from.node(d)?.type?.name === 'outlineHeading') return true;
+		                }
+		              } catch {
+		                // ignore
+		              }
+		              return false;
+		            })();
+
+		            const alreadySelectedBlock =
+		              Boolean(sel) &&
+		              typeof sel.from === 'number' &&
+		              typeof sel.to === 'number' &&
+		              Math.min(sel.from, sel.to) === blockFrom &&
+		              Math.max(sel.from, sel.to) === blockTo;
+
+		            if (isInHeading && alreadySelectedBlock) {
+		              // Let default Mod+A select the whole document.
+		              outlineDebug('editorProps.modA', { handled: false, reason: 'pass-through-doc-select' });
+		              return false;
+		            }
+
+		            event.preventDefault();
+		            event.stopPropagation();
+		            const nextSel = TextSelection.create(pmState.doc, blockFrom, blockTo);
+		            view.dispatch(pmState.tr.setSelection(nextSel));
+		            outlineDebug('editorProps.modA', { handled: true, blockFrom, blockTo, isInHeading, alreadySelectedBlock });
+		            return true;
+		          }
+		        } catch {
+		          // ignore
+		        }
 
 	        // В view-mode Enter/F2 должны ВСЕГДА включать режим редактирования текущей секции,
 	        // даже когда курсор стоит внутри listItem (иначе list keymap "съедает" Enter).
