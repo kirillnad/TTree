@@ -7561,6 +7561,7 @@ export function revealOutlineSection(sectionId, options = {}) {
     const sid = String(sectionId || '');
     if (!sid) return false;
     const { state: pmState, view } = outlineEditorInstance;
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
     const path = findOutlineSectionPathById(pmState.doc, sid);
     if (!Array.isArray(path) || !path.length) return false;
 
@@ -7591,6 +7592,27 @@ export function revealOutlineSection(sectionId, options = {}) {
     }
 
     view.dispatch(tr.scrollIntoView());
+
+    // Extra safety: ProseMirror's `scrollIntoView()` sometimes doesn't move the scroll container
+    // enough (especially after layout changes). Ensure the actual section DOM is visible.
+    try {
+      const escaped =
+        typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(sid) : sid.replace(/"/g, '\\"');
+      window.requestAnimationFrame(() => {
+        try {
+          const el =
+            view.dom?.querySelector?.(`[data-outline-section][data-section-id="${escaped}"]`) ||
+            view.dom?.querySelector?.(`[data-section-id="${escaped}"]`);
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ block: 'center', inline: 'nearest' });
+          }
+        } catch {
+          // ignore
+        }
+      });
+    } catch {
+      // ignore
+    }
 
     if (options && options.focus) {
       try {
