@@ -496,17 +496,17 @@ export function saveArticleDocJson(articleId, docJson, options = {}) {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
-  return attempt().catch(async (err) => {
-    const now = new Date().toISOString();
-    await updateCachedDocJson(articleId, docJson, now).catch(() => {});
-    await enqueueOp('save_doc_json', {
-      articleId,
-      payload: { docJson, createVersionIfStaleHours: payload.createVersionIfStaleHours || 12, coalesceKey: articleId },
-      coalesceKey: articleId,
-    }).catch(() => {});
-    return { status: 'queued', articleId, updatedAt: now, offline: true };
-  });
-}
+	  return attempt().catch(async (err) => {
+	    const now = new Date().toISOString();
+	    await updateCachedDocJson(articleId, docJson, now).catch(() => {});
+	    await enqueueOp('save_doc_json', {
+	      articleId,
+	      payload: { docJson, createVersionIfStaleHours: payload.createVersionIfStaleHours || 12, clientQueuedAt: Date.now() },
+	      coalesceKey: articleId,
+	    }).catch(() => {});
+	    return { status: 'queued', articleId, updatedAt: now, offline: true };
+	  });
+	}
 
 export function generateOutlineTitle(text) {
   if (typeof text !== 'string') {

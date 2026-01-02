@@ -770,41 +770,105 @@ function tryMergeWithPreviousTableOnBackspace(pmState, dispatch) {
 
 function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionId, TextSelection) {
   try {
+    const dbg = (reason, extra = {}) => {
+      try {
+        if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') !== '1') return;
+        // eslint-disable-next-line no-console
+        console.log('[outline][keys]', 'bodyToHeading.skip', { reason, sectionId: sectionId || null, ...extra });
+      } catch {
+        // ignore
+      }
+    };
+    const dbgStart = (extra = {}) => {
+      try {
+        if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') !== '1') return;
+        // eslint-disable-next-line no-console
+        console.log('[outline][keys]', 'bodyToHeading.check', { sectionId: sectionId || null, ...extra });
+      } catch {
+        // ignore
+      }
+    };
     if (!sectionId) return false;
-    if (!TextSelection) return false;
+    if (!TextSelection) {
+      dbg('no-TextSelection');
+      return false;
+    }
     const sel = pmState?.selection;
-    if (!sel?.empty) return false;
+    if (!sel?.empty) {
+      dbg('selection-not-empty');
+      return false;
+    }
+    const $from = sel.$from || null;
+    if (!$from) {
+      dbg('no-$from');
+      return false;
+    }
+    dbgStart({
+      from: sel.from,
+      parent: $from.parent?.type?.name || null,
+      parentOffset: $from.parentOffset ?? null,
+    });
 
     const sectionPos = findSectionPosById(pmState.doc, sectionId);
-    if (typeof sectionPos !== 'number') return false;
+    if (typeof sectionPos !== 'number') {
+      dbg('section-not-found');
+      return false;
+    }
     const sectionNode = pmState.doc.nodeAt(sectionPos);
-    if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+    if (!sectionNode || sectionNode.type?.name !== 'outlineSection') {
+      dbg('not-outlineSection', { found: sectionNode?.type?.name || null });
+      return false;
+    }
 
     const headingNode = sectionNode.child(0);
     const bodyNode = sectionNode.child(1);
-    if (!headingNode || headingNode.type?.name !== 'outlineHeading') return false;
-    if (!bodyNode || bodyNode.type?.name !== 'outlineBody') return false;
+    if (!headingNode || headingNode.type?.name !== 'outlineHeading') {
+      dbg('missing-heading', { found: headingNode?.type?.name || null });
+      return false;
+    }
+    if (!bodyNode || bodyNode.type?.name !== 'outlineBody') {
+      dbg('missing-body', { found: bodyNode?.type?.name || null });
+      return false;
+    }
 
-    const headingText = String(headingNode.textContent || '').replace(/\u00a0/g, ' ').trim();
-    if (headingText) return false;
+    const headingTextRaw = String(headingNode.textContent || '').replace(/\u00a0/g, ' ');
+    const headingHasText = Boolean(headingTextRaw.trim());
+    const headingEndsWithSpace = /\s$/.test(headingTextRaw);
 
-    if (!bodyNode.childCount) return false;
-    const firstBodyChild = bodyNode.child(0);
-    if (!firstBodyChild || firstBodyChild.type?.name !== 'paragraph') return false;
+    // Must be at the very start of the FIRST block inside body.
+    let bodyDepth = null;
+    for (let d = $from.depth; d >= 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'outlineBody') {
+        bodyDepth = d;
+        break;
+      }
+    }
+    if (bodyDepth == null) {
+      dbg('not-in-outlineBody', { parent: $from.parent?.type?.name || null });
+      return false;
+    }
+    if ($from.index(bodyDepth) !== 0) {
+      dbg('not-first-body-child', { index: $from.index(bodyDepth) });
+      return false;
+    }
+    if ($from.parent?.type?.name !== 'paragraph') {
+      dbg('parent-not-paragraph', { parent: $from.parent?.type?.name || null });
+      return false;
+    }
+    if (($from.parentOffset ?? null) !== 0) {
+      dbg('not-at-paragraph-start', { parentOffset: $from.parentOffset ?? null });
+      return false;
+    }
 
     const headingPos = sectionPos + 1;
-    const bodyPos = sectionPos + 1 + headingNode.nodeSize;
-    const firstParagraphPos = bodyPos + 1; // first child of outlineBody
-    const paragraphTextStart = firstParagraphPos + 1; // inside paragraph
-
-    // Must be exactly at the very start of the first paragraph in body.
-    if (sel.from !== paragraphTextStart) return false;
+    const paragraphTextStart = sel.from;
+    const paragraphNode = $from.parent;
 
     // Find first hardBreak inside the first paragraph to define "first line".
     let offset = 0;
     let breakOffset = null;
-    for (let i = 0; i < firstBodyChild.childCount; i += 1) {
-      const node = firstBodyChild.child(i);
+    for (let i = 0; i < paragraphNode.childCount; i += 1) {
+      const node = paragraphNode.child(i);
       if (node.type?.name === 'hardBreak') {
         breakOffset = offset;
         break;
@@ -812,37 +876,61 @@ function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionI
       offset += node.nodeSize;
     }
 
-    const sliceTo = paragraphTextStart + (breakOffset == null ? firstBodyChild.content.size : breakOffset);
-    if (sliceTo <= paragraphTextStart) return false;
+    const sliceTo = paragraphTextStart + (breakOffset == null ? paragraphNode.content.size : breakOffset);
+    if (sliceTo <= paragraphTextStart) {
+      dbg('empty-first-line');
+      return false;
+    }
 
     const slice = pmState.doc.slice(paragraphTextStart, sliceTo);
-    if (!slice?.content || slice.content.size <= 0) return false;
+    if (!slice?.content || slice.content.size <= 0) {
+      dbg('empty-slice');
+      return false;
+    }
 
     const deleteTo = breakOffset == null ? sliceTo : sliceTo + 1; // remove hardBreak too
     const headingContentFrom = headingPos + 1;
     const headingContentTo = headingPos + headingNode.nodeSize - 1;
 
-    let tr = pmState.tr.replaceRange(headingContentFrom, headingContentTo, slice.content);
+    let tr = pmState.tr;
+    // If heading already has content, add a separating space (unless it already ends with whitespace).
+    if (headingHasText && !headingEndsWithSpace) {
+      tr = tr.insertText(' ', headingContentTo);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    }
+
+    const insertAt = tr.mapping.map(headingContentTo, 1);
+    const caretAnchorBeforeInsert = insertAt;
+    tr = tr.insert(insertAt, slice.content);
 
     const delFromMapped = tr.mapping.map(paragraphTextStart, 1);
     const delToMapped = tr.mapping.map(deleteTo, -1);
     tr = tr.delete(delFromMapped, delToMapped);
 
-    // Place caret at end of heading.
-    const newSectionPos = findSectionPosById(tr.doc, sectionId);
-    if (typeof newSectionPos === 'number') {
-      const newSectionNode = tr.doc.nodeAt(newSectionPos);
-      const newHeading = newSectionNode?.type?.name === 'outlineSection' ? newSectionNode.child(0) : null;
-      if (newHeading) {
-        const newHeadingPos = newSectionPos + 1;
-        const endPos = newHeadingPos + newHeading.nodeSize - 1;
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(endPos), -1));
-      }
+    // Place caret at end of the original heading (i.e. start of the moved text).
+    try {
+      const caretPos = tr.mapping.map(caretAnchorBeforeInsert, -1);
+      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(caretPos), -1));
+    } catch {
+      // ignore
     }
 
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
     dispatch(tr.scrollIntoView());
     return true;
-  } catch {
+  } catch (err) {
+    try {
+      if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') === '1') {
+        // eslint-disable-next-line no-console
+        console.log('[outline][keys]', 'bodyToHeading.error', {
+          sectionId: sectionId || null,
+          message: String(err?.message || err || ''),
+          stack: String(err?.stack || ''),
+        });
+      }
+    } catch {
+      // ignore
+    }
     return false;
   }
 }
@@ -1252,15 +1340,17 @@ function writeAutosaveQueue(queue) {
   }
 }
 
-function setQueuedDocJson(articleId, docJson) {
+function setQueuedDocJson(articleId, docJson, queuedAtMs = null) {
   if (!articleId) return;
   if (state.article?.encrypted) return; // не сохраняем plaintext зашифрованных статей в localStorage
+  const queuedAt = typeof queuedAtMs === 'number' && Number.isFinite(queuedAtMs) ? queuedAtMs : Date.now();
   const queue = readAutosaveQueue();
   queue[String(articleId)] = {
     docJson: docJson && typeof docJson === 'object' ? docJson : null,
-    queuedAt: Date.now(),
+    queuedAt,
   };
   writeAutosaveQueue(queue);
+  return queuedAt;
 }
 
 function getQueuedDocJson(articleId) {
@@ -3808,34 +3898,28 @@ async function mountOutlineEditor() {
 	    },
 	  });
 
-	  const isOutlineBodyEffectivelyEmpty = (bodyNode) => {
+	  const isOutlineBodyTrulyEmpty = (bodyNode) => {
 	    try {
 	      if (!bodyNode) return true;
 	      if (bodyNode.childCount === 0) return true;
-	      if (
-	        bodyNode.childCount === 1 &&
-	        bodyNode.child(0)?.type?.name === 'paragraph' &&
-	        bodyNode.child(0).content.size === 0
-	      ) {
-	        return true;
-	      }
-	      let hasMeaningful = false;
+	      let hasContent = false;
 	      bodyNode.descendants((n) => {
-	        if (hasMeaningful) return false;
-	        if (n.type?.name === 'image' || n.type?.name === 'table') {
-	          hasMeaningful = true;
+	        if (hasContent) return false;
+	        const name = n?.type?.name;
+	        if (name === 'image' || name === 'table') {
+	          hasContent = true;
 	          return false;
 	        }
 	        if (n.isText) {
 	          const t = String(n.text || '').replace(/\u00a0/g, ' ');
 	          if (t.trim()) {
-	            hasMeaningful = true;
+	            hasContent = true;
 	            return false;
 	          }
 	        }
 	        return true;
 	      });
-	      return !hasMeaningful;
+	      return !hasContent;
 	    } catch {
 	      return false;
 	    }
@@ -3845,12 +3929,32 @@ async function mountOutlineEditor() {
 	    name: 'outlineBody',
 	    content: 'block*',
 	    defining: true,
-	    renderHTML({ node }) {
-	      const empty = isOutlineBodyEffectivelyEmpty(node);
-	      return ['div', { class: 'outline-body', 'data-outline-body': 'true', 'data-empty': empty ? 'true' : 'false' }, 0];
+	    renderHTML() {
+	      return ['div', { class: 'outline-body', 'data-outline-body': 'true' }, 0];
 	    },
 	    parseHTML() {
 	      return [{ tag: 'div[data-outline-body]' }];
+	    },
+	    addNodeView() {
+	      return ({ node }) => {
+	        const dom = document.createElement('div');
+	        dom.className = 'outline-body';
+	        dom.setAttribute('data-outline-body', 'true');
+	        const applyEmpty = (n) => {
+	          const empty = isOutlineBodyTrulyEmpty(n);
+	          dom.setAttribute('data-empty', empty ? 'true' : 'false');
+	        };
+	        applyEmpty(node);
+	        return {
+	          dom,
+	          contentDOM: dom,
+	          update(updatedNode) {
+	            if (!updatedNode || updatedNode.type?.name !== 'outlineBody') return false;
+	            applyEmpty(updatedNode);
+	            return true;
+	          },
+	        };
+	      };
 	    },
 	  });
 
@@ -7267,37 +7371,38 @@ async function saveOutlineEditor(options = {}) {
     }
     const docJson = outlineEditorInstance.getJSON();
     // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
-    if (state.articleId && targetArticleId !== state.articleId) {
-      try {
-        setQueuedDocJson(targetArticleId, docJson);
-      } catch {
-        // ignore
-      }
+	    if (state.articleId && targetArticleId !== state.articleId) {
+	      try {
+	        setQueuedDocJson(targetArticleId, docJson);
+	      } catch {
+	        // ignore
+	      }
       if (!silent) hideToast();
       setOutlineStatus('Оффлайн: черновик сохранён локально');
       return;
     }
-    if (mode === 'queue') {
-      try {
-        setQueuedDocJson(targetArticleId, docJson);
-      } catch {
-        // ignore
-      }
+	    if (mode === 'queue') {
+	      let clientQueuedAt = null;
+	      try {
+	        clientQueuedAt = setQueuedDocJson(targetArticleId, docJson);
+	      } catch {
+	        // ignore
+	      }
       try {
         // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
         await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
       } catch {
         // ignore
       }
-      try {
-        await enqueueOp('save_doc_json', {
-          articleId: targetArticleId,
-          payload: { docJson, createVersionIfStaleHours: 12 },
-          coalesceKey: targetArticleId,
-        });
-      } catch {
-        // ignore
-      }
+	      try {
+	        await enqueueOp('save_doc_json', {
+	          articleId: targetArticleId,
+	          payload: { docJson, createVersionIfStaleHours: 12, clientQueuedAt: clientQueuedAt || Date.now() },
+	          coalesceKey: targetArticleId,
+	        });
+	      } catch {
+	        // ignore
+	      }
       if (!silent) hideToast();
       if (state.article) {
         state.article.docJson = docJson;
@@ -7375,13 +7480,13 @@ async function saveOutlineEditor(options = {}) {
     } else {
       setOutlineStatus('Ошибка сохранения');
     }
-    // Сохраняем в локальную очередь, чтобы догнать позже.
-    try {
-      const docJson = outlineEditorInstance.getJSON();
-      if (docJson && typeof docJson === 'object') setQueuedDocJson(targetArticleId, docJson);
-    } catch {
-      // ignore
-    }
+	    // Сохраняем в локальную очередь, чтобы догнать позже.
+	    try {
+	      const docJson = outlineEditorInstance.getJSON();
+	      if (docJson && typeof docJson === 'object') setQueuedDocJson(targetArticleId, docJson);
+	    } catch {
+	      // ignore
+	    }
     // Ретрай чуть позже.
     scheduleAutosave({ delayMs: 5000 });
   }

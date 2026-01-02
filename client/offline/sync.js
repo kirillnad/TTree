@@ -11,6 +11,28 @@ import { deleteSectionEmbeddings, upsertArticleEmbeddings } from './embeddings.j
 import { startMediaPrefetchLoop, pruneUnusedMedia, updateMediaRefsForArticle } from './media.js';
 import { fetchArticlesIndex } from '../api.js?v=11';
 
+const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
+
+function clearQueuedDocJsonIfNotNewer(articleId, clientQueuedAt = null) {
+  try {
+    if (!articleId) return;
+    const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY) || '';
+    if (!raw) return;
+    const queue = JSON.parse(raw);
+    if (!queue || typeof queue !== 'object') return;
+    const key = String(articleId);
+    const entry = queue[key] || null;
+    if (!entry) return;
+    const queuedAt = Number(entry?.queuedAt || 0) || 0;
+    const cutoff = typeof clientQueuedAt === 'number' && Number.isFinite(clientQueuedAt) ? clientQueuedAt : null;
+    if (cutoff != null && queuedAt > cutoff) return;
+    delete queue[key];
+    window.localStorage.setItem(OUTLINE_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // ignore
+  }
+}
+
 let syncLoopStarted = false;
 let isFlushing = false;
 let fullPullStarted = false;
@@ -176,15 +198,18 @@ export async function flushOutboxOnce() {
   isFlushing = true;
   try {
     const ops = await listOutbox(50);
-    for (const op of ops) {
-      try {
-        await flushOp(op);
-        await removeOutboxOp(op.id);
-        if (op.type !== 'save_doc_json') {
-          try {
-            const index = await rawApiRequest('/api/articles');
-            cacheArticlesIndex(index).catch(() => {});
-          } catch {
+	    for (const op of ops) {
+	      try {
+	        await flushOp(op);
+	        await removeOutboxOp(op.id);
+	        if (op.type === 'save_doc_json') {
+	          clearQueuedDocJsonIfNotNewer(op.articleId, op.payload?.clientQueuedAt ?? null);
+	        }
+	        if (op.type !== 'save_doc_json') {
+	          try {
+	            const index = await rawApiRequest('/api/articles');
+	            cacheArticlesIndex(index).catch(() => {});
+	          } catch {
             // ignore
           }
         }
@@ -193,8 +218,8 @@ export async function flushOutboxOnce() {
         const msg = status ? `${status}: ${err?.message || 'error'}` : err?.message || String(err || 'error');
         await markOutboxError(op.id, msg);
 
-        if (shouldDropOutboxOp(err, op)) {
-          // Permanent failure for this op (e.g. article removed): drop and continue.
+	        if (shouldDropOutboxOp(err, op)) {
+	          // Permanent failure for this op (e.g. article removed): drop and continue.
           try {
             // eslint-disable-next-line no-console
             console.warn('[offline][outbox] drop op', {
@@ -207,13 +232,16 @@ export async function flushOutboxOnce() {
           } catch {
             // ignore
           }
-          try {
-            await removeOutboxOp(op.id);
-          } catch {
-            // ignore
-          }
-          continue;
-        }
+	          try {
+	            await removeOutboxOp(op.id);
+	            if (op.type === 'save_doc_json') {
+	              clearQueuedDocJsonIfNotNewer(op.articleId, op.payload?.clientQueuedAt ?? null);
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          continue;
+	        }
 
         // stop on retryable errors to avoid hammering the server
         if (isRetryableOutboxError(err)) break;
