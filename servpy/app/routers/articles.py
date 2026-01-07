@@ -13,6 +13,7 @@ from ..auth import User, get_current_user
 from ..data_store import (
     ArticleNotFound,
     InvalidOperation,
+    apply_outline_structure_snapshot,
     create_article,
     delete_article,
     get_article,
@@ -28,6 +29,7 @@ from ..data_store import (
     update_article_meta,
     update_article_doc_json,
     save_article_doc_json,
+    upsert_outline_section_content,
     get_article_block_embeddings,
 )
 from ..export_utils import _build_backup_article_html, _inline_uploads_for_backup
@@ -363,6 +365,84 @@ def put_article_doc_json_save(
             response.headers['X-Memus-Save-ms'] = str(elapsed_ms)
         except Exception:
             pass
+        return out
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put('/api/articles/{article_id}/sections/upsert-content')
+def put_article_section_upsert_content(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Upsert content (heading/body) for a single outline section.
+    This does NOT change structure (parent/position/collapsed).
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    section_id = (payload.get('sectionId') or '').strip()
+    heading_json = payload.get('headingJson') if payload else None
+    body_json = payload.get('bodyJson') if payload else None
+    seq = payload.get('seq') if payload else None
+    op_id = payload.get('opId') if payload else None
+    create_version_if_stale_hours = payload.get('createVersionIfStaleHours') if payload else None
+    if not section_id:
+        raise HTTPException(status_code=400, detail='sectionId is required')
+    if heading_json is None or body_json is None:
+        raise HTTPException(status_code=400, detail='headingJson and bodyJson are required')
+    if not isinstance(heading_json, dict) or not isinstance(body_json, dict):
+        raise HTTPException(status_code=400, detail='headingJson/bodyJson must be objects')
+    if seq is None:
+        raise HTTPException(status_code=400, detail='seq is required')
+    try:
+        seq_num = int(seq)
+    except Exception:
+        raise HTTPException(status_code=400, detail='seq must be integer') from None
+    try:
+        out = upsert_outline_section_content(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            section_id=section_id,
+            heading_json=heading_json,
+            body_json=body_json,
+            seq=seq_num,
+            op_id=str(op_id or '').strip() or None,
+            create_version_if_stale_hours=int(create_version_if_stale_hours)
+            if create_version_if_stale_hours is not None
+            else None,
+        )
+        return out
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put('/api/articles/{article_id}/structure/snapshot')
+def put_article_structure_snapshot(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Replace/repair article structure (parent/position/collapsed) by snapshot.
+    Must not change section contents.
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    nodes = payload.get('nodes') if payload else None
+    op_id = payload.get('opId') if payload else None
+    if nodes is None or not isinstance(nodes, list):
+        raise HTTPException(status_code=400, detail='nodes must be list')
+    try:
+        out = apply_outline_structure_snapshot(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            nodes=nodes,
+            op_id=str(op_id or '').strip() or None,
+        )
         return out
     except ArticleNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

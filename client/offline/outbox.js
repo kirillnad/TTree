@@ -30,7 +30,16 @@ export async function enqueueOp(type, { articleId, payload, coalesceKey } = {}) 
   const tx = db.transaction(['outbox'], 'readwrite');
   const store = tx.objectStore('outbox');
   const byTypeArticleId = store.index('byTypeArticleId');
+  const byTypeCoalesceKey = store.index('byTypeCoalesceKey');
   if (coalesceKey) {
+    const key = [String(type || ''), String(coalesceKey || '')];
+    let cursor = await reqToPromise(byTypeCoalesceKey.openCursor(IDBKeyRange.only(key))).catch(() => null);
+    while (cursor) {
+      cursor.delete();
+      cursor = await reqToPromise(cursor.continue()).catch(() => null);
+    }
+  } else if (articleId) {
+    // Backward-compatible coarse coalescing by (type, articleId).
     const key = [String(type || ''), articleId || null];
     let cursor = await reqToPromise(byTypeArticleId.openCursor(IDBKeyRange.only(key))).catch(() => null);
     while (cursor) {
@@ -46,6 +55,7 @@ export async function enqueueOp(type, { articleId, payload, coalesceKey } = {}) 
       createdAtMs: Date.now(),
       type: String(type || ''),
       articleId: articleId || null,
+      coalesceKey: coalesceKey ? String(coalesceKey) : null,
       payloadJson,
       attempts: 0,
       lastError: null,

@@ -17,6 +17,7 @@ from .html_sanitizer import sanitize_html
 from .text_utils import build_lemma, build_lemma_tokens, build_normalized_tokens, strip_html
 from .outline_doc_json import (
     build_outline_section_internal_links_map,
+    build_outline_section_plain_text,
     build_outline_section_plain_text_map,
     build_outline_section_fragments_map,
 )
@@ -68,6 +69,228 @@ class InvalidOperation(DataStoreError):
 
 
 logger = logging.getLogger('uvicorn.error')
+
+
+def _json_is_outline_heading(node: Any) -> bool:
+    return isinstance(node, dict) and node.get('type') == 'outlineHeading' and isinstance(node.get('content', []), list)
+
+
+def _json_is_outline_body(node: Any) -> bool:
+    return isinstance(node, dict) and node.get('type') == 'outlineBody' and isinstance(node.get('content', []), list)
+
+
+def _ensure_outline_section_node(section_id: str, *, heading: Any | None = None, body: Any | None = None) -> dict[str, Any]:
+    sid = str(section_id or '').strip()
+    if not sid:
+        raise InvalidOperation('sectionId is required')
+    heading_node = heading if _json_is_outline_heading(heading) else {'type': 'outlineHeading', 'content': []}
+    body_node = body if _json_is_outline_body(body) else {'type': 'outlineBody', 'content': [{'type': 'paragraph'}]}
+    return {
+        'type': 'outlineSection',
+        'attrs': {'id': sid, 'collapsed': False},
+        'content': [
+            heading_node,
+            body_node,
+            {'type': 'outlineChildren', 'content': []},
+        ],
+    }
+
+
+def _walk_outline_sections(doc_json: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        if node.get('type') == 'outlineSection':
+            out.append(node)
+            for child in node.get('content') or []:
+                if isinstance(child, dict) and child.get('type') == 'outlineChildren':
+                    walk(child.get('content') or [])
+                    break
+            return
+        walk(node.get('content') or [])
+
+    walk(doc_json)
+    return out
+
+
+def _find_outline_section_by_id(doc_json: Any, section_id: str) -> dict[str, Any] | None:
+    sid = str(section_id or '').strip()
+    if not sid:
+        return None
+    for sec in _walk_outline_sections(doc_json):
+        attrs = sec.get('attrs') or {}
+        if str(attrs.get('id') or '').strip() == sid:
+            return sec
+    return None
+
+
+def _delete_outline_section_by_id(doc_json: Any, section_id: str) -> bool:
+    sid = str(section_id or '').strip()
+    if not sid or not isinstance(doc_json, dict):
+        return False
+
+    def filter_sections(items: list[Any]) -> tuple[list[Any], bool]:
+        changed = False
+        out_items: list[Any] = []
+        for item in items:
+            if isinstance(item, dict) and item.get('type') == 'outlineSection':
+                attrs = item.get('attrs') or {}
+                if str(attrs.get('id') or '').strip() == sid:
+                    changed = True
+                    continue
+                for child in item.get('content') or []:
+                    if isinstance(child, dict) and child.get('type') == 'outlineChildren':
+                        new_children, ch = filter_sections(child.get('content') or [])
+                        if ch:
+                            child['content'] = new_children
+                            changed = True
+                        break
+            out_items.append(item)
+        return out_items, changed
+
+    root = doc_json.get('content') or []
+    if not isinstance(root, list):
+        return False
+    new_root, changed = filter_sections(root)
+    if changed:
+        doc_json['content'] = new_root
+    return changed
+
+
+def _build_outline_structure_nodes(doc_json: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+
+    def walk_list(items: list[Any], parent_id: str | None) -> None:
+        pos = 0
+        for item in items:
+            if not isinstance(item, dict) or item.get('type') != 'outlineSection':
+                continue
+            attrs = item.get('attrs') or {}
+            sid = str(attrs.get('id') or '').strip()
+            if not sid:
+                continue
+            out.append(
+                {
+                    'sectionId': sid,
+                    'parentId': parent_id,
+                    'position': pos,
+                    'collapsed': bool(attrs.get('collapsed', False)),
+                }
+            )
+            pos += 1
+            for child in item.get('content') or []:
+                if isinstance(child, dict) and child.get('type') == 'outlineChildren':
+                    walk_list(child.get('content') or [], sid)
+                    break
+
+    if isinstance(doc_json, dict) and isinstance(doc_json.get('content'), list):
+        walk_list(doc_json.get('content') or [], None)
+    return out
+
+
+def _apply_outline_structure_snapshot(doc_json: Any, nodes: list[dict[str, Any]]) -> dict[str, Any]:
+    if not isinstance(doc_json, dict) or doc_json.get('type') != 'doc' or not isinstance(doc_json.get('content'), list):
+        doc_json = {'type': 'doc', 'content': []}
+
+    existing_by_id: dict[str, dict[str, Any]] = {}
+    for sec in _walk_outline_sections(doc_json):
+        attrs = sec.get('attrs') or {}
+        sid = str(attrs.get('id') or '').strip()
+        if sid:
+            existing_by_id[sid] = sec
+
+    mentioned: set[str] = set()
+    children_by_parent: dict[str | None, list[tuple[int, str, dict[str, Any]]]] = {}
+    for row in nodes or []:
+        sid = str(row.get('sectionId') or '').strip()
+        if not sid:
+            continue
+        parent_raw = row.get('parentId')
+        parent_id = str(parent_raw).strip() if parent_raw is not None and str(parent_raw).strip() else None
+        try:
+            pos = int(row.get('position') or 0)
+        except Exception:
+            pos = 0
+        collapsed = bool(row.get('collapsed', False))
+        sec = existing_by_id.get(sid) or _ensure_outline_section_node(sid)
+        attrs = sec.get('attrs') or {}
+        attrs['id'] = sid
+        attrs['collapsed'] = collapsed
+        sec['attrs'] = attrs
+        content = sec.get('content') or []
+        # Ensure basic shape and children container.
+        if not isinstance(content, list) or len(content) < 3:
+            heading = None
+            body = None
+            for c in content if isinstance(content, list) else []:
+                if isinstance(c, dict) and c.get('type') == 'outlineHeading':
+                    heading = c
+                elif isinstance(c, dict) and c.get('type') == 'outlineBody':
+                    body = c
+            sec['content'] = [
+                heading if _json_is_outline_heading(heading) else {'type': 'outlineHeading', 'content': []},
+                body if _json_is_outline_body(body) else {'type': 'outlineBody', 'content': [{'type': 'paragraph'}]},
+                {'type': 'outlineChildren', 'content': []},
+            ]
+        else:
+            if not isinstance(content[2], dict) or content[2].get('type') != 'outlineChildren':
+                content[2] = {'type': 'outlineChildren', 'content': []}
+            elif not isinstance(content[2].get('content'), list):
+                content[2]['content'] = []
+            sec['content'] = content
+
+        existing_by_id[sid] = sec
+        mentioned.add(sid)
+        children_by_parent.setdefault(parent_id, []).append((pos, sid, sec))
+
+    for parent_id, lst in children_by_parent.items():
+        lst.sort(key=lambda t: (t[0], t[1]))
+        children_by_parent[parent_id] = lst
+
+    for sid, sec in existing_by_id.items():
+        children = [row[2] for row in children_by_parent.get(sid, [])]
+        try:
+            sec['content'][2]['content'] = children
+        except Exception:
+            pass
+
+    root = [row[2] for row in children_by_parent.get(None, [])]
+    for sid, sec in existing_by_id.items():
+        if sid in mentioned:
+            continue
+        root.append(sec)
+
+    doc_json['type'] = 'doc'
+    doc_json['content'] = root
+    return doc_json
+
+
+def _try_mark_op_applied(op_id: str, *, article_id: str, op_type: str, section_id: str | None = None) -> bool:
+    oid = str(op_id or '').strip()
+    if not oid:
+        return True
+    now = iso_now()
+    now_dt = datetime.utcnow()
+    now_dt = datetime.utcnow()
+    now_dt = datetime.utcnow()
+    try:
+        with CONN:
+            row = CONN.execute('SELECT 1 AS ok FROM applied_ops WHERE op_id = ?', (oid,)).fetchone()
+            if row:
+                return False
+            CONN.execute(
+                'INSERT INTO applied_ops (op_id, article_id, section_id, op_type, created_at) VALUES (?, ?, ?, ?, ?)',
+                (oid, article_id, section_id, op_type, now),
+            )
+    except Exception:
+        return True
+    return True
 
 
 def _coerce_embedding_to_list(value: Any) -> list[float]:
@@ -1174,6 +1397,325 @@ def save_article_doc_json(
         'removedBlockIds': sorted(list(removed_ids)),
         'historyEntriesAdded': history_entries_added,
     }
+
+
+def upsert_outline_section_content(
+    *,
+    article_id: str,
+    author_id: str,
+    section_id: str,
+    heading_json: Any,
+    body_json: Any,
+    seq: int,
+    op_id: str | None = None,
+    create_version_if_stale_hours: int | None = None,
+) -> dict[str, Any]:
+    """
+    Content-only upsert for a single outline section (heading+body).
+    - Does not change structure.
+    - Uses per-section seq to avoid stale updates.
+    - Uses optional op_id for idempotency.
+    """
+    if not article_id or not author_id:
+        raise ArticleNotFound('Article not found')
+    sid = str(section_id or '').strip()
+    if not sid:
+        raise InvalidOperation('sectionId is required')
+    if not _json_is_outline_heading(heading_json) or not _json_is_outline_body(body_json):
+        raise InvalidOperation('Invalid section JSON')
+    try:
+        seq_num = int(seq)
+    except Exception:
+        seq_num = 0
+    if seq_num <= 0:
+        raise InvalidOperation('seq must be positive')
+
+    now = iso_now()
+    now_dt = datetime.utcnow()
+
+    article_row = CONN.execute(
+        'SELECT id, author_id, title, updated_at, history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
+        (article_id,),
+    ).fetchone()
+    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+        raise ArticleNotFound('Article not found')
+
+    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+    )
+    if encrypted_flag:
+        raise InvalidOperation('Encrypted articles are not supported')
+
+    if op_id:
+        newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='section.upsertContent', section_id=sid)
+        if not newly:
+            return {'status': 'duplicate'}
+
+    meta_row = CONN.execute(
+        'SELECT last_seq, history_window_started_at, history_window_entry_id FROM outline_section_meta WHERE article_id = ? AND section_id = ?',
+        (article_id, sid),
+    ).fetchone()
+    last_seq = int(meta_row['last_seq']) if meta_row and meta_row.get('last_seq') is not None else 0
+    window_started_at_raw = (meta_row.get('history_window_started_at') or '').strip() if meta_row else ''
+    window_entry_id = (meta_row.get('history_window_entry_id') or '').strip() if meta_row else ''
+    window_started_dt: datetime | None = None
+    if window_started_at_raw:
+        try:
+            window_started_dt = datetime.fromisoformat(window_started_at_raw)
+        except Exception:
+            window_started_dt = None
+    if seq_num <= last_seq:
+        return {'status': 'ignored', 'reason': 'stale', 'lastSeq': last_seq}
+
+    # Auto-version best-effort: reuse existing full-save logic only for staleness condition.
+    if create_version_if_stale_hours:
+        try:
+            hours = int(create_version_if_stale_hours)
+        except Exception:
+            hours = 0
+        if hours > 0:
+            updated_at_raw = (article_row.get('updated_at') or '').strip()
+            if updated_at_raw:
+                try:
+                    updated_dt = datetime.fromisoformat(updated_at_raw)
+                    age_seconds = (datetime.utcnow() - updated_dt).total_seconds()
+                    if age_seconds >= hours * 3600:
+                        CONN.execute(
+                            '''
+                            INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            ''',
+                            (
+                                str(uuid.uuid4()),
+                                article_id,
+                                author_id,
+                                now,
+                                f'auto-{hours}h',
+                                None,
+                                json.dumps([]),
+                                article_row.get('article_doc_json'),
+                            ),
+                        )
+                except Exception:
+                    pass
+
+    raw_prev = article_row.get('article_doc_json') or ''
+    prev_doc: Any = None
+    if raw_prev:
+        try:
+            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+        except Exception:
+            prev_doc = None
+    if not isinstance(prev_doc, dict):
+        prev_doc = {'type': 'doc', 'content': []}
+
+    before_plain = build_outline_section_plain_text(prev_doc, sid)
+    before_frags = build_outline_section_fragments_map(prev_doc).get(sid) or {}
+
+    # Patch the section in-place (keep children intact).
+    doc_json = prev_doc
+    sec = _find_outline_section_by_id(doc_json, sid)
+    if sec is None:
+        sec = _ensure_outline_section_node(sid, heading=heading_json, body=body_json)
+        if not isinstance(doc_json.get('content'), list):
+            doc_json['content'] = []
+        doc_json['content'].append(sec)
+    else:
+        content = sec.get('content') or []
+        if not isinstance(content, list) or len(content) < 3:
+            # keep whatever children we can find
+            children = None
+            for c in content if isinstance(content, list) else []:
+                if isinstance(c, dict) and c.get('type') == 'outlineChildren':
+                    children = c
+                    break
+            sec['content'] = [heading_json, body_json, children or {'type': 'outlineChildren', 'content': []}]
+        else:
+            # Replace heading/body nodes by type.
+            h_idx = None
+            b_idx = None
+            for i, c in enumerate(content):
+                if isinstance(c, dict) and c.get('type') == 'outlineHeading' and h_idx is None:
+                    h_idx = i
+                elif isinstance(c, dict) and c.get('type') == 'outlineBody' and b_idx is None:
+                    b_idx = i
+            if h_idx is None:
+                content.insert(0, heading_json)
+            else:
+                content[h_idx] = heading_json
+            if b_idx is None:
+                insert_at = 1 if h_idx in (None, 0) else h_idx + 1
+                content.insert(insert_at, body_json)
+            else:
+                content[b_idx] = body_json
+            # Ensure children container exists at the end.
+            if not any(isinstance(c, dict) and c.get('type') == 'outlineChildren' for c in content):
+                content.append({'type': 'outlineChildren', 'content': []})
+            sec['content'] = content
+
+    after_plain = build_outline_section_plain_text(doc_json, sid)
+    after_frags = build_outline_section_fragments_map(doc_json).get(sid) or {}
+
+    history = deserialize_history(article_row.get('history'))
+    history_entries_added: list[dict[str, Any]] = []
+
+    history_window_seconds = 3600
+    should_consider_history = before_plain != after_plain
+    should_update_window = (
+        bool(window_entry_id)
+        and window_started_dt is not None
+        and (now_dt - window_started_dt).total_seconds() < history_window_seconds
+    )
+    history_window_entry_updated = False
+    history_window_entry_id_to_set: str | None = None
+    history_window_started_at_to_set: str | None = None
+
+    if should_consider_history:
+        if should_update_window:
+            # Sliding window: update the existing history entry (keep "before" from the first change in the window).
+            try:
+                for e in history:
+                    if isinstance(e, dict) and str(e.get('id') or '') == window_entry_id and str(e.get('blockId') or '') == sid:
+                        e['after'] = after_plain
+                        e['afterHeadingJson'] = after_frags.get('heading')
+                        e['afterBodyJson'] = after_frags.get('body')
+                        # Keep e['timestamp'] as window start; optionally track last update time.
+                        e['updatedAt'] = now
+                        history_window_entry_updated = True
+                        break
+            except Exception:
+                history_window_entry_updated = False
+
+        if not history_window_entry_updated:
+            entry_id = str(uuid.uuid4())
+            entry = {
+                'id': entry_id,
+                'blockId': sid,
+                'before': before_plain,
+                'after': after_plain,
+                'beforeHeadingJson': before_frags.get('heading'),
+                'beforeBodyJson': before_frags.get('body'),
+                'afterHeadingJson': after_frags.get('heading'),
+                'afterBodyJson': after_frags.get('body'),
+                'timestamp': now,
+            }
+            history.append(entry)
+            history_entries_added.append(entry)
+            history_window_entry_id_to_set = entry_id
+            history_window_started_at_to_set = now
+
+    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            (now, serialize_history(history), '[]', doc_json_str, article_id),
+        )
+        if meta_row:
+            if history_window_entry_id_to_set is not None:
+                CONN.execute(
+                    'UPDATE outline_section_meta SET last_seq = ?, history_window_started_at = ?, history_window_entry_id = ?, updated_at = ? WHERE article_id = ? AND section_id = ?',
+                    (seq_num, history_window_started_at_to_set, history_window_entry_id_to_set, now, article_id, sid),
+                )
+            else:
+                CONN.execute(
+                    'UPDATE outline_section_meta SET last_seq = ?, updated_at = ? WHERE article_id = ? AND section_id = ?',
+                    (seq_num, now, article_id, sid),
+                )
+        else:
+            CONN.execute(
+                'INSERT INTO outline_section_meta (article_id, section_id, last_seq, history_window_started_at, history_window_entry_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                (
+                    article_id,
+                    sid,
+                    seq_num,
+                    history_window_started_at_to_set,
+                    history_window_entry_id_to_set,
+                    now,
+                    now,
+                ),
+            )
+        # Update FTS for this section only.
+        plain = (after_plain or '').strip()
+        lemma = build_lemma(plain)
+        normalized = build_normalized_tokens(plain)
+        upsert_outline_section_search_index(sid, article_id, plain, lemma, normalized, now)
+
+    try:
+        upsert_embeddings_for_plain_texts(
+            author_id=author_id,
+            article_id=article_id,
+            article_title=article_row.get('title') or '',
+            block_texts={sid: after_plain},
+            updated_at=now,
+        )
+    except Exception:
+        pass
+
+    return {
+        'status': 'ok',
+        'articleId': article_id,
+        'updatedAt': now,
+        'changedBlockIds': [sid],
+        'removedBlockIds': [],
+        'historyEntriesAdded': history_entries_added,
+    }
+
+
+def apply_outline_structure_snapshot(
+    *,
+    article_id: str,
+    author_id: str,
+    nodes: list[dict[str, Any]],
+    op_id: str | None = None,
+) -> dict[str, Any]:
+    if not article_id or not author_id:
+        raise ArticleNotFound('Article not found')
+    if nodes is None or not isinstance(nodes, list):
+        raise InvalidOperation('nodes must be a list')
+
+    if op_id:
+        newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='structure.snapshot', section_id=None)
+        if not newly:
+            return {'status': 'duplicate'}
+
+    now = iso_now()
+    article_row = CONN.execute(
+        'SELECT id, author_id, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
+        (article_id,),
+    ).fetchone()
+    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+        raise ArticleNotFound('Article not found')
+    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+    )
+    if encrypted_flag:
+        raise InvalidOperation('Encrypted articles are not supported')
+
+    raw_prev = article_row.get('article_doc_json') or ''
+    prev_doc: Any = None
+    if raw_prev:
+        try:
+            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+        except Exception:
+            prev_doc = None
+    if not isinstance(prev_doc, dict):
+        prev_doc = {'type': 'doc', 'content': []}
+
+    doc_json = _apply_outline_structure_snapshot(prev_doc, nodes)
+    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+
+    with CONN:
+        CONN.execute(
+            'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            (now, '[]', doc_json_str, article_id),
+        )
+        # Links are structure-dependent; rebuild on snapshot (best-effort).
+        try:
+            _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
+        except Exception:
+            pass
+
+    return {'status': 'ok', 'articleId': article_id, 'updatedAt': now}
 
 
 def get_block_text_history(article_id: str, author_id: str, block_id: str, limit: int = 100) -> dict[str, Any]:

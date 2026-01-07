@@ -5,7 +5,7 @@ import { refs } from '../refs.js';
 import { navigate, routing } from '../routing.js';
 import { saveListCollapsedArticles, renderMainArticleList, ensureArticlesIndexLoaded } from '../sidebar.js';
 import { showToast } from '../toast.js';
-import { moveArticlePosition, indentArticleApi, outdentArticleApi } from '../api.js?v=11';
+import { moveArticlePosition, indentArticleApi, outdentArticleApi } from '../api.js?v=12';
 
 export function handleArticlesListKey(event) {
   const { code, ctrlKey, shiftKey, altKey, metaKey } = event;

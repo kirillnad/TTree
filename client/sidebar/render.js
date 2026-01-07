@@ -9,7 +9,7 @@ import {
   fetchDeletedArticlesIndex,
   restoreArticle as restoreArticleApi,
   deleteArticle as deleteArticleApi,
-} from '../api.js?v=11';
+} from '../api.js?v=12';
 import { showToast } from '../toast.js';
 import { updateTabButtons, hideHintPopover, setSidebarMobileOpen } from './layout.js';
 import { saveCollapsedArticles, saveListCollapsedArticles, ensureSidebarSelectionVisible } from './storage.js';

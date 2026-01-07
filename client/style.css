@@ -2082,6 +2082,15 @@ button.icon-button.small {
 .outline-section:not([data-editing="true"]) > .outline-body[data-empty="true"] {
   display: none;
 }
+.outline-section > .outline-children[data-empty="true"] {
+  display: none;
+}
+
+.outline-toolbar__menu {
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+
 .outline-heading {
   display: flex;
   align-items: flex-start;
@@ -2210,7 +2219,9 @@ button.icon-button.small {
 }
 .outline-body .tableWrapper > table {
   border-collapse: collapse;
-  width: 100%;
+  width: 100% !important;
+  max-width: 100%;
+  table-layout: fixed;
   margin: 0.75em 0;
   background: #ffffff;
 }
@@ -2307,12 +2318,20 @@ button.icon-button.small {
 }
 .outline-body .column-resize-handle {
   position: absolute;
-  right: -2px;
+  right: -6px;
   top: 0;
   bottom: 0;
-  width: 4px;
-  background-color: rgba(37, 99, 235, 0.35);
-  pointer-events: none;
+  width: 12px;
+  background: linear-gradient(
+    to right,
+    rgba(37, 99, 235, 0) 0%,
+    rgba(37, 99, 235, 0.18) 28%,
+    rgba(37, 99, 235, 0.35) 50%,
+    rgba(37, 99, 235, 0.18) 72%,
+    rgba(37, 99, 235, 0) 100%
+  );
+  cursor: col-resize;
+  pointer-events: auto;
 }
 .outline-body td,
 .outline-body th {

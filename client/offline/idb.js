@@ -21,10 +21,28 @@ function dbNameForUser(userKey) {
   return `memus_offline_v1_${sanitizeKey(userKey)}`;
 }
 
-const DB_VERSION = 1;
+const DB_VERSION = 3;
+
+const KNOWN_USER_KEYS_KEY = 'ttree_offline_known_user_keys_v1';
+
+function rememberKnownUserKey(userKey) {
+  try {
+    const key = String(userKey || '').trim();
+    if (!key) return;
+    const raw = window?.localStorage?.getItem?.(KNOWN_USER_KEYS_KEY) || '[]';
+    const arr = JSON.parse(raw);
+    const list = Array.isArray(arr) ? arr : [];
+    if (!list.includes(key)) list.push(key);
+    window.localStorage.setItem(KNOWN_USER_KEYS_KEY, JSON.stringify(list.slice(-200)));
+  } catch {
+    // ignore
+  }
+}
 
 export async function openOfflineIdb({ userKey } = {}) {
-  const name = dbNameForUser(userKey || 'anon');
+  const key = userKey || 'anon';
+  rememberKnownUserKey(key);
+  const name = dbNameForUser(key);
   const req = indexedDB.open(name, DB_VERSION);
   req.onupgradeneeded = () => {
     const db = req.result;
@@ -68,6 +86,25 @@ export async function openOfflineIdb({ userKey } = {}) {
       const store = db.createObjectStore('outbox', { keyPath: 'id' });
       store.createIndex('byCreatedAtMs', 'createdAtMs', { unique: false });
       store.createIndex('byTypeArticleId', ['type', 'articleId'], { unique: false });
+      store.createIndex('byTypeCoalesceKey', ['type', 'coalesceKey'], { unique: false });
+    } else {
+      // Upgrade: add new index for fine-grained coalescing (e.g. per section).
+      // eslint-disable-next-line no-undef
+      const tx = req.transaction;
+      try {
+        const store = tx.objectStore('outbox');
+        if (!store.indexNames.contains('byTypeCoalesceKey')) {
+          store.createIndex('byTypeCoalesceKey', ['type', 'coalesceKey'], { unique: false });
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!db.objectStoreNames.contains('pending_uploads')) {
+      const store = db.createObjectStore('pending_uploads', { keyPath: 'token' });
+      store.createIndex('byArticleId', 'articleId', { unique: false });
+      store.createIndex('byCreatedAtMs', 'createdAtMs', { unique: false });
     }
   };
 
@@ -132,4 +169,3 @@ export async function idbPing(db) {
 }
 
 export { reqToPromise, txDone };
-

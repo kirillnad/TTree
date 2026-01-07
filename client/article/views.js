@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=11';
+import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=12';
 import { showToast } from '../toast.js';
 import { showPrompt } from '../modal.js?v=10';
 import { navigate, routing } from '../routing.js';
@@ -371,7 +371,7 @@ export async function createInboxNote() {
       // the just-created draft section and it "disappears".
       navigate(inboxPath);
     }
-    const outline = await import('../outline/editor.js?v=109');
+    const outline = await import('../outline/editor.js?v=124');
     let newSectionId = null;
     const deadline = performance.now() + 15000;
     while (!newSectionId && performance.now() < deadline) {

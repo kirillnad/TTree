@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=11';
+import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=12';
 import { showToast } from './toast.js';
 import { initOfflineForUser } from './offline/index.js';
 import { startBackgroundFullPull, startSyncLoop, tryPullBootstrap } from './offline/sync.js';
@@ -38,7 +38,7 @@ function attachPendingQuickNotesFlushListener() {
       if (String(state.articleId || '') !== 'inbox') return false;
       if (!state.article) return false;
       // Insert into the currently open outline editor (so user sees it immediately).
-      const outline = await import('./outline/editor.js?v=109');
+      const outline = await import('./outline/editor.js?v=125');
       if (!outline?.insertOutlineSectionFromPlainTextAtStart) return false;
       const ok = outline.insertOutlineSectionFromPlainTextAtStart(noteId, text);
       if (ok) {

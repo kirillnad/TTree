@@ -207,6 +207,27 @@ def _init_postgres_schema() -> None:
             value TEXT NOT NULL
         )
         ''',
+        '''
+        CREATE TABLE IF NOT EXISTS outline_section_meta (
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            section_id TEXT NOT NULL,
+            last_seq BIGINT NOT NULL DEFAULT 0,
+            history_window_started_at TEXT,
+            history_window_entry_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(article_id, section_id)
+        )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS applied_ops (
+            op_id TEXT PRIMARY KEY,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            section_id TEXT,
+            op_type TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        ''',
     ]
 
     for stmt in statements:
@@ -237,6 +258,20 @@ def _init_postgres_schema() -> None:
                 WHERE table_name = 'articles' AND column_name = 'position'
             ) THEN
                 ALTER TABLE articles ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'outline_section_meta' AND column_name = 'history_window_started_at'
+            ) THEN
+                ALTER TABLE outline_section_meta ADD COLUMN history_window_started_at TEXT;
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'outline_section_meta' AND column_name = 'history_window_entry_id'
+            ) THEN
+                ALTER TABLE outline_section_meta ADD COLUMN history_window_entry_id TEXT;
             END IF;
             IF NOT EXISTS (
                 SELECT 1

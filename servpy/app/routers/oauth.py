@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ..auth import create_session, create_user, get_user_by_username, set_session_cookie, User
 from ..data_store import upsert_yandex_tokens
@@ -26,6 +26,36 @@ import urllib.request
 
 router = APIRouter()
 logger = logging.getLogger('uvicorn.error')
+
+def _finish_oauth_login(*, session_id: str, provider_state_cookie: str | None = None) -> HTMLResponse:
+    """
+    Finish OAuth login with a 200 HTML response (instead of 302) to maximize cookie reliability
+    on mobile/PWA browsers that may drop Set-Cookie on redirects.
+    """
+    html = """<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Memus — вход</title>
+  </head>
+  <body>
+    <p>Входим…</p>
+    <script>
+      try { window.location.replace('/'); } catch (e) { window.location.href = '/'; }
+    </script>
+    <noscript><a href="/">Продолжить</a></noscript>
+  </body>
+</html>
+"""
+    resp = HTMLResponse(content=html, status_code=200)
+    set_session_cookie(resp, session_id)
+    if provider_state_cookie:
+        try:
+            resp.delete_cookie(provider_state_cookie, path='/')
+        except Exception:
+            pass
+    return resp
 
 
 # Вынесено из app/main.py → app/routers/oauth.py
@@ -177,11 +207,7 @@ def google_callback(request: Request):
 
     # Создаём сессию и редиректим в SPA.
     sid = create_session(user.id)
-    redirect = RedirectResponse(url='/', status_code=302)
-    set_session_cookie(redirect, sid)
-    # Удаляем одноразовый state.
-    redirect.delete_cookie('google_oauth_state', path='/')
-    return redirect
+    return _finish_oauth_login(session_id=sid, provider_state_cookie='google_oauth_state')
 
 
 # Вынесено из app/main.py → app/routers/oauth.py
@@ -298,7 +324,19 @@ def yandex_callback(request: Request):
         logger.error('Failed to fetch Yandex userinfo: %s', exc)
         raise HTTPException(status_code=502, detail='Не удалось получить профиль Яндекса')
 
-    email = (user_info.get('default_email') or '').strip().lower()
+    # Yandex may return email in `default_email` and/or in a list `emails`.
+    # We normalize and consider both to avoid silently creating a "new" user for the same account.
+    emails: list[str] = []
+    try:
+        default_email = (user_info.get('default_email') or '').strip()
+        if default_email:
+            emails.append(default_email)
+        extra = user_info.get('emails') or []
+        if isinstance(extra, list):
+            emails.extend([str(e or '').strip() for e in extra if str(e or '').strip()])
+    except Exception:
+        emails = []
+    email = (emails[0] if emails else '').strip().lower()
     uid = str(user_info.get('id') or '') or ''
     if not email and not uid:
         raise HTTPException(status_code=400, detail='Яндекс не вернул идентификатор пользователя')
@@ -306,7 +344,8 @@ def yandex_callback(request: Request):
     # Для администратора: логиним существующего пользователя "kirill"
     # по Яндекс-аккаунту с email kirillnad@yandex.ru.
     admin_user: User | None = None
-    if email == 'kirillnad@yandex.ru':
+    email_set = {e.lower() for e in emails if e}
+    if 'kirillnad@yandex.ru' in email_set:
         try:
             admin_user = get_user_by_username('kirill')
         except Exception:  # noqa: BLE001
@@ -336,8 +375,4 @@ def yandex_callback(request: Request):
         logger.error('Failed to ensure help article after Yandex auth for %s: %r', user.id, exc)
 
     sid = create_session(user.id)
-    redirect = RedirectResponse(url='/', status_code=302)
-    set_session_cookie(redirect, sid)
-    redirect.delete_cookie('yandex_oauth_state', path='/')
-    return redirect
-
+    return _finish_oauth_login(session_id=sid, provider_state_cookie='yandex_oauth_state')

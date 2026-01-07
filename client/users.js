@@ -1,5 +1,5 @@
 import { refs } from './refs.js';
-import { fetchUsers, deleteUser } from './api.js?v=11';
+import { fetchUsers, deleteUser } from './api.js?v=12';
 import { showToast } from './toast.js';
 import { showPrompt } from './modal.js?v=10';
 

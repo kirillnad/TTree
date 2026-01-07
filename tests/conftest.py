@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import warnings
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -33,12 +34,28 @@ def _load_app():
 
 @pytest.fixture()
 def app_env(monkeypatch, tmp_path_factory):
-    if not os.getenv('SERVPY_DATABASE_URL'):
-        pytest.skip('SERVPY_DATABASE_URL is required for server tests (PostgreSQL)')
+    test_db_url = os.getenv('SERVPY_TEST_DATABASE_URL')
+    if not test_db_url:
+        pytest.skip('SERVPY_TEST_DATABASE_URL is required for server tests (to avoid wiping a real DB)')
+    monkeypatch.setenv('SERVPY_DATABASE_URL', test_db_url)
 
     db, data_store, main = _load_app()
     # main imports seed sample data; wipe to keep tests isolated
-    for table in ('attachments', 'blocks_fts', 'articles_fts', 'blocks', 'articles', 'users'):
+    for table in (
+        'attachments',
+        'blocks_fts',
+        'outline_sections_fts',
+        'articles_fts',
+        'block_embeddings',
+        'article_links',
+        'article_versions',
+        'applied_ops',
+        'outline_section_meta',
+        'sessions',
+        'blocks',
+        'articles',
+        'users',
+    ):
         try:
             db.execute(f'DELETE FROM {table}')
         except Exception:
@@ -52,7 +69,9 @@ def client(app_env):
     client = TestClient(app_env['app'])
     client.app_db = app_env['db']
     client.data_store = app_env['data_store']
-    # Register and authenticate default test user so API is usable in tests.
-    resp = client.post('/api/auth/register', json={'username': 'test', 'password': 'test'})
-    assert resp.status_code == 200
+    # Password auth endpoints are disabled in routing; authenticate by creating a session directly.
+    auth = importlib.import_module('servpy.app.auth')
+    user = auth.create_user('test', 'test')
+    sid = auth.create_session(user.id)
+    client.cookies.set(auth.SESSION_COOKIE_NAME, sid)
     return client

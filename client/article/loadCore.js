@@ -1,7 +1,7 @@
 // Вынесено из `article.js`: загрузка статьи в state (без DOM-рендера).
 
 import { state } from '../state.js';
-import { fetchArticle } from '../api.js?v=11';
+import { fetchArticle } from '../api.js?v=12';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { showToast } from '../toast.js';
 import { upsertArticleIndex } from '../sidebar.js';
@@ -10,6 +10,7 @@ import { updatePublicToggleLabel } from './header.js';
 
 const DEBUG_KEY = 'ttree_debug_article_load_v1';
 const PERF_KEY = 'ttree_profile_v1';
+const OUTLINE_LAST_ACTIVE_KEY = 'ttree_outline_last_active_v1';
 function debugEnabled() {
   try {
     return window?.localStorage?.getItem?.(DEBUG_KEY) === '1';
@@ -58,7 +59,24 @@ export async function loadArticle(id, options = {}) {
 
   if (switchingArticle) {
     try {
-      const outline = await import('../outline/editor.js?v=109');
+      const prevArticleId = state.articleId;
+      const outline = await import('../outline/editor.js?v=124');
+      try {
+        const snap = outline?.getOutlineActiveSectionSnapshot?.() || null;
+        if (prevArticleId && snap?.sectionId) {
+          const raw = window?.localStorage?.getItem?.(OUTLINE_LAST_ACTIVE_KEY) || '{}';
+          const parsed = JSON.parse(raw || '{}');
+          const next = parsed && typeof parsed === 'object' ? parsed : {};
+          next[String(prevArticleId)] = {
+            sectionId: snap.sectionId,
+            collapsed: Boolean(snap.collapsed),
+            savedAt: new Date().toISOString(),
+          };
+          window?.localStorage?.setItem?.(OUTLINE_LAST_ACTIVE_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // ignore
+      }
       if (outline?.flushOutlineAutosave) {
         // Don't block navigation on slow saves: store draft locally and let outbox sync later.
         await outline.flushOutlineAutosave({ mode: 'queue' });
@@ -122,7 +140,7 @@ export async function loadArticle(id, options = {}) {
   // Outline is the only editor mode now: auto-open after load.
   if (!state.isPublicView && !state.isRagView && !article.encrypted) {
     try {
-      const outline = await import('../outline/editor.js?v=109');
+      const outline = await import('../outline/editor.js?v=124');
       if (outline?.openOutlineEditor) {
         debugLog('outline.open.start', { id });
         // Don't block article navigation on TipTap mount: on mobile this can take seconds.

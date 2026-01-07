@@ -1,4 +1,4 @@
-import { fetchArticle, saveArticleDocJson } from '../api.js?v=11';
+import { fetchArticle, saveArticleDocJson } from '../api.js?v=12';
 import { updateCachedDocJson } from '../offline/cache.js';
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
@@ -86,4 +86,3 @@ export async function syncQueuedInboxToServer() {
   dlog('synced', { updatedAt: nowIso });
   return { status: 'synced' };
 }
-

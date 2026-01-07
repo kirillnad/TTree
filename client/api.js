@@ -148,6 +148,16 @@ export async function logout() {
 }
 
 let fetchArticlesIndexInFlight = null;
+const FORCE_CACHED_INDEX_KEY = 'ttree_offline_recovery_force_index_v1';
+
+function forceCachedIndexEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(FORCE_CACHED_INDEX_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function fetchArticlesIndex() {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     return getCachedArticlesIndex().catch(() => []);
@@ -166,6 +176,23 @@ export function fetchArticlesIndex() {
       } catch {
         cacheArticlesIndex(index).catch(() => {});
       }
+
+      // Recovery mode: if server index is unexpectedly tiny but local cache has many articles,
+      // prefer showing cached index so user can access recovered offline data.
+      try {
+        const cached = await getCachedArticlesIndex().catch(() => null);
+        const serverLen = Array.isArray(index) ? index.length : 0;
+        const cachedLen = cached && Array.isArray(cached) ? cached.length : 0;
+
+        // Strong heuristic: if server shows ~empty but cache is populated, show cache.
+        if (cachedLen >= 20 && serverLen <= 3) return cached;
+
+        // Explicit override (set by offline recovery import).
+        if (forceCachedIndexEnabled() && cachedLen && cachedLen > serverLen) return cached;
+      } catch {
+        // ignore
+      }
+
       return index;
     })
     .catch(async (err) => {

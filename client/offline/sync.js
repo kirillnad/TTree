@@ -9,7 +9,7 @@ import {
 import { listOutbox, markOutboxError, removeOutboxOp } from './outbox.js';
 import { deleteSectionEmbeddings, upsertArticleEmbeddings } from './embeddings.js';
 import { startMediaPrefetchLoop, pruneUnusedMedia, updateMediaRefsForArticle } from './media.js';
-import { fetchArticlesIndex } from '../api.js?v=11';
+import { fetchArticlesIndex } from '../api.js?v=12';
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 
@@ -97,8 +97,8 @@ function shouldDropOutboxOp(err, op) {
   if (status === 404 || status === 410) return true;
   // Some client errors are permanent for a given op.
   if (status >= 400 && status < 500 && status !== 401 && status !== 403 && status !== 408 && status !== 429) {
-    // For safety, only drop save_doc_json on 4xx besides auth/rate-limit.
-    return op?.type === 'save_doc_json';
+    // For safety, drop content/structure ops on permanent 4xx besides auth/rate-limit.
+    return op?.type === 'save_doc_json' || String(op?.type || '').startsWith('section_') || op?.type === 'structure_snapshot';
   }
   return false;
 }
@@ -157,6 +157,39 @@ async function flushOp(op) {
     return;
   }
 
+  if (op.type === 'section_upsert_content') {
+    const sectionId = op.payload?.sectionId || null;
+    const headingJson = op.payload?.headingJson || null;
+    const bodyJson = op.payload?.bodyJson || null;
+    const seq = op.payload?.seq || null;
+    if (!sectionId || !headingJson || !bodyJson || !seq) return;
+    await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/sections/upsert-content`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        opId: op.payload?.opId || op.id,
+        sectionId,
+        headingJson,
+        bodyJson,
+        seq,
+        createVersionIfStaleHours: 12,
+      }),
+    });
+    return;
+  }
+
+  if (op.type === 'structure_snapshot') {
+    const nodes = op.payload?.nodes || null;
+    if (!Array.isArray(nodes) || !nodes.length) return;
+    await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/structure/snapshot`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        opId: op.payload?.opId || op.id,
+        nodes,
+      }),
+    });
+    return;
+  }
+
   if (op.type === 'move_article_position') {
     const direction = op.payload?.direction || null;
     if (!direction) return;
@@ -192,6 +225,31 @@ async function flushOp(op) {
   }
 }
 
+async function maybeClearQueuedDocJsonAfterSuccessfulFlush(op) {
+  try {
+    if (!op || !op.articleId) return;
+    const isRelevant =
+      op.type === 'save_doc_json' || op.type === 'section_upsert_content' || op.type === 'structure_snapshot';
+    if (!isRelevant) return;
+    const cutoff = op.payload?.clientQueuedAt ?? null;
+    if (typeof cutoff !== 'number' || !Number.isFinite(cutoff)) return;
+
+    // Only clear the queued docJson when ALL ops for the same queuedAt are flushed.
+    const remaining = await listOutbox(500);
+    const stillHasSameBatch = (remaining || []).some(
+      (o) =>
+        o &&
+        o.articleId === op.articleId &&
+        (o.type === 'save_doc_json' || o.type === 'section_upsert_content' || o.type === 'structure_snapshot') &&
+        (o.payload?.clientQueuedAt ?? null) === cutoff,
+    );
+    if (stillHasSameBatch) return;
+    clearQueuedDocJsonIfNotNewer(op.articleId, cutoff);
+  } catch {
+    // ignore
+  }
+}
+
 export async function flushOutboxOnce() {
   if (isFlushing) return null;
   if (!navigator.onLine) return false;
@@ -199,17 +257,15 @@ export async function flushOutboxOnce() {
   try {
     const ops = await listOutbox(50);
 	    for (const op of ops) {
-	      try {
-	        await flushOp(op);
-	        await removeOutboxOp(op.id);
-	        if (op.type === 'save_doc_json') {
-	          clearQueuedDocJsonIfNotNewer(op.articleId, op.payload?.clientQueuedAt ?? null);
-	        }
-	        if (op.type !== 'save_doc_json') {
-	          try {
-	            const index = await rawApiRequest('/api/articles');
-	            cacheArticlesIndex(index).catch(() => {});
-	          } catch {
+		      try {
+		        await flushOp(op);
+		        await removeOutboxOp(op.id);
+		        await maybeClearQueuedDocJsonAfterSuccessfulFlush(op);
+		        if (op.type !== 'save_doc_json') {
+		          try {
+		            const index = await rawApiRequest('/api/articles');
+		            cacheArticlesIndex(index).catch(() => {});
+		          } catch {
             // ignore
           }
         }
@@ -232,16 +288,14 @@ export async function flushOutboxOnce() {
           } catch {
             // ignore
           }
-	          try {
-	            await removeOutboxOp(op.id);
-	            if (op.type === 'save_doc_json') {
-	              clearQueuedDocJsonIfNotNewer(op.articleId, op.payload?.clientQueuedAt ?? null);
-	            }
-	          } catch {
-	            // ignore
-	          }
-	          continue;
-	        }
+		          try {
+		            await removeOutboxOp(op.id);
+		            // Do not clear queued docJson on dropped ops: data may not be on the server.
+		          } catch {
+		            // ignore
+		          }
+		          continue;
+		        }
 
         // stop on retryable errors to avoid hammering the server
         if (isRetryableOutboxError(err)) break;

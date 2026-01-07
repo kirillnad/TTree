@@ -12,11 +12,12 @@ import {
   fetchArticlesIndex,
   uploadImageFile,
   uploadFileToYandexDisk,
-} from '../api.js?v=11';
+} from '../api.js?v=12';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { updateCachedDocJson } from '../offline/cache.js';
 import { enqueueOp } from '../offline/outbox.js';
+import { putPendingUpload, deletePendingUpload, listPendingUploads, markPendingUploadError } from '../offline/uploads.js';
 import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
 import { parseMarkdownOutlineSections, buildOutlineSectionTree } from './structuredPaste.js';
@@ -29,6 +30,7 @@ let autosaveTimer = null;
 let autosaveInFlight = false;
 let outlineLastSavedAt = null;
 let lastActiveSectionId = null;
+const pendingUploadObjectUrls = new Map(); // token -> objectUrl
 const committedSectionIndexText = new Map();
 const dirtySectionIds = new Set();
 let docDirty = false;
@@ -36,6 +38,8 @@ let onlineHandlerAttached = false;
 let outlineParseHtmlToNodes = null;
 let outlineGenerateHTML = null;
 let outlineHtmlExtensions = null;
+let outlineTableApi = { TableMap: null, CellSelection: null };
+let tableResizeActive = false;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
 let outlineToolbarCleanup = null;
@@ -54,6 +58,181 @@ let outlineSelectionMode = false;
 let outlineSelectedSectionIds = new Set();
 
 const OUTLINE_SECTION_CLIPBOARD_KEY = 'ttree_outline_section_clipboard_v1';
+const OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY = 'ttree_outline_table_column_clipboard_v1';
+const PENDING_UPLOAD_IMG_PREFIX = 'pending-attachment:';
+
+function findImagePosByUploadToken(doc, token) {
+  let found = null;
+  const t = String(token || '').trim();
+  if (!doc || !t) return null;
+  doc.descendants((node, pos) => {
+    if (found !== null) return false;
+    if (node?.type?.name !== 'image') return;
+    if (String(node.attrs?.uploadToken || '') !== t) return;
+    found = pos;
+  });
+  return found;
+}
+
+function revokePendingUploadObjectUrl(token) {
+  const t = String(token || '').trim();
+  if (!t) return;
+  const url = pendingUploadObjectUrls.get(t) || null;
+  if (!url) return;
+  pendingUploadObjectUrls.delete(t);
+  try {
+    URL.revokeObjectURL(url);
+  } catch {
+    // ignore
+  }
+}
+
+function normalizeDocJsonForSave(docJson) {
+  try {
+    if (!docJson || typeof docJson !== 'object') return docJson;
+    const root =
+      typeof structuredClone === 'function' ? structuredClone(docJson) : JSON.parse(JSON.stringify(docJson));
+    const visit = (node) => {
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 'image' && node.attrs && typeof node.attrs === 'object') {
+        const token = String(node.attrs.uploadToken || '').trim();
+        const src = String(node.attrs.src || '');
+        if (token && src.startsWith('blob:')) {
+          node.attrs = { ...node.attrs, src: `${PENDING_UPLOAD_IMG_PREFIX}${token}` };
+        }
+      }
+      const content = node.content;
+      if (Array.isArray(content)) content.forEach(visit);
+    };
+    visit(root);
+    return root;
+  } catch {
+    return docJson;
+  }
+}
+
+async function hydratePendingImagesFromIdbForArticle(articleId) {
+  try {
+    if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return;
+    const aid = String(articleId || '').trim();
+    if (!aid) return;
+    const pending = await listPendingUploads({ articleId: aid, limit: 200 }).catch(() => []);
+    if (!pending.length) return;
+    const byToken = new Map();
+    for (const row of pending) {
+      const t = String(row?.token || '').trim();
+      if (!t) continue;
+      if (row?.kind && String(row.kind) !== 'image') continue;
+      if (row?.blob) byToken.set(t, row.blob);
+    }
+    if (!byToken.size) return;
+
+    const { state: pmState, view } = outlineEditorInstance;
+    let tr = pmState.tr;
+    let changed = false;
+
+    pmState.doc.descendants((node, pos) => {
+      if (node?.type?.name !== 'image') return;
+      const token = String(node.attrs?.uploadToken || '').trim();
+      const src = String(node.attrs?.src || '');
+      const tokenFromSrc =
+        src.startsWith(PENDING_UPLOAD_IMG_PREFIX) ? src.slice(PENDING_UPLOAD_IMG_PREFIX.length).trim() : '';
+      const t = token || tokenFromSrc;
+      if (!t) return;
+      const blob = byToken.get(t);
+      if (!blob) return;
+      if (src.startsWith('blob:')) return; // already hydrated
+      let url = pendingUploadObjectUrls.get(t) || null;
+      if (!url) {
+        try {
+          url = URL.createObjectURL(blob);
+          pendingUploadObjectUrls.set(t, url);
+        } catch {
+          url = null;
+        }
+      }
+      if (!url) return;
+      const nextAttrs = { ...node.attrs, src: url, uploadToken: t };
+      tr = tr.setNodeMarkup(pos, undefined, nextAttrs);
+      changed = true;
+    });
+
+    if (changed) {
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      view.dispatch(tr);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function flushPendingImageUploadsForArticle(articleId) {
+  try {
+    if (!navigator.onLine) return false;
+    if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return false;
+    const aid = String(articleId || '').trim();
+    if (!aid) return false;
+    const pending = await listPendingUploads({ articleId: aid, limit: 50 }).catch(() => []);
+    if (!pending.length) return false;
+    let didAny = false;
+    for (const row of pending) {
+      const token = String(row?.token || '').trim();
+      if (!token) continue;
+      if (row?.kind && String(row.kind) !== 'image') continue;
+      const blob = row?.blob || null;
+      if (!blob) continue;
+      try {
+        const file =
+          blob instanceof File
+            ? blob
+            : new File([blob], row?.fileName || 'image', { type: row?.mime || blob.type || 'application/octet-stream' });
+        const res = await uploadImageFile(file);
+        const url = String(res?.url || '').trim();
+        if (!url) throw new Error('Upload failed');
+
+        // Update editor doc: replace the image src wherever this token exists.
+        try {
+          const { state: pmState, view } = outlineEditorInstance;
+          const pos = findImagePosByUploadToken(pmState.doc, token);
+          if (typeof pos === 'number') {
+            const node = pmState.doc.nodeAt(pos);
+            if (node?.type?.name === 'image') {
+              const nextAttrs = {
+                ...node.attrs,
+                src: url,
+                uploadToken: null,
+                title: String(node.attrs?.title || '').replace(/\s*\(ошибка загрузки\)\s*$/i, '').trim(),
+              };
+              let tr = pmState.tr.setNodeMarkup(pos, undefined, nextAttrs);
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              view.dispatch(tr);
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        revokePendingUploadObjectUrl(token);
+        await deletePendingUpload(token).catch(() => {});
+        didAny = true;
+      } catch (err) {
+        const msg = err?.message || String(err || 'error');
+        await markPendingUploadError(token, msg).catch(() => {});
+      }
+    }
+    if (didAny) {
+      // Queue a doc save so server gets the final URLs.
+      try {
+        scheduleAutosave({ delayMs: 350 });
+      } catch {
+        // ignore
+      }
+    }
+    return didAny;
+  } catch {
+    return false;
+  }
+}
 
 function readOutlineSectionClipboard() {
   try {
@@ -249,6 +428,125 @@ function buildMarkdownFromOutlineSectionNode(sectionNode, { baseLevel = 2, depth
 }
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
+const OUTLINE_SECTION_SEQ_KEY = 'ttree_outline_section_seq_v1';
+
+function getNextSectionSeq(articleId, sectionId) {
+  try {
+    const aid = String(articleId || '').trim();
+    const sid = String(sectionId || '').trim();
+    if (!aid || !sid) return 1;
+    const raw = window.localStorage.getItem(OUTLINE_SECTION_SEQ_KEY) || '';
+    const parsed = raw ? JSON.parse(raw) : {};
+    const byArticle = parsed && typeof parsed === 'object' ? parsed : {};
+    const row = (byArticle[aid] && typeof byArticle[aid] === 'object' ? byArticle[aid] : {}) || {};
+    const current = Number(row[sid] || 0) || 0;
+    const next = current + 1;
+    row[sid] = next;
+    byArticle[aid] = row;
+    window.localStorage.setItem(OUTLINE_SECTION_SEQ_KEY, JSON.stringify(byArticle));
+    return next;
+  } catch {
+    return Date.now();
+  }
+}
+
+let structureDirty = false;
+let lastStructureHash = '';
+let structureSnapshotTimer = null;
+
+function computeOutlineStructureNodesFromDoc(pmDoc) {
+  const out = [];
+  const walkChildren = (childrenNode, parentId) => {
+    if (!childrenNode) return;
+    const list = childrenNode.content;
+    if (!list) return;
+    let idx = 0;
+    list.forEach((child) => {
+      if (!child || child.type?.name !== 'outlineSection') return;
+      const sid = String(child.attrs?.id || '').trim();
+      if (!sid) return;
+      out.push({
+        sectionId: sid,
+        parentId: parentId || null,
+        position: idx,
+        collapsed: Boolean(child.attrs?.collapsed),
+      });
+      idx += 1;
+      try {
+        const children = child.child(2);
+        walkChildren(children, sid);
+      } catch {
+        // ignore
+      }
+    });
+  };
+  try {
+    const root = pmDoc?.content;
+    if (!root) return [];
+    // pmDoc.content is Fragment; iterate via forEach.
+    let idx = 0;
+    pmDoc.content.forEach((child) => {
+      if (!child || child.type?.name !== 'outlineSection') return;
+      const sid = String(child.attrs?.id || '').trim();
+      if (!sid) return;
+      out.push({
+        sectionId: sid,
+        parentId: null,
+        position: idx,
+        collapsed: Boolean(child.attrs?.collapsed),
+      });
+      idx += 1;
+      try {
+        const children = child.child(2);
+        walkChildren(children, sid);
+      } catch {
+        // ignore
+      }
+    });
+  } catch {
+    return [];
+  }
+  return out;
+}
+
+function computeOutlineStructureHash(pmDoc) {
+  try {
+    const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
+    // Deterministic signature: parentId|pos|id|collapsed joined.
+    return nodes.map((n) => `${n.parentId || ''}|${n.position}|${n.sectionId}|${n.collapsed ? 1 : 0}`).join('\n');
+  } catch {
+    return '';
+  }
+}
+
+function scheduleStructureSnapshot({ articleId, editor } = {}) {
+  try {
+    const aid = String(articleId || '').trim();
+    if (!aid) return;
+    if (!editor) return;
+    structureDirty = true;
+    if (structureSnapshotTimer) clearTimeout(structureSnapshotTimer);
+    structureSnapshotTimer = setTimeout(() => {
+      structureSnapshotTimer = null;
+      try {
+        if (!structureDirty) return;
+        const pmDoc = editor.state?.doc;
+        const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
+        if (!nodes.length) return;
+        void enqueueOp('structure_snapshot', {
+          articleId: aid,
+          payload: { nodes },
+          coalesceKey: `structure:${aid}`,
+        });
+        structureDirty = false;
+      } catch {
+        // ignore
+      }
+    }, 5000);
+  } catch {
+    // ignore
+  }
+}
 const OUTLINE_ALLOW_META = 'outlineAllowMutation';
 let lastReadOnlyToastAt = 0;
 
@@ -1416,6 +1714,704 @@ function renderOutlineShell({ loading = false } = {}) {
   }
 }
 
+function readOutlineTableColumnClipboard() {
+  try {
+    const raw = window?.localStorage?.getItem?.(OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY) || '';
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!Array.isArray(parsed.rows)) return null;
+    return {
+      v: Number(parsed.v || 1),
+      rows: parsed.rows,
+      copiedAt: typeof parsed.copiedAt === 'string' ? parsed.copiedAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeOutlineTableColumnClipboard(rows) {
+  try {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    window?.localStorage?.setItem?.(
+      OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY,
+      JSON.stringify({ v: 1, copiedAt: new Date().toISOString(), rows: safeRows }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function parsePct(value) {
+  const s = String(value || '').trim();
+  if (!s) return null;
+  const m = s.match(/(-?\d+(?:\.\d+)?)%/);
+  if (!m) return null;
+  const num = Number.parseFloat(m[1]);
+  return Number.isFinite(num) ? num : null;
+}
+
+function clampPct(pct) {
+  const n = Number(pct);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+function getColPct(colEl) {
+  try {
+    const ds = colEl?.dataset?.ttPct || '';
+    const fromDs = Number.parseFloat(String(ds || ''));
+    if (Number.isFinite(fromDs) && fromDs > 0) return fromDs;
+    const fromStyle = parsePct(colEl?.style?.width || '');
+    if (fromStyle != null && fromStyle > 0) return fromStyle;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setColPct(colEl, pct) {
+  try {
+    const p = clampPct(pct);
+    colEl.dataset.ttPct = p.toFixed(4);
+    colEl.style.width = `${p.toFixed(4)}%`;
+    colEl.style.minWidth = '';
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct = 10 } = {}) {
+  try {
+    const view = editor?.view;
+    if (!view) return false;
+    const idx = Number(insertIndex);
+    if (!Number.isFinite(idx) || idx < 0) return false;
+
+    const domAt = view.domAtPos(view.state.selection.from);
+    const base = (domAt?.node && domAt.node.nodeType === 1 ? domAt.node : domAt?.node?.parentElement) || null;
+    const tableEl = base?.closest?.('table') || null;
+    if (!tableEl) return false;
+    const colgroup = tableEl.querySelector('colgroup');
+    if (!colgroup) return false;
+    const cols = Array.from(colgroup.querySelectorAll('col'));
+    if (!cols.length) return false;
+    if (idx >= cols.length) return false;
+
+    const fallback = 100 / cols.length;
+    const current = cols.map((c) => getColPct(c) ?? fallback);
+
+    const newPct = clampPct(newColPct);
+    current[idx] = newPct;
+
+    const leftEnd = idx - 1;
+    const sumLeft = leftEnd >= 0 ? current.slice(0, leftEnd + 1).reduce((a, b) => a + b, 0) : 0;
+    const rightStart = idx + 1;
+    const rightCount = Math.max(0, cols.length - rightStart);
+    const sumRightOrig =
+      rightCount > 0 ? current.slice(rightStart).reduce((a, b) => a + b, 0) : 0;
+
+    let remaining = 100 - sumLeft - newPct;
+    if (remaining < 0) {
+      // Edge case (insert at end / too little room): take from the immediate left column if possible.
+      const takeFromIdx = Math.max(0, idx - 1);
+      const canTake = Math.max(0, current[takeFromIdx] - 1);
+      const need = Math.abs(remaining);
+      const taken = Math.min(canTake, need);
+      current[takeFromIdx] = Math.max(1, current[takeFromIdx] - taken);
+      remaining = 100 - (current.slice(0, leftEnd + 1).reduce((a, b) => a + b, 0)) - newPct;
+      remaining = Math.max(0, remaining);
+    }
+
+    if (rightCount > 0) {
+      if (sumRightOrig > 0) {
+        const factor = remaining / sumRightOrig;
+        for (let i = rightStart; i < cols.length; i += 1) current[i] *= factor;
+      } else {
+        const each = remaining / rightCount;
+        for (let i = rightStart; i < cols.length; i += 1) current[i] = each;
+      }
+    }
+
+    // Apply and normalize tiny floating drift on the last column.
+    let sum = current.reduce((a, b) => a + b, 0);
+    if (sum > 0 && Math.abs(sum - 100) > 0.01) {
+      const delta = 100 - sum;
+      const lastIdx = cols.length - 1;
+      current[lastIdx] = clampPct(current[lastIdx] + delta);
+      sum = current.reduce((a, b) => a + b, 0);
+    }
+
+    for (let i = 0; i < cols.length; i += 1) setColPct(cols[i], current[i]);
+    try {
+      tableEl.style.width = '100%';
+      tableEl.style.maxWidth = '100%';
+      tableEl.style.tableLayout = 'fixed';
+    } catch {
+      // ignore
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function captureTableColumnPercentsFromDom(tableEl) {
+  try {
+    if (!tableEl) return false;
+    const colgroup = tableEl.querySelector('colgroup');
+    if (!colgroup) return false;
+    const cols = Array.from(colgroup.querySelectorAll('col'));
+    if (!cols.length) return false;
+
+    const tableRect = tableEl.getBoundingClientRect();
+    if (!Number.isFinite(tableRect.width) || tableRect.width <= 0) return false;
+
+    const firstRow = tableEl.querySelector('tbody tr');
+    if (!firstRow) return false;
+    const cells = Array.from(firstRow.children || []).filter((el) => el && el.nodeType === 1);
+    if (!cells.length) return false;
+
+    const widthsPx = [];
+    for (let i = 0; i < cols.length; i += 1) {
+      const cellEl = cells[i] || null;
+      if (!cellEl) {
+        widthsPx.push(0);
+        continue;
+      }
+      const rect = cellEl.getBoundingClientRect();
+      widthsPx.push(Number.isFinite(rect.width) ? rect.width : 0);
+    }
+    const total = widthsPx.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    if (!(total > 0)) return false;
+
+    for (let i = 0; i < cols.length; i += 1) {
+      const pct = clampPct((widthsPx[i] / total) * 100);
+      setColPct(cols[i], pct);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getActiveTableDom(view) {
+  try {
+    if (!view?.state?.selection) return null;
+    const domAt = view.domAtPos(view.state.selection.from);
+    const base = (domAt?.node && domAt.node.nodeType === 1 ? domAt.node : domAt?.node?.parentElement) || null;
+    return base?.closest?.('table') || null;
+  } catch {
+    return null;
+  }
+}
+
+function readTableColPercentsFromDom(tableEl) {
+  try {
+    if (!tableEl) return null;
+    const colgroup = tableEl.querySelector('colgroup');
+    if (!colgroup) return null;
+    const cols = Array.from(colgroup.querySelectorAll('col'));
+    if (!cols.length) return null;
+    const fallback = 100 / cols.length;
+    return cols.map((c) => getColPct(c) ?? fallback);
+  } catch {
+    return null;
+  }
+}
+
+function applyTableColPercentsToDom(tableEl, percents) {
+  try {
+    if (!tableEl) return false;
+    const colgroup = tableEl.querySelector('colgroup');
+    if (!colgroup) return false;
+    const cols = Array.from(colgroup.querySelectorAll('col'));
+    if (!cols.length) return false;
+    if (!Array.isArray(percents) || percents.length !== cols.length) return false;
+    for (let i = 0; i < cols.length; i += 1) setColPct(cols[i], percents[i]);
+    try {
+      tableEl.style.width = '100%';
+      tableEl.style.maxWidth = '100%';
+      tableEl.style.tableLayout = 'fixed';
+    } catch {
+      // ignore
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, deletedIndex) {
+  try {
+    const w = Array.isArray(widthsBefore) ? widthsBefore.map((x) => Number(x) || 0) : null;
+    const k = Number(deletedIndex);
+    if (!w || !Number.isFinite(k) || k < 0 || k >= w.length) return null;
+    if (w.length <= 1) return null;
+    const deletedPct = Math.max(0, w[k] || 0);
+    const left = w.slice(0, k);
+    const right = w.slice(k + 1);
+    const sumRight = right.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    let newRight = right;
+    if (right.length) {
+      if (sumRight > 0) {
+        const factor = (sumRight + deletedPct) / sumRight;
+        newRight = right.map((x) => (Number.isFinite(x) ? x * factor : 0));
+      } else {
+        const each = (deletedPct || 0) / right.length;
+        newRight = right.map(() => each);
+      }
+    } else if (left.length) {
+      // Deleting the last column: give space to the new last column.
+      left[left.length - 1] = Math.max(1, (left[left.length - 1] || 0) + deletedPct);
+    }
+    const next = [...left, ...newRight].map((x) => clampPct(x));
+    // Normalize float drift on last column.
+    const sum = next.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    if (sum > 0 && Math.abs(sum - 100) > 0.01) {
+      next[next.length - 1] = clampPct(next[next.length - 1] + (100 - sum));
+    }
+    return next;
+  } catch {
+    return null;
+  }
+}
+
+function getActiveTableContext(pmState) {
+  try {
+    const TableMap = outlineTableApi?.TableMap || null;
+    const $from = pmState?.selection?.$from || null;
+    if (!$from) return null;
+    let tableDepth = null;
+    for (let d = $from.depth; d >= 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'table') {
+        tableDepth = d;
+        break;
+      }
+    }
+    if (tableDepth == null) return null;
+    const tablePos = $from.before(tableDepth);
+    const tableNode = pmState.doc.nodeAt(tablePos);
+    if (!tableNode || tableNode.type?.name !== 'table') return null;
+
+    let cellDepth = null;
+    for (let d = tableDepth + 1; d <= $from.depth; d += 1) {
+      const name = $from.node(d)?.type?.name;
+      if (name === 'tableCell' || name === 'tableHeader') {
+        cellDepth = d;
+        break;
+      }
+    }
+    if (cellDepth == null) return null;
+    const cellPos = $from.before(cellDepth);
+
+    const map = TableMap?.get ? TableMap.get(tableNode) : null;
+    if (!map) return null;
+    const rel = cellPos - tablePos - 1;
+    const rect = map.findCell(rel);
+    const colIndex = Number(rect?.left ?? 0);
+    const rowIndex = Number(rect?.top ?? 0);
+    return { tablePos, tableNode, map, colIndex, rowIndex };
+  } catch {
+    return null;
+  }
+}
+
+function selectOutlineTableColumn(editor, colIndex) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!CellSelection || !TableMap) return false;
+    return editor.commands.command(({ state: pmState, dispatch }) => {
+      const ctx = getActiveTableContext(pmState);
+      if (!ctx) return false;
+      const { tablePos, tableNode, map } = ctx;
+      const col = Number(colIndex);
+      if (!Number.isFinite(col) || col < 0 || col >= map.width) return false;
+      const aRel = map.positionAt(0, col, tableNode);
+      const bRel = map.positionAt(map.height - 1, col, tableNode);
+      const aAbs = tablePos + 1 + aRel;
+      const bAbs = tablePos + 1 + bRel;
+      let sel = null;
+      try {
+        if (typeof CellSelection.create === 'function') {
+          sel = CellSelection.create(pmState.doc, aAbs, bAbs);
+        }
+      } catch {
+        sel = null;
+      }
+      if (!sel) return false;
+      let tr = pmState.tr.setSelection(sel);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    });
+  } catch {
+    return false;
+  }
+}
+
+function canMoveTableWithoutSpans(tableNode, kindLabel = 'таблицы') {
+  try {
+    let hasSpans = false;
+    tableNode.descendants((n) => {
+      if (hasSpans) return false;
+      const name = n?.type?.name;
+      if (name === 'tableCell' || name === 'tableHeader') {
+        const cs = Number(n.attrs?.colspan || 1);
+        const rs = Number(n.attrs?.rowspan || 1);
+        if (cs !== 1 || rs !== 1) {
+          hasSpans = true;
+          return false;
+        }
+      }
+      return true;
+    });
+    if (hasSpans) {
+      showToast(`Перемещение ${kindLabel} пока не поддерживается для объединённых ячеек`);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveTableColumnBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, colIndex, rowIndex } = ctx;
+    const cols = tableNode.child(0)?.childCount || 0;
+    const rows = tableNode.childCount || 0;
+    if (!(cols > 0 && rows > 0)) return false;
+    const d = dir < 0 ? -1 : 1;
+    const targetCol = colIndex + d;
+    if (!(targetCol >= 0 && targetCol < cols)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'столбцов')) return false;
+
+    // Compute offset within the current cell so cursor stays in place.
+    let cellDepth = null;
+    for (let dep = pmState.selection.$from.depth; dep >= 0; dep -= 1) {
+      const name = pmState.selection.$from.node(dep)?.type?.name;
+      if (name === 'tableCell' || name === 'tableHeader') {
+        cellDepth = dep;
+        break;
+      }
+    }
+    const offsetInCell = cellDepth != null ? pmState.selection.from - pmState.selection.$from.start(cellDepth) : 0;
+
+    // Preserve column widths (DOM-only) by swapping percents.
+    const tableElBefore = getActiveTableDom(editor.view);
+    const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+    const widthsAfter =
+      Array.isArray(widthsBefore) && widthsBefore.length === cols
+        ? (() => {
+            const next = widthsBefore.slice();
+            const tmp = next[colIndex];
+            next[colIndex] = next[targetCol];
+            next[targetCol] = tmp;
+            return next;
+          })()
+        : null;
+
+    const newRows = [];
+    for (let r = 0; r < rows; r += 1) {
+      const row = tableNode.child(r);
+      if (row.type?.name !== 'tableRow') return false;
+      if (row.childCount !== cols) return false;
+      const swapped = [];
+      for (let c = 0; c < cols; c += 1) {
+        if (c === colIndex) swapped.push(row.child(targetCol));
+        else if (c === targetCol) swapped.push(row.child(colIndex));
+        else swapped.push(row.child(c));
+      }
+      newRows.push(row.type.create(row.attrs, swapped));
+    }
+
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+    // Keep cursor in the moved column's cell.
+    try {
+      const TextSelection = tiptap?.pmStateMod?.TextSelection;
+      if (TextSelection) {
+        const targetRowIndex = Math.min(newTable.childCount - 1, Math.max(0, rowIndex));
+        const targetColIndex = targetCol;
+        const targetRowNode = newTable.child(targetRowIndex);
+        const targetCell = targetRowNode.child(targetColIndex);
+
+        let pos = tablePos + 1;
+        for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
+        pos += 1;
+        for (let c = 0; c < targetColIndex; c += 1) pos += targetRowNode.child(c).nodeSize;
+        const cellPos = pos;
+        const cellFrom = cellPos + 1;
+        const cellTo = cellPos + targetCell.nodeSize - 1;
+        const desired = cellFrom + Math.max(0, offsetInCell);
+        const anchor = Math.min(Math.max(desired, cellFrom), cellTo);
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      }
+    } catch {
+      // ignore
+    }
+
+    editor.view.dispatch(tr.scrollIntoView());
+
+    if (widthsAfter) {
+      window.requestAnimationFrame(() => {
+        const tableEl = getActiveTableDom(editor.view);
+        applyTableColPercentsToDom(tableEl, widthsAfter);
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveTableRowBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, colIndex, rowIndex } = ctx;
+    const cols = tableNode.child(0)?.childCount || 0;
+    const rows = tableNode.childCount || 0;
+    if (!(cols > 0 && rows > 0)) return false;
+    const d = dir < 0 ? -1 : 1;
+    const targetRow = rowIndex + d;
+    if (!(targetRow >= 0 && targetRow < rows)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'строк')) return false;
+
+    // Preserve column widths.
+    const tableElBefore = getActiveTableDom(editor.view);
+    const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+
+    // Compute offset within the current cell so cursor stays in place.
+    let cellDepth = null;
+    for (let dep = pmState.selection.$from.depth; dep >= 0; dep -= 1) {
+      const name = pmState.selection.$from.node(dep)?.type?.name;
+      if (name === 'tableCell' || name === 'tableHeader') {
+        cellDepth = dep;
+        break;
+      }
+    }
+    const offsetInCell = cellDepth != null ? pmState.selection.from - pmState.selection.$from.start(cellDepth) : 0;
+
+    const newRows = [];
+    for (let r = 0; r < rows; r += 1) {
+      if (r === rowIndex) newRows.push(tableNode.child(targetRow));
+      else if (r === targetRow) newRows.push(tableNode.child(rowIndex));
+      else newRows.push(tableNode.child(r));
+    }
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+    try {
+      const TextSelection = tiptap?.pmStateMod?.TextSelection;
+      if (TextSelection) {
+        const targetRowIndex = targetRow;
+        const targetColIndex = Math.min(cols - 1, Math.max(0, colIndex));
+        const targetRowNode = newTable.child(targetRowIndex);
+        const targetCell = targetRowNode.child(targetColIndex);
+
+        let pos = tablePos + 1;
+        for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
+        pos += 1;
+        for (let c = 0; c < targetColIndex; c += 1) pos += targetRowNode.child(c).nodeSize;
+        const cellPos = pos;
+        const cellFrom = cellPos + 1;
+        const cellTo = cellPos + targetCell.nodeSize - 1;
+        const desired = cellFrom + Math.max(0, offsetInCell);
+        const anchor = Math.min(Math.max(desired, cellFrom), cellTo);
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      }
+    } catch {
+      // ignore
+    }
+
+    editor.view.dispatch(tr.scrollIntoView());
+    if (Array.isArray(widthsBefore) && widthsBefore.length === cols) {
+      window.requestAnimationFrame(() => {
+        const tableEl = getActiveTableDom(editor.view);
+        applyTableColPercentsToDom(tableEl, widthsBefore);
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveOutlineBodyParagraphBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const { state: pmState, view } = editor;
+    const { selection } = pmState;
+    const $from = selection?.$from || null;
+    if (!$from) return false;
+
+    // Only within outlineBody (not inside tables/lists/etc).
+    let paraDepth = null;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'paragraph') {
+        if ($from.node(d - 1)?.type?.name === 'outlineBody') paraDepth = d;
+        break;
+      }
+    }
+    if (paraDepth == null) return false;
+
+    const bodyDepth = paraDepth - 1;
+    const bodyNode = $from.node(bodyDepth);
+    const idx = $from.index(bodyDepth);
+    if (!bodyNode || bodyNode.type?.name !== 'outlineBody') return false;
+
+    const ddir = dir < 0 ? -1 : 1;
+    const targetIdx = idx + ddir;
+    if (!(targetIdx >= 0 && targetIdx < bodyNode.childCount)) return false;
+
+    const currNode = bodyNode.child(idx);
+    const otherNode = bodyNode.child(targetIdx);
+    if (currNode?.type?.name !== 'paragraph') return false;
+    if (otherNode?.type?.name !== 'paragraph') return false;
+
+    const currPos = $from.before(paraDepth);
+    const currSize = currNode.nodeSize;
+    const otherPos = ddir < 0 ? currPos - otherNode.nodeSize : currPos + currSize;
+    const otherSize = otherNode.nodeSize;
+
+    const offsetInPara = Math.max(0, selection.from - $from.start(paraDepth));
+
+    let tr = pmState.tr;
+    if (ddir < 0) {
+      // Move current paragraph up (swap with previous).
+      tr = tr.delete(currPos, currPos + currSize);
+      tr = tr.insert(otherPos, currNode);
+      const newPos = otherPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInPara;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    } else {
+      // Move current paragraph down (swap with next).
+      tr = tr.delete(currPos, currPos + currSize);
+      const insertPos = currPos + otherSize;
+      tr = tr.insert(insertPos, currNode);
+      const newPos = insertPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInPara;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    view.dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function copyOutlineTableColumn(editor) {
+  try {
+    const pmState = editor?.state;
+    if (!pmState) return false;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, map, colIndex } = ctx;
+    const rows = [];
+    for (let r = 0; r < map.height; r += 1) {
+      const rel = map.positionAt(r, colIndex, tableNode);
+      const abs = tablePos + 1 + rel;
+      const cell = pmState.doc.nodeAt(abs);
+      const json = cell?.content?.toJSON?.() || [];
+      rows.push(Array.isArray(json) ? json : []);
+    }
+    if (!rows.length) return false;
+    writeOutlineTableColumnClipboard(rows);
+    showToast(`Скопирован столбец (${rows.length} ячеек)`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function pasteOutlineTableColumnAfter(editor) {
+  try {
+    const clip = readOutlineTableColumnClipboard();
+    if (!clip?.rows?.length) {
+      showToast('Буфер столбца пуст');
+      return false;
+    }
+    const beforeState = editor?.state;
+    if (!beforeState) return false;
+    const beforeCtx = getActiveTableContext(beforeState);
+    if (!beforeCtx) return false;
+    const colIndex = beforeCtx.colIndex;
+    // Make sure the target column is the selection anchor for addColumnAfter().
+    selectOutlineTableColumn(editor, colIndex);
+    const ok = editor.chain().focus().addColumnAfter().run();
+    if (!ok) return false;
+    rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex: colIndex + 1, newColPct: 10 });
+
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, map } = ctx;
+    const newCol = Math.min(map.width - 1, colIndex + 1);
+
+    const schema = pmState.schema;
+    let tr = pmState.tr;
+    for (let r = map.height - 1; r >= 0; r -= 1) {
+      const rel = map.positionAt(r, newCol, tableNode);
+      const abs = tablePos + 1 + rel;
+      const cell = tr.doc.nodeAt(abs);
+      if (!cell) continue;
+
+      const rowContentJson = clip.rows[r] ?? null;
+      const contentJson = Array.isArray(rowContentJson) ? rowContentJson : [];
+      const safeJson = contentJson.length ? contentJson : [{ type: 'paragraph', content: [] }];
+      const contentNodes = [];
+      for (const nodeJson of safeJson) {
+        try {
+          contentNodes.push(schema.nodeFromJSON(nodeJson));
+        } catch {
+          // ignore invalid node
+        }
+      }
+      if (!contentNodes.length) continue;
+      const nextCell = cell.type.create(cell.attrs, contentNodes);
+      tr = tr.replaceWith(abs, abs + cell.nodeSize, nextCell);
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr);
+    showToast('Столбец вставлен');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function mountOutlineToolbar(editor) {
   if (!refs.outlineToolbar) return;
   if (!editor) return;
@@ -1449,6 +2445,45 @@ function mountOutlineToolbar(editor) {
     };
     el.addEventListener('click', onClick);
     return () => el.removeEventListener('click', onClick);
+  };
+
+  const tap = (el, handler) => {
+    if (!el) return () => {};
+    let lastTapAt = 0;
+    const invoke = (e) => {
+      lastTapAt = Date.now();
+      e.preventDefault();
+      e.stopPropagation();
+      handler();
+    };
+    const onPointerDown = (e) => invoke(e);
+    const onTouchStart = (e) => invoke(e);
+    const onClick = (e) => {
+      // Avoid double-trigger after pointerdown/touchstart.
+      if (Date.now() - lastTapAt < 450) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      invoke(e);
+    };
+
+    try {
+      el.addEventListener('pointerdown', onPointerDown);
+    } catch {
+      // ignore
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('click', onClick);
+    return () => {
+      try {
+        el.removeEventListener('pointerdown', onPointerDown);
+      } catch {
+        // ignore
+      }
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('click', onClick);
+    };
   };
 
   const markActive = (el, active) => {
@@ -1584,33 +2619,71 @@ function mountOutlineToolbar(editor) {
       if (action === 'addRowBefore') return chain.addRowBefore().run();
       if (action === 'addRowAfter') return chain.addRowAfter().run();
       if (action === 'deleteRow') return chain.deleteRow().run();
-      if (action === 'addColumnBefore') return chain.addColumnBefore().run();
-	      if (action === 'addColumnAfter') return chain.addColumnAfter().run();
-	      if (action === 'deleteColumn') return chain.deleteColumn().run();
-	      if (action === 'mergeCells') return chain.mergeCells().run();
-	      if (action === 'splitCell') return chain.splitCell().run();
-	      if (action === 'cancelTable') return cancelTableToText();
-	      if (action === 'deleteTable') return chain.deleteTable().run();
-	      return false;
-	    } catch {
-	      return false;
-	    }
-	  };
-
-	  const isEditing = () => {
-	    try {
-	      const st = outlineEditModeKey?.getState?.(editor.state) || null;
-	      return Boolean(st?.editingSectionId);
-	    } catch {
-	      return false;
-	    }
-	  };
-
-		  const requireEditing = () => {
-		    if (isEditing()) return true;
-		    notifyReadOnlyGlobal();
-		    return false;
+		      if (action === 'addColumnBefore') {
+		        const ctx = getActiveTableContext(editor.state);
+		        const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0)) : 0;
+		        const ok = chain.addColumnBefore().run();
+		        if (ok) {
+		          // New column is inserted at `insertIndex`.
+		          rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
+		        }
+		        return ok;
+		      }
+		      if (action === 'addColumnAfter') {
+		        const ctx = getActiveTableContext(editor.state);
+		        const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0) + 1) : 1;
+		        const ok = chain.addColumnAfter().run();
+		        if (ok) {
+		          // New column is inserted at `insertIndex`.
+		          rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
+		        }
+		        return ok;
+		      }
+		      if (action === 'deleteColumn') {
+		        const tableElBefore = getActiveTableDom(editor.view);
+		        const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+		        const ctx = getActiveTableContext(editor.state);
+		        const deletedIndex = ctx ? Number(ctx.colIndex || 0) : null;
+		        const widthsAfter =
+		          widthsBefore && deletedIndex != null
+		            ? rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, deletedIndex)
+		            : null;
+		        const ok = chain.deleteColumn().run();
+		        if (ok && Array.isArray(widthsAfter)) {
+		          window.requestAnimationFrame(() => {
+		            const tableEl = getActiveTableDom(editor.view);
+		            applyTableColPercentsToDom(tableEl, widthsAfter);
+		          });
+		        }
+		        return ok;
+		      }
+		      if (action === 'mergeCells') return chain.mergeCells().run();
+		      if (action === 'splitCell') return chain.splitCell().run();
+		      if (action === 'copyColumn') return copyOutlineTableColumn(editor);
+		      if (action === 'pasteColumnAfter') return pasteOutlineTableColumnAfter(editor);
+		      if (action === 'moveColumnRight') return moveTableColumnBy(editor, +1);
+		      if (action === 'cancelTable') return cancelTableToText();
+		      if (action === 'deleteTable') return chain.deleteTable().run();
+		      return false;
+		    } catch {
+		      return false;
+		    }
 		  };
+
+		  const isEditing = () => {
+		    try {
+		      const st = outlineEditModeKey?.getState?.(editor.state) || null;
+		      return Boolean(st?.editingSectionId);
+	    } catch {
+	      return false;
+	    }
+	  };
+
+  const requireEditing = () => {
+    if (isEditing()) return true;
+    notifyReadOnlyGlobal();
+    return false;
+  };
 
 			  const cancelTableToText = () => {
 			    if (!requireEditing()) return false;
@@ -1713,13 +2786,119 @@ function mountOutlineToolbar(editor) {
 			        // ignore
 			      }
 
-		      view.dispatch(tr.scrollIntoView());
-		      view.focus?.();
-		      return true;
-		    } catch {
-		      return false;
-		    }
-		  };
+			      view.dispatch(tr.scrollIntoView());
+			      view.focus?.();
+			      return true;
+			    } catch {
+			      return false;
+			    }
+			  };
+
+			  const moveTableColumnRight = () => {
+			    if (!requireEditing()) return false;
+			    try {
+			      const { state: pmState, view } = editor;
+			      const { selection } = pmState;
+			      const $from = selection?.$from;
+			      if (!$from) return false;
+
+			      // Find the nearest table/cell context (current table when nested).
+			      let tableDepth = null;
+			      let rowDepth = null;
+			      let cellDepth = null;
+			      for (let d = $from.depth; d >= 0; d -= 1) {
+			        const node = $from.node(d);
+			        const name = node?.type?.name;
+			        if (cellDepth == null && (name === 'tableCell' || name === 'tableHeader')) cellDepth = d;
+			        if (rowDepth == null && name === 'tableRow') rowDepth = d;
+			        if (name === 'table') {
+			          tableDepth = d;
+			          break;
+			        }
+			      }
+			      if (tableDepth == null || rowDepth == null || cellDepth == null) return false;
+
+			      const tablePos = $from.before(tableDepth);
+			      const tableNode = pmState.doc.nodeAt(tablePos);
+			      if (!tableNode || tableNode.type?.name !== 'table') return false;
+
+			      const rowIndex = $from.index(tableDepth);
+			      const colIndex = $from.index(rowDepth);
+			      const cols = tableNode.child(0)?.childCount || 0;
+			      if (!(cols > 0)) return false;
+			      if (!(colIndex >= 0 && colIndex < cols - 1)) return false;
+
+			      // Reject complex tables with rowspan/colspan.
+			      let hasSpans = false;
+			      tableNode.descendants((n) => {
+			        if (hasSpans) return false;
+			        const name = n?.type?.name;
+			        if (name === 'tableCell' || name === 'tableHeader') {
+			          const cs = Number(n.attrs?.colspan || 1);
+			          const rs = Number(n.attrs?.rowspan || 1);
+			          if (cs !== 1 || rs !== 1) {
+			            hasSpans = true;
+			            return false;
+			          }
+			        }
+			        return true;
+			      });
+			      if (hasSpans) {
+			        showToast('Перемещение столбцов пока не поддерживается для объединённых ячеек');
+			        return false;
+			      }
+
+			      const offsetInCell = selection.from - $from.start(cellDepth);
+
+			      const newRows = [];
+			      for (let r = 0; r < tableNode.childCount; r += 1) {
+			        const row = tableNode.child(r);
+			        if (row.type?.name !== 'tableRow') return false;
+			        if (row.childCount !== cols) return false;
+			        const swapped = [];
+			        for (let c = 0; c < cols; c += 1) {
+			          if (c === colIndex) swapped.push(row.child(c + 1));
+			          else if (c === colIndex + 1) swapped.push(row.child(c - 1));
+			          else swapped.push(row.child(c));
+			        }
+			        newRows.push(row.type.create(row.attrs, swapped));
+			      }
+
+			      const newTable = tableNode.type.create(tableNode.attrs, newRows);
+			      let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+			      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+			      // Keep cursor in the moved column's cell (same row, shifted right).
+			      try {
+			        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+			        if (TextSelection) {
+			          const targetRowIndex = Math.min(newTable.childCount - 1, Math.max(0, rowIndex));
+			          const targetColIndex = colIndex + 1;
+			          const targetRow = newTable.child(targetRowIndex);
+			          const targetCell = targetRow.child(targetColIndex);
+
+			          let pos = tablePos + 1; // inside table
+			          for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
+			          pos += 1; // inside row
+			          for (let c = 0; c < targetColIndex; c += 1) pos += targetRow.child(c).nodeSize;
+			          const cellPos = pos; // before cell node
+			          const cellFrom = cellPos + 1;
+			          const cellTo = cellPos + targetCell.nodeSize - 1;
+			          const desired = cellFrom + Math.max(0, offsetInCell);
+			          const anchor = Math.min(Math.max(desired, cellFrom), cellTo);
+			          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+			        }
+			      } catch {
+			        // ignore
+			      }
+
+			      view.dispatch(tr.scrollIntoView());
+			      view.focus?.();
+			      return true;
+			    } catch {
+			      return false;
+			    }
+			  };
 
 			  const insertLinkMark = (href, label, attrs = {}) => {
 			    const url = String(href || '').trim();
@@ -1956,16 +3135,65 @@ function mountOutlineToolbar(editor) {
       } else if (action === 'deleteColumn') {
         isActive = false;
         isDisabled = !canRun((c) => c.deleteColumn());
-      } else if (action === 'mergeCells') {
+      } else if (action === 'copyColumn') {
         isActive = false;
-        isDisabled = !canRun((c) => c.mergeCells());
-	      } else if (action === 'splitCell') {
-	        isActive = false;
-	        isDisabled = !canRun((c) => c.splitCell());
-	      } else if (action === 'cancelTable') {
-	        isActive = false;
-	        isDisabled = !isEditing() || !editor.isActive('table');
-	      } else if (action === 'deleteTable') {
+        isDisabled = !isEditing() || !editor.isActive('table');
+        if (!isDisabled) {
+          try {
+            isDisabled = !Boolean(getActiveTableContext(editor.state));
+          } catch {
+            isDisabled = true;
+          }
+        }
+      } else if (action === 'pasteColumnAfter') {
+        isActive = false;
+        isDisabled = !isEditing() || !editor.isActive('table');
+        if (!isDisabled) {
+          const clip = readOutlineTableColumnClipboard();
+          if (!clip?.rows?.length) isDisabled = true;
+        }
+        if (!isDisabled) isDisabled = !canRun((c) => c.addColumnAfter());
+		      } else if (action === 'mergeCells') {
+		        isActive = false;
+		        isDisabled = !canRun((c) => c.mergeCells());
+		      } else if (action === 'splitCell') {
+		        isActive = false;
+		        isDisabled = !canRun((c) => c.splitCell());
+		      } else if (action === 'moveColumnRight') {
+		        isActive = false;
+		        isDisabled = !isEditing() || !editor.isActive('table');
+		        try {
+		          const pmState = editor.state;
+		          const $from = pmState.selection?.$from;
+		          if ($from) {
+		            let tableDepth = null;
+		            let rowDepth = null;
+		            for (let d = $from.depth; d >= 0; d -= 1) {
+		              const node = $from.node(d);
+		              const name = node?.type?.name;
+		              if (rowDepth == null && name === 'tableRow') rowDepth = d;
+		              if (name === 'table') {
+		                tableDepth = d;
+		                break;
+		              }
+		            }
+		            if (tableDepth != null && rowDepth != null) {
+		              const tablePos = $from.before(tableDepth);
+		              const tableNode = pmState.doc.nodeAt(tablePos);
+		              const colIndex = $from.index(rowDepth);
+		              const cols = tableNode?.child(0)?.childCount || 0;
+		              if (!(cols > 0) || !(colIndex >= 0 && colIndex < cols - 1)) isDisabled = true;
+		            } else {
+		              isDisabled = true;
+		            }
+		          }
+		        } catch {
+		          // ignore
+		        }
+		      } else if (action === 'cancelTable') {
+		        isActive = false;
+		        isDisabled = !isEditing() || !editor.isActive('table');
+		      } else if (action === 'deleteTable') {
 	        isActive = false;
 	        isDisabled = !canRun((c) => c.deleteTable());
 	      }
@@ -2214,7 +3442,7 @@ function mountOutlineToolbar(editor) {
   cleanups.push(click(btns.newBelowBtn, () => insertNewSectionBelow()));
 
   for (const btn of dropdownBtns) {
-    cleanups.push(click(btn, () => toggleMenu(btn)));
+    cleanups.push(tap(btn, () => toggleMenu(btn)));
   }
 		  for (const item of actionButtons) {
 		    cleanups.push(
@@ -2487,9 +3715,81 @@ function moveCursorToSectionBodyStart(editor, sectionPos) {
     const { TextSelection } = tiptap?.pmStateMod || {};
     if (!TextSelection) return false;
     tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
-    editor.view.dispatch(tr);
+    editor.view.dispatch(tr.scrollIntoView());
     editor.view.focus?.({ preventScroll: true });
     return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveCursorToSectionHeadingStart(editor, sectionPos) {
+  if (!editor) return false;
+  if (typeof sectionPos !== 'number') return false;
+  try {
+    const pmState = editor.state;
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const heading = sectionNode.child(0);
+    const headingPos = sectionPos + 1;
+    const { TextSelection } = tiptap?.pmStateMod || {};
+    if (!TextSelection) return false;
+    const from = headingPos + 1;
+    const to = headingPos + heading.nodeSize - 1;
+    const anchor = Math.min(Math.max(from, from), Math.max(from, to));
+    let tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(anchor), 1));
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr.scrollIntoView());
+    editor.view.focus?.({ preventScroll: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveCursorToSectionHeadingEnd(editor, sectionPos) {
+  if (!editor) return false;
+  if (typeof sectionPos !== 'number') return false;
+  try {
+    const pmState = editor.state;
+    const sectionNode = pmState.doc.nodeAt(sectionPos);
+    if (!sectionNode) return false;
+    const heading = sectionNode.child(0);
+    const headingPos = sectionPos + 1;
+    const { TextSelection } = tiptap?.pmStateMod || {};
+    if (!TextSelection) return false;
+    const from = headingPos + 1;
+    const to = headingPos + heading.nodeSize - 1;
+    const anchor = Math.max(from, to);
+    let tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(anchor), -1));
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr.scrollIntoView());
+    editor.view.focus?.({ preventScroll: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveCursorToSectionPreferredStart(editor, sectionId) {
+  try {
+    if (!editor) return false;
+    const sid = String(sectionId || '').trim();
+    if (!sid) return false;
+    const pmState = editor.state;
+    const pos = findSectionPosById(pmState.doc, sid);
+    if (typeof pos !== 'number') return false;
+    const node = pmState.doc.nodeAt(pos);
+    if (!node || node.type?.name !== 'outlineSection') return false;
+    if (Boolean(node.attrs?.collapsed)) return moveCursorToSectionHeadingStart(editor, pos);
+    // Avoid mutating the document on open: if body is empty, place caret at the end of the heading.
+    try {
+      const body = node.child(1);
+      if (!body?.childCount) return moveCursorToSectionHeadingEnd(editor, pos);
+    } catch {
+      // ignore
+    }
+    return moveCursorToSectionBodyStart(editor, pos);
   } catch {
     return false;
   }
@@ -2517,7 +3817,7 @@ async function loadTiptap() {
   // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
   // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
   const t0 = perfEnabled() ? performance.now() : 0;
-  const mod = await import('./tiptap.bundle.js?v=3');
+  const mod = await import('./tiptap.bundle.js?v=4');
   if (t0) perfLog('import tiptap.bundle.js', { ms: Math.round(performance.now() - t0) });
   tiptap = {
     core: mod.core,
@@ -2525,6 +3825,7 @@ async function loadTiptap() {
     htmlMod: mod.htmlMod,
     pmStateMod: mod.pmStateMod,
     pmViewMod: mod.pmViewMod,
+    pmTablesMod: mod.pmTablesMod,
     linkMod: mod.linkMod,
     imageMod: mod.imageMod,
     tableMod: mod.tableMod,
@@ -2568,6 +3869,79 @@ function buildOutlineDocFromBlocks({ blocks, parseHtmlToNodes }) {
 
   const sections = (Array.isArray(blocks) ? blocks : []).map(convertBlock);
   return { type: 'doc', content: sections.length ? sections : [convertBlock({ id: safeUuid(), text: '', collapsed: false, children: [] })] };
+}
+
+function readOutlineLastActiveSnapshot(articleId) {
+  try {
+    const aid = String(articleId || '').trim();
+    if (!aid) return null;
+    const raw = window?.localStorage?.getItem?.('ttree_outline_last_active_v1') || '{}';
+    const parsed = JSON.parse(raw || '{}');
+    const row = parsed && typeof parsed === 'object' ? parsed[aid] : null;
+    if (!row || typeof row !== 'object') return null;
+    const sectionId = String(row.sectionId || '').trim();
+    if (!sectionId) return null;
+    return { sectionId, collapsed: Boolean(row.collapsed) };
+  } catch {
+    return null;
+  }
+}
+
+function writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed) {
+  try {
+    const aid = String(articleId || '').trim();
+    const sid = String(sectionId || '').trim();
+    if (!aid || !sid) return false;
+    const raw = window?.localStorage?.getItem?.('ttree_outline_last_active_v1') || '{}';
+    const parsed = JSON.parse(raw || '{}');
+    const next = parsed && typeof parsed === 'object' ? parsed : {};
+    next[aid] = { sectionId: sid, collapsed: Boolean(collapsed), savedAt: new Date().toISOString() };
+    window?.localStorage?.setItem?.('ttree_outline_last_active_v1', JSON.stringify(next));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function patchDocJsonCollapsedForPath(docJson, sectionId, targetCollapsed) {
+  try {
+    const sid = String(sectionId || '').trim();
+    if (!docJson || typeof docJson !== 'object' || !sid) return false;
+    let changed = false;
+    const stack = [];
+    const visit = (node) => {
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 'outlineSection') {
+        const id = String(node?.attrs?.id || '').trim();
+        if (id === sid) {
+          // Ensure the whole path is visible.
+          for (const ancestor of stack) {
+            if (ancestor?.attrs && ancestor.attrs.collapsed) {
+              ancestor.attrs = { ...(ancestor.attrs || {}), collapsed: false };
+              changed = true;
+            }
+          }
+          if (typeof targetCollapsed === 'boolean') {
+            const nextCollapsed = Boolean(targetCollapsed);
+            if (Boolean(node?.attrs?.collapsed) !== nextCollapsed) {
+              node.attrs = { ...(node.attrs || {}), collapsed: nextCollapsed };
+              changed = true;
+            }
+          }
+        }
+      }
+      const content = node.content;
+      if (Array.isArray(content)) {
+        if (node.type === 'outlineSection') stack.push(node);
+        content.forEach(visit);
+        if (node.type === 'outlineSection') stack.pop();
+      }
+    };
+    visit(docJson);
+    return changed;
+  } catch {
+    return false;
+  }
 }
 
 function findOutlineSectionPosAtSelection(doc, $from) {
@@ -2960,6 +4334,10 @@ async function mountOutlineEditor() {
 	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
 	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
 	  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
+	  outlineTableApi = {
+	    TableMap: tiptap.pmTablesMod?.TableMap || null,
+	    CellSelection: tiptap.pmTablesMod?.CellSelection || null,
+	  };
 	  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
 	  const Markdown = tiptap.markdownMod?.Markdown || tiptap.markdownMod?.default?.Markdown || tiptap.markdownMod?.default || null;
 
@@ -3169,18 +4547,6 @@ async function mountOutlineEditor() {
 	    TableKit.configure({ table: { resizable: true } }),
 	  ];
 
-	  const findImagePosByUploadToken = (doc, token) => {
-	    let found = null;
-	    if (!token) return null;
-	    doc.descendants((node, pos) => {
-	      if (found !== null) return false;
-	      if (node?.type?.name !== 'image') return;
-	      if (String(node.attrs?.uploadToken || '') !== String(token)) return;
-	      found = pos;
-	    });
-	    return found;
-	  };
-
 	  const OutlineImageUpload = Extension.create({
 	    name: 'outlineImageUpload',
 	    addProseMirrorPlugins() {
@@ -3206,13 +4572,31 @@ async function mountOutlineEditor() {
 	        return files;
 	      };
 
-		      const insertUploadingImage = (view, file) => {
-		        const token = `upl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-		        const objectUrl = URL.createObjectURL(file);
-		        const imgNode = view.state.schema.nodes.image.create({
-		          src: objectUrl,
-		          alt: file?.name || 'image',
-		          width: 320,
+			      const insertUploadingImage = (view, file) => {
+			        const token = `upl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+			        const objectUrl = URL.createObjectURL(file);
+			        try {
+			          pendingUploadObjectUrls.set(token, objectUrl);
+			        } catch {
+			          // ignore
+			        }
+			        try {
+			          const aid = outlineArticleId || state.articleId || null;
+			          void putPendingUpload({
+			            token,
+			            articleId: aid,
+			            kind: 'image',
+			            blob: file,
+			            fileName: file?.name || 'image',
+			            mime: file?.type || '',
+			          });
+			        } catch {
+			          // ignore
+			        }
+			        const imgNode = view.state.schema.nodes.image.create({
+			          src: objectUrl,
+			          alt: file?.name || 'image',
+			          width: 320,
 		          uploadToken: token,
 		        });
 		        // Вставляем картинку как inline, обрамляя пробелами, чтобы можно было писать до/после.
@@ -3230,42 +4614,54 @@ async function mountOutlineEditor() {
 		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
 		        view.dispatch(tr.scrollIntoView());
 
-	        uploadImageFile(file)
-	          .then((res) => {
-	            const url = String(res?.url || '').trim();
-	            try {
-	              URL.revokeObjectURL(objectUrl);
-	            } catch {
-	              // ignore
-	            }
-	            if (!url) throw new Error('Upload failed');
-	            const pos = findImagePosByUploadToken(view.state.doc, token);
-	            if (typeof pos !== 'number') return;
-	            const node = view.state.doc.nodeAt(pos);
-	            if (!node || node.type?.name !== 'image') return;
-	            const nextAttrs = { ...node.attrs, src: url, uploadToken: null };
-	            let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
-	            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-	            view.dispatch(tr2);
-	          })
-	          .catch((err) => {
-	            try {
-	              URL.revokeObjectURL(objectUrl);
-	            } catch {
-	              // ignore
-	            }
-	            showToast(err?.message || 'Не удалось загрузить изображение');
-	            // Remove placeholder if still present.
-	            try {
-	              const pos = findImagePosByUploadToken(view.state.doc, token);
-	              if (typeof pos !== 'number') return;
-	              let tr2 = view.state.tr.delete(pos, pos + 1);
-	              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-	              view.dispatch(tr2);
-	            } catch {
-	              // ignore
-	            }
-	          });
+		        uploadImageFile(file)
+		          .then((res) => {
+		            const url = String(res?.url || '').trim();
+		            if (!url) throw new Error('Upload failed');
+		            const pos = findImagePosByUploadToken(view.state.doc, token);
+		            if (typeof pos !== 'number') return;
+		            const node = view.state.doc.nodeAt(pos);
+		            if (!node || node.type?.name !== 'image') return;
+		            const nextAttrs = { ...node.attrs, src: url, uploadToken: null };
+		            let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+		            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+		            view.dispatch(tr2);
+		            revokePendingUploadObjectUrl(token);
+		            void deletePendingUpload(token).catch(() => {});
+		          })
+		          .catch((err) => {
+		            // IMPORTANT: if upload fails (offline/timeout), we must NOT delete the image.
+		            // Keep the local preview (objectUrl) and mark it as failed so the user doesn't lose content.
+		            showToast(err?.message || 'Не удалось загрузить изображение');
+		            try {
+		              if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') === '1') {
+		                // eslint-disable-next-line no-console
+		                console.log('[outline][image]', 'upload.failed', { token, message: String(err?.message || err || '') });
+		              }
+		            } catch {
+		              // ignore
+		            }
+		            try {
+		              const pos = findImagePosByUploadToken(view.state.doc, token);
+		              if (typeof pos !== 'number') return;
+		              const node = view.state.doc.nodeAt(pos);
+		              if (!node || node.type?.name !== 'image') return;
+		              const baseTitle = String(node.attrs?.title || '').trim();
+		              const nextTitle = baseTitle ? `${baseTitle} (ошибка загрузки)` : 'Ошибка загрузки';
+		              const nextAlt = String(node.attrs?.alt || file?.name || 'image');
+		              const nextAttrs = { ...node.attrs, src: objectUrl, alt: nextAlt, title: nextTitle, uploadToken: token };
+		              let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+		              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+		              view.dispatch(tr2);
+		            } catch {
+		              // ignore
+		            }
+		            try {
+		              void markPendingUploadError(token, String(err?.message || err || 'error'));
+		            } catch {
+		              // ignore
+		            }
+		          });
 	      };
 
 	      const handle = (view, event, items, files) => {
@@ -3300,6 +4696,34 @@ async function mountOutlineEditor() {
 	                return handle(view, event, items, files);
 	              },
 	            },
+	          },
+	          view(view) {
+	            return {
+	              update(viewNow, prevState) {
+	                try {
+	                  const prevSt = key.getState(prevState) || {};
+	                  const nextSt = key.getState(viewNow.state) || {};
+	                  const wasEditing = prevSt.editingSectionId || null;
+	                  const isEditing = nextSt.editingSectionId || null;
+	                  if (wasEditing && !isEditing) {
+	                    const sectionId = String(wasEditing || '').trim();
+	                    const articleId = outlineArticleId || state.articleId || null;
+	                    if (!sectionId || !articleId) return;
+	                    let collapsed = false;
+	                    try {
+	                      const pos = findSectionPosById(viewNow.state.doc, sectionId);
+	                      const node = typeof pos === 'number' ? viewNow.state.doc.nodeAt(pos) : null;
+	                      if (node?.type?.name === 'outlineSection') collapsed = Boolean(node.attrs?.collapsed);
+	                    } catch {
+	                      // ignore
+	                    }
+	                    writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed);
+	                  }
+	                } catch {
+	                  // ignore
+	                }
+	              },
+	            };
 	          },
 	        }),
 	      ];
@@ -3912,17 +5336,38 @@ async function mountOutlineEditor() {
     content: 'outlineSection+',
   });
 
-	  const OutlineChildren = Node.create({
-	    name: 'outlineChildren',
-	    content: 'outlineSection*',
-	    defining: true,
-	    renderHTML() {
-	      return ['div', { class: 'outline-children', 'data-outline-children': 'true' }, 0];
-	    },
-	    parseHTML() {
-	      return [{ tag: 'div[data-outline-children]' }];
-	    },
-	  });
+		  const OutlineChildren = Node.create({
+		    name: 'outlineChildren',
+		    content: 'outlineSection*',
+		    defining: true,
+		    renderHTML() {
+		      return ['div', { class: 'outline-children', 'data-outline-children': 'true' }, 0];
+		    },
+		    parseHTML() {
+		      return [{ tag: 'div[data-outline-children]' }];
+		    },
+		    addNodeView() {
+		      return ({ node }) => {
+		        const dom = document.createElement('div');
+		        dom.className = 'outline-children';
+		        dom.setAttribute('data-outline-children', 'true');
+		        const applyEmpty = (n) => {
+		          const empty = !n || n.childCount === 0;
+		          dom.setAttribute('data-empty', empty ? 'true' : 'false');
+		        };
+		        applyEmpty(node);
+		        return {
+		          dom,
+		          contentDOM: dom,
+		          update(updatedNode) {
+		            if (!updatedNode || updatedNode.type?.name !== 'outlineChildren') return false;
+		            applyEmpty(updatedNode);
+		            return true;
+		          },
+		        };
+		      };
+		    },
+		  });
 
 	  const isOutlineBodyTrulyEmpty = (bodyNode) => {
 	    try {
@@ -4159,31 +5604,72 @@ async function mountOutlineEditor() {
     }
   };
 
-  const outlineDeleteCurrentSectionForView = (pmState, dispatch, sectionPos) => {
-    const sectionNode = pmState.doc.nodeAt(sectionPos);
-    if (!sectionNode) return false;
-    const $pos = pmState.doc.resolve(sectionPos);
-    const idx = $pos.index();
-    const parent = $pos.parent;
-    if (!parent) return false;
-    if (parent.childCount <= 1) {
-      // Нельзя удалить последнюю секцию — просто очищаем.
-      const schema = pmState.doc.type.schema;
-      const newSection = schema.nodes.outlineSection.create(
-        { ...sectionNode.attrs, collapsed: false },
-        [
-          schema.nodes.outlineHeading.create({}, []),
-          schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
-          schema.nodes.outlineChildren.create({}, []),
-        ],
-      );
-      let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
-      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-      const heading = newSection.child(0);
-      const bodyStart = sectionPos + 1 + heading.nodeSize;
-      dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
-      return true;
-    }
+	  const outlineDeleteCurrentSectionForView = (pmState, dispatch, sectionPos) => {
+	    const sectionNode = pmState.doc.nodeAt(sectionPos);
+	    if (!sectionNode) return false;
+	    const $pos = pmState.doc.resolve(sectionPos);
+	    const idx = $pos.index();
+	    const parent = $pos.parent;
+	    if (!parent) return false;
+	    if (parent.childCount <= 1) {
+	      // Нельзя удалить последнюю секцию только на верхнем уровне документа.
+	      // Внутри outlineChildren последнего ребёнка удалить можно.
+	      if (parent.type?.name === 'doc') {
+	        const schema = pmState.doc.type.schema;
+	        const newSection = schema.nodes.outlineSection.create(
+	          { ...sectionNode.attrs, collapsed: false },
+	          [
+	            schema.nodes.outlineHeading.create({}, []),
+	            schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+	            schema.nodes.outlineChildren.create({}, []),
+	          ],
+	        );
+	        let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+	        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	        const heading = newSection.child(0);
+	        const bodyStart = sectionPos + 1 + heading.nodeSize;
+	        dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
+	        return true;
+	      }
+
+	      // Deleting the last child: move selection to the owner (parent) section body.
+	      let ownerSectionPos = null;
+	      try {
+	        for (let d = $pos.depth; d > 0; d -= 1) {
+	          if ($pos.node(d)?.type?.name === 'outlineSection') {
+	            ownerSectionPos = $pos.before(d);
+	            break;
+	          }
+	        }
+	      } catch {
+	        ownerSectionPos = null;
+	      }
+
+	      let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+	      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+	      try {
+	        if (typeof ownerSectionPos === 'number') {
+	          const mappedOwnerPos = tr.mapping.map(ownerSectionPos, -1);
+	          const ownerNode = tr.doc.nodeAt(mappedOwnerPos);
+	          if (ownerNode && ownerNode.type?.name === 'outlineSection') {
+	            const ownerHeading = ownerNode.child(0);
+	            const ownerBody = ownerNode.child(1);
+	            const bodyStart = mappedOwnerPos + 1 + ownerHeading.nodeSize;
+	            if (!ownerBody.childCount) {
+	              const schema = tr.doc.type.schema;
+	              tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+	            }
+	            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+	          }
+	        }
+	      } catch {
+	        // ignore
+	      }
+
+	      dispatch(tr.scrollIntoView());
+	      return true;
+	    }
 
     const hasPrev = idx > 0;
     const prevNode = hasPrev ? parent.child(idx - 1) : null;
@@ -4573,32 +6059,70 @@ async function mountOutlineEditor() {
         return prev;
       };
 
-      const deleteCurrentSection = (pmState, dispatch, sectionPos) => {
-        const sectionNode = pmState.doc.nodeAt(sectionPos);
-        if (!sectionNode) return false;
-        const $pos = pmState.doc.resolve(sectionPos);
-        const idx = $pos.index();
-        const parent = $pos.parent;
-        if (!parent) return false;
-        if (parent.childCount <= 1) {
-          // Нельзя удалить последнюю секцию — просто очищаем.
-          const schema = pmState.doc.type.schema;
-          const newSection = schema.nodes.outlineSection.create(
-            { ...sectionNode.attrs, collapsed: false },
-            [
-              schema.nodes.outlineHeading.create({}, []),
-              schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
-              schema.nodes.outlineChildren.create({}, []),
-            ],
-          );
-          let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
-          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-          // После очистки последней секции ставим курсор в начало body.
-          const heading = newSection.child(0);
-          const bodyStart = sectionPos + 1 + heading.nodeSize;
-          dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
-          return true;
-        }
+	      const deleteCurrentSection = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const $pos = pmState.doc.resolve(sectionPos);
+	        const idx = $pos.index();
+	        const parent = $pos.parent;
+	        if (!parent) return false;
+	        if (parent.childCount <= 1) {
+	          if (parent.type?.name === 'doc') {
+	            // Нельзя удалить последнюю секцию документа — просто очищаем.
+	            const schema = pmState.doc.type.schema;
+	            const newSection = schema.nodes.outlineSection.create(
+	              { ...sectionNode.attrs, collapsed: false },
+	              [
+	                schema.nodes.outlineHeading.create({}, []),
+	                schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+	                schema.nodes.outlineChildren.create({}, []),
+	              ],
+	            );
+	            let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+	            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	            // После очистки последней секции ставим курсор в начало body.
+	            const heading = newSection.child(0);
+	            const bodyStart = sectionPos + 1 + heading.nodeSize;
+	            dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1)).scrollIntoView());
+	            return true;
+	          }
+
+	          // Последнего ребёнка в outlineChildren удалять можно.
+	          let ownerSectionPos = null;
+	          try {
+	            for (let d = $pos.depth; d > 0; d -= 1) {
+	              if ($pos.node(d)?.type?.name === 'outlineSection') {
+	                ownerSectionPos = $pos.before(d);
+	                break;
+	              }
+	            }
+	          } catch {
+	            ownerSectionPos = null;
+	          }
+
+	          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+	          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	          try {
+	            if (typeof ownerSectionPos === 'number') {
+	              const mappedOwnerPos = tr.mapping.map(ownerSectionPos, -1);
+	              const ownerNode = tr.doc.nodeAt(mappedOwnerPos);
+	              if (ownerNode && ownerNode.type?.name === 'outlineSection') {
+	                const ownerHeading = ownerNode.child(0);
+	                const ownerBody = ownerNode.child(1);
+	                const bodyStart = mappedOwnerPos + 1 + ownerHeading.nodeSize;
+	                if (!ownerBody.childCount) {
+	                  const schema = tr.doc.type.schema;
+	                  tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
+	                }
+	                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+	              }
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          dispatch(tr.scrollIntoView());
+	          return true;
+	        }
 
         const hasPrev = idx > 0;
         const prevNode = hasPrev ? parent.child(idx - 1) : null;
@@ -6466,15 +7990,202 @@ async function mountOutlineEditor() {
     outlineEditorInstance = null;
   }
 
-		  const markdownExtension = Markdown
-		    ? Markdown.configure({ html: true, tightLists: true, transformPastedText: false, transformCopiedText: false })
-		    : null;
+			  const markdownExtension = Markdown
+			    ? Markdown.configure({ html: true, tightLists: true, transformPastedText: false, transformCopiedText: false })
+			    : null;
 
-		  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
-		  const createStart = perfEnabled() ? performance.now() : 0;
-  outlineEditorInstance = new Editor({
-	    element: contentRoot,
-			    extensions: [
+			  const OutlineTablePercentWidths = Extension.create({
+			    name: 'outlineTablePercentWidths',
+			    addProseMirrorPlugins() {
+			      return [
+			        new Plugin({
+			          view(view) {
+			            let raf = null;
+			            const parsePx = (value) => {
+			              const s = String(value || '').trim();
+			              if (!s) return 0;
+			              const m = s.match(/(-?\\d+(?:\\.\\d+)?)px/i);
+			              return m ? Number(m[1]) || 0 : 0;
+			            };
+			            const apply = () => {
+			              raf = null;
+			              try {
+			                const root = view?.dom;
+			                if (!root) return;
+			                const tables = root.querySelectorAll('.tableWrapper > table');
+			                for (const table of tables) {
+			                  const colgroup = table.querySelector('colgroup');
+			                  if (!colgroup) continue;
+			                  const cols = Array.from(colgroup.querySelectorAll('col'));
+			                  if (!cols.length) continue;
+			                  if (tableResizeActive) continue;
+			                  // Always keep table responsive.
+			                  try {
+			                    table.style.width = '100%';
+			                    table.style.maxWidth = '100%';
+			                    table.style.tableLayout = 'fixed';
+			                  } catch {
+			                    // ignore
+			                  }
+
+			                  // If we already have saved percents, just re-apply them (don't recompute).
+			                  let hasSavedPct = false;
+			                  for (const col of cols) {
+			                    const ds = col?.dataset?.ttPct || '';
+			                    const pct = Number.parseFloat(String(ds || ''));
+			                    if (Number.isFinite(pct) && pct > 0) {
+			                      hasSavedPct = true;
+			                      col.style.width = `${pct.toFixed(4)}%`;
+			                      col.style.minWidth = '';
+			                    } else {
+			                      const fromStylePct = parsePct(col.style.width);
+			                      if (fromStylePct != null && fromStylePct > 0) {
+			                        hasSavedPct = true;
+			                        col.dataset.ttPct = fromStylePct.toFixed(4);
+			                        col.style.width = `${fromStylePct.toFixed(4)}%`;
+			                        col.style.minWidth = '';
+			                      }
+			                    }
+			                  }
+			                  if (hasSavedPct) continue;
+			                }
+			              } catch {
+			                // ignore
+			              }
+			            };
+			            const schedule = () => {
+			              if (raf != null) return;
+			              raf = window.requestAnimationFrame(apply);
+			            };
+			            schedule();
+			            return {
+			              update() {
+			                schedule();
+			              },
+			              destroy() {
+			                if (raf != null) {
+			                  window.cancelAnimationFrame(raf);
+			                  raf = null;
+			                }
+			              },
+			            };
+			          },
+			        }),
+			      ];
+			    },
+			  });
+
+			  const OutlineTableSmartMouseSelection = Extension.create({
+			    name: 'outlineTableSmartMouseSelection',
+			    addProseMirrorPlugins() {
+			      const CellSelection = outlineTableApi?.CellSelection || null;
+			      if (!CellSelection) return [];
+
+			      return [
+			        new Plugin({
+			          view(view) {
+			            const findCellPos = ($pos) => {
+			              try {
+			                for (let d = $pos.depth; d >= 0; d -= 1) {
+			                  const name = $pos.node(d)?.type?.name;
+			                  if (name === 'tableCell' || name === 'tableHeader') return $pos.before(d);
+			                }
+			              } catch {
+			                // ignore
+			              }
+			              return null;
+			            };
+
+			            const onMouseUp = () => {
+			              try {
+			                const st = outlineEditModeKey?.getState?.(view.state) || null;
+			                if (!st?.editingSectionId) return;
+			                const sel = view.state.selection;
+			                if (!sel || sel.empty) return;
+			                // If selection spans multiple cells, force CellSelection (text-selection across cells is useless).
+			                const a = findCellPos(sel.$anchor);
+			                const b = findCellPos(sel.$head);
+			                if (a == null || b == null) return;
+			                if (a === b) return;
+			                const cellSel =
+			                  typeof CellSelection.create === 'function'
+			                    ? CellSelection.create(view.state.doc, a, b)
+			                    : null;
+			                if (!cellSel) return;
+			                let tr = view.state.tr.setSelection(cellSel);
+			                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			                view.dispatch(tr);
+			              } catch {
+			                // ignore
+			              }
+			            };
+
+			            // Use capture so we run even if some handler stops propagation.
+			            view.dom.addEventListener('mouseup', onMouseUp, true);
+			            return {
+			              destroy() {
+			                view.dom.removeEventListener('mouseup', onMouseUp, true);
+			              },
+			            };
+			          },
+			        }),
+			      ];
+			    },
+			  });
+
+			  const OutlineTableResizeCapture = Extension.create({
+			    name: 'outlineTableResizeCapture',
+			    addProseMirrorPlugins() {
+			      return [
+			        new Plugin({
+			          view(view) {
+			            const onPointerDown = (event) => {
+			              try {
+			                const handle = event?.target?.closest?.('.column-resize-handle');
+			                if (!handle) return;
+			                const st = outlineEditModeKey?.getState?.(view.state) || null;
+			                if (!st?.editingSectionId) return;
+			                tableResizeActive = true;
+			              } catch {
+			                // ignore
+			              }
+			            };
+
+			            const onPointerUp = () => {
+			              if (!tableResizeActive) return;
+			              tableResizeActive = false;
+			              try {
+			                const domAt = view.domAtPos(view.state.selection.from);
+			                const base =
+			                  (domAt?.node && domAt.node.nodeType === 1 ? domAt.node : domAt?.node?.parentElement) || null;
+			                const tableEl = base?.closest?.('table') || null;
+			                if (tableEl) captureTableColumnPercentsFromDom(tableEl);
+			              } catch {
+			                // ignore
+			              }
+			            };
+
+			            view.dom.addEventListener('pointerdown', onPointerDown, true);
+			            document.addEventListener('pointerup', onPointerUp, true);
+			            document.addEventListener('pointercancel', onPointerUp, true);
+			            return {
+			              destroy() {
+			                view.dom.removeEventListener('pointerdown', onPointerDown, true);
+			                document.removeEventListener('pointerup', onPointerUp, true);
+			                document.removeEventListener('pointercancel', onPointerUp, true);
+			              },
+			            };
+			          },
+			        }),
+			      ];
+			    },
+			  });
+
+			  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
+			  const createStart = perfEnabled() ? performance.now() : 0;
+	  outlineEditorInstance = new Editor({
+		    element: contentRoot,
+				    extensions: [
 		      OutlineDocument,
 		      OutlineSection,
 		      OutlineHeading,
@@ -6506,12 +8217,15 @@ async function mountOutlineEditor() {
 	      }),
 	      markdownExtension,
 	      ResizableImage,
-	      OutlineCommands,
-	      TableKit.configure({ table: { resizable: true } }),
-	      OutlineMarkdown,
-    ].filter(Boolean),
-    content,
-	    editorProps: {
+		      OutlineCommands,
+		      TableKit.configure({ table: { resizable: true } }),
+		      OutlineTableSmartMouseSelection,
+		      OutlineTableResizeCapture,
+		      OutlineTablePercentWidths,
+		      OutlineMarkdown,
+	    ].filter(Boolean),
+	    content,
+		    editorProps: {
 	      attributes: {
 	        class: 'outline-prosemirror',
 	      },
@@ -6526,6 +8240,91 @@ async function mountOutlineEditor() {
               pos: view.state?.selection?.$from?.pos ?? null,
             },
           });
+		        // Alt+Arrow in tables: move current column/row.
+		        try {
+		          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+		          const key = String(event.key || '');
+		          if (isAltOnly && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown')) {
+		            const st = outlineEditModeKey?.getState?.(view.state) || null;
+		            if (st?.editingSectionId && outlineEditorInstance) {
+		              const isSelectionInsideTable = () => {
+		                try {
+		                  const $from = view?.state?.selection?.$from || null;
+		                  if (!$from) return false;
+		                  for (let d = $from.depth; d > 0; d -= 1) {
+		                    const name = $from.node(d)?.type?.name;
+		                    if (
+		                      name === 'table' ||
+		                      name === 'tableRow' ||
+		                      name === 'tableCell' ||
+		                      name === 'tableHeader'
+		                    ) {
+		                      return true;
+		                    }
+		                  }
+		                  return false;
+		                } catch {
+		                  return false;
+		                }
+		              };
+
+		              // In tables: move column/row.
+		              if (outlineEditorInstance.isActive('table') || isSelectionInsideTable()) {
+		                let handled = false;
+		                if (key === 'ArrowLeft') handled = moveTableColumnBy(outlineEditorInstance, -1);
+		                else if (key === 'ArrowRight') handled = moveTableColumnBy(outlineEditorInstance, +1);
+		                else if (key === 'ArrowUp') handled = moveTableRowBy(outlineEditorInstance, -1);
+		                else if (key === 'ArrowDown') handled = moveTableRowBy(outlineEditorInstance, +1);
+		                if (handled) {
+		                  event.preventDefault();
+		                  event.stopPropagation();
+		                  return true;
+		                }
+		                // IMPORTANT: when caret is inside a table, Alt+Arrows must not trigger list/paragraph actions.
+		                // If we couldn't move a column/row (edge cases), fall back to default behavior.
+		                return false;
+		              }
+
+		              // Outside tables: list/paragraph actions.
+		              if (key === 'ArrowLeft' || key === 'ArrowRight') {
+		                const chain = outlineEditorInstance.chain().focus();
+		                chain.command(({ tr }) => {
+		                  tr.setMeta(OUTLINE_ALLOW_META, true);
+		                  return true;
+		                });
+		                let handled = false;
+		                if (outlineEditorInstance.isActive('bulletList') || outlineEditorInstance.isActive('orderedList')) {
+		                  if (key === 'ArrowRight') handled = chain.sinkListItem('listItem').run();
+		                  else {
+		                    handled = chain.liftListItem('listItem').run();
+		                    if (!handled && outlineEditorInstance.isActive('bulletList')) handled = chain.toggleBulletList().run();
+		                    if (!handled && outlineEditorInstance.isActive('orderedList')) handled = chain.toggleOrderedList().run();
+		                  }
+		                } else {
+		                  // Create a bullet list (first step), then allow further indent with Alt+Right.
+		                  if (key === 'ArrowRight') handled = chain.toggleBulletList().run();
+		                }
+		                if (handled) {
+		                  event.preventDefault();
+		                  event.stopPropagation();
+		                  return true;
+		                }
+		              } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+		                const handled =
+		                  key === 'ArrowUp'
+		                    ? moveOutlineBodyParagraphBy(outlineEditorInstance, -1)
+		                    : moveOutlineBodyParagraphBy(outlineEditorInstance, +1);
+		                if (handled) {
+		                  event.preventDefault();
+		                  event.stopPropagation();
+		                  return true;
+		                }
+		              }
+		            }
+		          }
+		        } catch {
+		          // ignore
+		        }
 		        // Ctrl/⌘+A внутри блока должен выделять весь блок (заголовок+тело).
 		        // Повторное Ctrl/⌘+A на заголовке — выделяет всю статью (дефолтное поведение).
 		        try {
@@ -7314,15 +9113,37 @@ async function mountOutlineEditor() {
       docDirty = false;
       outlineLastSavedAt = null;
       lastActiveSectionId = null;
+      try {
+        lastStructureHash = computeOutlineStructureHash(editor.state.doc);
+        structureDirty = false;
+        if (structureSnapshotTimer) {
+          clearTimeout(structureSnapshotTimer);
+          structureSnapshotTimer = null;
+        }
+      } catch {
+        // ignore
+      }
       setOutlineStatus('');
     },
     onUpdate: () => {
       // Любое изменение документа считается изменением текущей секции (или нескольких),
       // но “коммит секции” мы делаем при уходе из неё (onSelectionUpdate).
       docDirty = true;
+      try {
+        const pmDoc = outlineEditorInstance?.state?.doc || null;
+        if (pmDoc) {
+          const h = computeOutlineStructureHash(pmDoc);
+          if (h && h !== lastStructureHash) {
+            lastStructureHash = h;
+            scheduleStructureSnapshot({ articleId: outlineArticleId || state.articleId, editor: outlineEditorInstance });
+          }
+        }
+      } catch {
+        // ignore
+      }
       scheduleAutosave({ delayMs: 1500 });
     },
-    onSelectionUpdate: ({ editor }) => {
+	    onSelectionUpdate: ({ editor }) => {
       const { state: pmState } = editor;
       const { selection } = pmState;
       if (!selection) return;
@@ -7356,11 +9177,20 @@ async function mountOutlineEditor() {
         }
       }
       lastActiveSectionId = sectionId;
-    },
-	  });
-		  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
+	    },
+		  });
+			  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
 
-  contentRoot.focus?.({ preventScroll: true });
+	  try {
+	    if (outlineArticleId || state.articleId) {
+	      void hydratePendingImagesFromIdbForArticle(outlineArticleId || state.articleId);
+	      if (navigator.onLine) void flushPendingImageUploadsForArticle(outlineArticleId || state.articleId);
+	    }
+	  } catch {
+	    // ignore
+	  }
+
+	  contentRoot.focus?.({ preventScroll: true });
 
   // Tags: compute initial index and wire toolbar interactions.
   outlineSetActiveTagKey = (activeKey) => {
@@ -7473,9 +9303,9 @@ async function saveOutlineEditor(options = {}) {
   const targetArticleId = outlineArticleId || state.articleId;
   if (!targetArticleId) return;
   const silent = Boolean(options.silent);
-  const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
-  const postSaveTitleSectionIds = Array.from(new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)));
-  try {
+	    const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
+	    const postSaveTitleSectionIds = Array.from(new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)));
+	    try {
     if (!silent) showPersistentToast('Сохраняем outline…');
     if (state.article.encrypted) {
       if (!silent) {
@@ -7483,12 +9313,13 @@ async function saveOutlineEditor(options = {}) {
         showToast('Outline-сохранение docJson недоступно для зашифрованных статей');
       }
       return;
-    }
-    const docJson = outlineEditorInstance.getJSON();
-    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
-	    if (state.articleId && targetArticleId !== state.articleId) {
-	      try {
-	        setQueuedDocJson(targetArticleId, docJson);
+	    }
+	    const docJsonRaw = outlineEditorInstance.getJSON();
+	    const docJson = normalizeDocJsonForSave(docJsonRaw);
+	    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
+		    if (state.articleId && targetArticleId !== state.articleId) {
+		      try {
+		        setQueuedDocJson(targetArticleId, docJson);
 	      } catch {
 	        // ignore
 	      }
@@ -7496,53 +9327,79 @@ async function saveOutlineEditor(options = {}) {
       setOutlineStatus('Оффлайн: черновик сохранён локально');
       return;
     }
-	    if (mode === 'queue') {
-	      let clientQueuedAt = null;
+		    if (mode === 'queue') {
+		      let clientQueuedAt = null;
+		      try {
+		        clientQueuedAt = setQueuedDocJson(targetArticleId, docJson);
+		      } catch {
+		        // ignore
+		      }
 	      try {
-	        clientQueuedAt = setQueuedDocJson(targetArticleId, docJson);
+	        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
+	        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
 	      } catch {
 	        // ignore
 	      }
-      try {
-        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
-        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
-      } catch {
-        // ignore
-      }
+		      // Persist only changed section contents (never overwrite the whole article docJson on the server).
+		      try {
+		        const sectionIds = Array.from(
+		          new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)),
+		        );
+		        for (const sid of sectionIds) {
+		          try {
+		            const pos = findSectionPosById(outlineEditorInstance.state.doc, sid);
+		            if (typeof pos !== 'number') continue;
+		            const node = outlineEditorInstance.state.doc.nodeAt(pos);
+		            if (!node || node.type?.name !== 'outlineSection') continue;
+		            const heading = node.child(0);
+		            const body = node.child(1);
+		            const headingJson = heading?.toJSON ? heading.toJSON() : null;
+		            const bodyJson = body?.toJSON ? body.toJSON() : null;
+		            if (!headingJson || !bodyJson) continue;
+		            const seq = getNextSectionSeq(targetArticleId, sid);
+		            await enqueueOp('section_upsert_content', {
+		              articleId: targetArticleId,
+		              payload: {
+		                sectionId: sid,
+		                headingJson,
+		                bodyJson,
+		                seq,
+		                clientQueuedAt: clientQueuedAt || Date.now(),
+		              },
+		              coalesceKey: `content:${targetArticleId}:${sid}`,
+		            });
+		          } catch {
+		            // ignore this section
+		          }
+		        }
+		      } catch {
+		        // ignore
+		      }
+	      if (!silent) hideToast();
+	      if (state.article) {
+	        state.article.docJson = docJson;
+	      }
 	      try {
-	        await enqueueOp('save_doc_json', {
-	          articleId: targetArticleId,
-	          payload: { docJson, createVersionIfStaleHours: 12, clientQueuedAt: clientQueuedAt || Date.now() },
-	          coalesceKey: targetArticleId,
-	        });
+	        rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
+	        dirtySectionIds.clear();
 	      } catch {
 	        // ignore
 	      }
-      if (!silent) hideToast();
-      if (state.article) {
-        state.article.docJson = docJson;
-      }
-      try {
-        rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
-        dirtySectionIds.clear();
-      } catch {
-        // ignore
-      }
-      docDirty = false;
-      outlineLastSavedAt = new Date();
-      setOutlineStatus('Оффлайн: в очереди на синхронизацию');
-      try {
-        refreshOutlineTagsFromEditor();
-      } catch {
-        // ignore
-      }
-      try {
-        maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
-      } catch {
-        // ignore
-      }
-      return;
-    }
+	      docDirty = false;
+	      outlineLastSavedAt = new Date();
+	      setOutlineStatus('Оффлайн: в очереди на синхронизацию');
+	      try {
+	        refreshOutlineTagsFromEditor();
+	      } catch {
+	        // ignore
+	      }
+	      try {
+	        maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
+	      } catch {
+	        // ignore
+	      }
+	      return;
+	    }
     const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
     if (!silent) hideToast();
     const isQueued = Boolean(result?.offline) || String(result?.status || '') === 'queued';
@@ -7609,6 +9466,22 @@ async function saveOutlineEditor(options = {}) {
 
 export function getOutlineActiveSectionId() {
   return lastActiveSectionId || null;
+}
+
+export function getOutlineActiveSectionSnapshot() {
+  try {
+    if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return null;
+    const pmState = outlineEditorInstance.state;
+    const pos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+    if (typeof pos !== 'number') return null;
+    const node = pmState.doc.nodeAt(pos);
+    if (!node || node.type?.name !== 'outlineSection') return null;
+    const id = String(node.attrs?.id || '').trim();
+    if (!id) return null;
+    return { sectionId: id, collapsed: Boolean(node.attrs?.collapsed) };
+  } catch {
+    return null;
+  }
 }
 
 function findOutlineSectionPathById(doc, targetId) {
@@ -8118,6 +9991,27 @@ export async function openOutlineEditor() {
     }
   }
 
+  // Restore last-active section/collapsed state on open (only for normal navigation; search deep-links override this).
+  try {
+    if (!state.scrollTargetBlockId && outlineArticleId) {
+      const snap = readOutlineLastActiveSnapshot(outlineArticleId);
+      if (snap?.sectionId) {
+        // Make sure we open the last active section, and keep it in the same collapsed state.
+        // Apply to docJson before TipTap mounts so it doesn't count as an edit/autosave.
+        try {
+          if (state.article?.docJson && typeof state.article.docJson === 'object') {
+            patchDocJsonCollapsedForPath(state.article.docJson, snap.sectionId, snap.collapsed);
+          }
+        } catch {
+          // ignore
+        }
+        state.currentBlockId = snap.sectionId;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
 	  try {
 	    await mountOutlineEditor();
 	    try {
@@ -8127,31 +10021,39 @@ export async function openOutlineEditor() {
 	    }
 	    // If navigation/search requested a specific block, reveal it (expand ancestors) and scroll into view.
 	    try {
-	      const targetId = state.scrollTargetBlockId || state.currentBlockId || null;
-	      if (targetId) {
-	        revealOutlineSection(targetId, { focus: false });
+	      const explicitTarget = state.scrollTargetBlockId || null;
+	      if (explicitTarget) {
+	        revealOutlineSection(explicitTarget, { focus: false });
 	        state.scrollTargetBlockId = null;
+	        state.currentBlockId = explicitTarget;
 	      }
 	    } catch {
 	      // ignore
 	    }
-	    // При входе в outline ставим курсор в начало body текущей секции,
-	    // чтобы не приходилось "тыкать мышкой".
+	    // Place cursor inside the current section (heading if collapsed, body otherwise) and ensure it's visible.
 	    try {
-	      moveCursorToActiveSectionBodyStart(outlineEditorInstance);
-    } catch {
-      // ignore
-    }
+	      const targetId = state.currentBlockId || null;
+	      if (targetId) {
+	        moveCursorToSectionPreferredStart(outlineEditorInstance, targetId);
+	      }
+	    } catch {
+	      // ignore
+	    }
     const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
     if (loading) loading.classList.add('hidden');
     setOutlineStatus('Сохраняется автоматически');
 
 	    if (!onlineHandlerAttached) {
       onlineHandlerAttached = true;
-      window.addEventListener('online', () => {
-        if (!state.isOutlineEditing) return;
-        void runAutosave({ force: true });
-      });
+	      window.addEventListener('online', () => {
+	        if (!state.isOutlineEditing) return;
+	        try {
+	          void flushPendingImageUploadsForArticle(outlineArticleId || state.articleId);
+	        } catch {
+	          // ignore
+	        }
+	        void runAutosave({ force: true });
+	      });
       window.addEventListener('blur', () => {
         if (!state.isOutlineEditing) return;
         void runAutosave({ force: true });
@@ -8261,6 +10163,12 @@ export function closeOutlineEditor() {
     clearTimeout(autosaveTimer);
     autosaveTimer = null;
   }
+  if (structureSnapshotTimer) {
+    clearTimeout(structureSnapshotTimer);
+    structureSnapshotTimer = null;
+  }
+  structureDirty = false;
+  lastStructureHash = '';
   autosaveInFlight = false;
   dirtySectionIds.clear();
   committedSectionIndexText.clear();
@@ -8296,6 +10204,22 @@ export async function flushOutlineAutosave(options = {}) {
       const docJson = outlineEditorInstance.getJSON();
       if (docJson && typeof docJson === 'object') {
         setQueuedDocJson(targetArticleId, docJson);
+      }
+      // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
+      try {
+        if (structureDirty) {
+          const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
+          if (nodes.length) {
+            void enqueueOp('structure_snapshot', {
+              articleId: targetArticleId,
+              payload: { nodes },
+              coalesceKey: `structure:${targetArticleId}`,
+            });
+            structureDirty = false;
+          }
+        }
+      } catch {
+        // ignore
       }
     }
   } catch {

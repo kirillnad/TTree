@@ -3,6 +3,7 @@ export * as starterKitMod from '@tiptap/starter-kit';
 export * as htmlMod from '@tiptap/html';
 export * as pmStateMod from '@tiptap/pm/state';
 export * as pmViewMod from '@tiptap/pm/view';
+export * as pmTablesMod from '@tiptap/pm/tables';
 
 export * as linkMod from '@tiptap/extension-link';
 export * as imageMod from '@tiptap/extension-image';

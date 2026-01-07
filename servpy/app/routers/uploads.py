@@ -221,6 +221,21 @@ def register_yandex_attachment(
     return attachment
 
 
+# Legacy/compat public attachment path:
+# We expose storedPath as `/uploads/<article_id>/<filename>` while files are stored under
+# `/uploads/<user_id>/attachments/<article_id>/<filename>`.
+@router.get('/uploads/{article_id}/{filename}')
+async def get_article_attachment(article_id: str, filename: str, current_user: User = Depends(get_current_user)):
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    article = get_article(real_article_id, current_user.id)
+    if not article:
+        raise HTTPException(status_code=404, detail='Not found')
+    full_path = UPLOADS_DIR / current_user.id / 'attachments' / real_article_id / filename
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail='Not found')
+    return FileResponse(full_path)
+
+
 # Вынесено из app/main.py → app/routers/uploads.py
 @router.get('/uploads/{user_id}/{rest_of_path:path}')
 async def get_upload(user_id: str, rest_of_path: str, current_user: User = Depends(get_current_user)):
@@ -230,4 +245,3 @@ async def get_upload(user_id: str, rest_of_path: str, current_user: User = Depen
     if not full_path.is_file():
         raise HTTPException(status_code=404, detail='Not found')
     return FileResponse(full_path)
-
