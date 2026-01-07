@@ -33,7 +33,15 @@ function registerUploadsServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   try {
     navigator.serviceWorker
-      .register('/uploads-sw.js', { scope: '/' })
+      .register('/uploads-sw.js', { scope: '/', updateViaCache: 'none' })
+      .then((reg) => {
+        // Ensure the browser checks the SW script immediately (otherwise it can stay on an old SW for a long time).
+        try {
+          reg?.update?.();
+        } catch {
+          // ignore
+        }
+      })
       .catch(() => {
         // ignore SW registration failures
       });
@@ -75,6 +83,112 @@ function runOnIdle(fn, { timeout = 3000, fallbackDelay = 1200 } = {}) {
     // ignore
   }
   setTimeout(() => fn(), fallbackDelay);
+}
+
+function parseVersionFromUrl(rawUrl) {
+  try {
+    const url = new URL(String(rawUrl || ''), window.location.href);
+    const v = url.searchParams.get('v');
+    return v ? String(v) : '';
+  } catch {
+    return '';
+  }
+}
+
+function findResourceVersion(regex) {
+  try {
+    const entries = performance.getEntriesByType?.('resource') || [];
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      const name = entries[i]?.name;
+      if (!name) continue;
+      if (regex.test(String(name))) return parseVersionFromUrl(name);
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
+
+async function getServiceWorkerBuildInfo() {
+  try {
+    if (!('serviceWorker' in navigator)) return null;
+    const postToTarget = async (target) => await new Promise((resolve) => {
+      if (!target) return resolve(null);
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => resolve(null), 500);
+      channel.port1.onmessage = (e) => {
+        clearTimeout(timer);
+        resolve(e.data || null);
+      };
+      try {
+        target.postMessage({ type: 'memus:get-sw-build' }, [channel.port2]);
+      } catch {
+        clearTimeout(timer);
+        resolve(null);
+      }
+    });
+
+    // Most of the time we are controlled by the active SW.
+    if (navigator.serviceWorker.controller) {
+      return await postToTarget(navigator.serviceWorker.controller);
+    }
+
+    // Hard reload (Ctrl-F5) can result in an uncontrolled page; still try talking to the active SW.
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg?.active) return await postToTarget(reg.active);
+    } catch {
+      // ignore
+    }
+
+    return await new Promise((resolve) => {
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => resolve(null), 300);
+      channel.port1.onmessage = (e) => {
+        clearTimeout(timer);
+        resolve(e.data || null);
+      };
+      navigator.serviceWorker.controller?.postMessage?.({ type: 'memus:get-sw-build' }, [channel.port2]);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function refreshSidebarVersionLabel() {
+  const el = document.getElementById('sidebarVersionLabel');
+  if (!el) return;
+  try {
+    const apiV = findResourceVersion(/\/api\.js(\?|$)/);
+    const swInfo = await getServiceWorkerBuildInfo();
+    const buildId = swInfo?.buildId ? String(swInfo.buildId) : '';
+    if (buildId) {
+      try {
+        window.__BUILD_ID__ = buildId;
+      } catch {
+        // ignore
+      }
+      el.textContent = `v${buildId}`;
+      return;
+    }
+
+    // Fallback (e.g. first load before SW takes control)
+    if (apiV) {
+      el.textContent = `api v${apiV}`;
+    }
+  } catch {
+    // ignore
+  }
+}
+
+try {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      refreshSidebarVersionLabel().catch(() => {});
+    });
+  }
+} catch {
+  // ignore
 }
 
 function attachLazyGraphInit() {
@@ -122,6 +236,15 @@ function attachLazyUsersInit() {
   };
 
   refs.openUsersViewBtn.addEventListener('click', onClickCapture, true);
+}
+
+// Best-effort: show a server-derived revision marker in the sidebar.
+runOnIdle(() => refreshSidebarVersionLabel(), { timeout: 1500, fallbackDelay: 50 });
+setTimeout(() => refreshSidebarVersionLabel(), 3000);
+try {
+  navigator?.serviceWorker?.addEventListener?.('controllerchange', () => refreshSidebarVersionLabel());
+} catch {
+  // ignore
 }
 
 /**

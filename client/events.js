@@ -73,7 +73,13 @@ import {
   showArticleHistoryModal,
 } from './modal.js?v=10';
 import { loadArticle } from './article.js';
-import { getMediaProgressForArticle, isMediaPrefetchPaused, toggleMediaPrefetchPaused } from './offline/media.js';
+import {
+  getMediaProgressForArticle,
+  isMediaPrefetchPaused,
+  resetFailedMediaAssets,
+  startMediaPrefetchLoop,
+  toggleMediaPrefetchPaused,
+} from './offline/media.js';
 import { setMediaPrefetchPaused } from './offline/media.js';
 import { getOfflineCoverageSummary } from './offline/status.js';
 import { startBackgroundFullPull, getBackgroundFullPullStatus } from './offline/sync.js';
@@ -623,10 +629,19 @@ export function attachEvents() {
       const mediaTotal = Number(summary.media?.total || 0);
       const mediaOk = Number(summary.media?.ok || 0);
       const mediaError = Number(summary.media?.error || 0);
+      const mediaErrorKinds = summary.media?.errorKinds || null;
 
       const articlesOk = articlesTotal === 0 ? true : articlesWithDoc >= articlesTotal;
       const mediaOkAll = mediaTotal === 0 ? true : mediaOk >= mediaTotal;
       const ok = articlesOk && mediaOkAll && mediaError === 0;
+      const missingArticles = Math.max(0, articlesTotal - articlesWithDoc);
+      const missingMedia = Math.max(0, mediaTotal - mediaOk);
+
+      const needsLoginForMedia =
+        missingMedia > 0 &&
+        mediaErrorKinds &&
+        Number(mediaErrorKinds.noAccess || 0) > 0 &&
+        navigator.onLine;
 
       const pull = getBackgroundFullPullStatus?.() || null;
       const pullRunning = Boolean(pull?.running);
@@ -647,12 +662,47 @@ export function attachEvents() {
         } else if (pullLastError) {
           parts.push(`ошибка: ${pullLastError}`);
         }
-        if (!articlesOk) parts.push(`статьи: ${articlesWithDoc}/${articlesTotal}`);
-        if (!mediaOkAll) parts.push(`картинки: ${mediaOk}/${mediaTotal}`);
-        if (mediaError > 0) parts.push(`ошибок: ${mediaError}`);
+        if (needsLoginForMedia) {
+          parts.push('нужно войти, чтобы докачать картинки');
+        }
+
+        // Show user-meaningful progress (articles first) in a stable format.
+        // Even when all articles are already cached, keep the "статьи X/Y" part so the label doesn't "jump"
+        // between formats (this is user-facing, not a debugging counter).
+        if (articlesTotal > 0) parts.push(`статьи: ${articlesWithDoc}/${articlesTotal}`);
+        if (mediaTotal > 0) parts.push(`картинки: ${mediaOk}/${mediaTotal}`);
+
+        // Expose *why* missing media happens, but keep it short.
+        if (missingMedia > 0 && mediaErrorKinds) {
+          const nf = Number(mediaErrorKinds.notFound || 0);
+          const na = Number(mediaErrorKinds.noAccess || 0);
+          const net = Number(mediaErrorKinds.network || 0);
+          if (nf > 0) parts.push(`битые: ${nf}`);
+          else if (na > 0) parts.push(`нет доступа: ${na}`);
+          else if (net > 0) parts.push(`ошибкок сети: ${net}`);
+        }
+
         const label = parts.length ? `Оффлайн: ${parts.join(' · ')}` : 'Оффлайн: докачка…';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
-        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.toggle('hidden', pullRunning);
+        if (refs.offlineFetchBtn) {
+          // Button only when it can actually help.
+          const paused = Boolean(state.mediaPrefetchPaused);
+          const show =
+            !pullRunning &&
+            !needsLoginForMedia &&
+            (paused || missingArticles > 0 || missingMedia > 0);
+          refs.offlineFetchBtn.classList.toggle('hidden', !show);
+          try {
+            const labelEl = refs.offlineFetchBtn.querySelector('.sidebar-user-menu-label');
+            if (labelEl) {
+              if (paused) labelEl.textContent = 'Возобновить докачку';
+              else if (missingMedia > 0 && mediaError > 0) labelEl.textContent = 'Повторить докачку';
+              else labelEl.textContent = 'Докачать сейчас';
+            }
+          } catch {
+            // ignore
+          }
+        }
         setBtnState('loading', `Аккаунт · ${label}`);
       }
     } finally {
@@ -701,8 +751,16 @@ export function attachEvents() {
           return;
         }
         setMediaPrefetchPaused(false);
+        // If some images reached retry limit, "Докачать" should reset and try again.
+        resetFailedMediaAssets({ maxFailCountOnly: true }).catch(() => {});
+        // Media prefetch can run even when server sync is disabled (e.g. user is not authenticated right now).
+        try {
+          startMediaPrefetchLoop();
+        } catch {
+          // ignore
+        }
         startBackgroundFullPull({ force: true });
-        showToast('Докачиваем офлайн‑картинки в фоне…');
+        showToast('Докачиваем офлайн‑данные в фоне…');
         refs.userMenu?.classList.add('hidden');
         refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
         refreshOfflineStatusOnce().catch(() => {});

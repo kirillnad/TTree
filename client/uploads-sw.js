@@ -1,12 +1,17 @@
-const CACHE_NAME = 'memus-uploads-v1';
-const APP_CACHE = 'memus-app-shell-v5';
-
+// Two caches on purpose:
+// - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
+// - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
+const UPLOADS_CACHE = 'u1';
+const APP_VERSION = 10;
+const APP_BUILD = '3azuc9v3';
+const APP_CACHE = `a${APP_VERSION}`;
+  
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
-  '/style.css?v=38',
-  '/boot.js?v=5',
-  '/app.js?v=27',
+  '/style.css',
+  '/boot.js',
+  '/app.js',
   '/manifest.webmanifest',
   '/icons/favicon.ico',
   '/icons/icon-192.png',
@@ -81,6 +86,14 @@ function isJsOrCssUrl(url) {
   }
 }
 
+function makeReloadRequest(req) {
+  try {
+    return new Request(req, { cache: 'reload' });
+  } catch {
+    return req;
+  }
+}
+
 function shouldRevalidateNow(urlStr) {
   const now = Date.now();
   const last = lastRevalidateAtByUrl.get(urlStr) || 0;
@@ -136,9 +149,11 @@ self.addEventListener('activate', (event) => {
         const keys = await caches.keys();
         await Promise.all(
           keys.map((k) => {
-            if (k === CACHE_NAME) return Promise.resolve();
             if (k === APP_CACHE) return Promise.resolve();
+            if (k === UPLOADS_CACHE) return Promise.resolve();
+            if (/^a\\d+$/.test(String(k))) return caches.delete(k);
             if (k.startsWith('memus-app-shell-')) return caches.delete(k);
+            if (k.startsWith('memus-uploads-')) return caches.delete(k);
             return Promise.resolve();
           }),
         );
@@ -148,6 +163,21 @@ self.addEventListener('activate', (event) => {
       await self.clients.claim();
     })(),
   );
+});
+
+self.addEventListener('message', (event) => {
+  try {
+    const data = event.data || {};
+    if (data.type !== 'memus:get-sw-build') return;
+    const port = event.ports && event.ports[0];
+    if (!port) return;
+    port.postMessage({
+      buildId: String(APP_VERSION),
+      buildHash: String(APP_BUILD),
+    });
+  } catch {
+    // ignore
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -178,7 +208,7 @@ self.addEventListener('fetch', (event) => {
   if (isUploadsRequest(req)) {
     event.respondWith(
       (async () => {
-        const cache = await caches.open(CACHE_NAME);
+        const cache = await caches.open(UPLOADS_CACHE);
         const cached = await cache.match(req, { ignoreSearch: false });
         if (cached) {
           // stale-while-revalidate
@@ -218,7 +248,7 @@ self.addEventListener('fetch', (event) => {
             const url = new URL(req.url);
             if (isJsOrCssUrl(url)) {
               try {
-                const resp = await fetch(req);
+                const resp = await fetch(makeReloadRequest(req));
                 if (resp && resp.ok) {
                   cache.put(req, resp.clone()).catch(() => {});
                   return resp;
@@ -231,7 +261,7 @@ self.addEventListener('fetch', (event) => {
             // For other assets: stale-while-revalidate but throttle.
             if (!isImmutableAssetUrl(url) && shouldRevalidateNow(req.url)) {
               event.waitUntil(
-                fetch(req)
+                fetch(makeReloadRequest(req))
                   .then((resp) => {
                     if (resp && resp.ok) cache.put(req, resp.clone());
                   })
@@ -244,7 +274,8 @@ self.addEventListener('fetch', (event) => {
           return cached;
         }
         try {
-          const resp = await fetch(req);
+          const url = new URL(req.url);
+          const resp = await fetch(isJsOrCssUrl(url) ? makeReloadRequest(req) : req);
           if (resp && resp.ok) cache.put(req, resp.clone()).catch(() => {});
           return resp;
         } catch (err) {

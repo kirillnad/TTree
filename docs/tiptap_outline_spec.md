@@ -259,6 +259,30 @@ iOS Safari/WKWebView может **автоматически очищать** In
   - под заголовком статьи показываем индикатор `Медиа: X/Y` (X = скачано, Y = всего);
   - есть кнопка `Пауза/Продолжить`, которая останавливает/возобновляет фоновую докачку, не влияя на просмотр статей.
 
+### Версия клиента (PWA) и авто‑bump APP_VERSION
+
+Задача: иметь **одну точку** “форс‑обновления” клиентских скриптов и UI‑индикатор версии, чтобы два устройства с одинаковой версией работали на одинаковом app‑shell.
+
+- Источник истины: `TTree/client/uploads-sw.js`
+  - `APP_VERSION` — короткий порядковый номер (показывается в UI как `vN`).
+  - `APP_CACHE = "a" + APP_VERSION` — имя cache storage для app‑shell.
+- Генерация/проверка версии:
+  - `npm run gen:app-version` — пересчитывает `APP_BUILD` (хеш содержимого `client/`, включая `uploads-sw.js` за вычетом строк версии) и бампает `APP_VERSION` только если билд реально изменился.
+  - `npm run check:app-version` — проверяет, что `APP_BUILD` соответствует текущим исходникам.
+
+#### Watcher как сервис (без git)
+
+Чтобы не помнить про ручной запуск `gen/check`, на сервере запущен watcher, который автоматически бампает `APP_VERSION` при любых изменениях в `client/`.
+
+- Скрипт watcher: `TTree/scripts/watch_app_version.mjs` (`npm run watch:app-version`).
+- systemd user unit (запускается всегда благодаря `linger=yes`):
+  - файл: `/home/aadminn/.config/systemd/user/memus-watch-app-version.service`
+  - управление:
+    - `systemctl --user status memus-watch-app-version.service`
+    - `journalctl --user -u memus-watch-app-version.service -f`
+    - `systemctl --user restart memus-watch-app-version.service`
+    - `systemctl --user disable --now memus-watch-app-version.service`
+
 ---
 
 ## Инцидент: потеря серверной БД и восстановление (2026‑01)

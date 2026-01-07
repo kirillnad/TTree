@@ -1,5 +1,5 @@
 (() => {
-  const APP_MODULE = window.__memusAppModule || '/app.js?v=27';
+  const APP_MODULE = window.__memusAppModule || '/app.js';
   const BOOT_SESSION_KEY = 'ttree_boot_session_v1';
   const LAST_USER_KEY = 'ttree_last_user_v1';
   const LAST_ACTIVE_KEY = 'ttree_last_active_at_v1';

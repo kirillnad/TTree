@@ -95,6 +95,39 @@ let appStarted = false;
 let onAuthenticated = null;
 const LAST_USER_KEY = 'ttree_last_user_v1';
 
+async function startOfflineSessionFromCachedUser(options = {}) {
+  const { reason } = options || {};
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY);
+    const cachedUser = raw ? JSON.parse(raw) : null;
+    if (!cachedUser || (!cachedUser.id && !cachedUser.username)) return false;
+
+    applyUserToUi(cachedUser);
+    hideAuthOverlay();
+    ensureAppStarted();
+    attachPendingQuickNotesFlushListener();
+
+    // Offline DB init is still valuable even if user is not authenticated right now.
+    // IMPORTANT: do NOT start server sync loops here; without auth they'd just 401/spam and may confuse the user.
+    try {
+      await initOfflineForUser(cachedUser);
+    } catch (err) {
+      try {
+        console.warn('[offline] init failed', err);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (reason) {
+      showToast(`Оффлайн режим: локальные данные (${reason})`);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function showAuthOverlay() {
   if (refs.authOverlay) {
     refs.authOverlay.classList.remove('hidden');
@@ -300,6 +333,11 @@ export async function bootstrapAuth() {
       });
       return;
     }
+
+    // Online but unauthenticated / timed out: still allow opening cached local data (important for PWA on mobile).
+    // This avoids the "empty app + offline unavailable" experience when cookies/session are missing.
+    const ok = await startOfflineSessionFromCachedUser({ reason: 'без входа' });
+    if (ok) return;
   } catch (_) {
     // Игнорируем: просто покажем форму логина.
   }
@@ -307,25 +345,8 @@ export async function bootstrapAuth() {
   // Offline fallback: allow opening the PWA without network using cached user and IndexedDB.
   try {
     if (!navigator.onLine) {
-      const raw = localStorage.getItem(LAST_USER_KEY);
-      const cachedUser = raw ? JSON.parse(raw) : null;
-      if (cachedUser && (cachedUser.id || cachedUser.username)) {
-        applyUserToUi(cachedUser);
-        hideAuthOverlay();
-        ensureAppStarted();
-        showToast('Оффлайн режим: используем локальные данные');
-        try {
-          await initOfflineForUser(cachedUser);
-          startSyncLoop();
-        } catch (err) {
-          try {
-            console.warn('[offline] init failed', err);
-          } catch {
-            // ignore
-          }
-        }
-        return;
-      }
+      const ok = await startOfflineSessionFromCachedUser({ reason: 'нет интернета' });
+      if (ok) return;
       setAuthError('Нет интернета. Оффлайн-режим будет доступен после первого входа онлайн.');
     }
   } catch {

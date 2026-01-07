@@ -151,6 +151,30 @@ export async function updateMediaRefsForArticle(articleId, docJson) {
   await txDone(tx);
 }
 
+export async function resetFailedMediaAssets(options = {}) {
+  const { maxFailCountOnly = false } = options || {};
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['media_assets'], 'readwrite');
+  const store = tx.objectStore('media_assets');
+  const items = (await reqToPromise(store.getAll()).catch(() => [])) || [];
+  for (const it of items) {
+    if (!it?.url) continue;
+    if (String(it.status || '') !== 'error') continue;
+    const failCount = Number(it.failCount || 0);
+    if (maxFailCountOnly && failCount < 5) continue;
+    await reqToPromise(
+      store.put({
+        ...it,
+        status: 'needed',
+        failCount: 0,
+        lastError: null,
+        fetchedAtMs: 0,
+      }),
+    );
+  }
+  await txDone(tx);
+}
+
 async function markMediaOk(db, url) {
   const tx = db.transaction(['media_assets'], 'readwrite');
   const store = tx.objectStore('media_assets');

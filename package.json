@@ -4,6 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
+    "gen:app-version": "node scripts/gen_app_version.mjs --write",
+    "check:app-version": "node scripts/check_app_version.mjs",
+    "watch:app-version": "node scripts/watch_app_version.mjs",
     "snap": "node scripts/snap.js",
     "build:tiptap": "node scripts/build_tiptap_bundle.mjs"
   },
