@@ -1,5 +1,12 @@
 export const state = {
   mode: 'view',
+  // Server connectivity/auth status (for UI and boot decisions).
+  // - unknown: not checked yet
+  // - ok: server reachable and session valid
+  // - auth: server reachable but session missing/expired (401/403)
+  // - down: server unreachable (network error/timeout)
+  serverStatus: 'unknown',
+  serverStatusText: '',
   offlineReady: false,
   offlineInitStatus: 'idle', // idle | initializing | ready | error
   offlineInitError: '',

@@ -55,34 +55,101 @@ export function clearQueuedInboxDocJson() {
   writeQueue(queue);
 }
 
+function extractOutlineSections(docJson) {
+  try {
+    const content = Array.isArray(docJson?.content) ? docJson.content : [];
+    return content.filter((n) => n && n.type === 'outlineSection' && n.attrs && n.attrs.id);
+  } catch {
+    return [];
+  }
+}
+
+function mergeQueuedIntoServerDocJson(serverDocJson, queuedDocJson) {
+  const server = serverDocJson && typeof serverDocJson === 'object' ? serverDocJson : { type: 'doc', content: [] };
+  const queued = queuedDocJson && typeof queuedDocJson === 'object' ? queuedDocJson : { type: 'doc', content: [] };
+
+  const serverSections = extractOutlineSections(server);
+  const queuedSections = extractOutlineSections(queued);
+  const serverIds = new Set(serverSections.map((s) => String(s.attrs.id)));
+
+  const toAdd = [];
+  for (const s of queuedSections) {
+    const id = String(s?.attrs?.id || '');
+    if (!id) continue;
+    if (serverIds.has(id)) continue;
+    toAdd.push(s);
+  }
+
+  if (!toAdd.length) return { docJson: server, added: 0 };
+  const next = {
+    ...server,
+    type: server.type || 'doc',
+    content: [...toAdd, ...(Array.isArray(server.content) ? server.content : [])],
+  };
+  return { docJson: next, added: toAdd.length };
+}
+
+async function fetchInboxFromServerDirect() {
+  const resp = await fetch('/api/articles/inbox?include_history=0', { method: 'GET', credentials: 'include' });
+  if (resp.status === 401 || resp.status === 403) {
+    const err = new Error('auth');
+    err.status = resp.status;
+    throw err;
+  }
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
+  }
+  return resp.json();
+}
+
+export async function refreshInboxCacheFromServer() {
+  if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return { status: 'offline' };
+  const inbox = await fetchInboxFromServerDirect();
+  const nowIso = new Date().toISOString();
+  try {
+    if (inbox?.docJson && typeof inbox.docJson === 'object') {
+      await updateCachedDocJson('inbox', inbox.docJson, nowIso);
+    }
+  } catch {
+    // ignore
+  }
+  return { status: 'refreshed', updatedAt: inbox?.updatedAt || null, docJson: inbox?.docJson || null };
+}
+
 export async function syncQueuedInboxToServer() {
   const queued = readQueuedInboxDocJson();
   if (!queued || !queued.docJson) return { status: 'empty' };
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return { status: 'offline' };
 
-  // Make sure inbox exists on server and pick freshest base for conflict safety.
-  const inbox = await fetchArticle('inbox', { metaTimeoutMs: 600, cacheTimeoutMs: 200 });
-  const serverUpdatedAtMs = Date.parse(inbox?.updatedAt || '') || 0;
-  if (queued.queuedAt && serverUpdatedAtMs && queued.queuedAt < serverUpdatedAtMs) {
-    // Queued draft is older than server; do not override. Just clear it.
+  // Always merge into the freshest server state (never overwrite the whole inbox).
+  // This prevents losing notes when multiple devices create quick notes.
+  const inbox = await fetchInboxFromServerDirect().catch(async (err) => {
+    // Fallback: use offline-first fetch if direct fetch fails for some reason.
+    dlog('server.fetch.failed', { message: err?.message || String(err || 'error') });
+    return await fetchArticle('inbox', { metaTimeoutMs: 2000, cacheTimeoutMs: 400 });
+  });
+
+  const serverDocJson = inbox?.docJson && typeof inbox.docJson === 'object' ? inbox.docJson : { type: 'doc', content: [] };
+  const merged = mergeQueuedIntoServerDocJson(serverDocJson, queued.docJson);
+  if (!merged.added) {
     clearQueuedInboxDocJson();
-    dlog('skip.stale', { queuedAt: queued.queuedAt, serverUpdatedAtMs });
-    return { status: 'stale_cleared' };
+    dlog('skip.noChanges', null);
+    return { status: 'no_changes_cleared' };
   }
 
   const nowIso = new Date().toISOString();
-  const saveRes = await saveArticleDocJson('inbox', queued.docJson, { createVersionIfStaleHours: 12 });
+  const saveRes = await saveArticleDocJson('inbox', merged.docJson, { createVersionIfStaleHours: 12 });
   try {
-    await updateCachedDocJson('inbox', queued.docJson, nowIso);
+    await updateCachedDocJson('inbox', merged.docJson, nowIso);
   } catch {
     // ignore
   }
   if (saveRes && saveRes.status === 'queued') {
     dlog('queued', saveRes);
-    return { status: 'queued' };
+    return { status: 'queued', added: merged.added };
   }
 
   clearQueuedInboxDocJson();
-  dlog('synced', { updatedAt: nowIso });
-  return { status: 'synced' };
+  dlog('synced', { updatedAt: nowIso, added: merged.added });
+  return { status: 'synced', added: merged.added };
 }

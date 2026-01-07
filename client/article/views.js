@@ -19,6 +19,7 @@ import { flattenVisible, findBlock, setCurrentBlock } from '../block.js';
 import { loadArticle } from './loadCore.js';
 import { renderArticle, setMoveBlockFromInboxHandler } from './render.js';
 import { updateDragModeUi } from './dnd.js';
+import { refreshInboxCacheFromServer, syncQueuedInboxToServer } from '../quickNotes/queuedInbox.js';
 
 async function moveBlockFromInbox(blockId) {
   try {
@@ -253,6 +254,23 @@ export async function loadArticleView(id) {
     await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired, editBlockId: editTarget });
     renderArticle();
     recordArticleOpened(id);
+
+    // Inbox is special: keep it fresh across devices and merge any queued quick-notes.
+    if (id === 'inbox' && navigator.onLine && state.serverStatus === 'ok') {
+      try {
+        // 1) Refresh cached inbox from server (so mobile doesn't stay on stale cache).
+        await refreshInboxCacheFromServer().catch(() => {});
+        // 2) Merge queued quick-notes into server inbox (never overwrite).
+        await syncQueuedInboxToServer().catch(() => {});
+        // 3) If user is not actively editing, reload once so UI reflects the refreshed cache.
+        if (state.articleId === 'inbox' && !state.editingBlockId) {
+          await loadArticle('inbox', { resetUndoStacks: false });
+          renderArticle();
+        }
+      } catch {
+        // ignore
+      }
+    }
   } catch (error) {
     refs.blocksContainer.innerHTML = `<p class="meta">Не удалось загрузить статью: ${error.message}</p>`;
   }

@@ -3002,7 +3002,8 @@ h4.block-title {
 
 .sidebar-user-avatar[data-offline="ok"]::after,
 .sidebar-user-avatar[data-offline="loading"]::after,
-.sidebar-user-avatar[data-offline="off"]::after {
+.sidebar-user-avatar[data-offline="off"]::after,
+.sidebar-user-avatar[data-offline="auth"]::after {
   content: '';
   position: absolute;
   right: -1px;
@@ -3019,7 +3020,10 @@ h4.block-title {
   background: #eab308;
 }
 .sidebar-user-avatar[data-offline="off"]::after {
-  background: #94a3b8;
+  background: #ef4444;
+}
+.sidebar-user-avatar[data-offline="auth"]::after {
+  background: #f97316;
 }
 
 .sidebar-user-menu {
@@ -4074,4 +4078,3 @@ body.export-static .block-text p {
     font-size: 1.05rem;
   }
 }
-

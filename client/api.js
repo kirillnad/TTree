@@ -39,6 +39,20 @@ export async function apiRequest(path, options = {}) {
   });
   const perfHeadersAt = perfFetchStart ? performance.now() : 0;
   if (!response.ok) {
+    // Session missing/expired: treat as "auth required" (not "offline").
+    if (response.status === 401 || response.status === 403) {
+      try {
+        state.serverStatus = 'auth';
+        state.serverStatusText = 'auth';
+      } catch {
+        // ignore
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('memus:auth-required', { detail: { path, status: response.status } }));
+      } catch {
+        // ignore
+      }
+    }
     const details = await response.json().catch(() => ({}));
     if (perfStart) {
       // eslint-disable-next-line no-console
@@ -104,7 +118,20 @@ export async function fetchCurrentUser() {
     method: 'GET',
     credentials: 'include',
   });
-  if (response.status === 401) return null;
+  if (response.status === 401 || response.status === 403) {
+    try {
+      state.serverStatus = 'auth';
+      state.serverStatusText = 'auth';
+    } catch {
+      // ignore
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('memus:auth-required', { detail: { path: '/api/auth/me', status: response.status } }));
+    } catch {
+      // ignore
+    }
+    return null;
+  }
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
     throw new Error(details.detail || 'Auth check failed');

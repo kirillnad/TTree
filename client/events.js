@@ -581,6 +581,22 @@ export function attachEvents() {
         }
       };
 
+      // Server status has higher priority than offline cache readiness: do not confuse "not logged in" with "offline".
+      if (state.serverStatus === 'auth') {
+        const label = 'Требуется вход';
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        setBtnState('auth', `Аккаунт · ${label}`);
+        return;
+      }
+      if (state.serverStatus === 'down') {
+        const label = 'Нет доступа к серверу';
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
+        if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        setBtnState('off', `Аккаунт · ${label}`);
+        return;
+      }
+
       if (!state.offlineReady) {
         const initStatus = String(state.offlineInitStatus || 'idle');
         const errText = String(state.offlineInitError || '').trim();

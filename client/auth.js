@@ -95,6 +95,31 @@ let appStarted = false;
 let onAuthenticated = null;
 const LAST_USER_KEY = 'ttree_last_user_v1';
 
+async function fetchAuthMeWithTimeout(timeoutMs) {
+  const ms = typeof timeoutMs === 'number' ? Math.max(0, Math.floor(timeoutMs)) : 8000;
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => controller?.abort?.(), ms);
+  try {
+    const resp = await fetch('/api/auth/me', {
+      method: 'GET',
+      credentials: 'include',
+      signal: controller?.signal,
+    });
+    if (resp.status === 401 || resp.status === 403) return { status: 'auth' };
+    if (!resp.ok) {
+      const details = await resp.json().catch(() => ({}));
+      return { status: 'down', message: details?.detail || `HTTP ${resp.status}` };
+    }
+    const user = await resp.json();
+    return { status: 'ok', user };
+  } catch (err) {
+    if (err?.name === 'AbortError') return { status: 'down', message: 'timeout' };
+    return { status: 'down', message: err?.message || 'network' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function startOfflineSessionFromCachedUser(options = {}) {
   const { reason } = options || {};
   try {
@@ -204,6 +229,27 @@ function ensureAppStarted() {
 export function initAuth(callback) {
   onAuthenticated = callback;
 
+  // If the session expires while the app is open, switch to login UI automatically (when online).
+  try {
+    window.addEventListener('memus:auth-required', () => {
+      try {
+        if (navigator?.onLine === false) return;
+      } catch {
+        // ignore
+      }
+      try {
+        state.serverStatus = 'auth';
+        state.serverStatusText = 'auth';
+      } catch {
+        // ignore
+      }
+      setAuthMode('login');
+      showAuthOverlay();
+    });
+  } catch {
+    // ignore
+  }
+
   // Вход/регистрация по логину и паролю сейчас выключены.
   if (refs.logoutBtn) {
     refs.logoutBtn.addEventListener('click', async () => {
@@ -238,6 +284,8 @@ export async function bootstrapAuth() {
   try {
     // If there is no network, skip /api/auth/me and try offline fallback immediately.
     if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+      state.serverStatus = 'down';
+      state.serverStatusText = 'offline';
       throw new Error('offline');
     }
     // При старте нейтральный текст — «загружаем заметки», а не призыв логиниться.
@@ -251,16 +299,11 @@ export async function bootstrapAuth() {
       refs.authYandexLoginBtn.classList.add('hidden');
     }
 
-    // На некоторых мобильных браузерах (вроде старых WebView/Huawei)
-    // запрос /api/auth/me иногда «подвисает» без явной ошибки.
-    // Ограничиваем ожидание по таймауту, чтобы не держать оверлей бесконечно.
-    const authCheck = fetchCurrentUser().catch(() => null);
-    const timeout = new Promise((resolve) => {
-      setTimeout(() => resolve(null), 8000);
-    });
-    const user = await Promise.race([authCheck, timeout]);
-    if (user) {
-      applyUserToUi(user);
+    const res = await fetchAuthMeWithTimeout(8000);
+    if (res?.status === 'ok' && res.user) {
+      state.serverStatus = 'ok';
+      state.serverStatusText = '';
+      applyUserToUi(res.user);
       // ВАЖНО: не блокируем запуск приложения на инициализации offline/IndexedDB.
       // Иначе на медленных устройствах/профилях оверлей “Загружаем…” может висеть очень долго,
       // хотя сеть уже доступна и сервер отвечает 200.
@@ -309,7 +352,7 @@ export async function bootstrapAuth() {
           showToast('Инициализируем offline-базу… (может занять время)');
         }, 5000);
         try {
-          await initOfflineForUser(user);
+          await initOfflineForUser(res.user);
           const bootstrapIndex = await tryPullBootstrap();
           startSyncLoop();
           startBackgroundFullPull({ initialIndex: bootstrapIndex || undefined });
@@ -334,9 +377,19 @@ export async function bootstrapAuth() {
       return;
     }
 
-    // Online but unauthenticated / timed out: still allow opening cached local data (important for PWA on mobile).
-    // This avoids the "empty app + offline unavailable" experience when cookies/session are missing.
-    const ok = await startOfflineSessionFromCachedUser({ reason: 'без входа' });
+    if (res?.status === 'auth') {
+      // Server reachable but no valid session: this is NOT offline. Show login UI.
+      state.serverStatus = 'auth';
+      state.serverStatusText = 'auth';
+      setAuthMode('login');
+      showAuthOverlay();
+      return;
+    }
+
+    // Server is not reachable (timeout/network/server error): allow offline session if possible.
+    state.serverStatus = 'down';
+    state.serverStatusText = res?.message ? String(res.message) : 'down';
+    const ok = await startOfflineSessionFromCachedUser({ reason: 'нет доступа к серверу' });
     if (ok) return;
   } catch (_) {
     // Игнорируем: просто покажем форму логина.
