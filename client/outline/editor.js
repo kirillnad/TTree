@@ -38,7 +38,7 @@ let onlineHandlerAttached = false;
 let outlineParseHtmlToNodes = null;
 let outlineGenerateHTML = null;
 let outlineHtmlExtensions = null;
-let outlineTableApi = { TableMap: null, CellSelection: null };
+let outlineTableApi = { TableMap: null, CellSelection: null, moveTableColumn: null, moveTableRow: null };
 let tableResizeActive = false;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const PROOFREAD_RETRY_COOLDOWN_MS = 30 * 1000;
@@ -1895,6 +1895,35 @@ function getActiveTableDom(view) {
   }
 }
 
+function getActiveTableCellDom(view) {
+  try {
+    const sel = view?.state?.selection || null;
+    const $from = sel?.$from || null;
+    if (!$from) return null;
+
+    let cellDepth = null;
+    for (let d = $from.depth; d >= 0; d -= 1) {
+      const name = $from.node(d)?.type?.name;
+      if (name === 'tableCell' || name === 'tableHeader') {
+        cellDepth = d;
+        break;
+      }
+    }
+
+    if (cellDepth != null) {
+      const cellPos = $from.before(cellDepth);
+      const dom = view.nodeDOM?.(cellPos) || null;
+      if (dom && dom.nodeType === 1) return dom;
+    }
+
+    const domAt = view.domAtPos(sel.from);
+    const base = (domAt?.node && domAt.node.nodeType === 1 ? domAt.node : domAt?.node?.parentElement) || null;
+    return base?.closest?.('td,th') || null;
+  } catch {
+    return null;
+  }
+}
+
 function readTableColPercentsFromDom(tableEl) {
   try {
     if (!tableEl) return null;
@@ -2006,6 +2035,90 @@ function getActiveTableContext(pmState) {
   }
 }
 
+function getSelectedTableCellsFromState(pmState) {
+  try {
+    const out = [];
+    const sel = pmState?.selection;
+    const doc = pmState?.doc;
+    if (!sel || !doc) return out;
+
+    // Prefer collecting cell nodes via nodesBetween (works for CellSelection).
+    try {
+      doc.nodesBetween(sel.from, sel.to, (node, pos) => {
+        const name = node?.type?.name;
+        if (name === 'tableCell' || name === 'tableHeader') out.push({ node, pos });
+      });
+    } catch {
+      // ignore
+    }
+
+    // Cursor inside a single cell: nodesBetween won't include the cell node.
+    if (!out.length) {
+      try {
+        const $from = sel.$from || null;
+        if ($from) {
+          for (let d = $from.depth; d >= 0; d -= 1) {
+            const name = $from.node(d)?.type?.name;
+            if (name === 'tableCell' || name === 'tableHeader') {
+              const pos = $from.before(d);
+              const node = doc.nodeAt(pos);
+              if (node) out.push({ node, pos });
+              break;
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Deduplicate and apply stable order by position.
+    const byPos = new Map();
+    for (const row of out) {
+      const p = Number(row?.pos);
+      if (!Number.isFinite(p)) continue;
+      if (!byPos.has(p)) byPos.set(p, row);
+    }
+    return Array.from(byPos.values()).sort((a, b) => Number(a.pos) - Number(b.pos));
+  } catch {
+    return [];
+  }
+}
+
+function selectOutlineTableRow(editor, rowIndex) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!CellSelection || !TableMap) return false;
+    return editor.commands.command(({ state: pmState, dispatch }) => {
+      const ctx = getActiveTableContext(pmState);
+      if (!ctx) return false;
+      const { tablePos, tableNode, map } = ctx;
+      const r = Number(rowIndex);
+      if (!Number.isFinite(r) || r < 0 || r >= map.height) return false;
+      const aRel = map.positionAt(r, 0, tableNode);
+      const bRel = map.positionAt(r, map.width - 1, tableNode);
+      const aAbs = tablePos + 1 + aRel;
+      const bAbs = tablePos + 1 + bRel;
+      let sel = null;
+      try {
+        if (typeof CellSelection.create === 'function') {
+          sel = CellSelection.create(pmState.doc, aAbs, bAbs);
+        }
+      } catch {
+        sel = null;
+      }
+      if (!sel) return false;
+      let tr = pmState.tr.setSelection(sel);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    });
+  } catch {
+    return false;
+  }
+}
+
 function selectOutlineTableColumn(editor, colIndex) {
   try {
     const CellSelection = outlineTableApi?.CellSelection || null;
@@ -2066,89 +2179,140 @@ function canMoveTableWithoutSpans(tableNode, kindLabel = 'таблицы') {
   }
 }
 
+function intersectsTableSpansAtColumnOrRow(ctx, { kind, fromIndex, toIndex }) {
+  try {
+    if (!ctx) return true;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!TableMap) return true;
+    const map = ctx.map || null;
+    const tableNode = ctx.tableNode || null;
+    if (!map || !tableNode) return true;
+
+    const from = Number(fromIndex);
+    const to = Number(toIndex);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return true;
+
+    const fromClamped = kind === 'row' ? Math.max(0, Math.min(map.height - 1, from)) : Math.max(0, Math.min(map.width - 1, from));
+    const toClamped = kind === 'row' ? Math.max(0, Math.min(map.height - 1, to)) : Math.max(0, Math.min(map.width - 1, to));
+
+    const seen = new Set();
+    for (const relPos of map.map) {
+      const p = Number(relPos);
+      if (!Number.isFinite(p) || p < 0) continue;
+      if (seen.has(p)) continue;
+      seen.add(p);
+      let rect = null;
+      try {
+        rect = map.findCell(p);
+      } catch {
+        rect = null;
+      }
+      if (!rect) continue;
+      const w = Number(rect.right) - Number(rect.left);
+      const h = Number(rect.bottom) - Number(rect.top);
+      if (!(w > 1 || h > 1)) continue;
+
+      if (kind === 'col') {
+        const left = Number(rect.left);
+        const right = Number(rect.right);
+        if ((left <= fromClamped && fromClamped < right) || (left <= toClamped && toClamped < right)) return true;
+      } else {
+        const top = Number(rect.top);
+        const bottom = Number(rect.bottom);
+        if ((top <= fromClamped && fromClamped < bottom) || (top <= toClamped && toClamped < bottom)) return true;
+      }
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 function moveTableColumnBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const ctx = getActiveTableContext(editor.state);
+    if (!ctx) return false;
+    const { colIndex } = ctx;
+    const cols = ctx.map?.width || 0;
+    if (!(cols > 0)) return false;
+    const d = dir < 0 ? -1 : 1;
+    const targetCol = colIndex + d;
+    if (!(targetCol >= 0 && targetCol < cols)) return false;
+    return moveTableColumnToIndex(editor, colIndex, targetCol);
+  } catch {
+    return false;
+  }
+}
+
+function moveTableRowBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const ctx = getActiveTableContext(editor.state);
+    if (!ctx) return false;
+    const { rowIndex } = ctx;
+    const rows = ctx.map?.height || 0;
+    if (!(rows > 0)) return false;
+    const d = dir < 0 ? -1 : 1;
+    const targetRow = rowIndex + d;
+    if (!(targetRow >= 0 && targetRow < rows)) return false;
+    return moveTableRowToIndex(editor, rowIndex, targetRow);
+  } catch {
+    return false;
+  }
+}
+
+function moveTableColumnToIndex(editor, fromIndex, toIndex) {
   try {
     if (!editor?.view) return false;
     const pmState = editor.state;
     const ctx = getActiveTableContext(pmState);
     if (!ctx) return false;
-    const { tablePos, tableNode, colIndex, rowIndex } = ctx;
-    const cols = tableNode.child(0)?.childCount || 0;
-    const rows = tableNode.childCount || 0;
-    if (!(cols > 0 && rows > 0)) return false;
-    const d = dir < 0 ? -1 : 1;
-    const targetCol = colIndex + d;
-    if (!(targetCol >= 0 && targetCol < cols)) return false;
-    if (!canMoveTableWithoutSpans(tableNode, 'столбцов')) return false;
+    const { tableNode } = ctx;
+    const cols = ctx.map?.width || 0;
+    if (!(cols > 0)) return false;
 
-    // Compute offset within the current cell so cursor stays in place.
-    let cellDepth = null;
-    for (let dep = pmState.selection.$from.depth; dep >= 0; dep -= 1) {
-      const name = pmState.selection.$from.node(dep)?.type?.name;
-      if (name === 'tableCell' || name === 'tableHeader') {
-        cellDepth = dep;
-        break;
-      }
+    const from = Number(fromIndex);
+    const to = Number(toIndex);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return false;
+    if (from < 0 || from >= cols) return false;
+    if (to < 0 || to >= cols) return false;
+    if (from === to) return true;
+    if (intersectsTableSpansAtColumnOrRow(ctx, { kind: 'col', fromIndex: from, toIndex: to })) {
+      showToast('Нельзя переместить столбец: исходная или целевая колонка пересекается с объединёнными ячейками');
+      return false;
     }
-    const offsetInCell = cellDepth != null ? pmState.selection.from - pmState.selection.$from.start(cellDepth) : 0;
 
-    // Preserve column widths (DOM-only) by swapping percents.
     const tableElBefore = getActiveTableDom(editor.view);
     const widthsBefore = readTableColPercentsFromDom(tableElBefore);
     const widthsAfter =
       Array.isArray(widthsBefore) && widthsBefore.length === cols
         ? (() => {
             const next = widthsBefore.slice();
-            const tmp = next[colIndex];
-            next[colIndex] = next[targetCol];
-            next[targetCol] = tmp;
+            const moved = next.splice(from, 1)[0];
+            next.splice(to, 0, moved);
             return next;
           })()
         : null;
 
-    const newRows = [];
-    for (let r = 0; r < rows; r += 1) {
-      const row = tableNode.child(r);
-      if (row.type?.name !== 'tableRow') return false;
-      if (row.childCount !== cols) return false;
-      const swapped = [];
-      for (let c = 0; c < cols; c += 1) {
-        if (c === colIndex) swapped.push(row.child(targetCol));
-        else if (c === targetCol) swapped.push(row.child(colIndex));
-        else swapped.push(row.child(c));
-      }
-      newRows.push(row.type.create(row.attrs, swapped));
-    }
-
-    const newTable = tableNode.type.create(tableNode.attrs, newRows);
-    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
-    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-
-    // Keep cursor in the moved column's cell.
-    try {
-      const TextSelection = tiptap?.pmStateMod?.TextSelection;
-      if (TextSelection) {
-        const targetRowIndex = Math.min(newTable.childCount - 1, Math.max(0, rowIndex));
-        const targetColIndex = targetCol;
-        const targetRowNode = newTable.child(targetRowIndex);
-        const targetCell = targetRowNode.child(targetColIndex);
-
-        let pos = tablePos + 1;
-        for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
-        pos += 1;
-        for (let c = 0; c < targetColIndex; c += 1) pos += targetRowNode.child(c).nodeSize;
-        const cellPos = pos;
-        const cellFrom = cellPos + 1;
-        const cellTo = cellPos + targetCell.nodeSize - 1;
-        const desired = cellFrom + Math.max(0, offsetInCell);
-        const anchor = Math.min(Math.max(desired, cellFrom), cellTo);
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
-      }
-    } catch {
-      // ignore
-    }
-
-    editor.view.dispatch(tr.scrollIntoView());
+    const moveTableColumn = outlineTableApi?.moveTableColumn || null;
+    if (typeof moveTableColumn !== 'function') return false;
+    const cmd = moveTableColumn({ from, to, select: true });
+    const ok = editor.commands.command(({ state, dispatch }) => {
+      const wrappedDispatch =
+        typeof dispatch === 'function'
+          ? (tr) => {
+              try {
+                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              } catch {
+                // ignore
+              }
+              dispatch(tr);
+            }
+          : undefined;
+      return cmd(state, wrappedDispatch);
+    });
+    if (!ok) return false;
 
     if (widthsAfter) {
       window.requestAnimationFrame(() => {
@@ -2162,41 +2326,264 @@ function moveTableColumnBy(editor, dir) {
   }
 }
 
-function moveTableRowBy(editor, dir) {
+function moveTableRowToIndex(editor, fromIndex, toIndex) {
   try {
     if (!editor?.view) return false;
     const pmState = editor.state;
     const ctx = getActiveTableContext(pmState);
     if (!ctx) return false;
-    const { tablePos, tableNode, colIndex, rowIndex } = ctx;
+    const rows = ctx.map?.height || 0;
+    const cols = ctx.map?.width || 0;
+    if (!(cols > 0 && rows > 0)) return false;
+
+    const from = Number(fromIndex);
+    const to = Number(toIndex);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return false;
+    if (from < 0 || from >= rows) return false;
+    if (to < 0 || to >= rows) return false;
+    if (from === to) return true;
+    if (intersectsTableSpansAtColumnOrRow(ctx, { kind: 'row', fromIndex: from, toIndex: to })) {
+      showToast('Нельзя переместить строку: исходная или целевая строка пересекается с объединёнными ячейками');
+      return false;
+    }
+
+    // Preserve column widths (DOM-only).
+    const tableElBefore = getActiveTableDom(editor.view);
+    const widthsBefore = readTableColPercentsFromDom(tableElBefore); // DOM-only
+
+    const moveTableRow = outlineTableApi?.moveTableRow || null;
+    if (typeof moveTableRow !== 'function') return false;
+    const cmd = moveTableRow({ from, to, select: true });
+    const ok = editor.commands.command(({ state, dispatch }) => {
+      const wrappedDispatch =
+        typeof dispatch === 'function'
+          ? (tr) => {
+              try {
+                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              } catch {
+                // ignore
+              }
+              dispatch(tr);
+            }
+          : undefined;
+      return cmd(state, wrappedDispatch);
+    });
+    if (!ok) return false;
+
+    if (Array.isArray(widthsBefore) && widthsBefore.length === cols) {
+      window.requestAnimationFrame(() => {
+        const tableEl = getActiveTableDom(editor.view);
+        applyTableColPercentsToDom(tableEl, widthsBefore);
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function extractCellPlainText(cellNode) {
+  try {
+    if (!cellNode) return '';
+    const raw = cellNode.textContent || '';
+    return String(raw).replace(/\s+/g, ' ').trim();
+  } catch {
+    return '';
+  }
+}
+
+function isHeaderRowNode(rowNode) {
+  try {
+    if (!rowNode) return false;
+    for (let i = 0; i < rowNode.childCount; i += 1) {
+      if (rowNode.child(i)?.type?.name === 'tableHeader') return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function sortOutlineTableRowsByColumn(editor, { direction = 'asc' } = {}) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, colIndex } = ctx;
     const cols = tableNode.child(0)?.childCount || 0;
     const rows = tableNode.childCount || 0;
-    if (!(cols > 0 && rows > 0)) return false;
-    const d = dir < 0 ? -1 : 1;
-    const targetRow = rowIndex + d;
-    if (!(targetRow >= 0 && targetRow < rows)) return false;
-    if (!canMoveTableWithoutSpans(tableNode, 'строк')) return false;
+    if (!(cols > 0 && rows > 1)) return false;
+    if (!(colIndex >= 0 && colIndex < cols)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'таблицы')) return false;
 
-    // Preserve column widths.
+    const header = isHeaderRowNode(tableNode.child(0)) ? tableNode.child(0) : null;
+    const startRow = header ? 1 : 0;
+    const items = [];
+    for (let r = startRow; r < rows; r += 1) {
+      const rowNode = tableNode.child(r);
+      const cellNode = rowNode.child(colIndex);
+      items.push({ rowIndex: r, rowNode, key: extractCellPlainText(cellNode) });
+    }
+    const factor = direction === 'desc' ? -1 : 1;
+    items.sort((a, b) => factor * a.key.localeCompare(b.key, undefined, { sensitivity: 'base', numeric: true }));
+
+    const newRows = [];
+    if (header) newRows.push(header);
+    for (const it of items) newRows.push(it.rowNode);
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+
+    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sortOutlineTableColumnsByRow(editor, { direction = 'asc' } = {}) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, rowIndex } = ctx;
+    const cols = tableNode.child(0)?.childCount || 0;
+    const rows = tableNode.childCount || 0;
+    if (!(cols > 1 && rows > 0)) return false;
+    if (!(rowIndex >= 0 && rowIndex < rows)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'таблицы')) return false;
+
+    const rowNode = tableNode.child(rowIndex);
+    const keys = [];
+    for (let c = 0; c < cols; c += 1) {
+      keys.push({ colIndex: c, key: extractCellPlainText(rowNode.child(c)) });
+    }
+    const factor = direction === 'desc' ? -1 : 1;
+    keys.sort((a, b) => factor * a.key.localeCompare(b.key, undefined, { sensitivity: 'base', numeric: true }));
+    const order = keys.map((k) => k.colIndex);
+
+    // Preserve column widths by permuting saved percents.
     const tableElBefore = getActiveTableDom(editor.view);
     const widthsBefore = readTableColPercentsFromDom(tableElBefore);
-
-    // Compute offset within the current cell so cursor stays in place.
-    let cellDepth = null;
-    for (let dep = pmState.selection.$from.depth; dep >= 0; dep -= 1) {
-      const name = pmState.selection.$from.node(dep)?.type?.name;
-      if (name === 'tableCell' || name === 'tableHeader') {
-        cellDepth = dep;
-        break;
-      }
-    }
-    const offsetInCell = cellDepth != null ? pmState.selection.from - pmState.selection.$from.start(cellDepth) : 0;
+    const widthsAfter =
+      Array.isArray(widthsBefore) && widthsBefore.length === cols ? order.map((i) => widthsBefore[i]) : null;
 
     const newRows = [];
     for (let r = 0; r < rows; r += 1) {
-      if (r === rowIndex) newRows.push(tableNode.child(targetRow));
-      else if (r === targetRow) newRows.push(tableNode.child(rowIndex));
-      else newRows.push(tableNode.child(r));
+      const oldRow = tableNode.child(r);
+      const nextCells = order.map((i) => oldRow.child(i));
+      newRows.push(oldRow.type.create(oldRow.attrs, nextCells));
+    }
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    editor.view.dispatch(tr.scrollIntoView());
+    if (widthsAfter) {
+      window.requestAnimationFrame(() => {
+        const tableEl = getActiveTableDom(editor.view);
+        applyTableColPercentsToDom(tableEl, widthsAfter);
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function duplicateOutlineTableRow(editor) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, rowIndex, colIndex } = ctx;
+    const cols = tableNode.child(0)?.childCount || 0;
+    const rows = tableNode.childCount || 0;
+    if (!(cols > 0 && rows > 0)) return false;
+    if (!(rowIndex >= 0 && rowIndex < rows)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'строк')) return false;
+
+    const copyRow = tableNode.child(rowIndex);
+    const newRows = [];
+    for (let r = 0; r < rows; r += 1) {
+      newRows.push(tableNode.child(r));
+      if (r === rowIndex) newRows.push(copyRow.type.create(copyRow.attrs, copyRow.content, copyRow.marks));
+    }
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+    let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+
+    // Place selection in the duplicated row, same column.
+    try {
+      const TextSelection = tiptap?.pmStateMod?.TextSelection;
+      if (TextSelection) {
+        const targetRowIndex = Math.min(newTable.childCount - 1, rowIndex + 1);
+        const targetColIndex = Math.min(cols - 1, Math.max(0, colIndex));
+        const targetRowNode = newTable.child(targetRowIndex);
+        const targetCell = targetRowNode.child(targetColIndex);
+        let pos = tablePos + 1;
+        for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
+        pos += 1;
+        for (let c = 0; c < targetColIndex; c += 1) pos += targetRowNode.child(c).nodeSize;
+        const cellPos = pos;
+        const cellFrom = cellPos + 1;
+        const cellTo = cellPos + targetCell.nodeSize - 1;
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(cellTo, cellFrom + 1)), 1));
+      }
+    } catch {
+      // ignore
+    }
+
+    editor.view.dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function duplicateOutlineTableColumn(editor) {
+  try {
+    if (!editor?.view) return false;
+    const pmState = editor.state;
+    const ctx = getActiveTableContext(pmState);
+    if (!ctx) return false;
+    const { tablePos, tableNode, rowIndex, colIndex } = ctx;
+    const cols = tableNode.child(0)?.childCount || 0;
+    const rows = tableNode.childCount || 0;
+    if (!(cols > 0 && rows > 0)) return false;
+    if (!(colIndex >= 0 && colIndex < cols)) return false;
+    if (!canMoveTableWithoutSpans(tableNode, 'столбцов')) return false;
+
+    // Preserve column widths by splitting the duplicated column pct in half.
+    const tableElBefore = getActiveTableDom(editor.view);
+    const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+    let widthsAfter = null;
+    if (Array.isArray(widthsBefore) && widthsBefore.length === cols) {
+      const next = [...widthsBefore];
+      const src = Math.max(0, Number(next[colIndex] || 0));
+      const half = clampPct(src / 2);
+      next[colIndex] = half;
+      next.splice(colIndex + 1, 0, half);
+      // Normalize drift on last column.
+      const sum = next.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+      if (sum > 0 && Math.abs(sum - 100) > 0.01) {
+        next[next.length - 1] = clampPct(next[next.length - 1] + (100 - sum));
+      }
+      widthsAfter = next;
+    }
+
+    const newRows = [];
+    for (let r = 0; r < rows; r += 1) {
+      const oldRow = tableNode.child(r);
+      const nextCells = [];
+      for (let c = 0; c < cols; c += 1) {
+        const cell = oldRow.child(c);
+        nextCells.push(cell);
+        if (c === colIndex) nextCells.push(cell.type.create(cell.attrs, cell.content, cell.marks));
+      }
+      newRows.push(oldRow.type.create(oldRow.attrs, nextCells));
     }
     const newTable = tableNode.type.create(tableNode.attrs, newRows);
     let tr = pmState.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
@@ -2205,11 +2592,10 @@ function moveTableRowBy(editor, dir) {
     try {
       const TextSelection = tiptap?.pmStateMod?.TextSelection;
       if (TextSelection) {
-        const targetRowIndex = targetRow;
-        const targetColIndex = Math.min(cols - 1, Math.max(0, colIndex));
+        const targetRowIndex = Math.min(newTable.childCount - 1, Math.max(0, rowIndex));
+        const targetColIndex = Math.min(cols, Math.max(0, colIndex + 1));
         const targetRowNode = newTable.child(targetRowIndex);
         const targetCell = targetRowNode.child(targetColIndex);
-
         let pos = tablePos + 1;
         for (let r = 0; r < targetRowIndex; r += 1) pos += newTable.child(r).nodeSize;
         pos += 1;
@@ -2217,19 +2603,22 @@ function moveTableRowBy(editor, dir) {
         const cellPos = pos;
         const cellFrom = cellPos + 1;
         const cellTo = cellPos + targetCell.nodeSize - 1;
-        const desired = cellFrom + Math.max(0, offsetInCell);
-        const anchor = Math.min(Math.max(desired, cellFrom), cellTo);
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(cellTo, cellFrom + 1)), 1));
       }
     } catch {
       // ignore
     }
 
     editor.view.dispatch(tr.scrollIntoView());
-    if (Array.isArray(widthsBefore) && widthsBefore.length === cols) {
+    if (Array.isArray(widthsAfter) && widthsAfter.length === cols + 1) {
       window.requestAnimationFrame(() => {
         const tableEl = getActiveTableDom(editor.view);
-        applyTableColPercentsToDom(tableEl, widthsBefore);
+        applyTableColPercentsToDom(tableEl, widthsAfter);
+      });
+    } else {
+      window.requestAnimationFrame(() => {
+        const tableEl = getActiveTableDom(editor.view);
+        captureTableColumnPercentsFromDom(tableEl);
       });
     }
     return true;
@@ -2642,17 +3031,17 @@ function mountOutlineToolbar(editor) {
 		          });
 		        }
 		        return ok;
-		      }
-		      if (action === 'mergeCells') return chain.mergeCells().run();
-		      if (action === 'splitCell') return chain.splitCell().run();
-		      if (action === 'copyColumn') return copyOutlineTableColumn(editor);
-		      if (action === 'pasteColumnAfter') return pasteOutlineTableColumnAfter(editor);
-		      if (action === 'moveColumnRight') return moveTableColumnBy(editor, +1);
-		      if (action === 'cancelTable') return cancelTableToText();
-		      if (action === 'deleteTable') return chain.deleteTable().run();
-		      return false;
-		    } catch {
-		      return false;
+			      }
+			      if (action === 'mergeCells') return chain.mergeCells().run();
+			      if (action === 'splitCell') return chain.splitCell().run();
+			      if (action === 'copyColumn') return false;
+			      if (action === 'pasteColumnAfter') return false;
+			      if (action === 'moveColumnRight') return false;
+			      if (action === 'cancelTable') return cancelTableToText();
+			      if (action === 'deleteTable') return chain.deleteTable().run();
+			      return false;
+			    } catch {
+			      return false;
 		    }
 		  };
 
@@ -3121,66 +3510,20 @@ function mountOutlineToolbar(editor) {
       } else if (action === 'deleteColumn') {
         isActive = false;
         isDisabled = !canRun((c) => c.deleteColumn());
-      } else if (action === 'copyColumn') {
+      } else if (action === 'copyColumn' || action === 'pasteColumnAfter' || action === 'moveColumnRight') {
+        isActive = false;
+        isDisabled = true;
+      } else if (action === 'mergeCells') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.mergeCells());
+      } else if (action === 'splitCell') {
+        isActive = false;
+        isDisabled = !canRun((c) => c.splitCell());
+      } else if (action === 'cancelTable') {
         isActive = false;
         isDisabled = !isEditing() || !editor.isActive('table');
-        if (!isDisabled) {
-          try {
-            isDisabled = !Boolean(getActiveTableContext(editor.state));
-          } catch {
-            isDisabled = true;
-          }
-        }
-      } else if (action === 'pasteColumnAfter') {
+      } else if (action === 'deleteTable') {
         isActive = false;
-        isDisabled = !isEditing() || !editor.isActive('table');
-        if (!isDisabled) {
-          const clip = readOutlineTableColumnClipboard();
-          if (!clip?.rows?.length) isDisabled = true;
-        }
-        if (!isDisabled) isDisabled = !canRun((c) => c.addColumnAfter());
-		      } else if (action === 'mergeCells') {
-		        isActive = false;
-		        isDisabled = !canRun((c) => c.mergeCells());
-		      } else if (action === 'splitCell') {
-		        isActive = false;
-		        isDisabled = !canRun((c) => c.splitCell());
-		      } else if (action === 'moveColumnRight') {
-		        isActive = false;
-		        isDisabled = !isEditing() || !editor.isActive('table');
-		        try {
-		          const pmState = editor.state;
-		          const $from = pmState.selection?.$from;
-		          if ($from) {
-		            let tableDepth = null;
-		            let rowDepth = null;
-		            for (let d = $from.depth; d >= 0; d -= 1) {
-		              const node = $from.node(d);
-		              const name = node?.type?.name;
-		              if (rowDepth == null && name === 'tableRow') rowDepth = d;
-		              if (name === 'table') {
-		                tableDepth = d;
-		                break;
-		              }
-		            }
-		            if (tableDepth != null && rowDepth != null) {
-		              const tablePos = $from.before(tableDepth);
-		              const tableNode = pmState.doc.nodeAt(tablePos);
-		              const colIndex = $from.index(rowDepth);
-		              const cols = tableNode?.child(0)?.childCount || 0;
-		              if (!(cols > 0) || !(colIndex >= 0 && colIndex < cols - 1)) isDisabled = true;
-		            } else {
-		              isDisabled = true;
-		            }
-		          }
-		        } catch {
-		          // ignore
-		        }
-		      } else if (action === 'cancelTable') {
-		        isActive = false;
-		        isDisabled = !isEditing() || !editor.isActive('table');
-		      } else if (action === 'deleteTable') {
-	        isActive = false;
 	        isDisabled = !canRun((c) => c.deleteTable());
 	      }
 
@@ -4336,6 +4679,8 @@ async function mountOutlineEditor() {
 	  outlineTableApi = {
 	    TableMap: tiptap.pmTablesMod?.TableMap || null,
 	    CellSelection: tiptap.pmTablesMod?.CellSelection || null,
+	    moveTableColumn: tiptap.pmTablesMod?.moveTableColumn || null,
+	    moveTableRow: tiptap.pmTablesMod?.moveTableRow || null,
 	  };
 	  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
 	  const Markdown = tiptap.markdownMod?.Markdown || tiptap.markdownMod?.default?.Markdown || tiptap.markdownMod?.default || null;
@@ -6764,10 +7109,10 @@ async function mountOutlineEditor() {
         });
 
       return {
-        'Alt-ArrowUp': () => moveSection('up'),
-        'Alt-ArrowDown': () => moveSection('down'),
-        'Alt-ArrowRight': () => indentSection(),
-        'Alt-ArrowLeft': () => outdentSection(),
+        'Alt-ArrowUp': () => (this.editor.isActive('table') ? false : moveSection('up')),
+        'Alt-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
+        'Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
+        'Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
         // Ctrl+↑: схлопнуть родителя (и всё внутри него)
@@ -7999,14 +8344,172 @@ async function mountOutlineEditor() {
     outlineEditorInstance = null;
   }
 
-			  const markdownExtension = Markdown
-			    ? Markdown.configure({ html: true, tightLists: true, transformPastedText: false, transformCopiedText: false })
-			    : null;
+				  const markdownExtension = Markdown
+				    ? Markdown.configure({ html: true, tightLists: true, transformPastedText: false, transformCopiedText: false })
+				    : null;
 
-			  const OutlineTablePercentWidths = Extension.create({
-			    name: 'outlineTablePercentWidths',
-			    addProseMirrorPlugins() {
-			      return [
+				  const OutlineTableCellStyling = Extension.create({
+				    name: 'outlineTableCellStyling',
+				    addOptions() {
+				      return {
+				        types: ['tableCell', 'tableHeader'],
+				        textAlignValues: ['left', 'center', 'right', 'justify'],
+				        verticalAlignValues: ['top', 'middle', 'bottom'],
+				      };
+				    },
+				    addGlobalAttributes() {
+				      const parseStyleProp = (el, prop) => {
+				        try {
+				          const v = el?.style?.[prop];
+				          return v ? String(v).trim() : '';
+				        } catch {
+				          return '';
+				        }
+				      };
+				      const renderStyle = (attrs) => {
+				        const parts = [];
+				        const textAlign = attrs?.nodeTextAlign ? String(attrs.nodeTextAlign) : '';
+				        const vAlign = attrs?.nodeVerticalAlign ? String(attrs.nodeVerticalAlign) : '';
+				        const textColor = attrs?.nodeTextColor ? String(attrs.nodeTextColor) : '';
+				        const background = attrs?.nodeBackground ? String(attrs.nodeBackground) : '';
+				        if (textAlign && this.options.textAlignValues.includes(textAlign)) parts.push(`text-align: ${textAlign}`);
+				        if (vAlign && this.options.verticalAlignValues.includes(vAlign)) parts.push(`vertical-align: ${vAlign}`);
+				        if (textColor) parts.push(`color: ${textColor}`);
+				        if (background) parts.push(`background-color: ${background}`);
+				        return parts.length ? { style: parts.join('; ') } : {};
+				      };
+				      return [
+				        {
+				          types: this.options.types,
+				          attributes: {
+				            nodeTextAlign: {
+				              default: null,
+				              parseHTML: (el) => {
+				                const v = parseStyleProp(el, 'textAlign');
+				                return v && this.options.textAlignValues.includes(v) ? v : null;
+				              },
+				              renderHTML: (attrs) => renderStyle(attrs),
+				            },
+				            nodeVerticalAlign: {
+				              default: null,
+				              parseHTML: (el) => {
+				                const v = parseStyleProp(el, 'verticalAlign');
+				                return v && this.options.verticalAlignValues.includes(v) ? v : null;
+				              },
+				              renderHTML: (attrs) => renderStyle(attrs),
+				            },
+				            nodeTextColor: {
+				              default: null,
+				              parseHTML: (el) => {
+				                const v = parseStyleProp(el, 'color');
+				                return v ? String(v).replace(/['"]+/g, '') : null;
+				              },
+				              renderHTML: (attrs) => renderStyle(attrs),
+				            },
+				            nodeBackground: {
+				              default: null,
+				              parseHTML: (el) => {
+				                const v = parseStyleProp(el, 'backgroundColor');
+				                return v ? String(v).replace(/['"]+/g, '') : null;
+				              },
+				              renderHTML: (attrs) => renderStyle(attrs),
+				            },
+				          },
+				        },
+				      ];
+				    },
+				    addCommands() {
+				      const setAttrForCells = (attr, value) => ({ state: pmState, dispatch }) => {
+				        try {
+				          const cells = getSelectedTableCellsFromState(pmState);
+				          if (!cells.length) return false;
+				          let tr = pmState.tr;
+				          let changed = false;
+				          for (const { node, pos } of cells) {
+				            if (!node || typeof pos !== 'number') continue;
+				            const next = { ...(node.attrs || {}) };
+				            if (value == null || value === '') delete next[attr];
+				            else next[attr] = value;
+				            tr = tr.setNodeMarkup(pos, undefined, next);
+				            changed = true;
+				          }
+				          if (!changed) return false;
+				          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				          dispatch(tr);
+				          return true;
+				        } catch {
+				          return false;
+				        }
+				      };
+
+				      const clearCells = () => ({ state: pmState, dispatch }) => {
+				        try {
+				          const cells = getSelectedTableCellsFromState(pmState);
+				          if (!cells.length) return false;
+				          const paragraphType = pmState.schema.nodes?.paragraph || null;
+				          if (!paragraphType) return false;
+				          let tr = pmState.tr;
+				          // Replace from bottom to top to keep positions stable.
+				          const desc = [...cells].sort((a, b) => Number(b.pos) - Number(a.pos));
+				          let changed = false;
+				          for (const { node, pos } of desc) {
+				            if (!node || typeof pos !== 'number') continue;
+				            const from = pos + 1;
+				            const to = pos + node.nodeSize - 1;
+				            if (!(to >= from)) continue;
+				            const para = paragraphType.createAndFill();
+				            if (!para) continue;
+				            tr = tr.replaceWith(from, to, para);
+				            changed = true;
+				          }
+				          if (!changed) return false;
+				          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				          dispatch(tr.scrollIntoView());
+				          return true;
+				        } catch {
+				          return false;
+				        }
+				      };
+
+				      return {
+				        setNodeTextAlign: (value) => setAttrForCells('nodeTextAlign', value),
+				        setNodeVAlign: (value) => setAttrForCells('nodeVerticalAlign', value),
+				        setNodeTextColor: (value) => setAttrForCells('nodeTextColor', value),
+				        setNodeBackground: (value) => setAttrForCells('nodeBackground', value),
+				        unsetNodeAlignment: () => ({ state: pmState, dispatch }) => {
+				          try {
+				            const cells = getSelectedTableCellsFromState(pmState);
+				            if (!cells.length) return false;
+				            let tr = pmState.tr;
+				            let changed = false;
+				            for (const { node, pos } of cells) {
+				              if (!node || typeof pos !== 'number') continue;
+				              const prevAlign = node.attrs?.nodeTextAlign || null;
+				              const prevV = node.attrs?.nodeVerticalAlign || null;
+				              if (!prevAlign && !prevV) continue;
+				              const next = { ...(node.attrs || {}) };
+				              delete next.nodeTextAlign;
+				              delete next.nodeVerticalAlign;
+				              tr = tr.setNodeMarkup(pos, undefined, next);
+				              changed = true;
+				            }
+				            if (!changed) return false;
+				            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				            dispatch(tr);
+				            return true;
+				          } catch {
+				            return false;
+				          }
+				        },
+				        clearNodeContents: () => clearCells(),
+				      };
+				    },
+				  });
+
+				  const OutlineTablePercentWidths = Extension.create({
+				    name: 'outlineTablePercentWidths',
+				    addProseMirrorPlugins() {
+				      return [
 			        new Plugin({
 			          view(view) {
 			            let raf = null;
@@ -8142,10 +8645,10 @@ async function mountOutlineEditor() {
 			    },
 			  });
 
-			  const OutlineTableResizeCapture = Extension.create({
-			    name: 'outlineTableResizeCapture',
-			    addProseMirrorPlugins() {
-			      return [
+				  const OutlineTableResizeCapture = Extension.create({
+				    name: 'outlineTableResizeCapture',
+				    addProseMirrorPlugins() {
+				      return [
 			        new Plugin({
 			          view(view) {
 			            const onPointerDown = (event) => {
@@ -8188,13 +8691,929 @@ async function mountOutlineEditor() {
 			        }),
 			      ];
 			    },
-			  });
+				  });
 
-			  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
-			  const createStart = perfEnabled() ? performance.now() : 0;
-	  outlineEditorInstance = new Editor({
-		    element: contentRoot,
-				    extensions: [
+				  const OutlineTableNodeUi = Extension.create({
+				    name: 'outlineTableNodeUi',
+				    addProseMirrorPlugins() {
+				      const editor = this.editor;
+				      const TABLE_TEXT_COLORS = [
+				        { label: 'Default text', value: null },
+				        { label: 'Gray text', value: 'var(--tt-color-text-gray)' },
+				        { label: 'Brown text', value: 'var(--tt-color-text-brown)' },
+				        { label: 'Orange text', value: 'var(--tt-color-text-orange)' },
+				        { label: 'Yellow text', value: 'var(--tt-color-text-yellow)' },
+				        { label: 'Green text', value: 'var(--tt-color-text-green)' },
+				        { label: 'Blue text', value: 'var(--tt-color-text-blue)' },
+				        { label: 'Purple text', value: 'var(--tt-color-text-purple)' },
+				        { label: 'Pink text', value: 'var(--tt-color-text-pink)' },
+				        { label: 'Red text', value: 'var(--tt-color-text-red)' },
+				      ];
+				      const TABLE_BG_COLORS = [
+				        { label: 'Default background', value: null },
+				        { label: 'Gray background', value: 'var(--tt-color-highlight-gray)' },
+				        { label: 'Brown background', value: 'var(--tt-color-highlight-brown)' },
+				        { label: 'Orange background', value: 'var(--tt-color-highlight-orange)' },
+				        { label: 'Yellow background', value: 'var(--tt-color-highlight-yellow)' },
+				        { label: 'Green background', value: 'var(--tt-color-highlight-green)' },
+				        { label: 'Blue background', value: 'var(--tt-color-highlight-blue)' },
+				        { label: 'Purple background', value: 'var(--tt-color-highlight-purple)' },
+				        { label: 'Pink background', value: 'var(--tt-color-highlight-pink)' },
+				        { label: 'Red background', value: 'var(--tt-color-highlight-red)' },
+				      ];
+				      const TABLE_ALIGN_TEXT = [
+				        { label: 'Align left', value: 'left' },
+				        { label: 'Align center', value: 'center' },
+				        { label: 'Align right', value: 'right' },
+				        { label: 'Justify', value: 'justify' },
+				      ];
+				      const TABLE_ALIGN_VERTICAL = [
+				        { label: 'Align top', value: 'top' },
+				        { label: 'Align middle', value: 'middle' },
+				        { label: 'Align bottom', value: 'bottom' },
+				      ];
+
+				      const safeRect = (rect) => {
+				        try {
+				          if (!rect) return null;
+				          const r = {
+				            left: Number(rect.left),
+				            top: Number(rect.top),
+				            right: Number(rect.right),
+				            bottom: Number(rect.bottom),
+				            width: Number(rect.width),
+				            height: Number(rect.height),
+				          };
+				          if (!Number.isFinite(r.left) || !Number.isFinite(r.top)) return null;
+				          return r;
+				        } catch {
+				          return null;
+				        }
+				      };
+
+				      const clampToViewport = (x, y, w, h, pad = 8) => {
+				        try {
+				          const vw = window.innerWidth || 0;
+				          const vh = window.innerHeight || 0;
+				          const left = Math.max(pad, Math.min(x, Math.max(pad, vw - w - pad)));
+				          const top = Math.max(pad, Math.min(y, Math.max(pad, vh - h - pad)));
+				          return { left, top };
+				        } catch {
+				          return { left: x, top: y };
+				        }
+				      };
+
+				      class Menu {
+				        constructor() {
+				          this.panels = [];
+				          this.onDocMouseDown = (e) => {
+				            try {
+				              const target = e?.target;
+				              if (!target) return;
+				              for (const p of this.panels) {
+				                if (p && p.contains(target)) return;
+				              }
+				              this.closeAll();
+				            } catch {
+				              this.closeAll();
+				            }
+				          };
+				          this.onKeyDown = (e) => {
+				            if (e?.key === 'Escape') this.closeAll();
+				          };
+				        }
+
+				        isOpen() {
+				          return this.panels.length > 0;
+				        }
+
+				        closeAll() {
+				          try {
+				            for (const p of this.panels) p?.remove?.();
+				          } catch {
+				            // ignore
+				          }
+				          this.panels = [];
+				          try {
+				            document.removeEventListener('mousedown', this.onDocMouseDown, true);
+				            window.removeEventListener('keydown', this.onKeyDown, true);
+				          } catch {
+				            // ignore
+				          }
+				        }
+
+				        openPanel({ anchorRect, items, level = 0 }) {
+				          const ar = safeRect(anchorRect);
+				          if (!ar) return;
+				          // close deeper panels
+				          while (this.panels.length > level) {
+				            const p = this.panels.pop();
+				            try {
+				              p?.remove?.();
+				            } catch {
+				              // ignore
+				            }
+				          }
+
+				          const panel = document.createElement('div');
+				          panel.className = 'tt-table-menu';
+				          panel.setAttribute('role', 'menu');
+				          panel.setAttribute('data-level', String(level));
+				          panel.addEventListener('mousedown', (e) => {
+				            e.stopPropagation();
+				          });
+
+				          for (const it of items) {
+				            if (it.type === 'separator') {
+				              const sep = document.createElement('div');
+				              sep.className = 'tt-table-menu-sep';
+				              panel.appendChild(sep);
+				              continue;
+				            }
+				            const btn = document.createElement('button');
+				            btn.type = 'button';
+				            btn.className = 'tt-table-menu-item';
+				            btn.textContent = it.label;
+				            btn.disabled = Boolean(it.disabled);
+				            if (it.swatch) {
+				              btn.classList.add('has-swatch');
+				              try {
+				                const v = it.swatchValue == null ? 'transparent' : String(it.swatchValue);
+				                btn.style.setProperty('--tt-swatch', v);
+				              } catch {
+				                // ignore
+				              }
+				            }
+				            if (it.submenu) btn.classList.add('has-submenu');
+				            btn.addEventListener('click', (e) => {
+				              e.preventDefault();
+				              e.stopPropagation();
+				              if (it.disabled) return;
+				              if (it.submenu) {
+				                const br = btn.getBoundingClientRect();
+				                this.openPanel({ anchorRect: br, items: it.submenu(), level: level + 1 });
+				                return;
+				              }
+				              try {
+				                it.onClick?.();
+				              } finally {
+				                this.closeAll();
+				              }
+				            });
+				            panel.appendChild(btn);
+				          }
+
+				          document.body.appendChild(panel);
+				          // position after mount (getBoundingClientRect requires DOM)
+				          const pr = panel.getBoundingClientRect();
+				          const baseX = level === 0 ? ar.right + 8 : ar.right + 8;
+				          const baseY = level === 0 ? ar.top : ar.top;
+				          const pos = clampToViewport(baseX, baseY, pr.width, pr.height);
+				          panel.style.left = `${pos.left}px`;
+				          panel.style.top = `${pos.top}px`;
+
+				          this.panels.push(panel);
+				          try {
+				            if (this.panels.length === 1) {
+				              document.addEventListener('mousedown', this.onDocMouseDown, true);
+				              window.addEventListener('keydown', this.onKeyDown, true);
+				            }
+				          } catch {
+				            // ignore
+				          }
+				        }
+				      }
+
+      class TableUiView {
+        constructor(view) {
+				          this.view = view;
+				          this.menu = new Menu();
+				          this.wrapper = null;
+				          this.table = null;
+				          this.observedTable = null;
+				          this.resizeObserver = null;
+				          this.layoutRaf = null;
+				          this.resizeRaf = null;
+				          this.destroyed = false;
+				          this.root = document.createElement('div');
+				          this.root.className = 'tt-table-ui';
+				          this.root.style.display = 'none';
+
+				          this.scheduleLayout = () => {
+				            if (this.layoutRaf != null) return;
+				            this.layoutRaf = window.requestAnimationFrame(() => {
+				              this.layoutRaf = null;
+				              if (this.destroyed) return;
+				              this.update(this.view);
+				            });
+				          };
+				          this.scheduleResizeLoop = () => {
+				            if (this.resizeRaf != null) return;
+				            this.resizeRaf = window.requestAnimationFrame(() => {
+				              this.resizeRaf = null;
+				              if (this.destroyed) return;
+				              if (tableResizeActive) this.update(this.view);
+				            });
+				          };
+				          this.onWrapperScroll = () => this.scheduleLayout();
+				          this.onWindowResize = () => this.scheduleLayout();
+				          try {
+				            window.addEventListener('resize', this.onWindowResize, { passive: true });
+				          } catch {
+				            // ignore
+				          }
+
+				          this.rowHandles = [];
+				          this.colHandles = [];
+				          this.dragState = null;
+				          this.suppressClickUntil = 0;
+
+				          this.colDropIndicator = document.createElement('div');
+				          this.colDropIndicator.className = 'tt-table-drop-indicator tt-table-drop-indicator-col';
+				          this.colDropIndicator.style.display = 'none';
+				          this.root.appendChild(this.colDropIndicator);
+
+				          this.rowDropIndicator = document.createElement('div');
+				          this.rowDropIndicator.className = 'tt-table-drop-indicator tt-table-drop-indicator-row';
+				          this.rowDropIndicator.style.display = 'none';
+				          this.root.appendChild(this.rowDropIndicator);
+				          this.cellHandle = document.createElement('button');
+				          this.cellHandle.type = 'button';
+				          this.cellHandle.className = 'tt-table-handle tt-table-cell-handle';
+				          this.cellHandle.setAttribute('aria-label', 'Cell actions');
+				          this.cellHandle.addEventListener('click', (e) => {
+				            e.preventDefault();
+				            e.stopPropagation();
+				            const rect = this.cellHandle.getBoundingClientRect();
+				            this.openCellMenu(rect);
+				          });
+				          this.root.appendChild(this.cellHandle);
+				        }
+
+				        hideDropIndicators() {
+				          try {
+				            if (this.colDropIndicator) this.colDropIndicator.style.display = 'none';
+				          } catch {
+				            // ignore
+				          }
+				          try {
+				            if (this.rowDropIndicator) this.rowDropIndicator.style.display = 'none';
+				          } catch {
+				            // ignore
+				          }
+				        }
+
+				        cancelDrag() {
+				          const st = this.dragState;
+				          if (!st) return;
+				          this.dragState = null;
+				          this.hideDropIndicators();
+				          try {
+				            window.removeEventListener('pointermove', st.onMove);
+				            window.removeEventListener('pointerup', st.onUp);
+				            window.removeEventListener('pointercancel', st.onUp);
+          } catch {
+            // ignore
+          }
+          try {
+            document.body.classList.remove('tt-table-dragging');
+          } catch {
+            // ignore
+          }
+        }
+
+        destroy() {
+          this.destroyed = true;
+          this.cancelDrag();
+          this.menu.closeAll();
+          try {
+            if (this.layoutRaf != null) window.cancelAnimationFrame(this.layoutRaf);
+          } catch {
+				            // ignore
+				          }
+				          this.layoutRaf = null;
+				          try {
+				            if (this.resizeRaf != null) window.cancelAnimationFrame(this.resizeRaf);
+				          } catch {
+				            // ignore
+				          }
+				          this.resizeRaf = null;
+				          try {
+				            window.removeEventListener('resize', this.onWindowResize);
+				          } catch {
+				            // ignore
+				          }
+				          try {
+				            this.wrapper?.removeEventListener?.('scroll', this.onWrapperScroll);
+				          } catch {
+				            // ignore
+				          }
+				          try {
+				            this.resizeObserver?.disconnect?.();
+				          } catch {
+				            // ignore
+				          }
+				          this.resizeObserver = null;
+				          this.observedTable = null;
+				          try {
+				            this.root.remove();
+				          } catch {
+				            // ignore
+				          }
+				          this.wrapper = null;
+				          this.table = null;
+				        }
+
+				        ensureAttached(wrapper) {
+				          if (!wrapper) return;
+				          if (this.wrapper === wrapper) return;
+				          try {
+				            this.wrapper?.removeEventListener?.('scroll', this.onWrapperScroll);
+				          } catch {
+				            // ignore
+				          }
+				          try {
+				            this.root.remove();
+				          } catch {
+				            // ignore
+				          }
+				          this.wrapper = wrapper;
+				          try {
+				            this.wrapper.addEventListener('scroll', this.onWrapperScroll, { passive: true });
+				          } catch {
+				            // ignore
+				          }
+				          this.wrapper.appendChild(this.root);
+				        }
+
+        buildRowHandles(count) {
+				          while (this.rowHandles.length > count) {
+				            const btn = this.rowHandles.pop();
+				            try {
+				              btn?.remove?.();
+				            } catch {
+				              // ignore
+				            }
+				          }
+          while (this.rowHandles.length < count) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tt-table-handle tt-table-row-handle';
+            btn.setAttribute('aria-label', 'Row actions');
+            btn.dataset.idx = String(this.rowHandles.length);
+            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'row'));
+            btn.addEventListener('click', (e) => {
+              if (Date.now() < this.suppressClickUntil) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              editor?.chain?.().focus?.().run?.();
+              const idx = Number(btn.dataset.idx || 0);
+              selectOutlineTableRow(editor, idx);
+              const rect = btn.getBoundingClientRect();
+              this.openRowMenu(rect);
+            });
+            this.rowHandles.push(btn);
+            this.root.appendChild(btn);
+          }
+        }
+
+        buildColHandles(count) {
+				          while (this.colHandles.length > count) {
+				            const btn = this.colHandles.pop();
+				            try {
+				              btn?.remove?.();
+				            } catch {
+				              // ignore
+				            }
+				          }
+          while (this.colHandles.length < count) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tt-table-handle tt-table-col-handle';
+            btn.setAttribute('aria-label', 'Column actions');
+            btn.dataset.idx = String(this.colHandles.length);
+            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'col'));
+            btn.addEventListener('click', (e) => {
+              if (Date.now() < this.suppressClickUntil) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              editor?.chain?.().focus?.().run?.();
+              const idx = Number(btn.dataset.idx || 0);
+              selectOutlineTableColumn(editor, idx);
+              const rect = btn.getBoundingClientRect();
+              this.openColumnMenu(rect);
+            });
+            this.colHandles.push(btn);
+            this.root.appendChild(btn);
+          }
+        }
+
+        onHandlePointerDown(e, btn, kind) {
+          try {
+            if (!e || e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            editor?.chain?.().focus?.().run?.();
+            const fromIndex = Number(btn?.dataset?.idx || 0);
+            if (kind === 'row') selectOutlineTableRow(editor, fromIndex);
+            else selectOutlineTableColumn(editor, fromIndex);
+            try {
+              if (typeof btn.setPointerCapture === 'function') btn.setPointerCapture(e.pointerId);
+            } catch {
+              // ignore
+            }
+
+            const state = {
+              kind,
+              btn,
+              pointerId: e.pointerId,
+              fromIndex,
+              startX: e.clientX,
+              startY: e.clientY,
+              moved: false,
+            };
+            this.dragState = state;
+
+            const onMove = (ev) => this.onHandlePointerMove(ev);
+            const onUp = (ev) => this.onHandlePointerUp(ev);
+            state.onMove = onMove;
+            state.onUp = onUp;
+            window.addEventListener('pointermove', onMove, { passive: false });
+            window.addEventListener('pointerup', onUp, { passive: false });
+            window.addEventListener('pointercancel', onUp, { passive: false });
+          } catch {
+            // ignore
+          }
+        }
+
+        onHandlePointerMove(e) {
+          const st = this.dragState;
+          if (!st || !e) return;
+          if (e.pointerId !== st.pointerId) return;
+          try {
+            e.preventDefault();
+          } catch {
+            // ignore
+          }
+          const dx = e.clientX - st.startX;
+          const dy = e.clientY - st.startY;
+          if (!st.moved && Math.hypot(dx, dy) >= 4) {
+            st.moved = true;
+            try {
+              document.body.classList.add('tt-table-dragging');
+            } catch {
+              // ignore
+            }
+          }
+          if (st.moved) {
+            const dropIndex = this.getDropIndexFromPointer(st.kind, e.clientX, e.clientY);
+            st.dropIndex = dropIndex;
+            if (dropIndex == null) this.hideDropIndicators();
+            else this.updateDropIndicator(st.kind, dropIndex, e.clientX, e.clientY);
+          }
+        }
+
+        getDropIndexFromPointer(kind, clientX, clientY) {
+          try {
+            const tableEl = this.table;
+            if (!tableEl) return null;
+            const rows = Array.from(tableEl.querySelectorAll('tbody tr'));
+            if (!rows.length) return null;
+            if (kind === 'col') {
+              const firstRowCells = Array.from(rows[0].children || []).filter((x) => x && x.nodeType === 1);
+              if (!firstRowCells.length) return null;
+              const centers = firstRowCells.map((el) => {
+                const rect = el.getBoundingClientRect();
+                return rect.left + rect.width / 2;
+              });
+              if (!centers.length) return null;
+              if (clientX < centers[0]) return 0;
+              for (let i = 0; i < centers.length - 1; i += 1) {
+                if (clientX >= centers[i] && clientX < centers[i + 1]) return i + 1;
+              }
+              return centers.length - 1;
+            }
+            const centers = rows
+              .map((rowEl) => {
+                const cellEl = rowEl.children && rowEl.children[0];
+                if (!cellEl) return null;
+                const rect = cellEl.getBoundingClientRect();
+                return rect.top + rect.height / 2;
+              })
+              .filter((x) => typeof x === 'number');
+            if (!centers.length) return null;
+            if (clientY < centers[0]) return 0;
+            for (let i = 0; i < centers.length - 1; i += 1) {
+              if (clientY >= centers[i] && clientY < centers[i + 1]) return i + 1;
+            }
+            return centers.length - 1;
+          } catch {
+            return null;
+          }
+        }
+
+        updateDropIndicator(kind, dropIndex, clientX, clientY) {
+          try {
+            const tableEl = this.table;
+            const wrapper = this.wrapper;
+            if (!tableEl || !wrapper) return;
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const tableRect = tableEl.getBoundingClientRect();
+            const tableTop = tableRect.top - wrapperRect.top;
+            const tableLeft = tableRect.left - wrapperRect.left;
+            const tableWidth = tableRect.width;
+            const tableHeight = tableRect.height;
+            const rows = Array.from(tableEl.querySelectorAll('tbody tr'));
+            if (!rows.length) return;
+
+            if (kind === 'col') {
+              const cells = Array.from(rows[0].children || []).filter((x) => x && x.nodeType === 1);
+              if (!cells.length) return;
+              const idx = Math.max(0, Math.min(cells.length - 1, Number(dropIndex)));
+              const rect = cells[idx].getBoundingClientRect();
+              const lastRect = cells[cells.length - 1].getBoundingClientRect();
+              const lastCenter = lastRect.left + lastRect.width / 2;
+              const x =
+                idx === cells.length - 1 && clientX > lastCenter ? lastRect.right - wrapperRect.left : rect.left - wrapperRect.left;
+
+              this.colDropIndicator.style.display = '';
+              this.rowDropIndicator.style.display = 'none';
+              this.colDropIndicator.style.left = `${Math.round(x)}px`;
+              this.colDropIndicator.style.top = `${Math.round(tableTop)}px`;
+              this.colDropIndicator.style.height = `${Math.max(0, Math.round(tableHeight))}px`;
+              return;
+            }
+
+            const idx = Math.max(0, Math.min(rows.length - 1, Number(dropIndex)));
+            const cellEl = rows[idx]?.children?.[0];
+            if (!cellEl) return;
+            const rect = cellEl.getBoundingClientRect();
+            const lastCell = rows[rows.length - 1]?.children?.[0] || null;
+            const lastRect = lastCell?.getBoundingClientRect?.() || null;
+            const lastCenter = lastRect ? lastRect.top + lastRect.height / 2 : null;
+            const y =
+              idx === rows.length - 1 && lastRect && typeof lastCenter === 'number' && clientY > lastCenter
+                ? lastRect.bottom - wrapperRect.top
+                : rect.top - wrapperRect.top;
+
+            this.rowDropIndicator.style.display = '';
+            this.colDropIndicator.style.display = 'none';
+            this.rowDropIndicator.style.left = `${Math.round(tableLeft)}px`;
+            this.rowDropIndicator.style.top = `${Math.round(y)}px`;
+            this.rowDropIndicator.style.width = `${Math.max(0, Math.round(tableWidth))}px`;
+          } catch {
+            // ignore
+          }
+        }
+
+        onHandlePointerUp(e) {
+          const st = this.dragState;
+          if (!st || !e) return;
+          if (e.pointerId !== st.pointerId) return;
+          try {
+            e.preventDefault();
+            e.stopPropagation();
+          } catch {
+            // ignore
+          }
+          this.dragState = null;
+          try {
+            window.removeEventListener('pointermove', st.onMove);
+            window.removeEventListener('pointerup', st.onUp);
+            window.removeEventListener('pointercancel', st.onUp);
+          } catch {
+            // ignore
+          }
+          try {
+            document.body.classList.remove('tt-table-dragging');
+          } catch {
+            // ignore
+          }
+          this.hideDropIndicators();
+
+          if (!st.moved) return;
+          this.suppressClickUntil = Date.now() + 250;
+          const dropIndex = st.dropIndex ?? this.getDropIndexFromPointer(st.kind, e.clientX, e.clientY);
+          if (dropIndex == null) return;
+
+          try {
+            editor?.chain?.().focus?.().run?.();
+          } catch {
+            // ignore
+          }
+          if (st.kind === 'col') moveTableColumnToIndex(editor, st.fromIndex, dropIndex);
+          else moveTableRowToIndex(editor, st.fromIndex, dropIndex);
+          this.scheduleLayout();
+        }
+
+        isEnabled() {
+          try {
+            const st = outlineEditModeKey?.getState?.(this.view.state) || null;
+            return Boolean(st?.editingSectionId) && !state.isPublicView;
+				          } catch {
+				            return false;
+				          }
+				        }
+
+				        update(view) {
+				          this.view = view;
+				          if (!tableResizeActive && this.resizeRaf != null) {
+				            try {
+				              window.cancelAnimationFrame(this.resizeRaf);
+				            } catch {
+				              // ignore
+				            }
+				            this.resizeRaf = null;
+				          }
+				          if (!this.isEnabled()) {
+				            this.root.style.display = 'none';
+				            this.menu.closeAll();
+				            return;
+				          }
+				          const ctx = getActiveTableContext(view.state);
+				          const tableEl = getActiveTableDom(view);
+				          const activeCellEl = getActiveTableCellDom(view);
+				          const wrapper = tableEl?.closest?.('.tableWrapper') || null;
+				          if (!ctx || !tableEl || !wrapper || !activeCellEl) {
+				            this.root.style.display = 'none';
+				            this.menu.closeAll();
+				            return;
+				          }
+				          this.ensureAttached(wrapper);
+				          this.table = tableEl;
+				          try {
+				            if (typeof ResizeObserver === 'function') {
+				              if (!this.resizeObserver) {
+				                this.resizeObserver = new ResizeObserver(() => this.scheduleLayout());
+				              }
+				              if (this.observedTable !== tableEl) {
+				                this.resizeObserver.disconnect();
+				                this.resizeObserver.observe(tableEl);
+				                this.observedTable = tableEl;
+				              }
+				            }
+				          } catch {
+				            // ignore
+				          }
+				          this.root.style.display = '';
+
+				          const rows = Array.from(tableEl.querySelectorAll('tbody tr'));
+				          const rowCount = Number(ctx.map?.height || rows.length || 0);
+				          const colCount = Number(ctx.map?.width || 0);
+				          this.buildRowHandles(Math.max(0, rowCount));
+				          this.buildColHandles(Math.max(0, colCount));
+
+				          const wrapperRect = wrapper.getBoundingClientRect();
+				          const tableRect = tableEl.getBoundingClientRect();
+				          const tableTop = tableRect.top - wrapperRect.top;
+				          const tableLeft = tableRect.left - wrapperRect.left;
+				          const handleThickness = 14;
+				          const handleGap = 4;
+				          const handleMinCenter = handleThickness / 2;
+				          const activeRowIndex = Math.max(0, Math.min(Math.max(0, rowCount - 1), Number(ctx.rowIndex || 0)));
+				          const activeColIndex = Math.max(0, Math.min(Math.max(0, colCount - 1), Number(ctx.colIndex || 0)));
+				          const colHandleTop = Math.max(handleMinCenter, tableTop - (handleThickness / 2 + handleGap));
+				          const rowHandleLeft = Math.max(handleMinCenter, tableLeft - (handleThickness / 2 + handleGap));
+				          const activeCellRect = activeCellEl.getBoundingClientRect();
+				          const activeCellX = activeCellRect.left - wrapperRect.left + activeCellRect.width / 2;
+				          const activeCellY = activeCellRect.top - wrapperRect.top + activeCellRect.height / 2;
+
+				          // Column handles at top
+				          for (let i = 0; i < this.colHandles.length; i += 1) {
+				            const btn = this.colHandles[i];
+				            if (!btn) continue;
+				            btn.dataset.idx = String(i);
+				            if (i !== activeColIndex) {
+				              btn.style.display = 'none';
+				              continue;
+				            }
+				            btn.style.display = '';
+				            btn.style.width = `${Math.max(18, Math.round(activeCellRect.width))}px`;
+				            btn.style.height = `${handleThickness}px`;
+				            btn.style.left = `${Math.round(activeCellX)}px`;
+				            btn.style.top = `${Math.round(colHandleTop)}px`;
+				          }
+
+				          // Row handles at left
+				          for (let i = 0; i < this.rowHandles.length; i += 1) {
+				            const btn = this.rowHandles[i];
+				            if (!btn) continue;
+				            btn.dataset.idx = String(i);
+				            if (i !== activeRowIndex) {
+				              btn.style.display = 'none';
+				              continue;
+				            }
+				            btn.style.display = '';
+				            btn.style.width = `${handleThickness}px`;
+				            btn.style.height = `${Math.max(18, Math.round(activeCellRect.height))}px`;
+				            btn.style.left = `${Math.round(rowHandleLeft)}px`;
+				            btn.style.top = `${Math.round(activeCellY)}px`;
+				          }
+
+				          // Cell handle near active cell
+				          try {
+				            // Anchor on the right border of the actual selected cell.
+				            const x = activeCellRect.right - wrapperRect.left;
+				            this.cellHandle.style.display = '';
+				            this.cellHandle.style.left = `${Math.round(x)}px`;
+				            this.cellHandle.style.top = `${Math.round(activeCellY)}px`;
+				          } catch {
+				            this.cellHandle.style.display = 'none';
+				          }
+				          if (tableResizeActive) this.scheduleResizeLoop();
+				        }
+
+				        openCellMenu(anchorRect) {
+				          const items = [
+				            {
+				              label: 'Color',
+				              submenu: () => [
+				                {
+				                  label: 'text',
+				                  submenu: () =>
+				                    TABLE_TEXT_COLORS.map((c) => ({
+				                      label: c.label,
+				                      swatch: true,
+				                      swatchValue: c.value,
+				                      onClick: () => editor.commands.setNodeTextColor(c.value),
+				                    })),
+				                },
+				                {
+				                  label: 'Background color',
+				                  submenu: () =>
+				                    TABLE_BG_COLORS.map((c) => ({
+				                      label: c.label,
+				                      swatch: true,
+				                      swatchValue: c.value,
+				                      onClick: () => editor.commands.setNodeBackground(c.value),
+				                    })),
+				                },
+				              ],
+				            },
+				            {
+				              label: 'Alignment',
+				              submenu: () => [
+				                ...TABLE_ALIGN_TEXT.map((a) => ({
+				                  label: a.label,
+				                  onClick: () => editor.commands.setNodeTextAlign(a.value),
+				                })),
+				                { type: 'separator' },
+				                ...TABLE_ALIGN_VERTICAL.map((a) => ({
+				                  label: a.label,
+				                  onClick: () => editor.commands.setNodeVAlign(a.value),
+				                })),
+				              ],
+				            },
+				            { type: 'separator' },
+				            { label: 'Clear contents', onClick: () => editor.commands.clearNodeContents() },
+				          ];
+				          this.menu.openPanel({ anchorRect, items, level: 0 });
+				        }
+
+				        openRowMenu(anchorRect) {
+				          const items = [
+				            { label: 'Insert row above', onClick: () => editor.chain().focus().addRowBefore().run() },
+				            { label: 'Insert row below', onClick: () => editor.chain().focus().addRowAfter().run() },
+				            {
+				              label: 'Sort ',
+				              submenu: () => [
+				                { label: 'Sort column A-Z', onClick: () => sortOutlineTableColumnsByRow(editor, { direction: 'asc' }) },
+				                { label: 'Sort column Z-A', onClick: () => sortOutlineTableColumnsByRow(editor, { direction: 'desc' }) },
+				              ],
+				            },
+				            { label: 'Header row', onClick: () => editor.chain().focus().toggleHeaderRow().run() },
+				            {
+				              label: 'Move ',
+				              submenu: () => [
+				                { label: 'Move row up', onClick: () => moveTableRowBy(editor, -1) },
+				                { label: 'Move row down', onClick: () => moveTableRowBy(editor, +1) },
+				                { label: 'Move row left', disabled: true, onClick: () => {} },
+				                { label: 'Move row right', disabled: true, onClick: () => {} },
+				              ],
+				            },
+				            { label: 'Duplicate row', onClick: () => duplicateOutlineTableRow(editor) },
+				            { label: 'Delete row', onClick: () => editor.chain().focus().deleteRow().run() },
+				            { type: 'separator' },
+				            { label: 'Clear row contents', onClick: () => editor.commands.clearNodeContents() },
+				          ];
+				          this.menu.openPanel({ anchorRect, items, level: 0 });
+				        }
+
+				        openColumnMenu(anchorRect) {
+				          const items = [
+				            {
+				              label: 'Insert column left',
+				              onClick: () => {
+				                const ctx = getActiveTableContext(editor.state);
+				                const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0)) : 0;
+				                const ok = editor.chain().focus().addColumnBefore().run();
+				                if (ok) {
+				                  window.requestAnimationFrame(() => {
+				                    try {
+				                      rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
+				                    } catch {
+				                      const tableEl = getActiveTableDom(editor.view);
+				                      captureTableColumnPercentsFromDom(tableEl);
+				                    }
+				                  });
+				                }
+				              },
+				            },
+				            {
+				              label: 'Insert column right',
+				              onClick: () => {
+				                const ctx = getActiveTableContext(editor.state);
+				                const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0) + 1) : 1;
+				                const ok = editor.chain().focus().addColumnAfter().run();
+				                if (ok) {
+				                  window.requestAnimationFrame(() => {
+				                    try {
+				                      rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
+				                    } catch {
+				                      const tableEl = getActiveTableDom(editor.view);
+				                      captureTableColumnPercentsFromDom(tableEl);
+				                    }
+				                  });
+				                }
+				              },
+				            },
+				            {
+				              label: 'Sort ',
+				              submenu: () => [
+				                { label: 'Sort row A-Z', onClick: () => sortOutlineTableRowsByColumn(editor, { direction: 'asc' }) },
+				                { label: 'Sort row Z-A', onClick: () => sortOutlineTableRowsByColumn(editor, { direction: 'desc' }) },
+				              ],
+				            },
+				            { label: 'Header column', onClick: () => editor.chain().focus().toggleHeaderColumn().run() },
+				            {
+				              label: 'Move ',
+				              submenu: () => [
+				                { label: 'Move column up', disabled: true, onClick: () => {} },
+				                { label: 'Move column down', disabled: true, onClick: () => {} },
+				                { label: 'Move column left', onClick: () => moveTableColumnBy(editor, -1) },
+				                { label: 'Move column right', onClick: () => moveTableColumnBy(editor, +1) },
+				              ],
+				            },
+				            { label: 'Duplicate column', onClick: () => duplicateOutlineTableColumn(editor) },
+				            {
+				              label: 'Delete column',
+				              onClick: () => {
+				                const tableElBefore = getActiveTableDom(editor.view);
+				                const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+				                const ctx = getActiveTableContext(editor.state);
+				                const deletedIndex = ctx ? Number(ctx.colIndex || 0) : null;
+				                const widthsAfter =
+				                  widthsBefore && deletedIndex != null
+				                    ? rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, deletedIndex)
+				                    : null;
+				                const ok = editor.chain().focus().deleteColumn().run();
+				                if (ok && Array.isArray(widthsAfter)) {
+				                  window.requestAnimationFrame(() => {
+				                    const tableEl = getActiveTableDom(editor.view);
+				                    applyTableColPercentsToDom(tableEl, widthsAfter);
+				                  });
+				                }
+				              },
+				            },
+				            { type: 'separator' },
+				            { label: 'Clear column contents', onClick: () => editor.commands.clearNodeContents() },
+				          ];
+				          this.menu.openPanel({ anchorRect, items, level: 0 });
+				        }
+				      }
+
+				      return [
+				        new Plugin({
+				          view(view) {
+				            const ui = new TableUiView(view);
+				            ui.update(view);
+				            return {
+				              update(nextView) {
+				                ui.update(nextView);
+				              },
+				              destroy() {
+				                ui.destroy();
+				              },
+				            };
+				          },
+				        }),
+				      ];
+				    },
+				  });
+
+				  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
+				  const createStart = perfEnabled() ? performance.now() : 0;
+		  outlineEditorInstance = new Editor({
+			    element: contentRoot,
+					    extensions: [
 		      OutlineDocument,
 		      OutlineSection,
 		      OutlineHeading,
@@ -8220,19 +9639,21 @@ async function mountOutlineEditor() {
         heading: false,
         link: false,
       }),
-	      Link.configure({
-	        openOnClick: false,
-	        protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS,
-	      }),
-	      markdownExtension,
-	      ResizableImage,
-		      OutlineCommands,
-		      TableKit.configure({ table: { resizable: true } }),
-		      OutlineTableSmartMouseSelection,
-		      OutlineTableResizeCapture,
-		      OutlineTablePercentWidths,
-		      OutlineMarkdown,
-	    ].filter(Boolean),
+		      Link.configure({
+		        openOnClick: false,
+		        protocols: OUTLINE_ALLOWED_LINK_PROTOCOLS,
+		      }),
+		      markdownExtension,
+		      ResizableImage,
+			      OutlineCommands,
+			      OutlineTableCellStyling,
+			      TableKit.configure({ table: { resizable: true } }),
+			      OutlineTableNodeUi,
+			      OutlineTableSmartMouseSelection,
+			      OutlineTableResizeCapture,
+			      OutlineTablePercentWidths,
+			      OutlineMarkdown,
+		    ].filter(Boolean),
 	    content,
 		    editorProps: {
 	      attributes: {
@@ -8249,13 +9670,13 @@ async function mountOutlineEditor() {
               pos: view.state?.selection?.$from?.pos ?? null,
             },
           });
-		        // Alt+Arrow in tables: move current column/row.
-		        try {
-		          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
-		          const key = String(event.key || '');
-		          if (isAltOnly && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown')) {
-		            const st = outlineEditModeKey?.getState?.(view.state) || null;
-		            if (st?.editingSectionId && outlineEditorInstance) {
+			        // Alt+Arrow: our custom table moves are disabled; keep TipTap defaults in tables.
+			        try {
+			          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+			          const key = String(event.key || '');
+			          if (isAltOnly && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown')) {
+			            const st = outlineEditModeKey?.getState?.(view.state) || null;
+			            if (st?.editingSectionId && outlineEditorInstance) {
 		              const isSelectionInsideTable = () => {
 		                try {
 		                  const $from = view?.state?.selection?.$from || null;
@@ -8277,26 +9698,13 @@ async function mountOutlineEditor() {
 		                }
 		              };
 
-		              // In tables: move column/row.
-		              if (outlineEditorInstance.isActive('table') || isSelectionInsideTable()) {
-		                let handled = false;
-		                if (key === 'ArrowLeft') handled = moveTableColumnBy(outlineEditorInstance, -1);
-		                else if (key === 'ArrowRight') handled = moveTableColumnBy(outlineEditorInstance, +1);
-		                else if (key === 'ArrowUp') handled = moveTableRowBy(outlineEditorInstance, -1);
-		                else if (key === 'ArrowDown') handled = moveTableRowBy(outlineEditorInstance, +1);
-		                if (handled) {
-		                  event.preventDefault();
-		                  event.stopPropagation();
-		                  return true;
-		                }
-		                // IMPORTANT: when caret is inside a table, Alt+Arrows must not trigger list/paragraph actions.
-		                // If we couldn't move a column/row (edge cases), fall back to default behavior.
-		                return false;
-		              }
+			              // In tables: do nothing (let TipTap/prosemirror handle it).
+			              // IMPORTANT: when caret is inside a table, Alt+Arrows must not trigger list/paragraph actions.
+			              if (outlineEditorInstance.isActive('table') || isSelectionInsideTable()) return false;
 
-		              // Outside tables: list/paragraph actions.
-		              if (key === 'ArrowLeft' || key === 'ArrowRight') {
-		                const chain = outlineEditorInstance.chain().focus();
+			              // Outside tables: list/paragraph actions.
+			              if (key === 'ArrowLeft' || key === 'ArrowRight') {
+			                const chain = outlineEditorInstance.chain().focus();
 		                chain.command(({ tr }) => {
 		                  tr.setMeta(OUTLINE_ALLOW_META, true);
 		                  return true;

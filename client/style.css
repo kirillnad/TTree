@@ -2213,8 +2213,13 @@ button.icon-button.small {
   /* margin-top: 6px; */
 }
 .outline-body .tableWrapper {
+  position: relative;
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  /* Room for table handles: 14px thick + 4px gap. */
+  padding: 20px 0 0 20px;
+  box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
 }
 .outline-body .tableWrapper > table {
@@ -2222,7 +2227,7 @@ button.icon-button.small {
   width: 100% !important;
   max-width: 100%;
   table-layout: fixed;
-  margin: 0.75em 0;
+  margin: 0;
   background: #ffffff;
 }
 .outline-body th,
@@ -2340,6 +2345,201 @@ button.icon-button.small {
 .outline-editor__loading {
   margin-top: 10px;
   color: rgba(51, 65, 85, 0.75);
+}
+
+/* TipTap-like table handles + menus */
+:root {
+  --tt-color-highlight-blue: #e0f2fe;
+  --tt-color-highlight-blue-contrast: #ceeafd;
+  --tt-color-highlight-brown: rgb(244, 238, 238);
+  --tt-color-highlight-brown-contrast: rgba(210, 162, 141, 0.35);
+  --tt-color-highlight-gray: rgb(248, 248, 247);
+  --tt-color-highlight-gray-contrast: rgba(84, 72, 49, 0.15);
+  --tt-color-highlight-green: #dcfce7;
+  --tt-color-highlight-green-contrast: #c7fad8;
+  --tt-color-highlight-orange: rgb(251, 236, 221);
+  --tt-color-highlight-orange-contrast: rgba(224, 124, 57, 0.27);
+  --tt-color-highlight-pink: rgb(252, 241, 246);
+  --tt-color-highlight-pink-contrast: rgba(225, 136, 179, 0.27);
+  --tt-color-highlight-purple: #f3e8ff;
+  --tt-color-highlight-purple-contrast: #e4ccff;
+  --tt-color-highlight-red: #ffe4e6;
+  --tt-color-highlight-red-contrast: #ffccd0;
+  --tt-color-highlight-yellow: #fef9c3;
+  --tt-color-highlight-yellow-contrast: #fbe604;
+  --tt-color-text-blue: hsl(202, 54%, 43%);
+  --tt-color-text-blue-contrast: hsla(202, 54%, 59%, 0.27);
+  --tt-color-text-brown: hsl(19, 31%, 47%);
+  --tt-color-text-brown-contrast: hsla(18, 43%, 69%, 0.35);
+  --tt-color-text-gray: hsl(45, 2%, 46%);
+  --tt-color-text-gray-contrast: hsla(39, 26%, 26%, 0.15);
+  --tt-color-text-green: hsl(148, 32%, 39%);
+  --tt-color-text-green-contrast: hsla(126, 29%, 60%, 0.27);
+  --tt-color-text-orange: hsl(30, 89%, 45%);
+  --tt-color-text-orange-contrast: hsla(24, 73%, 55%, 0.27);
+  --tt-color-text-pink: hsl(328, 49%, 53%);
+  --tt-color-text-pink-contrast: hsla(331, 60%, 71%, 0.27);
+  --tt-color-text-purple: hsl(274, 32%, 54%);
+  --tt-color-text-purple-contrast: hsla(274, 37%, 64%, 0.27);
+  --tt-color-text-red: hsl(2, 62%, 55%);
+  --tt-color-text-red-contrast: hsla(8, 79%, 79%, 0.4);
+  --tt-color-text-yellow: hsl(38, 62%, 49%);
+  --tt-color-text-yellow-contrast: hsla(44, 82%, 59%, 0.39);
+}
+
+.outline-body .tt-table-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.outline-body .tt-table-handle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  min-height: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.outline-body .tt-table-row-handle {
+  border-radius: 10px;
+  border: none;
+  background: rgba(15, 22, 36, 0.05);
+  box-shadow: none;
+  padding-inline-end: 1px;
+  padding-inline-start: 1px;
+  cursor: grab;
+}
+.outline-body .tt-table-col-handle {
+  border-radius: 10px;
+  border: none;
+  background: rgba(15, 22, 36, 0.05);
+  box-shadow: none;
+  cursor: grab;
+}
+.outline-body .tt-table-row-handle::after,
+.outline-body .tt-table-col-handle::after {
+  content: "";
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  opacity: 0.8;
+}
+.outline-body .tt-table-col-handle::after {
+  box-shadow: -6px 0 0 rgba(15, 23, 42, 0.8), 6px 0 0 rgba(15, 23, 42, 0.8);
+}
+.outline-body .tt-table-row-handle::after {
+  box-shadow: 0 -6px 0 rgba(15, 23, 42, 0.8), 0 6px 0 rgba(15, 23, 42, 0.8);
+}
+.outline-body .tt-table-cell-handle {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  border: 2px solid rgba(99, 102, 241, 0.85);
+  background: #ffffff;
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.18);
+}
+/* Keep table handles stable while hovering resize borders. */
+.outline-body .tt-table-handle:hover {
+  background: rgba(15, 22, 36, 0.07);
+}
+
+/* Column resize hover shouldn't show any extra shadows on our table handles. */
+.outline-body .tt-table-row-handle:hover,
+.outline-body .tt-table-col-handle:hover {
+  box-shadow: none;
+}
+body.tt-table-dragging .outline-body .tt-table-row-handle,
+body.tt-table-dragging .outline-body .tt-table-col-handle {
+  cursor: grabbing;
+}
+.outline-body .tt-table-handle:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.85);
+  outline-offset: 2px;
+}
+
+.outline-body .tt-table-drop-indicator {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9;
+  background: rgba(99, 102, 241, 0.9);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+.outline-body .tt-table-drop-indicator-col {
+  width: 2px;
+  transform: translateX(-1px);
+}
+.outline-body .tt-table-drop-indicator-row {
+  height: 2px;
+  transform: translateY(-1px);
+}
+
+.tt-table-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+}
+.tt-table-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.92);
+  font: inherit;
+  text-align: left;
+}
+.tt-table-menu-item:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.06);
+}
+.tt-table-menu-item:disabled {
+  opacity: 0.45;
+}
+.tt-table-menu-item.has-submenu::after {
+  content: "›";
+  color: rgba(51, 65, 85, 0.6);
+}
+.tt-table-menu-sep {
+  height: 1px;
+  margin: 6px 6px;
+  background: rgba(226, 232, 240, 0.9);
+}
+.tt-table-menu-item.has-swatch {
+  position: relative;
+  padding-left: 36px;
+}
+.tt-table-menu-item.has-swatch::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  border-radius: 6px;
+  background: var(--tt-swatch, transparent);
+  border: 1px solid rgba(148, 163, 184, 0.6);
 }
 
 /* Depth accents (pleasant, subtle) */
