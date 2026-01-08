@@ -41,7 +41,8 @@ let outlineHtmlExtensions = null;
 let outlineTableApi = { TableMap: null, CellSelection: null };
 let tableResizeActive = false;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
-const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean }
+const PROOFREAD_RETRY_COOLDOWN_MS = 30 * 1000;
+const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean, status: 'ok'|'error', lastAttemptAtMs: number }
 let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 let dropGuardCleanup = null;
@@ -4205,6 +4206,11 @@ function maybeGenerateTitlesAfterSave(editor, doc, sectionIds) {
 function maybeProofreadOnLeave(editor, doc, sectionId) {
   if (!editor || !doc || !sectionId) return;
   if (state.article?.encrypted) return;
+  try {
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+  } catch {
+    // ignore
+  }
 
   const pos = findSectionPosById(doc, sectionId);
   const sectionNode = typeof pos === 'number' ? doc.nodeAt(pos) : null;
@@ -4216,9 +4222,13 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
   const htmlHash = hashTextForProofread(bodyHtml);
   const prev = proofreadState.get(sectionId) || null;
   if (prev?.inFlight) return;
-  if (prev?.htmlHash === htmlHash) return;
+  if (prev?.status === 'ok' && prev?.htmlHash === htmlHash) return;
+  if (prev?.status === 'error' && prev?.htmlHash === htmlHash) {
+    const lastAttemptAtMs = Number(prev?.lastAttemptAtMs || 0) || 0;
+    if (Date.now() - lastAttemptAtMs < PROOFREAD_RETRY_COOLDOWN_MS) return;
+  }
 
-  proofreadState.set(sectionId, { htmlHash, inFlight: true });
+  proofreadState.set(sectionId, { htmlHash, inFlight: true, status: prev?.status || 'ok', lastAttemptAtMs: Date.now() });
   proofreadOutlineHtml(bodyHtml)
     .then((res) => {
       const correctedHtml = String(res?.html || '').trim();
@@ -4235,9 +4245,13 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
       docDirty = true;
       scheduleAutosave({ delayMs: 900 });
     })
-    .catch(() => {})
+    .catch(() => {
+      proofreadState.set(sectionId, { htmlHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
+    })
     .finally(() => {
-      proofreadState.set(sectionId, { htmlHash, inFlight: false });
+      const next = proofreadState.get(sectionId) || null;
+      if (next?.status === 'error') return;
+      proofreadState.set(sectionId, { htmlHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
     });
 }
 
@@ -9427,12 +9441,12 @@ async function saveOutlineEditor(options = {}) {
 	      }
 		    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
 		    try {
-		      if (outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
+		      if (!isQueued && outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
 		        const sid = lastActiveSectionId || null;
-	        if (sid) maybeProofreadOnLeave(outlineEditorInstance, outlineEditorInstance.state.doc, sid);
-	      }
-	    } catch {
-	      // ignore
+		        if (sid) maybeProofreadOnLeave(outlineEditorInstance, outlineEditorInstance.state.doc, sid);
+		      }
+		    } catch {
+		      // ignore
 	    }
 	  } catch (error) {
     if (!silent) {
