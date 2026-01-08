@@ -88,22 +88,29 @@
         })
         .catch(() => {});
 
-      try {
-        // Reload the page once the new SW takes control, so modules are reloaded from the new app-shell cache.
-        let reloaded = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (reloaded) return;
-          reloaded = true;
-          try {
-            window.location.reload();
-          } catch {
-            // ignore
-          }
-        });
-      } catch {
-        // ignore
-      }
-    } catch {
+	      try {
+	        // Avoid a "double reload" after a user-initiated refresh:
+	        // the SW can finish installing/claiming a few seconds later and fire `controllerchange`.
+	        // Only force-reload when the page started controlled (this is an in-place update),
+	        // and it wasn't a manual reload navigation.
+	        const startedControlled = Boolean(navigator.serviceWorker.controller);
+	        const manualReloadNav = isReloadNavigation();
+	        let reloaded = false;
+	        navigator.serviceWorker.addEventListener('controllerchange', () => {
+	          if (reloaded) return;
+	          reloaded = true;
+	          if (!startedControlled) return;
+	          if (manualReloadNav) return;
+	          try {
+	            window.location.reload();
+	          } catch {
+	            // ignore
+	          }
+	        });
+	      } catch {
+	        // ignore
+	      }
+	    } catch {
       // ignore
     }
   }

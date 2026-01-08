@@ -133,7 +133,7 @@ function saveSidebarSearchViewToStorage() {
 function updateSidebarSearchViewUi() {
   const view = normalizeSidebarSearchView(state.sidebarSearchView);
   const isSearch = view === 'search';
-  const nextLabel = isSearch ? 'Фильтр' : 'Поиск';
+  const nextLabel = isSearch ? 'Поиск' : 'Фильтр';
 
   if (refs.sidebarSearchViewToggle) {
     refs.sidebarSearchViewToggle.dataset.view = view;
