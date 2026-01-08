@@ -466,6 +466,8 @@ function getNextSectionSeq(articleId, sectionId) {
 let structureDirty = false;
 let lastStructureHash = '';
 let structureSnapshotTimer = null;
+let lastStructureSectionIds = new Set();
+let deletedStructureSectionIds = new Set();
 
 function computeOutlineStructureNodesFromDoc(pmDoc) {
   const out = [];
@@ -594,6 +596,24 @@ function perfLog(label, data = {}) {
     if (!perfEnabled()) return;
     // eslint-disable-next-line no-console
     console.log('[perf][outline]', label, data);
+  } catch {
+    // ignore
+  }
+}
+
+const OUTLINE_PROOFREAD_DEBUG_KEY = 'ttree_outline_debug_proofread_v1';
+function proofreadDebugEnabled() {
+  try {
+    return window?.localStorage?.getItem?.(OUTLINE_PROOFREAD_DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function proofreadDebug(label, data = {}) {
+  try {
+    if (!proofreadDebugEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[outline][proofread]', label, data);
   } catch {
     // ignore
   }
@@ -4799,54 +4819,99 @@ function maybeGenerateTitlesAfterSave(editor, doc, sectionIds) {
 }
 
 function maybeProofreadOnLeave(editor, doc, sectionId) {
-  if (!editor || !doc || !sectionId) return;
-  if (state.article?.encrypted) return;
+  const sid = String(sectionId || '').trim();
+  const logSkip = (reason, extra = {}) => proofreadDebug('skip', { reason, sectionId: sid, ...extra });
+
+  if (!editor || !doc || !sid) {
+    logSkip('missing_args', { hasEditor: Boolean(editor), hasDoc: Boolean(doc), hasSectionId: Boolean(sid) });
+    return;
+  }
+  if (state.article?.encrypted) {
+    logSkip('encrypted_article');
+    return;
+  }
   try {
-    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+      logSkip('offline');
+      return;
+    }
   } catch {
     // ignore
   }
 
-  const pos = findSectionPosById(doc, sectionId);
+  const pos = findSectionPosById(doc, sid);
   const sectionNode = typeof pos === 'number' ? doc.nodeAt(pos) : null;
-  if (!sectionNode) return;
+  if (!sectionNode) {
+    logSkip('section_not_found', { pos: typeof pos === 'number' ? pos : null });
+    return;
+  }
   const bodyNode = sectionNode.child(1);
   const bodyHtml = bodyNodeToHtml(bodyNode);
-  if (!bodyHtml) return;
-
-  const htmlHash = hashTextForProofread(bodyHtml);
-  const prev = proofreadState.get(sectionId) || null;
-  if (prev?.inFlight) return;
-  if (prev?.status === 'ok' && prev?.htmlHash === htmlHash) return;
-  if (prev?.status === 'error' && prev?.htmlHash === htmlHash) {
-    const lastAttemptAtMs = Number(prev?.lastAttemptAtMs || 0) || 0;
-    if (Date.now() - lastAttemptAtMs < PROOFREAD_RETRY_COOLDOWN_MS) return;
+  if (!bodyHtml) {
+    logSkip('empty_body_html');
+    return;
   }
 
-  proofreadState.set(sectionId, { htmlHash, inFlight: true, status: prev?.status || 'ok', lastAttemptAtMs: Date.now() });
+  const htmlHash = hashTextForProofread(bodyHtml);
+  const prev = proofreadState.get(sid) || null;
+  if (prev?.inFlight) {
+    logSkip('already_in_flight', { htmlHash });
+    return;
+  }
+  if (prev?.status === 'ok' && prev?.htmlHash === htmlHash) {
+    logSkip('already_ok_same_hash', { htmlHash });
+    return;
+  }
+  if (prev?.status === 'error' && prev?.htmlHash === htmlHash) {
+    const lastAttemptAtMs = Number(prev?.lastAttemptAtMs || 0) || 0;
+    if (Date.now() - lastAttemptAtMs < PROOFREAD_RETRY_COOLDOWN_MS) {
+      logSkip('error_cooldown', { htmlHash, lastAttemptAtMs, cooldownMs: PROOFREAD_RETRY_COOLDOWN_MS });
+      return;
+    }
+  }
+
+  proofreadDebug('start', { sectionId: sid, htmlHash });
+  proofreadState.set(sid, { htmlHash, inFlight: true, status: prev?.status || 'ok', lastAttemptAtMs: Date.now() });
   proofreadOutlineHtml(bodyHtml)
     .then((res) => {
       const correctedHtml = String(res?.html || '').trim();
-      if (!correctedHtml) return;
+      if (!correctedHtml) {
+        proofreadDebug('skip_apply', { sectionId: sid, reason: 'empty_corrected_html' });
+        return;
+      }
       const currentDoc = editor.state.doc;
-      const currentPos = findSectionPosById(currentDoc, sectionId);
+      const currentPos = findSectionPosById(currentDoc, sid);
       const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
-      if (!currentNode) return;
+      if (!currentNode) {
+        proofreadDebug('skip_apply', { sectionId: sid, reason: 'section_not_found_current_doc' });
+        return;
+      }
       const currentBodyHtml = bodyNodeToHtml(currentNode.child(1));
-      if (hashTextForProofread(currentBodyHtml) !== htmlHash) return;
-      if (hashTextForProofread(correctedHtml) === htmlHash) return;
-      const applied = applyBodyHtmlToSection(editor, sectionId, correctedHtml);
-      if (!applied) return;
+      if (hashTextForProofread(currentBodyHtml) !== htmlHash) {
+        proofreadDebug('skip_apply', { sectionId: sid, reason: 'body_changed_since_request' });
+        return;
+      }
+      if (hashTextForProofread(correctedHtml) === htmlHash) {
+        proofreadDebug('skip_apply', { sectionId: sid, reason: 'no_changes_from_server' });
+        return;
+      }
+      const applied = applyBodyHtmlToSection(editor, sid, correctedHtml);
+      if (!applied) {
+        proofreadDebug('skip_apply', { sectionId: sid, reason: 'apply_failed' });
+        return;
+      }
       docDirty = true;
       scheduleAutosave({ delayMs: 900 });
     })
     .catch(() => {
-      proofreadState.set(sectionId, { htmlHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
+      proofreadDebug('error', { sectionId: sid, htmlHash });
+      proofreadState.set(sid, { htmlHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
     })
     .finally(() => {
-      const next = proofreadState.get(sectionId) || null;
+      const next = proofreadState.get(sid) || null;
       if (next?.status === 'error') return;
-      proofreadState.set(sectionId, { htmlHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
+      proofreadState.set(sid, { htmlHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
+      proofreadDebug('done', { sectionId: sid, htmlHash });
     });
 }
 
@@ -6285,42 +6350,45 @@ async function mountOutlineEditor() {
 	      return true;
 	    }
 
-    const hasPrev = idx > 0;
-    const prevNode = hasPrev ? parent.child(idx - 1) : null;
-    const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
-    const nextStart = sectionPos + sectionNode.nodeSize;
+	    const hasPrev = idx > 0;
+	    const hasNext = idx < parent.childCount - 1;
+	    const prevNode = hasPrev ? parent.child(idx - 1) : null;
+	    const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
+	    const nextStart = sectionPos + sectionNode.nodeSize;
 
-    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
-    if (hasPrev && typeof prevStart === 'number') {
-      const prevSection = tr.doc.nodeAt(prevStart);
-      if (prevSection) {
-        const prevHeading = prevSection.child(0);
-        const prevBody = prevSection.child(1);
-        const bodyStart = prevStart + 1 + prevHeading.nodeSize;
-        if (!prevBody.childCount) {
-          const schema = tr.doc.type.schema;
-          tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
-        }
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
-      }
-    } else {
-      const nextPos = sectionPos < tr.doc.content.size ? sectionPos : nextStart;
-      const nextSection = tr.doc.nodeAt(nextPos);
-      if (nextSection) {
-        const nextHeading = nextSection.child(0);
-        const nextBody = nextSection.child(1);
-        const bodyStart = nextPos + 1 + nextHeading.nodeSize;
-        if (!nextBody.childCount) {
-          const schema = tr.doc.type.schema;
-          tr = tr.insert(bodyStart + 1, schema.nodes.paragraph.create({}, []));
-        }
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
-      }
-    }
-    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-    dispatch(tr.scrollIntoView());
-    return true;
-  };
+	    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+	    const selectSectionHeading = (tr, pos) => {
+	      try {
+	        const node = tr.doc.nodeAt(pos);
+	        if (!node || node.type?.name !== 'outlineSection') return tr;
+	        const heading = node.child(0);
+	        const headingStart = pos + 1;
+	        const headingEnd = headingStart + heading.nodeSize - 1;
+	        return tr.setSelection(TextSelection.near(tr.doc.resolve(headingEnd), -1));
+	      } catch {
+	        return tr;
+	      }
+	    };
+
+	    if (hasNext) {
+	      // Prefer selecting the next section after deleting the current one.
+	      const nextPos = sectionPos < tr.doc.content.size ? sectionPos : nextStart;
+	      const nextSection = tr.doc.nodeAt(nextPos);
+	      if (nextSection) {
+	        // Keep the next section visible and avoid jumping deep into the body.
+	        tr = selectSectionHeading(tr, nextPos);
+	      }
+	    } else if (hasPrev && typeof prevStart === 'number') {
+	      // Deleted the last sibling: fall back to previous section.
+	      const prevSection = tr.doc.nodeAt(prevStart);
+	      if (prevSection) {
+	        tr = selectSectionHeading(tr, prevStart);
+	      }
+	    }
+	    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	    dispatch(tr.scrollIntoView());
+	    return true;
+	  };
 
   const outlineMergeSectionIntoPreviousForView = (pmState, dispatch, sectionPos) => {
     const sectionNode = pmState.doc.nodeAt(sectionPos);
@@ -11117,7 +11185,7 @@ async function mountOutlineEditor() {
         },
       },
     },
-    onCreate: ({ editor }) => {
+	    onCreate: ({ editor }) => {
       // Если docJson ещё не хранится на сервере (статья была создана/редактировалась
       // только в блочном режиме), сохраняем docJson отдельно, не трогая blocks.
       if (shouldBootstrapDocJson && state.articleId && state.article && !state.article.encrypted) {
@@ -11138,36 +11206,54 @@ async function mountOutlineEditor() {
       docDirty = false;
       outlineLastSavedAt = null;
       lastActiveSectionId = null;
-      try {
-        lastStructureHash = computeOutlineStructureHash(editor.state.doc);
-        structureDirty = false;
-        if (structureSnapshotTimer) {
-          clearTimeout(structureSnapshotTimer);
-          structureSnapshotTimer = null;
-        }
-      } catch {
+	      try {
+	        lastStructureHash = computeOutlineStructureHash(editor.state.doc);
+	        structureDirty = false;
+	        try {
+	          const nodes = computeOutlineStructureNodesFromDoc(editor.state.doc);
+	          lastStructureSectionIds = new Set(nodes.map((n) => String(n.sectionId || '')).filter(Boolean));
+	          deletedStructureSectionIds.clear();
+	        } catch {
+	          lastStructureSectionIds = new Set();
+	          deletedStructureSectionIds.clear();
+	        }
+	        if (structureSnapshotTimer) {
+	          clearTimeout(structureSnapshotTimer);
+	          structureSnapshotTimer = null;
+	        }
+	      } catch {
         // ignore
       }
       setOutlineStatus('');
     },
-    onUpdate: () => {
+	    onUpdate: () => {
       // Любое изменение документа считается изменением текущей секции (или нескольких),
       // но “коммит секции” мы делаем при уходе из неё (onSelectionUpdate).
       docDirty = true;
-      try {
-        const pmDoc = outlineEditorInstance?.state?.doc || null;
-        if (pmDoc) {
-          const h = computeOutlineStructureHash(pmDoc);
-          if (h && h !== lastStructureHash) {
-            lastStructureHash = h;
-            scheduleStructureSnapshot({ articleId: outlineArticleId || state.articleId, editor: outlineEditorInstance });
-          }
-        }
-      } catch {
-        // ignore
-      }
-      scheduleAutosave({ delayMs: 1500 });
-    },
+	      try {
+	        const pmDoc = outlineEditorInstance?.state?.doc || null;
+	        if (pmDoc) {
+	          const h = computeOutlineStructureHash(pmDoc);
+	          if (h && h !== lastStructureHash) {
+	            lastStructureHash = h;
+	            try {
+	              const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
+	              const nextIds = new Set(nodes.map((n) => String(n.sectionId || '')).filter(Boolean));
+	              for (const sid of lastStructureSectionIds) {
+	                if (!nextIds.has(sid)) deletedStructureSectionIds.add(sid);
+	              }
+	              lastStructureSectionIds = nextIds;
+	            } catch {
+	              // ignore
+	            }
+	            scheduleStructureSnapshot({ articleId: outlineArticleId || state.articleId, editor: outlineEditorInstance });
+	          }
+	        }
+	      } catch {
+	        // ignore
+	      }
+	      scheduleAutosave({ delayMs: 1500 });
+	    },
 	    onSelectionUpdate: ({ editor }) => {
       const { state: pmState } = editor;
       const { selection } = pmState;
@@ -11189,21 +11275,29 @@ async function mountOutlineEditor() {
         // ignore
       }
 
-	      if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
-	        const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
-	        if (changed) {
-	          try {
-	            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
-          } catch {
-            // ignore
-          }
-          // Ушли из секции — стараемся сохранить быстрее, чтобы история “секции” была естественной.
-          scheduleAutosave({ delayMs: 350 });
-        }
-      }
-      lastActiveSectionId = sectionId;
-	    },
-		  });
+		      if (lastActiveSectionId && lastActiveSectionId !== sectionId) {
+		        const changed = markSectionDirtyIfChanged(pmState.doc, lastActiveSectionId);
+		        try {
+		          proofreadDebug('leave_section', { from: lastActiveSectionId, to: sectionId, changed });
+		        } catch {
+		          // ignore
+		        }
+		        // Proofread gating should not depend on `changed`:
+		        // autosave can rebuild the committed map while staying in the same section, making `changed=false`
+		        // even though the user edited text. `maybeProofreadOnLeave` is hash-based and will no-op when unchanged.
+		        try {
+		          maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
+		        } catch {
+		          // ignore
+		        }
+		        if (changed) {
+		          // Ушли из секции — стараемся сохранить быстрее, чтобы история “секции” была естественной.
+		          scheduleAutosave({ delayMs: 350 });
+		        }
+		      }
+		      lastActiveSectionId = sectionId;
+		    },
+			  });
 			  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
 
 	  try {
@@ -11339,8 +11433,8 @@ async function saveOutlineEditor(options = {}) {
       }
       return;
 	    }
-	    const docJsonRaw = outlineEditorInstance.getJSON();
-	    const docJson = normalizeDocJsonForSave(docJsonRaw);
+		    const docJsonRaw = outlineEditorInstance.getJSON();
+		    const docJson = normalizeDocJsonForSave(docJsonRaw);
 	    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
 		    if (state.articleId && targetArticleId !== state.articleId) {
 		      try {
@@ -11352,18 +11446,75 @@ async function saveOutlineEditor(options = {}) {
       setOutlineStatus('Оффлайн: черновик сохранён локально');
       return;
     }
-		    if (mode === 'queue') {
-		      const clientQueuedAt = Date.now();
-	      try {
-	        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
-	        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
-	      } catch {
-	        // ignore
-	      }
-		      // Persist only changed section contents (never overwrite the whole article docJson on the server).
+			    if (mode === 'queue') {
+			      const clientQueuedAt = Date.now();
 		      try {
-		        const sectionIds = Array.from(
-		          new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)),
+		        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
+		        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
+		      } catch {
+		        // ignore
+		      }
+
+		      // Structural deletions must be saved as full docJson so the server actually removes blocks
+		      // (structure snapshots alone can only reorder/parent existing blocks).
+		      if (deletedStructureSectionIds.size) {
+		        deletedStructureSectionIds.clear();
+		        try {
+		          if (navigator.onLine) {
+		            const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
+		            if (state.article) {
+		              state.article.docJson = docJson;
+		              if (result?.updatedAt) state.article.updatedAt = result.updatedAt;
+		            }
+		            try {
+		              rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
+		              dirtySectionIds.clear();
+		            } catch {
+		              // ignore
+		            }
+		            docDirty = false;
+		            outlineLastSavedAt = new Date();
+		            setOutlineStatus(`Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
+		            try {
+		              refreshOutlineTagsFromEditor();
+		            } catch {
+		              // ignore
+		            }
+		            return;
+		          }
+		        } catch {
+		          // fall back to outbox
+		        }
+		        try {
+		          await enqueueOp('save_doc_json', {
+		            articleId: targetArticleId,
+		            payload: { docJson, createVersionIfStaleHours: 12, clientQueuedAt },
+		            coalesceKey: targetArticleId,
+		          });
+		        } catch {
+		          // ignore
+		        }
+		        try {
+		          rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
+		          dirtySectionIds.clear();
+		        } catch {
+		          // ignore
+		        }
+		        docDirty = false;
+		        outlineLastSavedAt = new Date();
+		        setOutlineStatus('Оффлайн: в очереди на синхронизацию');
+		        try {
+		          refreshOutlineTagsFromEditor();
+		        } catch {
+		          // ignore
+		        }
+		        return;
+		      }
+
+			      // Persist only changed section contents (never overwrite the whole article docJson on the server).
+			      try {
+			        const sectionIds = Array.from(
+			          new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)),
 		        );
 		        for (const sid of sectionIds) {
 		          try {
@@ -11418,8 +11569,8 @@ async function saveOutlineEditor(options = {}) {
 	      } catch {
 	        // ignore
 	      }
-	      return;
-	    }
+		      return;
+		    }
     const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
     if (!silent) hideToast();
     const isQueued = Boolean(result?.offline) || String(result?.status || '') === 'queued';
@@ -12144,9 +12295,15 @@ export function closeOutlineEditor() {
     clearTimeout(structureSnapshotTimer);
     structureSnapshotTimer = null;
   }
-  structureDirty = false;
-  lastStructureHash = '';
-  autosaveInFlight = false;
+	  structureDirty = false;
+	  lastStructureHash = '';
+	  try {
+	    lastStructureSectionIds = new Set();
+	    deletedStructureSectionIds.clear();
+	  } catch {
+	    lastStructureSectionIds = new Set();
+	  }
+	  autosaveInFlight = false;
   dirtySectionIds.clear();
   committedSectionIndexText.clear();
   lastActiveSectionId = null;
