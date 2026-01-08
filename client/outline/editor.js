@@ -3258,44 +3258,53 @@ function mountOutlineToolbar(editor) {
     return () => el.removeEventListener('click', onClick);
   };
 
-  const tap = (el, handler) => {
-    if (!el) return () => {};
-    let lastTapAt = 0;
-    const invoke = (e) => {
-      lastTapAt = Date.now();
-      e.preventDefault();
-      e.stopPropagation();
-      handler();
-    };
-    const onPointerDown = (e) => invoke(e);
-    const onTouchStart = (e) => invoke(e);
-    const onClick = (e) => {
-      // Avoid double-trigger after pointerdown/touchstart.
-      if (Date.now() - lastTapAt < 450) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      invoke(e);
-    };
+	  const tap = (el, handler) => {
+	    if (!el) return () => {};
+	    let lastTapAt = 0;
+	    const invoke = (e) => {
+	      lastTapAt = Date.now();
+	      e.preventDefault();
+	      e.stopPropagation();
+	      handler();
+	    };
+	    const onPointerDown = (e) => invoke(e);
+	    const onTouchStart = (e) => invoke(e);
+	    const onClick = (e) => {
+	      // Avoid double-trigger after pointerdown/touchstart.
+	      if (Date.now() - lastTapAt < 450) {
+	        e.preventDefault();
+	        e.stopPropagation();
+	        return;
+	      }
+	      invoke(e);
+	    };
 
-    try {
-      el.addEventListener('pointerdown', onPointerDown);
-    } catch {
-      // ignore
-    }
-    el.addEventListener('touchstart', onTouchStart, { passive: false });
-    el.addEventListener('click', onClick);
-    return () => {
-      try {
-        el.removeEventListener('pointerdown', onPointerDown);
-      } catch {
-        // ignore
-      }
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('click', onClick);
-    };
-  };
+	    try {
+	      el.addEventListener('pointerdown', onPointerDown);
+	    } catch {
+	      // ignore
+	    }
+	    try {
+	      el.addEventListener('touchstart', onTouchStart, { passive: false });
+	    } catch {
+	      // Some older browsers don't support the options object.
+	      try {
+	        el.addEventListener('touchstart', onTouchStart);
+	      } catch {
+	        // ignore
+	      }
+	    }
+	    el.addEventListener('click', onClick);
+	    return () => {
+	      try {
+	        el.removeEventListener('pointerdown', onPointerDown);
+	      } catch {
+	        // ignore
+	      }
+	      el.removeEventListener('touchstart', onTouchStart);
+	      el.removeEventListener('click', onClick);
+	    };
+	  };
 
   const markActive = (el, active) => {
     if (!el) return;

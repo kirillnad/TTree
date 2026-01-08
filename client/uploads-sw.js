@@ -2,8 +2,8 @@
 // - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 187;
-const APP_BUILD = 'bkg70818';
+const APP_VERSION = 188;
+const APP_BUILD = 'ayladhy6';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
