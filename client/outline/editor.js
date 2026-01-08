@@ -38,7 +38,20 @@ let onlineHandlerAttached = false;
 let outlineParseHtmlToNodes = null;
 let outlineGenerateHTML = null;
 let outlineHtmlExtensions = null;
-let outlineTableApi = { TableMap: null, CellSelection: null, moveTableColumn: null, moveTableRow: null };
+let outlineTableApi = {
+  TableMap: null,
+  CellSelection: null,
+  moveTableColumn: null,
+  moveTableRow: null,
+  addRowBefore: null,
+  addRowAfter: null,
+  deleteRow: null,
+  addColumnBefore: null,
+  addColumnAfter: null,
+  deleteColumn: null,
+  toggleHeaderRow: null,
+  toggleHeaderColumn: null,
+};
 let tableResizeActive = false;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const PROOFREAD_RETRY_COOLDOWN_MS = 30 * 1000;
@@ -1887,7 +1900,22 @@ function captureTableColumnPercentsFromDom(tableEl) {
 function getActiveTableDom(view) {
   try {
     if (!view?.state?.selection) return null;
-    const domAt = view.domAtPos(view.state.selection.from);
+    const sel = view.state.selection;
+
+    // Prefer CellSelection anchor/head cell DOM (more reliable than `selection.from`).
+    try {
+      const anchorCellPos = sel?.$anchorCell?.pos;
+      const headCellPos = sel?.$headCell?.pos;
+      const pos = Number.isFinite(anchorCellPos) ? anchorCellPos : Number.isFinite(headCellPos) ? headCellPos : null;
+      if (pos != null) {
+        const dom = view.nodeDOM?.(pos) || null;
+        if (dom && dom.nodeType === 1) return dom.closest?.('table') || null;
+      }
+    } catch {
+      // ignore
+    }
+
+    const domAt = view.domAtPos(sel.from);
     const base = (domAt?.node && domAt.node.nodeType === 1 ? domAt.node : domAt?.node?.parentElement) || null;
     return base?.closest?.('table') || null;
   } catch {
@@ -1905,7 +1933,7 @@ function getActiveTableCellDom(view) {
     try {
       const anchorCellPos = sel?.$anchorCell?.pos;
       const headCellPos = sel?.$headCell?.pos;
-      const pos = Number.isFinite(headCellPos) ? headCellPos : Number.isFinite(anchorCellPos) ? anchorCellPos : null;
+      const pos = Number.isFinite(anchorCellPos) ? anchorCellPos : Number.isFinite(headCellPos) ? headCellPos : null;
       if (pos != null) {
         const dom = view.nodeDOM?.(pos) || null;
         if (dom && dom.nodeType === 1) return dom;
@@ -1944,8 +1972,26 @@ function readTableColPercentsFromDom(tableEl) {
     if (!colgroup) return null;
     const cols = Array.from(colgroup.querySelectorAll('col'));
     if (!cols.length) return null;
-    const fallback = 100 / cols.length;
-    return cols.map((c) => getColPct(c) ?? fallback);
+    const fromAttrs = cols.map((c) => getColPct(c));
+    const hasAny = fromAttrs.some((v) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+    if (hasAny) {
+      const fallback = 100 / cols.length;
+      return fromAttrs.map((v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback));
+    }
+
+    // No saved % widths found: derive percents from the current rendered DOM widths.
+    const firstRow = tableEl.querySelector('tbody tr');
+    if (!firstRow) return null;
+    const cells = Array.from(firstRow.children || []).filter((el) => el && el.nodeType === 1);
+    if (cells.length < cols.length) return null;
+    const widthsPx = [];
+    for (let i = 0; i < cols.length; i += 1) {
+      const rect = cells[i].getBoundingClientRect();
+      widthsPx.push(Number.isFinite(rect.width) ? rect.width : 0);
+    }
+    const total = widthsPx.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+    if (!(total > 0)) return null;
+    return widthsPx.map((w) => clampPct((w / total) * 100));
   } catch {
     return null;
   }
@@ -2011,30 +2057,33 @@ function rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, delet
 function getActiveTableContext(pmState) {
   try {
     const TableMap = outlineTableApi?.TableMap || null;
-    const $from = pmState?.selection?.$from || null;
-    if (!$from) return null;
+    const sel = pmState?.selection || null;
+    const $from = sel?.$from || null;
+    const $anchorCell = sel?.$anchorCell || null;
+    const $base = $anchorCell || $from || null;
+    if (!$base) return null;
     let tableDepth = null;
-    for (let d = $from.depth; d >= 0; d -= 1) {
-      if ($from.node(d)?.type?.name === 'table') {
+    for (let d = $base.depth; d >= 0; d -= 1) {
+      if ($base.node(d)?.type?.name === 'table') {
         tableDepth = d;
         break;
       }
     }
     if (tableDepth == null) return null;
-    const tablePos = $from.before(tableDepth);
+    const tablePos = $base.before(tableDepth);
     const tableNode = pmState.doc.nodeAt(tablePos);
     if (!tableNode || tableNode.type?.name !== 'table') return null;
 
     let cellDepth = null;
-    for (let d = tableDepth + 1; d <= $from.depth; d += 1) {
-      const name = $from.node(d)?.type?.name;
+    for (let d = tableDepth + 1; d <= $base.depth; d += 1) {
+      const name = $base.node(d)?.type?.name;
       if (name === 'tableCell' || name === 'tableHeader') {
         cellDepth = d;
         break;
       }
     }
     if (cellDepth == null) return null;
-    const cellPos = $from.before(cellDepth);
+    const cellPos = $base.before(cellDepth);
 
     const map = TableMap?.get ? TableMap.get(tableNode) : null;
     if (!map) return null;
@@ -2132,6 +2181,43 @@ function selectOutlineTableRow(editor, rowIndex) {
   }
 }
 
+function selectOutlineTableRowAt(editor, tablePos, rowIndex) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!CellSelection || !TableMap) return false;
+    const tp = Number(tablePos);
+    const r = Number(rowIndex);
+    if (!Number.isFinite(tp) || tp < 0 || !Number.isFinite(r) || r < 0) return false;
+    return editor.commands.command(({ state: pmState, dispatch }) => {
+      const tableNode = pmState?.doc?.nodeAt?.(tp) || null;
+      if (!tableNode || tableNode.type?.name !== 'table') return false;
+      const map = TableMap?.get ? TableMap.get(tableNode) : null;
+      if (!map) return false;
+      if (r >= map.height) return false;
+      const aRel = map.positionAt(r, 0, tableNode);
+      const bRel = map.positionAt(r, map.width - 1, tableNode);
+      const aAbs = tp + 1 + aRel;
+      const bAbs = tp + 1 + bRel;
+      let sel = null;
+      try {
+        if (typeof CellSelection.create === 'function') {
+          sel = CellSelection.create(pmState.doc, aAbs, bAbs);
+        }
+      } catch {
+        sel = null;
+      }
+      if (!sel) return false;
+      let tr = pmState.tr.setSelection(sel);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    });
+  } catch {
+    return false;
+  }
+}
+
 function selectOutlineTableColumn(editor, colIndex) {
   try {
     const CellSelection = outlineTableApi?.CellSelection || null;
@@ -2161,6 +2247,153 @@ function selectOutlineTableColumn(editor, colIndex) {
       dispatch(tr.scrollIntoView());
       return true;
     });
+  } catch {
+    return false;
+  }
+}
+
+function selectOutlineTableColumnAt(editor, tablePos, colIndex) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!CellSelection || !TableMap) return false;
+    const tp = Number(tablePos);
+    const col = Number(colIndex);
+    if (!Number.isFinite(tp) || tp < 0 || !Number.isFinite(col) || col < 0) return false;
+    return editor.commands.command(({ state: pmState, dispatch }) => {
+      const tableNode = pmState?.doc?.nodeAt?.(tp) || null;
+      if (!tableNode || tableNode.type?.name !== 'table') return false;
+      const map = TableMap?.get ? TableMap.get(tableNode) : null;
+      if (!map) return false;
+      if (col >= map.width) return false;
+      const aRel = map.positionAt(0, col, tableNode);
+      const bRel = map.positionAt(map.height - 1, col, tableNode);
+      const aAbs = tp + 1 + aRel;
+      const bAbs = tp + 1 + bRel;
+      let sel = null;
+      try {
+        if (typeof CellSelection.create === 'function') {
+          sel = CellSelection.create(pmState.doc, aAbs, bAbs);
+        }
+      } catch {
+        sel = null;
+      }
+      if (!sel) return false;
+      let tr = pmState.tr.setSelection(sel);
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      dispatch(tr.scrollIntoView());
+      return true;
+    });
+  } catch {
+    return false;
+  }
+}
+
+function applyAttrToTableRowAt({ pmState, dispatch }, { tablePos, rowIndex, attr, value }) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!TableMap) return false;
+    const tp = Number(tablePos);
+    const r = Number(rowIndex);
+    if (!Number.isFinite(tp) || tp < 0 || !Number.isFinite(r) || r < 0) return false;
+    const tableNode = pmState?.doc?.nodeAt?.(tp) || null;
+    if (!tableNode || tableNode.type?.name !== 'table') return false;
+    const map = TableMap?.get ? TableMap.get(tableNode) : null;
+    if (!map) return false;
+    if (r >= map.height) return false;
+
+    let tr = pmState.tr;
+    try {
+      if (CellSelection?.create) {
+        const aRel = map.positionAt(r, 0, tableNode);
+        const bRel = map.positionAt(r, map.width - 1, tableNode);
+        const aAbs = tp + 1 + aRel;
+        const bAbs = tp + 1 + bRel;
+        tr = tr.setSelection(CellSelection.create(tr.doc, aAbs, bAbs));
+      }
+    } catch {
+      // ignore
+    }
+
+    const cellPositions = new Set();
+    for (let c = 0; c < map.width; c += 1) {
+      const rel = map.map[r * map.width + c];
+      if (!Number.isFinite(rel)) continue;
+      cellPositions.add(tp + 1 + rel);
+    }
+    if (!cellPositions.size) return false;
+
+    let changed = false;
+    for (const pos of cellPositions) {
+      const node = tr.doc.nodeAt(pos);
+      const name = node?.type?.name;
+      if (name !== 'tableCell' && name !== 'tableHeader') continue;
+      const next = { ...(node.attrs || {}) };
+      if (value == null || value === '') delete next[attr];
+      else next[attr] = value;
+      tr = tr.setNodeMarkup(pos, undefined, next);
+      changed = true;
+    }
+    if (!changed) return false;
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    dispatch(tr);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function applyAttrToTableColumnAt({ pmState, dispatch }, { tablePos, colIndex, attr, value }) {
+  try {
+    const CellSelection = outlineTableApi?.CellSelection || null;
+    const TableMap = outlineTableApi?.TableMap || null;
+    if (!TableMap) return false;
+    const tp = Number(tablePos);
+    const col = Number(colIndex);
+    if (!Number.isFinite(tp) || tp < 0 || !Number.isFinite(col) || col < 0) return false;
+    const tableNode = pmState?.doc?.nodeAt?.(tp) || null;
+    if (!tableNode || tableNode.type?.name !== 'table') return false;
+    const map = TableMap?.get ? TableMap.get(tableNode) : null;
+    if (!map) return false;
+    if (col >= map.width) return false;
+
+    let tr = pmState.tr;
+    try {
+      if (CellSelection?.create) {
+        const aRel = map.positionAt(0, col, tableNode);
+        const bRel = map.positionAt(map.height - 1, col, tableNode);
+        const aAbs = tp + 1 + aRel;
+        const bAbs = tp + 1 + bRel;
+        tr = tr.setSelection(CellSelection.create(tr.doc, aAbs, bAbs));
+      }
+    } catch {
+      // ignore
+    }
+
+    const cellPositions = new Set();
+    for (let r = 0; r < map.height; r += 1) {
+      const rel = map.map[r * map.width + col];
+      if (!Number.isFinite(rel)) continue;
+      cellPositions.add(tp + 1 + rel);
+    }
+    if (!cellPositions.size) return false;
+
+    let changed = false;
+    for (const pos of cellPositions) {
+      const node = tr.doc.nodeAt(pos);
+      const name = node?.type?.name;
+      if (name !== 'tableCell' && name !== 'tableHeader') continue;
+      const next = { ...(node.attrs || {}) };
+      if (value == null || value === '') delete next[attr];
+      else next[attr] = value;
+      tr = tr.setNodeMarkup(pos, undefined, next);
+      changed = true;
+    }
+    if (!changed) return false;
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    dispatch(tr);
+    return true;
   } catch {
     return false;
   }
@@ -4695,12 +4928,20 @@ async function mountOutlineEditor() {
 	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
 	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
 	  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
-	  outlineTableApi = {
-	    TableMap: tiptap.pmTablesMod?.TableMap || null,
-	    CellSelection: tiptap.pmTablesMod?.CellSelection || null,
-	    moveTableColumn: tiptap.pmTablesMod?.moveTableColumn || null,
-	    moveTableRow: tiptap.pmTablesMod?.moveTableRow || null,
-	  };
+		  outlineTableApi = {
+		    TableMap: tiptap.pmTablesMod?.TableMap || null,
+		    CellSelection: tiptap.pmTablesMod?.CellSelection || null,
+		    moveTableColumn: tiptap.pmTablesMod?.moveTableColumn || null,
+		    moveTableRow: tiptap.pmTablesMod?.moveTableRow || null,
+		    addRowBefore: tiptap.pmTablesMod?.addRowBefore || null,
+		    addRowAfter: tiptap.pmTablesMod?.addRowAfter || null,
+		    deleteRow: tiptap.pmTablesMod?.deleteRow || null,
+		    addColumnBefore: tiptap.pmTablesMod?.addColumnBefore || null,
+		    addColumnAfter: tiptap.pmTablesMod?.addColumnAfter || null,
+		    deleteColumn: tiptap.pmTablesMod?.deleteColumn || null,
+		    toggleHeaderRow: tiptap.pmTablesMod?.toggleHeaderRow || null,
+		    toggleHeaderColumn: tiptap.pmTablesMod?.toggleHeaderColumn || null,
+		  };
 	  const UniqueID = tiptap.uniqueIdMod.default || tiptap.uniqueIdMod.UniqueID || tiptap.uniqueIdMod;
 	  const Markdown = tiptap.markdownMod?.Markdown || tiptap.markdownMod?.default?.Markdown || tiptap.markdownMod?.default || null;
 
@@ -8579,6 +8820,32 @@ async function mountOutlineEditor() {
 			                    }
 			                  }
 			                  if (hasSavedPct) continue;
+
+			                  // No saved widths yet (e.g. after moveTableColumn replaces the table DOM).
+			                  // Derive percents from current DOM widths and persist them to dataset+style
+			                  // so widths never "snap" to an implicit default.
+			                  try {
+			                    const firstRow = table.querySelector('tbody tr');
+			                    if (!firstRow) continue;
+			                    const cells = Array.from(firstRow.children || []).filter((el) => el && el.nodeType === 1);
+			                    if (cells.length < cols.length) continue;
+			                    const widthsPx = [];
+			                    for (let i = 0; i < cols.length; i += 1) {
+			                      const rect = cells[i].getBoundingClientRect();
+			                      widthsPx.push(Number.isFinite(rect.width) ? rect.width : 0);
+			                    }
+			                    const total = widthsPx.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+			                    if (!(total > 0)) continue;
+			                    const next = widthsPx.map((w) => clampPct((w / total) * 100));
+			                    // Normalize drift on the last column.
+			                    const sum = next.reduce((a, b) => a + b, 0);
+			                    if (Math.abs(sum - 100) > 0.01) {
+			                      next[next.length - 1] = clampPct(next[next.length - 1] + (100 - sum));
+			                    }
+			                    for (let i = 0; i < cols.length; i += 1) setColPct(cols[i], next[i]);
+			                  } catch {
+			                    // ignore
+			                  }
 			                }
 			              } catch {
 			                // ignore
@@ -8785,12 +9052,16 @@ async function mountOutlineEditor() {
 				      class Menu {
 				        constructor() {
 				          this.panels = [];
-				          this.onDocMouseDown = (e) => {
+				          this.onDocPointerDown = (e) => {
 				            try {
-				              const target = e?.target;
-				              if (!target) return;
-				              for (const p of this.panels) {
-				                if (p && p.contains(target)) return;
+				              const target = e?.target || null;
+				              const path = typeof e?.composedPath === 'function' ? e.composedPath() : null;
+				              const nodes = Array.isArray(path) && path.length ? path : target ? [target] : [];
+				              if (!nodes.length) return;
+				              for (const n of nodes) {
+				                for (const p of this.panels) {
+				                  if (p && (n === p || p.contains(n))) return;
+				                }
 				              }
 				              this.closeAll();
 				            } catch {
@@ -8814,8 +9085,8 @@ async function mountOutlineEditor() {
 				          }
 				          this.panels = [];
 				          try {
-				            document.removeEventListener('mousedown', this.onDocMouseDown, true);
-				            window.removeEventListener('keydown', this.onKeyDown, true);
+				            document.removeEventListener('pointerdown', this.onDocPointerDown, false);
+				            window.removeEventListener('keydown', this.onKeyDown, false);
 				          } catch {
 				            // ignore
 				          }
@@ -8838,6 +9109,9 @@ async function mountOutlineEditor() {
 				          panel.className = 'tt-table-menu';
 				          panel.setAttribute('role', 'menu');
 				          panel.setAttribute('data-level', String(level));
+				          panel.addEventListener('pointerdown', (e) => {
+				            e.stopPropagation();
+				          });
 				          panel.addEventListener('mousedown', (e) => {
 				            e.stopPropagation();
 				          });
@@ -8894,8 +9168,9 @@ async function mountOutlineEditor() {
 				          this.panels.push(panel);
 				          try {
 				            if (this.panels.length === 1) {
-				              document.addEventListener('mousedown', this.onDocMouseDown, true);
-				              window.addEventListener('keydown', this.onKeyDown, true);
+				              // Bubble phase so menu can stopPropagation on pointerdown.
+				              document.addEventListener('pointerdown', this.onDocPointerDown, false);
+				              window.addEventListener('keydown', this.onKeyDown, false);
 				            }
 				          } catch {
 				            // ignore
@@ -9075,7 +9350,7 @@ async function mountOutlineEditor() {
 				          this.wrapper.appendChild(this.root);
 				        }
 
-        buildRowHandles(count) {
+				        buildRowHandles(count) {
 				          while (this.rowHandles.length > count) {
 				            const btn = this.rowHandles.pop();
 				            try {
@@ -9084,33 +9359,34 @@ async function mountOutlineEditor() {
 				              // ignore
 				            }
 				          }
-          while (this.rowHandles.length < count) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'tt-table-handle tt-table-row-handle';
-            btn.setAttribute('aria-label', 'Row actions');
-            btn.dataset.idx = String(this.rowHandles.length);
-            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'row'));
-            btn.addEventListener('click', (e) => {
-              if (Date.now() < this.suppressClickUntil) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-              }
-              e.preventDefault();
-              e.stopPropagation();
-              editor?.chain?.().focus?.().run?.();
-              const idx = Number(btn.dataset.idx || 0);
-              selectOutlineTableRow(editor, idx);
-              const rect = btn.getBoundingClientRect();
-              this.openRowMenu(rect);
-            });
-            this.rowHandles.push(btn);
-            this.root.appendChild(btn);
-          }
-        }
+				          while (this.rowHandles.length < count) {
+				            const btn = document.createElement('button');
+				            btn.type = 'button';
+				            btn.className = 'tt-table-handle tt-table-row-handle';
+				            btn.setAttribute('aria-label', 'Row actions');
+				            btn.dataset.idx = String(this.rowHandles.length);
+				            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'row'));
+					            btn.addEventListener('click', (e) => {
+					              if (Date.now() < this.suppressClickUntil) {
+					                e.preventDefault();
+					                e.stopPropagation();
+					                return;
+					              }
+					              e.preventDefault();
+					              e.stopPropagation();
+					              const tablePos = getActiveTableContext(this.view?.state)?.tablePos;
+					              const rect = btn.getBoundingClientRect();
+					              editor?.chain?.().focus?.().run?.();
+					              const idx = Number(btn.dataset.idx || 0);
+					              selectOutlineTableRow(editor, idx);
+					              this.openRowMenu(rect, idx, tablePos);
+					            });
+				            this.rowHandles.push(btn);
+				            this.root.appendChild(btn);
+				          }
+				        }
 
-        buildColHandles(count) {
+				        buildColHandles(count) {
 				          while (this.colHandles.length > count) {
 				            const btn = this.colHandles.pop();
 				            try {
@@ -9119,46 +9395,45 @@ async function mountOutlineEditor() {
 				              // ignore
 				            }
 				          }
-          while (this.colHandles.length < count) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'tt-table-handle tt-table-col-handle';
-            btn.setAttribute('aria-label', 'Column actions');
-            btn.dataset.idx = String(this.colHandles.length);
-            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'col'));
-            btn.addEventListener('click', (e) => {
-              if (Date.now() < this.suppressClickUntil) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-              }
-              e.preventDefault();
-              e.stopPropagation();
-              editor?.chain?.().focus?.().run?.();
-              const idx = Number(btn.dataset.idx || 0);
-              selectOutlineTableColumn(editor, idx);
-              const rect = btn.getBoundingClientRect();
-              this.openColumnMenu(rect);
-            });
-            this.colHandles.push(btn);
-            this.root.appendChild(btn);
-          }
-        }
+				          while (this.colHandles.length < count) {
+				            const btn = document.createElement('button');
+				            btn.type = 'button';
+				            btn.className = 'tt-table-handle tt-table-col-handle';
+				            btn.setAttribute('aria-label', 'Column actions');
+				            btn.dataset.idx = String(this.colHandles.length);
+				            btn.addEventListener('pointerdown', (e) => this.onHandlePointerDown(e, btn, 'col'));
+					            btn.addEventListener('click', (e) => {
+					              if (Date.now() < this.suppressClickUntil) {
+					                e.preventDefault();
+					                e.stopPropagation();
+					                return;
+					              }
+					              e.preventDefault();
+					              e.stopPropagation();
+					              const tablePos = getActiveTableContext(this.view?.state)?.tablePos;
+					              const rect = btn.getBoundingClientRect();
+					              editor?.chain?.().focus?.().run?.();
+					              const idx = Number(btn.dataset.idx || 0);
+					              selectOutlineTableColumn(editor, idx);
+					              this.openColumnMenu(rect, idx, tablePos);
+					            });
+				            this.colHandles.push(btn);
+				            this.root.appendChild(btn);
+				          }
+				        }
 
-        onHandlePointerDown(e, btn, kind) {
-          try {
-            if (!e || e.button !== 0) return;
-            e.preventDefault();
-            e.stopPropagation();
-            editor?.chain?.().focus?.().run?.();
-            const fromIndex = Number(btn?.dataset?.idx || 0);
-            if (kind === 'row') selectOutlineTableRow(editor, fromIndex);
-            else selectOutlineTableColumn(editor, fromIndex);
-            try {
-              if (typeof btn.setPointerCapture === 'function') btn.setPointerCapture(e.pointerId);
-            } catch {
-              // ignore
-            }
+	        onHandlePointerDown(e, btn, kind) {
+	          try {
+	            if (!e || e.button !== 0) return;
+	            e.preventDefault();
+	            e.stopPropagation();
+	            editor?.chain?.().focus?.().run?.();
+	            const fromIndex = Number(btn?.dataset?.idx || 0);
+	            try {
+	              if (typeof btn.setPointerCapture === 'function') btn.setPointerCapture(e.pointerId);
+	            } catch {
+	              // ignore
+	            }
 
             const state = {
               kind,
@@ -9352,8 +9627,8 @@ async function mountOutlineEditor() {
 				          }
 				        }
 
-				        update(view) {
-				          this.view = view;
+					        update(view) {
+					          this.view = view;
 				          if (!tableResizeActive && this.resizeRaf != null) {
 				            try {
 				              window.cancelAnimationFrame(this.resizeRaf);
@@ -9362,30 +9637,31 @@ async function mountOutlineEditor() {
 				            }
 				            this.resizeRaf = null;
 				          }
-				          if (!this.isEnabled()) {
-				            this.root.style.display = 'none';
-				            this.menu.closeAll();
-				            try {
-				              this.cellOutline.style.display = 'none';
-				            } catch {
-				              // ignore
-				            }
-				            return;
-				          }
-				          const ctx = getActiveTableContext(view.state);
-				          const tableEl = getActiveTableDom(view);
-				          const activeCellEl = getActiveTableCellDom(view);
-				          const wrapper = tableEl?.closest?.('.tableWrapper') || null;
-				          if (!ctx || !tableEl || !wrapper || !activeCellEl) {
-				            this.root.style.display = 'none';
-				            this.menu.closeAll();
-				            try {
-				              this.cellOutline.style.display = 'none';
-				            } catch {
-				              // ignore
-				            }
-				            return;
-				          }
+					          if (!this.isEnabled()) {
+					            this.root.style.display = 'none';
+					            this.menu.closeAll();
+					            try {
+					              this.cellOutline.style.display = 'none';
+					            } catch {
+					              // ignore
+					            }
+					            return;
+					          }
+					          const ctx = getActiveTableContext(view.state);
+					          const activeCellEl = getActiveTableCellDom(view);
+					          const tableEl = activeCellEl?.closest?.('table') || getActiveTableDom(view);
+					          const wrapper = tableEl?.closest?.('.tableWrapper') || null;
+					          if (!ctx || !tableEl || !wrapper || !activeCellEl) {
+					            this.root.style.display = 'none';
+					            // Keep menu open while the cursor is interacting with it (editor may temporarily lose focus).
+					            if (!this.menu.isOpen()) this.menu.closeAll();
+					            try {
+					              this.cellOutline.style.display = 'none';
+					            } catch {
+					              // ignore
+					            }
+					            return;
+					          }
 				          this.ensureAttached(wrapper);
 				          this.table = tableEl;
 				          try {
@@ -9427,13 +9703,41 @@ async function mountOutlineEditor() {
 				          const activeCellLeft = activeCellRect.left - wrapperRect.left;
 				          const activeCellTop = activeCellRect.top - wrapperRect.top;
 
+				          // Determine selection type (cell/row/col/range).
+				          let selectionKind = 'cell';
+				          try {
+				            const sel = view.state.selection;
+				            const anchorPos = sel?.$anchorCell?.pos;
+				            const headPos = sel?.$headCell?.pos;
+				            if (typeof anchorPos === 'number' && typeof headPos === 'number' && anchorPos !== headPos) {
+				              const anchorRel = anchorPos - (ctx.tablePos + 1);
+				              const headRel = headPos - (ctx.tablePos + 1);
+				              const rect = ctx.map?.rectBetween?.(anchorRel, headRel) || null;
+				              if (rect) {
+				                const w = Number(rect.right) - Number(rect.left);
+				                const h = Number(rect.bottom) - Number(rect.top);
+				                if (w === 1 && h > 1) selectionKind = 'col';
+				                else if (h === 1 && w > 1) selectionKind = 'row';
+				                else selectionKind = 'range';
+				              } else {
+				                selectionKind = 'range';
+				              }
+				            }
+				          } catch {
+				            selectionKind = 'cell';
+				          }
+
 				          // Active cell outline (overlay to avoid DOM mutations inside the editor)
 				          try {
-				            this.cellOutline.style.display = '';
-				            this.cellOutline.style.left = `${Math.round(activeCellLeft)}px`;
-				            this.cellOutline.style.top = `${Math.round(activeCellTop)}px`;
-				            this.cellOutline.style.width = `${Math.max(0, Math.round(activeCellRect.width))}px`;
-				            this.cellOutline.style.height = `${Math.max(0, Math.round(activeCellRect.height))}px`;
+				            if (selectionKind === 'cell') {
+				              this.cellOutline.style.display = '';
+				              this.cellOutline.style.left = `${Math.round(activeCellLeft)}px`;
+				              this.cellOutline.style.top = `${Math.round(activeCellTop)}px`;
+				              this.cellOutline.style.width = `${Math.max(0, Math.round(activeCellRect.width))}px`;
+				              this.cellOutline.style.height = `${Math.max(0, Math.round(activeCellRect.height))}px`;
+				            } else {
+				              this.cellOutline.style.display = 'none';
+				            }
 				          } catch {
 				            try {
 				              this.cellOutline.style.display = 'none';
@@ -9476,103 +9780,335 @@ async function mountOutlineEditor() {
 
 				          // Cell handle near active cell
 				          try {
-				            // Anchor on the right border of the actual selected cell.
-				            const x = activeCellRect.right - wrapperRect.left;
-				            this.cellHandle.style.display = '';
-				            this.cellHandle.style.left = `${Math.round(x)}px`;
-				            this.cellHandle.style.top = `${Math.round(activeCellY)}px`;
+				            if (selectionKind !== 'cell') {
+				              this.cellHandle.style.display = 'none';
+				            } else {
+				              // Anchor on the right border of the actual selected cell.
+				              const x = activeCellRect.right - wrapperRect.left;
+				              this.cellHandle.style.display = '';
+				              this.cellHandle.style.left = `${Math.round(x)}px`;
+				              this.cellHandle.style.top = `${Math.round(activeCellY)}px`;
+				            }
 				          } catch {
 				            this.cellHandle.style.display = 'none';
 				          }
 				          if (tableResizeActive) this.scheduleResizeLoop();
 				        }
 
-				        openCellMenu(anchorRect) {
-				          const items = [
-				            {
-				              label: 'Color',
-				              submenu: () => [
-				                {
-				                  label: 'text',
-				                  submenu: () =>
-				                    TABLE_TEXT_COLORS.map((c) => ({
-				                      label: c.label,
-				                      swatch: true,
-				                      swatchValue: c.value,
-				                      onClick: () => editor.commands.setNodeTextColor(c.value),
-				                    })),
-				                },
-				                {
-				                  label: 'Background color',
-				                  submenu: () =>
-				                    TABLE_BG_COLORS.map((c) => ({
-				                      label: c.label,
-				                      swatch: true,
-				                      swatchValue: c.value,
-				                      onClick: () => editor.commands.setNodeBackground(c.value),
-				                    })),
-				                },
-				              ],
-				            },
-				            {
-				              label: 'Alignment',
-				              submenu: () => [
-				                ...TABLE_ALIGN_TEXT.map((a) => ({
-				                  label: a.label,
-				                  onClick: () => editor.commands.setNodeTextAlign(a.value),
-				                })),
-				                { type: 'separator' },
-				                ...TABLE_ALIGN_VERTICAL.map((a) => ({
-				                  label: a.label,
-				                  onClick: () => editor.commands.setNodeVAlign(a.value),
-				                })),
-				              ],
-				            },
-				            { type: 'separator' },
-				            { label: 'Clear contents', onClick: () => editor.commands.clearNodeContents() },
-				          ];
-				          this.menu.openPanel({ anchorRect, items, level: 0 });
-				        }
+					        openCellMenu(anchorRect) {
+					          const restoreFocus = () => {
+					            try {
+					              editor?.chain?.().focus?.().run?.();
+					            } catch {
+					              // ignore
+					            }
+					          };
+					          const items = [
+					            {
+					              label: 'Color',
+					              submenu: () => [
+					                {
+					                  label: 'text',
+					                  submenu: () =>
+					                    TABLE_TEXT_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => {
+					                        restoreFocus();
+					                        editor.commands.setNodeTextColor(c.value);
+					                      },
+					                    })),
+					                },
+					                {
+					                  label: 'Background color',
+					                  submenu: () =>
+					                    TABLE_BG_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => {
+					                        restoreFocus();
+					                        editor.commands.setNodeBackground(c.value);
+					                      },
+					                    })),
+					                },
+					              ],
+					            },
+					            {
+					              label: 'Alignment',
+					              submenu: () => [
+					                ...TABLE_ALIGN_TEXT.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => {
+					                    restoreFocus();
+					                    editor.commands.setNodeTextAlign(a.value);
+					                  },
+					                })),
+					                { type: 'separator' },
+					                ...TABLE_ALIGN_VERTICAL.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => {
+					                    restoreFocus();
+					                    editor.commands.setNodeVAlign(a.value);
+					                  },
+					                })),
+					              ],
+					            },
+					            { type: 'separator' },
+					            {
+					              label: 'Clear contents',
+					              onClick: () => {
+					                restoreFocus();
+					                editor.commands.clearNodeContents();
+					              },
+					            },
+					          ];
+					          this.menu.openPanel({ anchorRect, items, level: 0 });
+					        }
 
-				        openRowMenu(anchorRect) {
-				          const items = [
-				            { label: 'Insert row above', onClick: () => editor.chain().focus().addRowBefore().run() },
-				            { label: 'Insert row below', onClick: () => editor.chain().focus().addRowAfter().run() },
-				            {
-				              label: 'Sort ',
-				              submenu: () => [
-				                { label: 'Sort column A-Z', onClick: () => sortOutlineTableColumnsByRow(editor, { direction: 'asc' }) },
-				                { label: 'Sort column Z-A', onClick: () => sortOutlineTableColumnsByRow(editor, { direction: 'desc' }) },
-				              ],
-				            },
-				            { label: 'Header row', onClick: () => editor.chain().focus().toggleHeaderRow().run() },
-				            {
-				              label: 'Move ',
-				              submenu: () => [
-				                { label: 'Move row up', onClick: () => moveTableRowBy(editor, -1) },
-				                { label: 'Move row down', onClick: () => moveTableRowBy(editor, +1) },
-				                { label: 'Move row left', disabled: true, onClick: () => {} },
-				                { label: 'Move row right', disabled: true, onClick: () => {} },
-				              ],
-				            },
-				            { label: 'Duplicate row', onClick: () => duplicateOutlineTableRow(editor) },
-				            { label: 'Delete row', onClick: () => editor.chain().focus().deleteRow().run() },
-				            { type: 'separator' },
-				            { label: 'Clear row contents', onClick: () => editor.commands.clearNodeContents() },
-				          ];
-				          this.menu.openPanel({ anchorRect, items, level: 0 });
-				        }
+					        openRowMenu(anchorRect, rowIndex, tablePos) {
+					          const restoreFocusAndRowSelection = () => {
+					            try {
+					              editor?.chain?.().focus?.().run?.();
+					            } catch {
+					              // ignore
+					            }
+					            if (Number.isFinite(Number(tablePos))) {
+					              selectOutlineTableRowAt(editor, tablePos, rowIndex);
+					            }
+					          };
+					          const runRowCellAttr = (attr, value) => {
+					            try {
+					              editor?.chain?.().focus?.().run?.();
+					            } catch {
+					              // ignore
+					            }
+					            return editor.commands.command(({ state: pmState, dispatch }) => {
+					              const tp = Number.isFinite(Number(tablePos))
+					                ? Number(tablePos)
+					                : getActiveTableContext(pmState)?.tablePos;
+					              const r =
+					                Number.isFinite(Number(rowIndex)) ? Number(rowIndex) : getActiveTableContext(pmState)?.rowIndex;
+					              if (!Number.isFinite(Number(tp)) || !Number.isFinite(Number(r))) return false;
+					              return applyAttrToTableRowAt({ pmState, dispatch }, { tablePos: tp, rowIndex: r, attr, value });
+					            });
+					          };
+					          const withRowSelection = (fn) => () => {
+					            restoreFocusAndRowSelection();
+					            return fn?.();
+					          };
+					          const runTableCmd = (cmd) => {
+					            try {
+					              if (typeof cmd !== 'function') return false;
+					              restoreFocusAndRowSelection();
+					              return editor.commands.command(({ state, dispatch }) => {
+					                const wrappedDispatch =
+					                  typeof dispatch === 'function'
+				                    ? (tr) => {
+				                        try {
+				                          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				                        } catch {
+				                          // ignore
+				                        }
+				                        dispatch(tr);
+				                      }
+				                    : undefined;
+				                return cmd(state, wrappedDispatch);
+				              });
+				            } catch {
+					              return false;
+					            }
+					          };
+					          const items = [
+					            {
+					              label: 'Color',
+					              submenu: () => [
+					                {
+					                  label: 'text',
+					                  submenu: () =>
+					                    TABLE_TEXT_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => runRowCellAttr('nodeTextColor', c.value),
+					                    })),
+					                },
+					                {
+					                  label: 'Background color',
+					                  submenu: () =>
+					                    TABLE_BG_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => runRowCellAttr('nodeBackground', c.value),
+					                    })),
+					                },
+					              ],
+					            },
+					            {
+					              label: 'Alignment',
+					              submenu: () => [
+					                ...TABLE_ALIGN_TEXT.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => runRowCellAttr('nodeTextAlign', a.value),
+					                })),
+					                { type: 'separator' },
+					                ...TABLE_ALIGN_VERTICAL.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => runRowCellAttr('nodeVerticalAlign', a.value),
+					                })),
+					              ],
+					            },
+					            { type: 'separator' },
+					            { label: 'Insert row above', onClick: () => runTableCmd(outlineTableApi?.addRowBefore) },
+					            { label: 'Insert row below', onClick: () => runTableCmd(outlineTableApi?.addRowAfter) },
+					            {
+					              label: 'Sort ',
+					              submenu: () => [
+					                {
+					                  label: 'Sort column A-Z',
+					                  onClick: withRowSelection(() =>
+					                    sortOutlineTableColumnsByRow(editor, { direction: 'asc' }),
+					                  ),
+					                },
+					                {
+					                  label: 'Sort column Z-A',
+					                  onClick: withRowSelection(() =>
+					                    sortOutlineTableColumnsByRow(editor, { direction: 'desc' }),
+					                  ),
+					                },
+					              ],
+					            },
+					            { label: 'Header row', onClick: () => runTableCmd(outlineTableApi?.toggleHeaderRow) },
+					            {
+					              label: 'Move ',
+					              submenu: () => [
+					                { label: 'Move row up', onClick: withRowSelection(() => moveTableRowBy(editor, -1)) },
+					                { label: 'Move row down', onClick: withRowSelection(() => moveTableRowBy(editor, +1)) },
+					                { label: 'Move row left', disabled: true, onClick: () => {} },
+					                { label: 'Move row right', disabled: true, onClick: () => {} },
+					              ],
+					            },
+					            { label: 'Duplicate row', onClick: withRowSelection(() => duplicateOutlineTableRow(editor)) },
+					            { label: 'Delete row', onClick: () => runTableCmd(outlineTableApi?.deleteRow) },
+					            { type: 'separator' },
+					            {
+					              label: 'Clear row contents',
+					              onClick: () => {
+					                restoreFocusAndRowSelection();
+					                editor.commands.clearNodeContents();
+					              },
+					            },
+					          ];
+					          this.menu.openPanel({ anchorRect, items, level: 0 });
+					        }
 
-				        openColumnMenu(anchorRect) {
-				          const items = [
-				            {
-				              label: 'Insert column left',
-				              onClick: () => {
-				                const ctx = getActiveTableContext(editor.state);
-				                const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0)) : 0;
-				                const ok = editor.chain().focus().addColumnBefore().run();
-				                if (ok) {
-				                  window.requestAnimationFrame(() => {
+					        openColumnMenu(anchorRect, colIndex, tablePos) {
+					          const restoreFocusAndColSelection = () => {
+					            try {
+					              editor?.chain?.().focus?.().run?.();
+					            } catch {
+					              // ignore
+					            }
+					            if (Number.isFinite(Number(tablePos))) {
+					              selectOutlineTableColumnAt(editor, tablePos, colIndex);
+					            }
+					          };
+					          const runColCellAttr = (attr, value) => {
+					            try {
+					              editor?.chain?.().focus?.().run?.();
+					            } catch {
+					              // ignore
+					            }
+					            return editor.commands.command(({ state: pmState, dispatch }) => {
+					              const tp = Number.isFinite(Number(tablePos))
+					                ? Number(tablePos)
+					                : getActiveTableContext(pmState)?.tablePos;
+					              const col =
+					                Number.isFinite(Number(colIndex)) ? Number(colIndex) : getActiveTableContext(pmState)?.colIndex;
+					              if (!Number.isFinite(Number(tp)) || !Number.isFinite(Number(col))) return false;
+					              return applyAttrToTableColumnAt(
+					                { pmState, dispatch },
+					                { tablePos: tp, colIndex: col, attr, value },
+					              );
+					            });
+					          };
+					          const withColSelection = (fn) => () => {
+					            restoreFocusAndColSelection();
+					            return fn?.();
+					          };
+					          const runTableCmd = (cmd) => {
+					            try {
+					              if (typeof cmd !== 'function') return false;
+					              restoreFocusAndColSelection();
+					              return editor.commands.command(({ state, dispatch }) => {
+					                const wrappedDispatch =
+					                  typeof dispatch === 'function'
+				                    ? (tr) => {
+				                        try {
+				                          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				                        } catch {
+				                          // ignore
+				                        }
+				                        dispatch(tr);
+				                      }
+				                    : undefined;
+				                return cmd(state, wrappedDispatch);
+				              });
+				            } catch {
+					              return false;
+					            }
+					          };
+					          const items = [
+					            {
+					              label: 'Color',
+					              submenu: () => [
+					                {
+					                  label: 'text',
+					                  submenu: () =>
+					                    TABLE_TEXT_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => runColCellAttr('nodeTextColor', c.value),
+					                    })),
+					                },
+					                {
+					                  label: 'Background color',
+					                  submenu: () =>
+					                    TABLE_BG_COLORS.map((c) => ({
+					                      label: c.label,
+					                      swatch: true,
+					                      swatchValue: c.value,
+					                      onClick: () => runColCellAttr('nodeBackground', c.value),
+					                    })),
+					                },
+					              ],
+					            },
+					            {
+					              label: 'Alignment',
+					              submenu: () => [
+					                ...TABLE_ALIGN_TEXT.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => runColCellAttr('nodeTextAlign', a.value),
+					                })),
+					                { type: 'separator' },
+					                ...TABLE_ALIGN_VERTICAL.map((a) => ({
+					                  label: a.label,
+					                  onClick: () => runColCellAttr('nodeVerticalAlign', a.value),
+					                })),
+					              ],
+					            },
+					            { type: 'separator' },
+					            {
+					              label: 'Insert column left',
+					              onClick: () => {
+					                restoreFocusAndColSelection();
+					                const insertIndex = Math.max(0, Number(colIndex || 0));
+					                const ok = runTableCmd(outlineTableApi?.addColumnBefore);
+					                if (ok) {
+					                  window.requestAnimationFrame(() => {
 				                    try {
 				                      rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
 				                    } catch {
@@ -9584,13 +10120,13 @@ async function mountOutlineEditor() {
 				              },
 				            },
 				            {
-				              label: 'Insert column right',
-				              onClick: () => {
-				                const ctx = getActiveTableContext(editor.state);
-				                const insertIndex = ctx ? Math.max(0, Number(ctx.colIndex || 0) + 1) : 1;
-				                const ok = editor.chain().focus().addColumnAfter().run();
-				                if (ok) {
-				                  window.requestAnimationFrame(() => {
+					              label: 'Insert column right',
+					              onClick: () => {
+					                restoreFocusAndColSelection();
+					                const insertIndex = Math.max(0, Number(colIndex || 0) + 1);
+					                const ok = runTableCmd(outlineTableApi?.addColumnAfter);
+					                if (ok) {
+					                  window.requestAnimationFrame(() => {
 				                    try {
 				                      rebalanceTableColumnPercentsAfterInsert(editor, { insertIndex, newColPct: 10 });
 				                    } catch {
@@ -9601,49 +10137,65 @@ async function mountOutlineEditor() {
 				                }
 				              },
 				            },
-				            {
-				              label: 'Sort ',
-				              submenu: () => [
-				                { label: 'Sort row A-Z', onClick: () => sortOutlineTableRowsByColumn(editor, { direction: 'asc' }) },
-				                { label: 'Sort row Z-A', onClick: () => sortOutlineTableRowsByColumn(editor, { direction: 'desc' }) },
-				              ],
-				            },
-				            { label: 'Header column', onClick: () => editor.chain().focus().toggleHeaderColumn().run() },
-				            {
-				              label: 'Move ',
-				              submenu: () => [
-				                { label: 'Move column up', disabled: true, onClick: () => {} },
-				                { label: 'Move column down', disabled: true, onClick: () => {} },
-				                { label: 'Move column left', onClick: () => moveTableColumnBy(editor, -1) },
-				                { label: 'Move column right', onClick: () => moveTableColumnBy(editor, +1) },
-				              ],
-				            },
-				            { label: 'Duplicate column', onClick: () => duplicateOutlineTableColumn(editor) },
-				            {
-				              label: 'Delete column',
-				              onClick: () => {
-				                const tableElBefore = getActiveTableDom(editor.view);
-				                const widthsBefore = readTableColPercentsFromDom(tableElBefore);
-				                const ctx = getActiveTableContext(editor.state);
-				                const deletedIndex = ctx ? Number(ctx.colIndex || 0) : null;
-				                const widthsAfter =
-				                  widthsBefore && deletedIndex != null
-				                    ? rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, deletedIndex)
+					            {
+					              label: 'Sort ',
+					              submenu: () => [
+					                {
+					                  label: 'Sort row A-Z',
+					                  onClick: withColSelection(() =>
+					                    sortOutlineTableRowsByColumn(editor, { direction: 'asc' }),
+					                  ),
+					                },
+					                {
+					                  label: 'Sort row Z-A',
+					                  onClick: withColSelection(() =>
+					                    sortOutlineTableRowsByColumn(editor, { direction: 'desc' }),
+					                  ),
+					                },
+					              ],
+					            },
+					            { label: 'Header column', onClick: () => runTableCmd(outlineTableApi?.toggleHeaderColumn) },
+					            {
+					              label: 'Move ',
+					              submenu: () => [
+					                { label: 'Move column up', disabled: true, onClick: () => {} },
+					                { label: 'Move column down', disabled: true, onClick: () => {} },
+					                { label: 'Move column left', onClick: withColSelection(() => moveTableColumnBy(editor, -1)) },
+					                { label: 'Move column right', onClick: withColSelection(() => moveTableColumnBy(editor, +1)) },
+					              ],
+					            },
+					            { label: 'Duplicate column', onClick: withColSelection(() => duplicateOutlineTableColumn(editor)) },
+					            {
+					              label: 'Delete column',
+					              onClick: () => {
+					                restoreFocusAndColSelection();
+					                const tableElBefore = getActiveTableDom(editor.view);
+					                const widthsBefore = readTableColPercentsFromDom(tableElBefore);
+					                const deletedIndex = Number.isFinite(Number(colIndex)) ? Number(colIndex) : null;
+					                const widthsAfter =
+					                  widthsBefore && deletedIndex != null
+					                    ? rebalanceTableColumnPercentsAfterDeleteFromSnapshot(widthsBefore, deletedIndex)
 				                    : null;
-				                const ok = editor.chain().focus().deleteColumn().run();
+				                const ok = runTableCmd(outlineTableApi?.deleteColumn);
 				                if (ok && Array.isArray(widthsAfter)) {
 				                  window.requestAnimationFrame(() => {
 				                    const tableEl = getActiveTableDom(editor.view);
 				                    applyTableColPercentsToDom(tableEl, widthsAfter);
 				                  });
-				                }
-				              },
-				            },
-				            { type: 'separator' },
-				            { label: 'Clear column contents', onClick: () => editor.commands.clearNodeContents() },
-				          ];
-				          this.menu.openPanel({ anchorRect, items, level: 0 });
-				        }
+					                }
+					              },
+					            },
+					            { type: 'separator' },
+					            {
+					              label: 'Clear column contents',
+					              onClick: () => {
+					                restoreFocusAndColSelection();
+					                editor.commands.clearNodeContents();
+					              },
+					            },
+					          ];
+					          this.menu.openPanel({ anchorRect, items, level: 0 });
+					        }
 				      }
 
 				      return [

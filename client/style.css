@@ -1131,10 +1131,8 @@ main.content {
 }
 
 .outline-toolbar__dropdown-btn::after {
-  content: "▾";
-  font-size: 0.75em;
-  opacity: 0.75;
-  margin-left: 0.35rem;
+  /* No dropdown arrows: they shift icons in the outline toolbar. */
+  content: none;
 }
 
 .outline-toolbar__menu {
@@ -2331,14 +2329,8 @@ button.icon-button.small {
   top: 0;
   bottom: 0;
   width: 12px;
-  background: linear-gradient(
-    to right,
-    rgba(37, 99, 235, 0) 0%,
-    rgba(37, 99, 235, 0.18) 28%,
-    rgba(37, 99, 235, 0.35) 50%,
-    rgba(37, 99, 235, 0.18) 72%,
-    rgba(37, 99, 235, 0) 100%
-  );
+  /* Keep resize handle invisible (no "shadow") on hover. */
+  background: transparent;
   cursor: col-resize;
   pointer-events: auto;
 }
@@ -2473,6 +2465,9 @@ button.icon-button.small {
 }
 body.tt-table-dragging .outline-body .tt-table-row-handle,
 body.tt-table-dragging .outline-body .tt-table-col-handle {
+  cursor: grabbing;
+}
+body.tt-table-dragging {
   cursor: grabbing;
 }
 .outline-body .tt-table-handle:focus-visible {
