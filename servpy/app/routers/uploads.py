@@ -6,10 +6,11 @@ import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
 
@@ -185,7 +186,7 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
 @router.post('/api/articles/{article_id}/attachments/yandex')
 def register_yandex_attachment(
     article_id: str,
-    payload: dict[str, Any],
+    payload: dict[str, Any] = Body(...),
     current_user: User = Depends(get_current_user),
 ):
     """
