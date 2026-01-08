@@ -1036,6 +1036,10 @@ main.content {
   align-items: center;
 }
 
+.outline-toolbar #outlineNewBelowBtn {
+  margin-left: auto;
+}
+
 .outline-tags-panel {
   margin-top: 0.4rem;
   display: flex;

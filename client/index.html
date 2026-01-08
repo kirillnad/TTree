@@ -479,10 +479,10 @@
                 <button id="outlineIndentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг вправо (Alt+→)" hidden>
                   <span class="outline-toolbar__arrow">&#xE64D;</span><span class="toolbar-label"> Вправо</span>
                 </button>
-                <div class="outline-toolbar__dropdown outline-toolbar__dropdown--view">
-                  <button
-                    id="outlineBlocksMenuBtn"
-                    class="ghost small outline-toolbar__dropdown-btn"
+	                <div class="outline-toolbar__dropdown outline-toolbar__dropdown--view">
+	                  <button
+	                    id="outlineBlocksMenuBtn"
+	                    class="ghost small outline-toolbar__dropdown-btn"
                     type="button"
                     aria-haspopup="true"
                     aria-expanded="false"
@@ -504,19 +504,15 @@
                     <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="paste">
                       <span class="outline-menu__icon outline-menu__icon--glyph">&#xE77F;</span><span class="outline-menu__label">Вставить</span>
                     </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="clear">
-                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE74D;</span><span class="outline-menu__label">Очистить буфер</span>
-                    </button>
-                  </div>
-                </div>
-                <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
-                  &#xE109;<span class="toolbar-label"> Новый</span>
-                </button>
-                <div>&nbsp;&nbsp;&nbsp;</div>
-                <div class="outline-toolbar__dropdown">
-                  <button
-                    id="outlineTextMenuBtn"
-                    class="ghost small outline-toolbar__dropdown-btn"
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="clear">
+	                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE74D;</span><span class="outline-menu__label">Очистить буфер</span>
+	                    </button>
+	                  </div>
+	                </div>
+	                <div class="outline-toolbar__dropdown">
+	                  <button
+	                    id="outlineTextMenuBtn"
+	                    class="ghost small outline-toolbar__dropdown-btn"
                     type="button"
                     aria-haspopup="true"
                     aria-expanded="false"
@@ -631,10 +627,14 @@
 	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteTable">
 	                      <span class="outline-menu__icon">✕</span><span class="outline-menu__label">Удалить таблицу</span>
 	                    </button>
-	                  </div>
-	                </div>
-              </div>
-            </div>
+		                  </div>
+		                </div>
+
+	                <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
+	                  &#xE109;<span class="toolbar-label"> Новый</span>
+	                </button>
+	              </div>
+	            </div>
           <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
             <span class="inline-progress__spinner" aria-hidden="true"></span>
             <span class="inline-progress__text">Вставляем Markdown...</span>
