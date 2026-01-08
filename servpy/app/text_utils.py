@@ -35,9 +35,22 @@ def build_normalized_tokens(text: str = '') -> str:
 
 def build_lemma(text: str = '') -> str:
     tokens = tokenize(text)
-    return ' '.join(MORPH.parse(token)[0].normal_form for token in tokens)
+    out: list[str] = []
+    for token in tokens:
+        try:
+            out.append(MORPH.parse(token)[0].normal_form)
+        except Exception:
+            # Be resilient: never fail the whole save/indexing due to a single bad token/parser edge case.
+            out.append(token)
+    return ' '.join(out)
 
 
 def build_lemma_tokens(text: str = '') -> list[str]:
     tokens = tokenize(text)
-    return [MORPH.parse(token)[0].normal_form for token in tokens]
+    out: list[str] = []
+    for token in tokens:
+        try:
+            out.append(MORPH.parse(token)[0].normal_form)
+        except Exception:
+            out.append(token)
+    return out

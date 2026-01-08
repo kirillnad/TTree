@@ -595,22 +595,41 @@ export function saveArticleDocJson(articleId, docJson, options = {}) {
   if (options && typeof options.createVersionIfStaleHours === 'number') {
     payload.createVersionIfStaleHours = options.createVersionIfStaleHours;
   }
-  const attempt = () =>
-    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json/save`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
-	  return attempt().catch(async (err) => {
-	    const now = new Date().toISOString();
-	    await updateCachedDocJson(articleId, docJson, now).catch(() => {});
-	    await enqueueOp('save_doc_json', {
-	      articleId,
-	      payload: { docJson, createVersionIfStaleHours: payload.createVersionIfStaleHours || 12, clientQueuedAt: Date.now() },
-	      coalesceKey: articleId,
-	    }).catch(() => {});
-	    return { status: 'queued', articleId, updatedAt: now, offline: true };
-	  });
-	}
+	const attempt = () =>
+	    apiRequest(`/api/articles/${encodeURIComponent(articleId)}/doc-json/save`, {
+	      method: 'PUT',
+	      body: JSON.stringify(payload),
+	    });
+		  return attempt().catch(async (err) => {
+		    const now = new Date().toISOString();
+		    // IMPORTANT: don't bump `updatedAt` locally on queued saves.
+		    // If we bump it, online meta checks will see a mismatch and prefer stale server docJson,
+		    // effectively "resurrecting" deleted blocks and hiding the local draft after Ctrl-F5.
+		    let preservedUpdatedAt = null;
+		    try {
+		      if (state?.articleId && String(state.articleId) === String(articleId) && state.article?.updatedAt) {
+		        preservedUpdatedAt = state.article.updatedAt;
+		      }
+		    } catch {
+		      // ignore
+		    }
+		    if (!preservedUpdatedAt) {
+		      try {
+		        const cached = await getCachedArticle(articleId).catch(() => null);
+		        preservedUpdatedAt = cached?.updatedAt || cached?.updated_at || null;
+		      } catch {
+		        preservedUpdatedAt = null;
+		      }
+		    }
+		    await updateCachedDocJson(articleId, docJson, preservedUpdatedAt).catch(() => {});
+		    await enqueueOp('save_doc_json', {
+		      articleId,
+		      payload: { docJson, createVersionIfStaleHours: payload.createVersionIfStaleHours || 12, clientQueuedAt: Date.now() },
+		      coalesceKey: articleId,
+		    }).catch(() => {});
+		    return { status: 'queued', articleId, updatedAt: preservedUpdatedAt || now, offline: true };
+		  });
+		}
 
 export function generateOutlineTitle(text) {
   if (typeof text !== 'string') {

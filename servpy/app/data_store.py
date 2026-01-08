@@ -590,10 +590,34 @@ def _rebuild_article_links_for_article_id(article_id: str, *, doc_json: Any | No
             link_map = build_outline_section_internal_links_map(doc_json)
         except Exception:
             link_map = {}
+        # Only insert links to existing articles (article_links.to_id has a FK to articles.id).
+        existing_targets: set[str] = set()
+        try:
+            all_targets: set[str] = set()
+            for targets in (link_map or {}).values():
+                for tid in targets or set():
+                    if tid and tid != article_id:
+                        all_targets.add(str(tid))
+            if all_targets:
+                ids = list(all_targets)
+                # Chunk to avoid huge IN lists.
+                for i in range(0, len(ids), 200):
+                    chunk = ids[i : i + 200]
+                    placeholders = ','.join('?' for _ in chunk)
+                    rows = CONN.execute(f'SELECT id FROM articles WHERE id IN ({placeholders})', tuple(chunk)).fetchall()
+                    for row in rows or []:
+                        eid = str(row.get('id') or '').strip()
+                        if eid:
+                            existing_targets.add(eid)
+        except Exception:
+            existing_targets = set()
         for section_id, targets in (link_map or {}).items():
             for target_id in targets or set():
-                if target_id and target_id != article_id:
-                    values.append((article_id, section_id, target_id, 'internal'))
+                if not target_id or target_id == article_id:
+                    continue
+                if existing_targets and str(target_id) not in existing_targets:
+                    continue
+                values.append((article_id, section_id, target_id, 'internal'))
         if values:
             CONN.executemany(
                 '''
@@ -1436,16 +1460,22 @@ def save_article_doc_json(
             (now, serialize_history(history), '[]', doc_json_str, article_id),
         )
 
-        # Rebuild internal links from doc_json.
-        _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
+        # Rebuild internal links from doc_json (best-effort: never fail the save).
+        try:
+            _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Failed to rebuild article_links for save_article_doc_json: %r', exc)
 
-        # Rebuild section FTS for the whole article.
-        CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
-        for sid, plain in (next_map or {}).items():
-            text = (plain or '').strip()
-            lemma = build_lemma(text)
-            normalized = build_normalized_tokens(text)
-            upsert_outline_section_search_index(sid, article_id, text, lemma, normalized, now)
+        # Rebuild section FTS for the whole article (best-effort: never fail the save).
+        try:
+            CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
+            for sid, plain in (next_map or {}).items():
+                text = (plain or '').strip()
+                lemma = build_lemma(text)
+                normalized = build_normalized_tokens(text)
+                upsert_outline_section_search_index(sid, article_id, text, lemma, normalized, now)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Failed to rebuild outline_sections_fts for save_article_doc_json: %r', exc)
 
     # Semantic embeddings updates after transaction.
     try:

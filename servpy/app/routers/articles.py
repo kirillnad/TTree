@@ -370,6 +370,9 @@ def put_article_doc_json_save(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InvalidOperation as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception('Unhandled error in /doc-json/save for article=%s user=%s', real_article_id, current_user.id)
+        raise HTTPException(status_code=500, detail='Internal Server Error') from exc
 
 
 @router.put('/api/articles/{article_id}/sections/upsert-content')
