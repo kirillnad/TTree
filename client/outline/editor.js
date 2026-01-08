@@ -8618,13 +8618,13 @@ async function mountOutlineEditor() {
 	  };
   outlineParseHtmlToNodes = parseHtmlToNodes;
 
-	  const OutlineMarkdown = Extension.create({
-	    name: 'outlineMarkdown',
-	    addCommands() {
-	      return {
-	        insertMarkdown:
-	          (markdown) =>
-	          ({ editor }) => {
+		  const OutlineMarkdown = Extension.create({
+		    name: 'outlineMarkdown',
+		    addCommands() {
+		      return {
+		        insertMarkdown:
+		          (markdown) =>
+		          ({ editor }) => {
 	            if (!outlineEditModeKey) return false;
 	            const st = outlineEditModeKey.getState(editor.state) || {};
 	            if (!st.editingSectionId) {
@@ -8640,15 +8640,249 @@ async function mountOutlineEditor() {
 	            if (!nodes.length) return false;
 	            return editor.chain().focus().insertContent(nodes).run();
 	          },
-	      };
-	    },
-	  });
+		      };
+		    },
+		  });
 
-  let shouldBootstrapDocJson = false;
-  let content = null;
-  const contentStart = perfEnabled() ? performance.now() : 0;
-  const candidate = state.article?.docJson || null;
-  if (candidate && typeof candidate === 'object') {
+		  const OutlineFormattedPaste = Extension.create({
+		    name: 'outlineFormattedPaste',
+		    addProseMirrorPlugins() {
+		      const editor = this.editor;
+
+		      const normalizeHtmlForBodyInsert = (rawHtml) => {
+		        const normalized = String(rawHtml || '').trim();
+		        if (!normalized) return '';
+		        let doc = null;
+		        try {
+		          doc = new DOMParser().parseFromString(normalized, 'text/html');
+		        } catch {
+		          return normalized;
+		        }
+		        const body = doc?.body;
+		        if (!body) return normalized;
+		        try {
+		          // Outline body doesn't support nested headings; downgrade them to paragraphs.
+		          for (const h of Array.from(body.querySelectorAll('h1,h2,h3,h4,h5,h6'))) {
+		            const p = doc.createElement('p');
+		            const strong = doc.createElement('strong');
+		            try {
+		              while (h.firstChild) strong.appendChild(h.firstChild);
+		            } catch {
+		              strong.textContent = String(h.textContent || '');
+		            }
+		            p.appendChild(strong);
+		            h.replaceWith(p);
+		          }
+		        } catch {
+		          // ignore
+		        }
+		        return String(body.innerHTML || '').trim();
+		      };
+
+		      const looksLikeHtmlSource = (text) => {
+		        const t = String(text || '').trim();
+		        if (!t) return false;
+		        if (!t.includes('<') || !t.includes('>')) return false;
+		        if (!/<\s*\/?\s*[a-z][^>]*>/i.test(t)) return false;
+		        try {
+		          const doc = new DOMParser().parseFromString(t, 'text/html');
+		          const body = doc?.body;
+		          if (!body) return false;
+		          const allowed = new Set([
+		            'p',
+		            'br',
+		            'strong',
+		            'b',
+		            'em',
+		            'i',
+		            'u',
+		            's',
+		            'a',
+		            'ul',
+		            'ol',
+		            'li',
+		            'blockquote',
+		            'pre',
+		            'code',
+		            'table',
+		            'thead',
+		            'tbody',
+		            'tr',
+		            'td',
+		            'th',
+		            'img',
+		            'span',
+		            'div',
+		            'h1',
+		            'h2',
+		            'h3',
+		            'h4',
+		            'h5',
+		            'h6',
+		          ]);
+		          const el = Array.from(body.querySelectorAll('*')).find((e) => allowed.has(String(e.tagName || '').toLowerCase()));
+		          return Boolean(el);
+		        } catch {
+		          return false;
+		        }
+		      };
+
+		      const looksLikeMarkdown = (text) => {
+		        const t = String(text || '').replace(/\r\n/g, '\n').trim();
+		        if (!t) return false;
+		        // Strong signals only to avoid breaking plain-text pastes (logs, etc.).
+		        const signals = [
+		          /```[\s\S]*```/m, // fenced code block
+		          /^\s{0,3}([-*+]|\d+\.)\s+\S/m, // list item
+		          /^\s{0,3}>\s+\S/m, // blockquote
+		          /\[[^\]]+\]\([^)]+\)/, // link
+		          /!\[[^\]]*\]\([^)]+\)/, // image
+		          /\*\*[^*\n]+\*\*/, // bold
+		          /__[^_\n]+__/, // bold
+		          /`[^`\n]+`/, // inline code
+		        ];
+		        return signals.some((re) => re.test(t));
+		      };
+
+		      const looksLikeMarkdownTable = (text) => {
+		        try {
+		          const lines = String(text || '')
+		            .replace(/\r\n/g, '\n')
+		            .split('\n')
+		            .map((l) => String(l || '').trim())
+		            .filter(Boolean);
+		          if (lines.length < 2) return false;
+		          return Boolean(parseMarkdownTableLines(lines));
+		        } catch {
+		          return false;
+		        }
+		      };
+
+		      const insertParsedNodes = (view, nodes) => {
+		        if (!nodes || !Array.isArray(nodes) || !nodes.length) return false;
+		        const from = view?.state?.selection?.from;
+		        const to = view?.state?.selection?.to;
+		        if (!Number.isFinite(from) || !Number.isFinite(to)) return false;
+		        try {
+		          return editor
+		            .chain()
+		            .focus()
+		            .command(({ tr }) => {
+		              tr.setMeta(OUTLINE_ALLOW_META, true);
+		              return true;
+		            })
+		            .insertContentAt({ from, to }, nodes)
+		            .run();
+		        } catch {
+		          return false;
+		        }
+		      };
+
+		      const maybeHandlePaste = (view, event) => {
+		        try {
+		          const st = outlineEditModeKey?.getState?.(view.state) || null;
+		          if (!st?.editingSectionId) return false;
+
+		          const items = event?.clipboardData?.items || null;
+		          const files = event?.clipboardData?.files || null;
+		          if ((files && files.length) || (items && Array.from(items).some((it) => it?.kind === 'file'))) return false;
+
+		          const html = String(event?.clipboardData?.getData?.('text/html') || '').trim();
+		          const text = String(event?.clipboardData?.getData?.('text/plain') || '').trim();
+
+		          // Keep the existing "paste as outline sections" behavior.
+		          if (html) {
+		            try {
+		              const htmlParsed = /<h[1-6][\s>]/i.test(html) ? true : false;
+		              if (htmlParsed) return false;
+		            } catch {
+		              // ignore
+		            }
+		          }
+
+		          // HTML fragment insertion (clipboard provides HTML).
+		          if (html) {
+		            const normalizedHtml = normalizeHtmlForBodyInsert(html);
+		            const nodes = parseHtmlToNodes(normalizedHtml);
+		            if (!nodes.length) return false;
+		            event.preventDefault();
+		            event.stopPropagation();
+		            return insertParsedNodes(view, nodes);
+		          }
+
+		          // HTML source insertion (clipboard provides raw `<tag>` in text/plain).
+		          if (text && looksLikeHtmlSource(text)) {
+		            const normalizedHtml = normalizeHtmlForBodyInsert(text);
+		            const nodes = parseHtmlToNodes(normalizedHtml);
+		            if (!nodes.length) return false;
+		            event.preventDefault();
+		            event.stopPropagation();
+		            return insertParsedNodes(view, nodes);
+		          }
+
+		          // Markdown insertion (convert markdown to HTML, then to nodes).
+		          if (text && looksLikeMarkdown(text)) {
+		            // Keep dedicated markdown-table handler.
+		            if (looksLikeMarkdownTable(text)) return false;
+
+		            // Keep the existing "markdown headings => outline sections" handler.
+		            try {
+		              const mdParsed = parseMarkdownOutlineSections(text);
+		              const safeToConvert = mdParsed?.startsWithHeading || (mdParsed?.sections?.length || 0) >= 2;
+		              if (safeToConvert) return false;
+		            } catch {
+		              // ignore
+		            }
+
+		            const parser = editor?.storage?.markdown?.parser || null;
+		            if (!parser?.parse) return false;
+
+		            const isInline =
+		              !text.includes('\n') &&
+		              !/^\s{0,3}([-*+]|\d+\.)\s+\S/m.test(text) &&
+		              !/```[\s\S]*```/m.test(text) &&
+		              !/^\s{0,3}>\s+\S/m.test(text);
+
+		            const htmlFromMarkdown = String(parser.parse(text, { inline: isInline })).trim();
+		            if (!htmlFromMarkdown) return false;
+
+		            const normalizedHtml = normalizeHtmlForBodyInsert(htmlFromMarkdown);
+		            const nodes = parseHtmlToNodes(normalizedHtml);
+		            if (!nodes.length) return false;
+
+		            event.preventDefault();
+		            event.stopPropagation();
+		            return insertParsedNodes(view, nodes);
+		          }
+
+		          return false;
+		        } catch {
+		          return false;
+		        }
+		      };
+
+		      return [
+		        new Plugin({
+		          props: {
+		            handlePaste(view, event) {
+		              return maybeHandlePaste(view, event);
+		            },
+		            handleDOMEvents: {
+		              paste(view, event) {
+		                return maybeHandlePaste(view, event);
+		              },
+		            },
+		          },
+		        }),
+		      ];
+		    },
+		  });
+
+	  let shouldBootstrapDocJson = false;
+	  let content = null;
+	  const contentStart = perfEnabled() ? performance.now() : 0;
+	  const candidate = state.article?.docJson || null;
+	  if (candidate && typeof candidate === 'object') {
     // TipTap can accept JSON content directly.
     if (candidate.type === 'doc' && Array.isArray(candidate.content)) {
       content = candidate;
@@ -10303,13 +10537,14 @@ async function mountOutlineEditor() {
 			      OutlineAttachmentUpload,
 			      OutlineImageResize,
 		      OutlineImagePreview,
-		      OutlineStructuredSectionPaste,
-		      OutlineMarkdownTablePaste,
-		      UniqueID.configure({
-		        types: ['outlineSection'],
-		        attributeName: 'id',
-		        generateID: () => safeUuid(),
-	      }),
+			      OutlineStructuredSectionPaste,
+			      OutlineMarkdownTablePaste,
+			      OutlineFormattedPaste,
+			      UniqueID.configure({
+			        types: ['outlineSection'],
+			        attributeName: 'id',
+			        generateID: () => safeUuid(),
+		      }),
       StarterKit.configure({
         document: false,
         heading: false,
