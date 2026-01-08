@@ -2237,6 +2237,10 @@ button.icon-button.small {
   text-align: left;
   vertical-align: top;
 }
+.outline-body td.tt-table-active-cell,
+.outline-body th.tt-table-active-cell {
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.85);
+}
 .outline-body th {
   background-color: #f1f5f9;
   font-weight: 650;
@@ -2392,6 +2396,12 @@ button.icon-button.small {
   inset: 0;
   pointer-events: none;
   z-index: 8;
+}
+.outline-body .tt-table-active-cell-outline {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.85);
 }
 .outline-body .tt-table-handle {
   position: absolute;

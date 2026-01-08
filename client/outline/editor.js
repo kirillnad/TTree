@@ -1901,6 +1901,19 @@ function getActiveTableCellDom(view) {
     const $from = sel?.$from || null;
     if (!$from) return null;
 
+    // For CellSelection, anchor/head positions point at actual cells.
+    try {
+      const anchorCellPos = sel?.$anchorCell?.pos;
+      const headCellPos = sel?.$headCell?.pos;
+      const pos = Number.isFinite(headCellPos) ? headCellPos : Number.isFinite(anchorCellPos) ? anchorCellPos : null;
+      if (pos != null) {
+        const dom = view.nodeDOM?.(pos) || null;
+        if (dom && dom.nodeType === 1) return dom;
+      }
+    } catch {
+      // ignore
+    }
+
     let cellDepth = null;
     for (let d = $from.depth; d >= 0; d -= 1) {
       const name = $from.node(d)?.type?.name;
@@ -2318,6 +2331,12 @@ function moveTableColumnToIndex(editor, fromIndex, toIndex) {
       window.requestAnimationFrame(() => {
         const tableEl = getActiveTableDom(editor.view);
         applyTableColPercentsToDom(tableEl, widthsAfter);
+        try {
+          const wrapper = tableEl?.closest?.('.tableWrapper') || null;
+          wrapper?.dispatchEvent?.(new Event('scroll'));
+        } catch {
+          // ignore
+        }
       });
     }
     return true;
@@ -8884,8 +8903,8 @@ async function mountOutlineEditor() {
 				        }
 				      }
 
-      class TableUiView {
-        constructor(view) {
+				      class TableUiView {
+				        constructor(view) {
 				          this.view = view;
 				          this.menu = new Menu();
 				          this.wrapper = null;
@@ -8898,6 +8917,11 @@ async function mountOutlineEditor() {
 				          this.root = document.createElement('div');
 				          this.root.className = 'tt-table-ui';
 				          this.root.style.display = 'none';
+
+				          this.cellOutline = document.createElement('div');
+				          this.cellOutline.className = 'tt-table-active-cell-outline';
+				          this.cellOutline.style.display = 'none';
+				          this.root.appendChild(this.cellOutline);
 
 				          this.scheduleLayout = () => {
 				            if (this.layoutRaf != null) return;
@@ -8982,13 +9006,18 @@ async function mountOutlineEditor() {
           }
         }
 
-        destroy() {
-          this.destroyed = true;
-          this.cancelDrag();
-          this.menu.closeAll();
-          try {
-            if (this.layoutRaf != null) window.cancelAnimationFrame(this.layoutRaf);
-          } catch {
+				        destroy() {
+				          this.destroyed = true;
+				          this.cancelDrag();
+				          try {
+				            this.cellOutline.style.display = 'none';
+				          } catch {
+				            // ignore
+				          }
+				          this.menu.closeAll();
+				          try {
+				            if (this.layoutRaf != null) window.cancelAnimationFrame(this.layoutRaf);
+				          } catch {
 				            // ignore
 				          }
 				          this.layoutRaf = null;
@@ -9336,6 +9365,11 @@ async function mountOutlineEditor() {
 				          if (!this.isEnabled()) {
 				            this.root.style.display = 'none';
 				            this.menu.closeAll();
+				            try {
+				              this.cellOutline.style.display = 'none';
+				            } catch {
+				              // ignore
+				            }
 				            return;
 				          }
 				          const ctx = getActiveTableContext(view.state);
@@ -9345,6 +9379,11 @@ async function mountOutlineEditor() {
 				          if (!ctx || !tableEl || !wrapper || !activeCellEl) {
 				            this.root.style.display = 'none';
 				            this.menu.closeAll();
+				            try {
+				              this.cellOutline.style.display = 'none';
+				            } catch {
+				              // ignore
+				            }
 				            return;
 				          }
 				          this.ensureAttached(wrapper);
@@ -9385,6 +9424,23 @@ async function mountOutlineEditor() {
 				          const activeCellRect = activeCellEl.getBoundingClientRect();
 				          const activeCellX = activeCellRect.left - wrapperRect.left + activeCellRect.width / 2;
 				          const activeCellY = activeCellRect.top - wrapperRect.top + activeCellRect.height / 2;
+				          const activeCellLeft = activeCellRect.left - wrapperRect.left;
+				          const activeCellTop = activeCellRect.top - wrapperRect.top;
+
+				          // Active cell outline (overlay to avoid DOM mutations inside the editor)
+				          try {
+				            this.cellOutline.style.display = '';
+				            this.cellOutline.style.left = `${Math.round(activeCellLeft)}px`;
+				            this.cellOutline.style.top = `${Math.round(activeCellTop)}px`;
+				            this.cellOutline.style.width = `${Math.max(0, Math.round(activeCellRect.width))}px`;
+				            this.cellOutline.style.height = `${Math.max(0, Math.round(activeCellRect.height))}px`;
+				          } catch {
+				            try {
+				              this.cellOutline.style.display = 'none';
+				            } catch {
+				              // ignore
+				            }
+				          }
 
 				          // Column handles at top
 				          for (let i = 0; i < this.colHandles.length; i += 1) {
