@@ -2,9 +2,9 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { apiRequest, fetchArticlesIndex } from '../api.js?v=12';
+import { apiRequest, fetchArticlesIndex } from '../api.js';
 import { showToast } from '../toast.js';
-import { showPrompt } from '../modal.js?v=10';
+import { showPrompt } from '../modal.js';
 import { startEditing, saveEditing, cancelEditing, createSibling } from '../actions.js';
 import { placeCaretAtEnd, placeCaretAtStart } from '../utils.js';
 import {

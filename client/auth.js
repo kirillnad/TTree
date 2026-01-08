@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { refs } from './refs.js';
-import { fetchCurrentUser, login, registerUser, logout } from './api.js?v=12';
+import { fetchCurrentUser, login, registerUser, logout } from './api.js';
 import { showToast } from './toast.js';
 import { initOfflineForUser } from './offline/index.js';
 import { startBackgroundFullPull, startSyncLoop, tryPullBootstrap } from './offline/sync.js';
@@ -38,7 +38,7 @@ function attachPendingQuickNotesFlushListener() {
       if (String(state.articleId || '') !== 'inbox') return false;
       if (!state.article) return false;
       // Insert into the currently open outline editor (so user sees it immediately).
-      const outline = await import('./outline/editor.js?v=125');
+      const outline = await import('./outline/editor.js');
       if (!outline?.insertOutlineSectionFromPlainTextAtStart) return false;
       const ok = outline.insertOutlineSectionFromPlainTextAtStart(noteId, text);
       if (ok) {
@@ -58,8 +58,8 @@ function attachPendingQuickNotesFlushListener() {
       timer = null;
       try {
         qlog('sync.start');
-        inFlight = import('./quickNotes/queuedInbox.js')
-          .then((m) => m.syncQueuedInboxToServer?.())
+        inFlight = import('./quickNotes/pending.js')
+          .then((m) => m.enqueuePendingQuickNotesForSync?.())
           .then((res) => {
             qlog('sync.done', res || null);
           })
@@ -136,6 +136,12 @@ async function startOfflineSessionFromCachedUser(options = {}) {
     // IMPORTANT: do NOT start server sync loops here; without auth they'd just 401/spam and may confuse the user.
     try {
       await initOfflineForUser(cachedUser);
+      try {
+        // Queue pending quick-notes into outbox even in offline-only session.
+        await import('./quickNotes/pending.js').then((m) => m.enqueuePendingQuickNotesForSync?.());
+      } catch {
+        // ignore
+      }
     } catch (err) {
       try {
         console.warn('[offline] init failed', err);
@@ -310,20 +316,10 @@ export async function bootstrapAuth() {
       hideAuthOverlay();
       ensureAppStarted();
       attachPendingQuickNotesFlushListener();
-      // Sync queued inbox (boot modal) in background.
-      try {
-        setTimeout(() => {
-          import('./quickNotes/queuedInbox.js')
-            .then((m) => m.syncQueuedInboxToServer?.())
-            .catch(() => {});
-        }, 50);
-      } catch {
-        // ignore
-      }
       // Warm up TipTap bundle on idle so first article open doesn't spend seconds on parsing/initialization.
       // This is especially noticeable on mobile after Ctrl-F5 when caches are cold.
       try {
-        const warm = () => import('./outline/tiptap.bundle.js?v=3').catch(() => {});
+        const warm = () => import('./outline/tiptap.bundle.js').catch(() => {});
         if (typeof requestIdleCallback === 'function') {
           requestIdleCallback(() => warm(), { timeout: 2500 });
         } else {
@@ -353,6 +349,12 @@ export async function bootstrapAuth() {
         }, 5000);
         try {
           await initOfflineForUser(res.user);
+          try {
+            // Convert boot quick-notes to standard outbox ops (content-only upserts for inbox sections).
+            await import('./quickNotes/pending.js').then((m) => m.enqueuePendingQuickNotesForSync?.());
+          } catch {
+            // ignore
+          }
           const bootstrapIndex = await tryPullBootstrap();
           startSyncLoop();
           startBackgroundFullPull({ initialIndex: bootstrapIndex || undefined });

@@ -15,8 +15,9 @@ import aiofiles
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 
 from ..auth import User, get_current_user, get_user_by_id
+from ..blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
 from ..db import CONN
-from ..data_store import _expand_wikilinks, delete_article, get_article, save_article
+from ..data_store import _expand_wikilinks, delete_article, get_article, upsert_article_doc_json_snapshot
 from ..import_assets import UPLOADS_DIR, _import_attachment_from_bytes
 from ..import_utils import _parse_markdown_blocks, _walk_blocks
 
@@ -374,18 +375,15 @@ def _import_logseq_from_bytes(
 
         # Сначала создаём «пустую» статью, чтобы запись в articles уже существовала,
         # а затем подтягиваем вложения и только после этого сохраняем финальное дерево блоков.
-        skeleton_article = {
-            'id': new_article_id,
-            'title': base_title,
-            'createdAt': now,
-            'updatedAt': now,
-            'deletedAt': None,
-            'blocks': [],
-            'history': [],
-            'redoHistory': [],
-            'authorId': current_user.id,
-        }
-        save_article(skeleton_article)
+        upsert_article_doc_json_snapshot(
+            article_id=new_article_id,
+            author_id=current_user.id,
+            title=base_title,
+            doc_json={'type': 'doc', 'content': []},
+            created_at=now,
+            updated_at=now,
+            reset_history=True,
+        )
 
         # Применяем переписывание ссылок на вложения для каждого блока.
         for block in _walk_blocks(blocks_tree):
@@ -399,19 +397,16 @@ def _import_logseq_from_bytes(
             if text_html:
                 block['text'] = _expand_wikilinks(text_html, current_user.id)
 
-        article = {
-            'id': new_article_id,
-            'title': base_title,
-            'createdAt': now,
-            'updatedAt': now,
-            'deletedAt': None,
-            'blocks': blocks_tree,
-            'history': [],
-            'redoHistory': [],
-            'authorId': current_user.id,
-        }
-
-        save_article(article)
+        doc_json = convert_blocks_to_outline_doc_json(blocks_tree, fallback_id=new_article_id)
+        upsert_article_doc_json_snapshot(
+            article_id=new_article_id,
+            author_id=current_user.id,
+            title=base_title,
+            doc_json=doc_json,
+            created_at=now,
+            updated_at=now,
+            reset_history=True,
+        )
         created = get_article(new_article_id, current_user.id)
         if created:
             imported_articles.append(created)
@@ -435,4 +430,3 @@ async def import_from_logseq(
     raw = await file.read()
     filename = file.filename or ''
     return _import_logseq_from_bytes(raw, filename, assets_base_url, current_user)
-

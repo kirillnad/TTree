@@ -14,14 +14,11 @@ from uuid import uuid4
 
 from .auth import User, get_user_by_id
 from .db import CONN
-from .blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
 from .data_store import (
     create_attachment,
     get_article,
     get_or_create_user_inbox,
-    insert_block,
-    save_article,
-    update_article_doc_json,
+    save_article_doc_json,
 )
 from .import_assets import _save_image_bytes_for_user
 from .yandex_disk_utils import _upload_bytes_to_yandex_for_user
@@ -308,56 +305,75 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
         # На всякий случай создаём пустой блок, чтобы апдейт не потерялся.
         parts.append('<p><br /></p>')
 
-    block_html = ''.join(parts)
+    # IMPORTANT: inbox в tiptap-режиме хранится как docJson (центр правды).
+    # Нельзя пересобирать docJson из legacy `blocks`, иначе теряются секции,
+    # которые были созданы/изменены в outline-редакторе (они не пишутся в таблицу blocks).
+    #
+    # Поэтому Telegram-бот напрямую добавляет новую секцию в начало `articles.article_doc_json`.
 
-    # Вставляем новый блок в конец корня inbox, как быстрые заметки в UI.
-    root_blocks = inbox_article.get('blocks') or []
-    if not root_blocks:
-        # Если по какой-то причине в инбоксе нет блоков, создадим один явным UPDATE.
-        now = datetime.utcnow().isoformat()
-        new_block = {
-            'id': str(uuid4()),
-            'text': block_html,
-            'collapsed': False,
-            'children': [],
+    def make_text_paragraphs(text_value: str) -> list[dict[str, Any]]:
+        lines = [ln.strip() for ln in (text_value or '').splitlines()]
+        lines = [ln for ln in lines if ln]
+        if not lines:
+            return [{'type': 'paragraph'}]
+        return [{'type': 'paragraph', 'content': [{'type': 'text', 'text': ln}]} for ln in lines]
+
+    def make_link_paragraph(href: str, label: str) -> dict[str, Any]:
+        safe_href = str(href or '')
+        safe_label = str(label or safe_href or 'файл')
+        return {
+            'type': 'paragraph',
+            'content': [
+                {
+                    'type': 'text',
+                    'text': safe_label,
+                    'marks': [
+                        {
+                            'type': 'link',
+                            'attrs': {
+                                'href': safe_href,
+                                'target': '_blank',
+                                'rel': 'noopener noreferrer nofollow',
+                                'class': None,
+                            },
+                        }
+                    ],
+                }
+            ],
         }
-        inbox_article['blocks'] = [new_block]
-        try:
-            save_article(inbox_article)
-        except Exception as exc:  # noqa: BLE001
-            logger.error('Telegram bot: failed to save inbox article directly: %r', exc)
-            return
-        try:
-            doc_json = convert_blocks_to_outline_doc_json(inbox_article.get('blocks') or [], fallback_id=str(article_id))
-            update_article_doc_json(article_id, user.id, doc_json)
-        except Exception as exc:  # noqa: BLE001
-            logger.error('Telegram bot: failed to rebuild inbox docJson: %r', exc)
-        if chat_id is not None:
-            _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')
-        return
 
-    anchor_id = root_blocks[-1].get('id')
-    if not anchor_id:
-        logger.error('Telegram bot: last inbox block has no id for article %s', article_id)
-        return
+    try:
+        fresh = get_article(article_id, author_id=user.id, include_blocks=False) or {}
+        doc_json = fresh.get('docJson')
+        if not isinstance(doc_json, dict) or doc_json.get('type') != 'doc':
+            doc_json = {'type': 'doc', 'content': []}
+        if not isinstance(doc_json.get('content'), list):
+            doc_json['content'] = []
 
-    payload = {
-        'text': block_html,
-        'collapsed': False,
-        'children': [],
-    }
-    try:
-        insert_block(article_id, anchor_id, 'after', payload)
+        section_id = str(uuid4())
+        heading_text = (text.splitlines()[0].strip() if text else '') or ''
+        body_paragraphs: list[dict[str, Any]] = []
+        if text:
+            body_paragraphs.extend(make_text_paragraphs(text))
+        for href, label in attachments:
+            body_paragraphs.append(make_link_paragraph(href, label))
+
+        new_section = {
+            'type': 'outlineSection',
+            'attrs': {'id': section_id, 'collapsed': False},
+            'content': [
+                {'type': 'outlineHeading', 'content': ([{'type': 'text', 'text': heading_text}] if heading_text else [])},
+                {'type': 'outlineBody', 'content': body_paragraphs or [{'type': 'paragraph'}]},
+                {'type': 'outlineChildren', 'content': []},
+            ],
+        }
+
+        doc_json['content'] = [new_section, *doc_json.get('content')]
+        save_article_doc_json(article_id=article_id, author_id=user.id, doc_json=doc_json)
+        logger.info('Telegram bot: inbox docJson appended user=%s article=%s section=%s', user.id, article_id, section_id)
     except Exception as exc:  # noqa: BLE001
-        logger.error('Telegram bot: insert_block failed: %r', exc)
+        logger.error('Telegram bot: failed to append inbox section: %r', exc)
         return
-    try:
-        fresh = get_article(article_id, author_id=user.id, include_blocks=True) or {}
-        blocks = fresh.get('blocks') or []
-        doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article_id))
-        update_article_doc_json(article_id, user.id, doc_json)
-    except Exception as exc:  # noqa: BLE001
-        logger.error('Telegram bot: failed to rebuild inbox docJson after insert: %r', exc)
 
     if chat_id is not None:
         _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')

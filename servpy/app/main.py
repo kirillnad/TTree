@@ -99,7 +99,6 @@ from .data_store import (
 from .routers.common import _present_article, _resolve_article_id_for_user
 from .routers import auth as auth_routes
 from .routers import articles as articles_routes
-from .routers import blocks as blocks_routes
 from .routers import public as public_routes
 from .routers import uploads as uploads_routes
 from .routers import export as export_routes
@@ -205,7 +204,6 @@ async def disable_client_caching(request: Request, call_next):
 # Роуты вынесены из app/main.py → app/routers/*
 app.include_router(auth_routes.router)
 app.include_router(articles_routes.router)
-app.include_router(blocks_routes.router)
 app.include_router(public_routes.router)
 app.include_router(uploads_routes.router)
 app.include_router(export_routes.router)

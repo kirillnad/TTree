@@ -135,25 +135,26 @@ def start_reindex_task(author_id: str, mode: str = 'all') -> dict[str, Any]:
                 article_titles = {}
                 article_section_texts = {}
 
+            # Outline-first: index embeddings by outline section id (section_id == block_id).
             sql = '''
                 SELECT
-                    b.id AS block_id,
-                    b.article_id AS article_id,
+                    s.section_id AS block_id,
+                    s.article_id AS article_id,
                     a.title AS article_title,
-                    b.text AS block_text,
-                    b.updated_at AS updated_at
-                FROM blocks b
-                JOIN articles a ON a.id = b.article_id
+                    s.text AS block_text,
+                    s.updated_at AS updated_at
+                FROM outline_sections_fts s
+                JOIN articles a ON a.id = s.article_id
                 {join_clause}
                 WHERE a.deleted_at IS NULL
                   AND a.author_id = ?
                   {missing_filter}
-                ORDER BY b.updated_at DESC
+                ORDER BY s.updated_at DESC
             '''
             join_clause = ''
             missing_filter = ''
             if requested_mode == 'missing':
-                join_clause = 'LEFT JOIN block_embeddings be ON be.block_id = b.id AND be.author_id = a.author_id'
+                join_clause = 'LEFT JOIN block_embeddings be ON be.block_id = s.section_id AND be.author_id = a.author_id'
                 missing_filter = 'AND be.block_id IS NULL'
             rows = CONN.execute(
                 sql.format(join_clause=join_clause, missing_filter=missing_filter),

@@ -26,7 +26,7 @@
 
 2. **Embeddings/поиск: только title + body (без детей)**  
    Для секции `S`: текст для индекса/эмбеддинга = `plain(title(S)) + "\n" + plain(body(S))`, **без** текстов дочерних секций.
-   Источник истины для текста секции — `articles.article_doc_json` (outlineSection → heading/body). `blocks.text` (HTML) считается legacy и используется только как fallback.
+   Источник истины для текста секции — только `articles.article_doc_json` (outlineSection → heading/body). Legacy `blocks`/`blocks_fts` не используются в runtime (только как исторический артефакт/одноразовая миграция).
 
 3. **Структура хранится явно, не эвристикой**  
    В документе должна существовать явная нода `section` (а не “угадывание секций” по голым `heading/paragraph`).
@@ -69,12 +69,12 @@
 
 ## Удаление старого блочного режима (HTML blocks)
 
-- Старый режим редактирования через `blocks.text` (HTML) выключен для обычных пользователей.
+- Старый режим редактирования через `blocks.text` (HTML) выключен.
 - Интерфейс статьи всегда открывается в outline‑режиме (TipTap): чтение + вход в edit‑mode по Enter/F2/dblclick.
-- `blocks`/`blocks_fts` остаются как legacy‑проекция/совместимость на переходный период, но:
+- `blocks`/`blocks_fts` больше не являются частью схемы хранения статьи: API не читает и не пишет их. Эмбеддинги/поиск строятся по `section_id` из `article_doc_json`.
   - `article_links` пересчитывается из `article_doc_json` (link mark href `/article/<id>`) при сохранении outline;
   - FTS по содержимому работает через `outline_sections_fts`;
-  - semantic embeddings берутся из `article_doc_json`.
+  - semantic embeddings хранятся в `block_embeddings`, где `block_id == section_id`.
   Для таблиц используем `TableKit` из `@tiptap/extension-table` (resizable columns) и команды: вставка таблицы 2×2, add/delete row/column (до/после), toggle header row/column, merge/split cell (если применимо), **“отменить таблицу” → преобразовать таблицу в обычный текст** (каждая ячейка становится отдельным абзацем).
 
 ## Markdown
@@ -224,7 +224,7 @@ iOS Safari/WKWebView может **автоматически очищать** In
 
 - `GET /api/articles/{id}` отдаёт **doc_json-first**: `docJson` + метаданные, а `blocks` возвращается как пустой массив.
   - Это сильно уменьшает payload и устраняет долгие ответы на больших статьях (раньше строили дерево `blocks` на каждый запрос).
-  - Если `docJson` отсутствует/битый — сервер делает self-heal (из legacy blocks или из последней версии) и возвращает уже заполненный `docJson`.
+  - Если `docJson` отсутствует/битый — сервер делает self-heal из последней `article_versions.doc_json` (а для `inbox-*` ещё может восстановить из `articles.history`) и возвращает уже заполненный `docJson`.
 - Диагностика:
   - сервер добавляет заголовки ответа `X-Memus-Article-ms` и `X-Memus-DocJson-bytes`;
   - клиентский debug включается через `localStorage.ttree_debug_article_load_v1 = "1"` (логи в console: `[api]`, `[article-load]`).
@@ -283,6 +283,12 @@ iOS Safari/WKWebView может **автоматически очищать** In
     - `systemctl --user restart memus-watch-app-version.service`
     - `systemctl --user disable --now memus-watch-app-version.service`
 
+#### Важно: обновление по обычному F5
+
+ServiceWorker регистрируется ранним бут‑скриптом `TTree/client/boot.js` и основным приложением `TTree/client/app.js`.
+Обе регистрации должны использовать `updateViaCache: 'none'`, иначе браузер может “залипать” на старом `uploads-sw.js`,
+и UI будет показывать старую версию (например `v18`), хотя на сервере уже `v20`.
+
 ---
 
 ## Инцидент: потеря серверной БД и восстановление (2026‑01)
@@ -307,6 +313,43 @@ iOS Safari/WKWebView может **автоматически очищать** In
 - Серверный `users.id` для пользователя `kirill` был приведён обратно к старому `userKey`, чтобы:
   - совпали пути `/uploads/<userKey>/...` в docJson;
   - клиент “естественно” использовал правильную локальную IndexedDB без специальных режимов.
+
+---
+
+## Инцидент: деградация inbox (часть секций стала пустой/пропала)
+
+### Симптом
+
+- `/api/articles/inbox` начал возвращать inbox, где часть секций пустая (heading/body), а часть секций вообще пропала.
+- Локально на одном из устройств секции ещё были (в IndexedDB), но это **не должно** быть источником правды.
+
+### Причина
+
+Мы одновременно использовали две “истины” для одной и той же сущности inbox:
+
+- **Новая схема (outline-first):** статья хранится в `articles.article_doc_json` и изменяется через `save_article_doc_json()`.
+  При этом таблица `blocks` *не обновляется* при редактировании в outline-редакторе.
+- **Старая схема (legacy blocks):** некоторые интеграции (в частности Telegram‑бот) вставляли/читали данные через таблицу `blocks`,
+  а затем пересобирали `docJson` из `blocks`.
+
+Когда `docJson` был пересобран из `blocks`, в него попали только те секции, которые существовали в `blocks`,
+а “outline‑секций” (которые никогда не писались в `blocks`) не стало. Плюс в `blocks` мог быть “дефолтный” пустой блок → секции становились пустыми.
+
+### Восстановление (server-side)
+
+Серверный ремонт выполняется только из серверных данных (сервер — центр правды):
+
+- Скрипт: `TTree/scripts/repair_inbox_from_server.py`
+- Источники:
+  - текущий `articles.article_doc_json`
+  - `articles.history` (outline-first записи по секциям)
+  - `article_versions.doc_json` (снапшоты)
+- Запуск:
+  - `PYTHONPATH=/home/aadminn/Ttree/TTree python3 scripts/repair_inbox_from_server.py <user_id>`
+
+### Профилактика
+
+- Telegram‑бот и другие интеграции для inbox должны работать **docJson-first** (не через `blocks`), чтобы не “съедать” секции.
 
 3) **Залить статьи обратно на сервер**
 - Восстановление делали batch‑процедурой на клиенте (временный recovery UI):
@@ -363,9 +406,9 @@ Cron‑задачи установлены в crontab пользователя `
 ### Самовосстановление doc_json (чтобы публичные статьи не становились пустыми)
 
 - Публичный рендер и outline-режим используют `articles.article_doc_json` как источник истины.
-- Если у статьи `article_doc_json` отсутствует/битый, но ещё есть legacy `blocks`:
-  - при открытии статьи (и в `/p/<slug>`) сервер делает best-effort конвертацию `blocks → doc_json` и сохраняет `article_doc_json`;
-  - предпочитаем Node-конвертер (`scripts/blocks_to_outline_doc_json.mjs`), иначе используем упрощённый Python fallback (может потерять форматирование, но не оставит статью пустой).
+- Если у статьи `article_doc_json` отсутствует/битый:
+  - сервер восстанавливает `doc_json` из последней `article_versions.doc_json`;
+  - для `inbox-*` дополнительно может восстановить docJson из `articles.history` (если есть).
 
 ## Горячие клавиши (обязательные)
 
@@ -585,7 +628,7 @@ UX для пустого заголовка при редактировании:
 - В меню статьи есть “История блока…”, которая показывает историю изменений текущей секции/блока (по `section.id`).
 - История пишется на сервере при сохранении:
   - `section_upsert_content` (контент секции),
-  - и/или при сохранении `article_doc_json` (fallback/старый путь).
+  - и/или при сохранении `article_doc_json` (полный снапшот статьи).
 - Восстановление восстанавливает состояние “после выбранного изменения” и в outline-режиме правит TipTap-документ (только `heading/body`, дети сохраняются), затем уходит в автосейв.
 - Вся старая история HTML-блоков очищается (одноразовая миграция в `schema.py`, ключ `schema_meta.purged_legacy_block_history_v1`).
 
@@ -652,7 +695,7 @@ UX для пустого заголовка при редактировании:
 
 - Семантический индекс (`block_embeddings`) строится из `articles.article_doc_json`, по секциям `outlineSection.attrs.id`.
 - Текст секции для embeddings = `plain(heading) + "\n" + plain(body)` (без детей).
-- `blocks.text` (HTML) остаётся только для legacy-рендера/совместимости и используется как fallback, если `doc_json` недоступен.
+- Legacy `blocks` не используется в runtime: embeddings всегда по `section_id` из docJson.
 
 ### FTS (обычный поиск): `outline_sections_fts`
 
@@ -662,7 +705,7 @@ UX для пустого заголовка при редактировании:
   - `text` — plain-text секции (heading+body, без детей),
   - `lemma` и `normalized_text` (как и в старом FTS),
   - `search_vector` (tsvector) + GIN индекс.
-- Переиндексация: `python3 -m servpy.app.reindex_fts` (пересобирает `articles_fts`, `blocks_fts` и `outline_sections_fts`).
+- Переиндексация: `python3 -m servpy.app.reindex_fts` (пересобирает `articles_fts` и `outline_sections_fts`).
 
 ### `article_links` (внутренние ссылки)
 

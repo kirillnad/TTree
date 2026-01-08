@@ -7,7 +7,8 @@ from typing import Any
 from uuid import uuid4
 
 from .db import CONN
-from .data_store import save_article
+from .blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
+from .data_store import upsert_article_doc_json_snapshot
 from .import_html import _parse_memus_export_payload
 
 # Вынесено из app/main.py → app/onboarding.py
@@ -89,8 +90,16 @@ def ensure_help_article_for_user(author_id: str) -> None:
         'authorId': author_id,
     }
     try:
-        save_article(article)
+        doc_json = convert_blocks_to_outline_doc_json(article.get('blocks') or [], fallback_id=new_article_id)
+        upsert_article_doc_json_snapshot(
+            article_id=new_article_id,
+            author_id=author_id,
+            title=title,
+            doc_json=doc_json,
+            created_at=str(article_meta.get('createdAt') or now),
+            updated_at=str(article_meta.get('updatedAt') or now),
+            reset_history=True,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.error('Failed to create default help article for user %s: %r', author_id, exc)
         return
-

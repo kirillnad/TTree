@@ -1,11 +1,11 @@
 import { state, isSavingTitle, setSavingTitle } from './state.js';
 import { refs } from './refs.js';
-import { apiRequest, deleteArticle } from './api.js?v=12';
+import { apiRequest, deleteArticle } from './api.js';
 import { showToast } from './toast.js';
 import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
 import { navigate, routing } from './routing.js';
-import { showConfirm } from './modal.js?v=10';
+import { showConfirm } from './modal.js';
 
 let isArticleMenuOpen = false;
 

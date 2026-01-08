@@ -3,7 +3,6 @@
   const BOOT_SESSION_KEY = 'ttree_boot_session_v1';
   const LAST_USER_KEY = 'ttree_last_user_v1';
   const LAST_ACTIVE_KEY = 'ttree_last_active_at_v1';
-  const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
   const MAX_QUEUED_SECTIONS = 200;
   const IDLE_MS = 15 * 60 * 1000;
   const SLOW_BOOT_MS = 2500;
@@ -50,7 +49,60 @@
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     try {
-      navigator.serviceWorker.register('/uploads-sw.js', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker
+        .register('/uploads-sw.js', { scope: '/', updateViaCache: 'none' })
+        .then((reg) => {
+          try {
+            // If a new SW is waiting (server __BUILD_ID__ changed), activate it immediately.
+            if (reg && reg.waiting) {
+              reg.waiting.postMessage({ type: 'memus:skipWaiting' });
+            }
+            reg?.addEventListener?.('updatefound', () => {
+              try {
+                const installing = reg.installing;
+                if (!installing) return;
+                installing.addEventListener('statechange', () => {
+                  if (installing.state !== 'installed') return;
+                  // If we already have a controller, this is an update -> activate it.
+                  if (navigator.serviceWorker.controller) {
+                    try {
+                      reg.waiting?.postMessage?.({ type: 'memus:skipWaiting' });
+                    } catch {
+                      // ignore
+                    }
+                  }
+                });
+              } catch {
+                // ignore
+              }
+            });
+          } catch {
+            // ignore
+          }
+          try {
+            const p = reg?.update?.();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+          } catch {
+            // ignore
+          }
+        })
+        .catch(() => {});
+
+      try {
+        // Reload the page once the new SW takes control, so modules are reloaded from the new app-shell cache.
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (reloaded) return;
+          reloaded = true;
+          try {
+            window.location.reload();
+          } catch {
+            // ignore
+          }
+        });
+      } catch {
+        // ignore
+      }
     } catch {
       // ignore
     }
@@ -737,74 +789,34 @@
     return total;
   }
 
-  function readQueuedInboxEntry() {
+  const PENDING_KEY = 'ttree_pending_quick_notes_v1';
+  function readPendingQuickNotes() {
     try {
-      const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY) || '';
-      if (!raw) return null;
-      const queue = JSON.parse(raw);
-      const entry = queue && typeof queue === 'object' ? queue.inbox : null;
-      if (!entry || !entry.docJson || typeof entry.docJson !== 'object') return null;
-      return { docJson: entry.docJson, queuedAt: Number(entry.queuedAt || 0) || 0 };
+      const raw = window.localStorage.getItem(PENDING_KEY) || '';
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
     } catch {
-      return null;
+      return [];
     }
   }
-
-  function writeQueuedInboxEntry(docJson) {
+  function writePendingQuickNotes(items) {
     try {
-      const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY) || '';
-      const queue = raw ? JSON.parse(raw) : {};
-      const nextQueue = queue && typeof queue === 'object' ? queue : {};
-      nextQueue.inbox = { docJson, queuedAt: Date.now() };
-      window.localStorage.setItem(OUTLINE_QUEUE_KEY, JSON.stringify(nextQueue));
+      window.localStorage.setItem(PENDING_KEY, JSON.stringify(Array.isArray(items) ? items : []));
     } catch {
       // ignore
     }
   }
 
-  function countOutlineSections(docJson) {
-    try {
-      const content = docJson?.content;
-      if (!Array.isArray(content)) return 0;
-      return content.filter((n) => n && n.type === 'outlineSection').length;
-    } catch {
-      return 0;
-    }
-  }
-
-  function buildSectionFromPlainText(text, sectionId) {
-    const t = String(text || '').trim();
-    const lines = t.split(/\r?\n/);
-    const paragraphContent = [];
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i];
-      if (line) paragraphContent.push({ type: 'text', text: line });
-      if (i !== lines.length - 1) paragraphContent.push({ type: 'hardBreak' });
-    }
-    return {
-      type: 'outlineSection',
-      attrs: { id: String(sectionId || uuid()), collapsed: false },
-      content: [
-        { type: 'outlineHeading', content: [] },
-        { type: 'outlineBody', content: [paragraphContent.length ? { type: 'paragraph', content: paragraphContent } : { type: 'paragraph' }] },
-        { type: 'outlineChildren', content: [] },
-      ],
-    };
-  }
-
-  function addQuickNoteToQueuedInbox(text) {
+  function addQuickNoteToPending(text) {
     const trimmed = String(text || '').trim();
     if (!trimmed) return null;
-    const note = { id: uuid(), createdAt: nowIso(), text: trimmed };
-    const existing = readQueuedInboxEntry();
-    const baseDoc = existing?.docJson && typeof existing.docJson === 'object' ? existing.docJson : { type: 'doc', content: [] };
-    const baseContent = Array.isArray(baseDoc.content) ? baseDoc.content.slice() : [];
-
-    const section = buildSectionFromPlainText(note.text, note.id);
-    const nextContent = [section, ...baseContent].slice(0, MAX_QUEUED_SECTIONS);
-    const nextDoc = { ...baseDoc, type: 'doc', content: nextContent };
-    writeQueuedInboxEntry(nextDoc);
-    dlog('saved.queued', { id: note.id, sections: countOutlineSections(nextDoc) });
+    const sectionId = uuid();
+    const note = { id: sectionId, sectionId, createdAt: nowIso(), text: trimmed };
+    const items = readPendingQuickNotes();
+    const next = [note, ...items].slice(0, MAX_QUEUED_SECTIONS);
+    writePendingQuickNotes(next);
+    dlog('saved.pending', { id: note.id, len: next.length });
     return note;
   }
 
@@ -874,8 +886,7 @@
     title.textContent = 'Быстрая заметка (оффлайн-буфер)';
     const meta = document.createElement('div');
     meta.className = 'boot-modal__meta';
-    const entry = readQueuedInboxEntry();
-    const count = entry?.docJson ? countOutlineSections(entry.docJson) : 0;
+    const count = readPendingQuickNotes().length;
     meta.textContent = count ? `В очереди: ${count}` : (reason ? `Причина: ${reason}` : 'Можно без интернета и без входа');
     left.appendChild(title);
     left.appendChild(meta);
@@ -931,8 +942,7 @@
     backdrop.appendChild(modal);
 
     const updateMeta = () => {
-      const e = readQueuedInboxEntry();
-      const c = e?.docJson ? countOutlineSections(e.docJson) : 0;
+      const c = readPendingQuickNotes().length;
       meta.textContent = c ? `В очереди: ${c}` : (reason ? `Причина: ${reason}` : 'Можно без интернета и без входа');
     };
 
@@ -945,7 +955,7 @@
     };
 
     const save = (keepOpen) => {
-      const note = addQuickNoteToQueuedInbox(textarea.value);
+      const note = addQuickNoteToPending(textarea.value);
       if (!note) return;
       textarea.value = '';
       toast.textContent = 'Сохранено локально';

@@ -2,8 +2,8 @@
 // - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 18;
-const APP_BUILD = 'degxol9q';
+const APP_VERSION = 78;
+const APP_BUILD = 'e0quxwy9';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
@@ -12,7 +12,57 @@ const APP_SHELL_URLS = [
   '/style.css',
   '/boot.js',
   '/app.js',
+  // Core modules required to render list view offline.
+  '/routing.js',
+  '/events.js',
+  '/auth.js',
+  '/refs.js',
+  '/sidebar.js',
+  '/state.js',
+  '/api.js',
+  '/toast.js',
+  '/utils.js',
+  '/modal.js',
+  '/users.js',
+  '/search.js',
+  '/title.js',
+  '/undo.js',
+  '/actions.js',
+  '/block.js',
+  '/encryption.js',
+  '/article.js',
+  '/markdown.js',
+  // Submodules used during startup / offline.
+  '/offline/index.js',
+  '/offline/idb.js',
+  '/offline/cache.js',
+  '/offline/indexer.js',
+  '/offline/outbox.js',
+  '/offline/uploads.js',
+  '/offline/sync.js',
+  '/offline/storage.js',
+  '/offline/status.js',
+  '/offline/media.js',
+  '/offline/search.js',
+  '/offline/embeddings.js',
+  '/article/loadCore.js',
+  '/article/views.js',
+  '/article/render.js',
+  '/article/header.js',
+  '/article/encryption.js',
+  '/outline/editor.js',
+  '/outline/tiptap.bundle.js',
+  '/outline/structuredPaste.js',
+  '/outline/linkProtocols.js',
+  '/block/selection.js',
+  '/block/sanitize.js',
+  '/block/editable.js',
+  '/block/images.js',
+  '/block/lists.js',
+  '/block/paragraphMerge.js',
+  '/quickNotes/pending.js',
   '/manifest.webmanifest',
+  '/fonts/SegoeIcons.ttf',
   '/icons/favicon.ico',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -86,6 +136,17 @@ function isJsOrCssUrl(url) {
   }
 }
 
+function canonicalizeSameOriginAssetRequest(req) {
+  try {
+    const url = new URL(req.url);
+    if (url.origin !== self.location.origin) return req;
+    // Strip search params so old `?v=` imports still work with app-shell caching.
+    return new Request(url.origin + url.pathname, { method: 'GET' });
+  } catch {
+    return req;
+  }
+}
+
 function makeReloadRequest(req) {
   try {
     return new Request(req, { cache: 'reload' });
@@ -131,13 +192,18 @@ function offlineHtml() {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
+      let precached = false;
       try {
         const cache = await caches.open(APP_CACHE);
         await cache.addAll(APP_SHELL_URLS);
+        precached = true;
       } catch {
         // ignore (e.g. offline first install)
       }
-      await self.skipWaiting();
+      // Never activate a new SW if we failed to precache app-shell (would break offline for existing users).
+      if (precached) {
+        await self.skipWaiting();
+      }
     })(),
   );
 });
@@ -168,6 +234,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('message', (event) => {
   try {
     const data = event.data || {};
+    if (data.type === 'memus:skipWaiting') {
+      try {
+        self.skipWaiting();
+      } catch {
+        // ignore
+      }
+      return;
+    }
     if (data.type !== 'memus:get-sw-build') return;
     const port = event.ports && event.ports[0];
     if (!port) return;
@@ -240,7 +314,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         const cache = await caches.open(APP_CACHE);
-        const cached = await cache.match(req, { ignoreSearch: false });
+        const keyReq = canonicalizeSameOriginAssetRequest(req);
+        const cached = await cache.match(keyReq, { ignoreSearch: true });
         if (cached) {
           // JS/CSS should update immediately on reload (otherwise SW can "pin" old code).
           // Use network-first here to avoid duplicates and still fallback to cache offline.
@@ -250,7 +325,7 @@ self.addEventListener('fetch', (event) => {
               try {
                 const resp = await fetch(makeReloadRequest(req));
                 if (resp && resp.ok) {
-                  cache.put(req, resp.clone()).catch(() => {});
+                  cache.put(keyReq, resp.clone()).catch(() => {});
                   return resp;
                 }
               } catch {
@@ -263,7 +338,7 @@ self.addEventListener('fetch', (event) => {
               event.waitUntil(
                 fetch(makeReloadRequest(req))
                   .then((resp) => {
-                    if (resp && resp.ok) cache.put(req, resp.clone());
+                    if (resp && resp.ok) cache.put(keyReq, resp.clone());
                   })
                   .catch(() => {}),
               );
@@ -276,7 +351,7 @@ self.addEventListener('fetch', (event) => {
         try {
           const url = new URL(req.url);
           const resp = await fetch(isJsOrCssUrl(url) ? makeReloadRequest(req) : req);
-          if (resp && resp.ok) cache.put(req, resp.clone()).catch(() => {});
+          if (resp && resp.ok) cache.put(keyReq, resp.clone()).catch(() => {});
           return resp;
         } catch (err) {
           // If it's an HTML request (rare, aside from navigation), fall back to app shell.

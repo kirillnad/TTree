@@ -315,34 +315,20 @@ export function fetchArticle(id, options = {}) {
         ? () => globalThis.crypto.randomUUID()
         : () => `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
-    // Offline fallback for inbox: if user created quick notes in boot mode, they live in outline queue.
-    let docJson = null;
-    try {
-      const raw = window.localStorage.getItem('ttree_outline_autosave_queue_docjson_v1') || '';
-      if (raw) {
-        const queue = JSON.parse(raw);
-        const entry = queue && typeof queue === 'object' ? queue.inbox : null;
-        if (entry && entry.docJson && typeof entry.docJson === 'object') docJson = entry.docJson;
-      }
-    } catch {
-      docJson = null;
-    }
-    if (!docJson) {
-      docJson = {
-        type: 'doc',
-        content: [
-          {
-            type: 'outlineSection',
-            attrs: { id: safeUuid(), collapsed: false },
-            content: [
-              { type: 'outlineHeading', content: [] },
-              { type: 'outlineBody', content: [{ type: 'paragraph' }] },
-              { type: 'outlineChildren', content: [] },
-            ],
-          },
-        ],
-      };
-    }
+    const docJson = {
+      type: 'doc',
+      content: [
+        {
+          type: 'outlineSection',
+          attrs: { id: safeUuid(), collapsed: false },
+          content: [
+            { type: 'outlineHeading', content: [] },
+            { type: 'outlineBody', content: [{ type: 'paragraph' }] },
+            { type: 'outlineChildren', content: [] },
+          ],
+        },
+      ],
+    };
     return {
       id: 'inbox',
       title: 'Быстрые заметки',
@@ -357,6 +343,70 @@ export function fetchArticle(id, options = {}) {
       docJson,
       history: [],
     };
+  };
+
+  const PENDING_QUICK_NOTES_KEY = 'ttree_pending_quick_notes_v1';
+  const readPendingQuickNotes = () => {
+    try {
+      const raw = window?.localStorage?.getItem?.(PENDING_QUICK_NOTES_KEY) || '';
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const buildOutlineSectionFromPlainText = (sectionId, text) => {
+    const sid = String(sectionId || '').trim();
+    if (!sid) return null;
+    const t = String(text || '').trim();
+    const lines = t.split(/\r?\n/);
+    const paragraphContent = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (line) paragraphContent.push({ type: 'text', text: line });
+      if (i !== lines.length - 1) paragraphContent.push({ type: 'hardBreak' });
+    }
+    return {
+      type: 'outlineSection',
+      attrs: { id: sid, collapsed: false },
+      content: [
+        { type: 'outlineHeading', content: [] },
+        { type: 'outlineBody', content: [paragraphContent.length ? { type: 'paragraph', content: paragraphContent } : { type: 'paragraph' }] },
+        { type: 'outlineChildren', content: [] },
+      ],
+    };
+  };
+
+  const withPendingQuickNotesOverlay = (article) => {
+    try {
+      if (!article || String(article.id || '') !== 'inbox') return article;
+      const pending = readPendingQuickNotes();
+      if (!pending.length) return article;
+      const baseDoc = article?.docJson && typeof article.docJson === 'object' ? article.docJson : { type: 'doc', content: [] };
+      const baseContent = Array.isArray(baseDoc.content) ? baseDoc.content : [];
+      const existing = new Set(
+        baseContent
+          .filter((n) => n && n.type === 'outlineSection' && n.attrs && n.attrs.id)
+          .map((n) => String(n.attrs.id)),
+      );
+      const toAdd = [];
+      for (const n of pending) {
+        const sid = String(n?.sectionId || n?.id || '').trim();
+        if (!sid) continue;
+        if (existing.has(sid)) continue;
+        const sec = buildOutlineSectionFromPlainText(sid, n?.text || '');
+        if (sec) toAdd.push(sec);
+      }
+      if (!toAdd.length) return article;
+      return {
+        ...article,
+        docJson: { ...baseDoc, type: baseDoc.type || 'doc', content: [...toAdd, ...baseContent] },
+      };
+    } catch {
+      return article;
+    }
   };
 
   const fetchMeta = () =>
@@ -387,14 +437,14 @@ export function fetchArticle(id, options = {}) {
     if (!cached) {
       if (!navigator.onLine && String(id) === 'inbox') {
         perfLog('[offline-first][article] choose.local.inbox.offline', { id });
-        return buildLocalInboxArticle();
+        return withPendingQuickNotesOverlay(buildLocalInboxArticle());
       }
       perfLog('[offline-first][article] choose.network.no-cache', { id });
-      return fetchOnline();
+      return withPendingQuickNotesOverlay(await fetchOnline());
     }
     if (!navigator.onLine) {
       perfLog('[offline-first][article] choose.cache.offline', { id, updatedAt: cached?.updatedAt || null });
-      return cached;
+      return withPendingQuickNotesOverlay(cached);
     }
 
     const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
@@ -409,14 +459,14 @@ export function fetchArticle(id, options = {}) {
       const serverUpdatedAt = String(meta?.updatedAt || '').trim();
       if (serverUpdatedAt && serverUpdatedAt === cachedUpdatedAt) {
         perfLog('[offline-first][article] choose.cache.meta.same', { id, cachedUpdatedAt });
-        return cached;
+        return withPendingQuickNotesOverlay(cached);
       }
       perfLog('[offline-first][article] choose.network.meta.diff', {
         id,
         cachedUpdatedAt,
         serverUpdatedAt: serverUpdatedAt || null,
       });
-      return fetchOnline();
+      return withPendingQuickNotesOverlay(await fetchOnline());
     } catch (err) {
       // If meta check fails, fall back to cached quickly and refresh in background.
       if (String(err?.name || '') === 'TimeoutError' || String(err?.message || '') === 'meta_timeout') {
@@ -430,7 +480,7 @@ export function fetchArticle(id, options = {}) {
       } else {
         perfLog('[offline-first][article] choose.cache.meta.failed', { id, cachedUpdatedAt });
       }
-      return cached;
+      return withPendingQuickNotesOverlay(cached);
     }
   });
 }

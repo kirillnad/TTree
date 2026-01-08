@@ -1,5 +1,5 @@
 import { refs } from './refs.js';
-import { apiRequest } from './api.js?v=12';
+import { apiRequest } from './api.js';
 import { navigate, routing } from './routing.js';
 import { state } from './state.js';
 import { showToast } from './toast.js';

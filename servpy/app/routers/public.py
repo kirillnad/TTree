@@ -7,9 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from ..auth import User, get_current_user
 from ..db import CONN
-from ..data_store import build_article_from_row, get_article, rows_to_tree
-from ..blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
-from ..data_store import update_article_doc_json
+from ..data_store import build_article_from_row, get_article, update_article_doc_json
 from ..public_render import (
     _build_public_article_html,
     _generate_public_slug,
@@ -65,17 +63,6 @@ def read_public_article(slug: str):
     # doc_json-first: keep payload small; blocks are not needed for public read.
     article = build_article_from_row(row, include_blocks=False)
     if article and not article.get('docJson') and not bool(article.get('encrypted')):
-        # Self-heal for public pages: ensure doc_json exists so outliner viewer can render content.
-        try:
-            blocks = rows_to_tree(str(article.get('id') or ''))
-            if blocks:
-                doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article.get('id') or ''))
-                update_article_doc_json(str(article.get('id') or ''), str(row.get('author_id') or ''), doc_json)
-                row = _get_public_article_row(slug)
-                article = build_article_from_row(row, include_blocks=False)
-        except Exception:
-            pass
-    if article and not article.get('docJson') and not bool(article.get('encrypted')):
         # If blocks are gone, try restoring from the latest version snapshot.
         try:
             ver = CONN.execute(
@@ -109,17 +96,6 @@ def read_public_article_page(slug: str):
     if not row:
         raise HTTPException(status_code=404, detail='Article not found')
     article = build_article_from_row(row, include_blocks=False)
-    if article and not article.get('docJson') and not bool(article.get('encrypted')):
-        # Self-heal for public pages: ensure doc_json exists so outliner viewer can render content.
-        try:
-            blocks = rows_to_tree(str(article.get('id') or ''))
-            if blocks:
-                doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article.get('id') or ''))
-                update_article_doc_json(str(article.get('id') or ''), str(row.get('author_id') or ''), doc_json)
-                row = _get_public_article_row(slug)
-                article = build_article_from_row(row, include_blocks=False)
-        except Exception:
-            pass
     if article and not article.get('docJson') and not bool(article.get('encrypted')):
         # If blocks are gone, try restoring from the latest version snapshot.
         try:

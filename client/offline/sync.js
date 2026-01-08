@@ -9,7 +9,8 @@ import {
 import { listOutbox, markOutboxError, removeOutboxOp } from './outbox.js';
 import { deleteSectionEmbeddings, upsertArticleEmbeddings } from './embeddings.js';
 import { startMediaPrefetchLoop, pruneUnusedMedia, updateMediaRefsForArticle } from './media.js';
-import { fetchArticlesIndex } from '../api.js?v=12';
+import { fetchArticlesIndex } from '../api.js';
+import { removePendingQuickNoteBySectionId } from '../quickNotes/pending.js';
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 
@@ -38,6 +39,51 @@ let isFlushing = false;
 let fullPullStarted = false;
 let fullPullRunning = false;
 let outboxIntervalId = null;
+
+function debugOfflineEnabled() {
+  try {
+    return window?.localStorage?.getItem?.('ttree_debug_offline_v1') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dlog(...args) {
+  try {
+    if (!debugOfflineEnabled()) return;
+    // eslint-disable-next-line no-console
+    console.log('[offline][queue]', ...args);
+  } catch {
+    // ignore
+  }
+}
+
+function pruneOutlineDocJsonQueueToInboxOnly() {
+  try {
+    const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY) || '';
+    if (!raw) return { changed: false, removed: 0 };
+    const queue = JSON.parse(raw);
+    if (!queue || typeof queue !== 'object') return { changed: false, removed: 0 };
+
+    const keys = Object.keys(queue);
+    if (!keys.length) return { changed: false, removed: 0 };
+
+    let removed = 0;
+    for (const k of keys) {
+      if (k === 'inbox') continue;
+      delete queue[k];
+      removed += 1;
+    }
+    if (!removed) return { changed: false, removed: 0 };
+
+    window.localStorage.setItem(OUTLINE_QUEUE_KEY, JSON.stringify(queue));
+    dlog('prune.queue', { removed });
+    return { changed: true, removed };
+  } catch (err) {
+    dlog('prune.queue.error', { message: err?.message || String(err || 'error') });
+    return { changed: false, removed: 0 };
+  }
+}
 
 let fullPullStatus = {
   running: false,
@@ -260,6 +306,14 @@ export async function flushOutboxOnce() {
 		      try {
 		        await flushOp(op);
 		        await removeOutboxOp(op.id);
+		        try {
+		          if (op.type === 'section_upsert_content' && String(op.articleId || '') === 'inbox') {
+		            const sid = String(op.payload?.sectionId || '').trim();
+		            if (sid) removePendingQuickNoteBySectionId(sid);
+		          }
+		        } catch {
+		          // ignore
+		        }
 		        await maybeClearQueuedDocJsonAfterSuccessfulFlush(op);
 		        if (op.type !== 'save_doc_json') {
 		          try {
@@ -323,6 +377,7 @@ function startOutboxInterval() {
       if (hasMore === false) {
         window.clearInterval(outboxIntervalId);
         outboxIntervalId = null;
+        pruneOutlineDocJsonQueueToInboxOnly();
       }
     } catch {
       // keep interval
@@ -339,6 +394,7 @@ function stopOutboxInterval() {
 export function startSyncLoop() {
   if (syncLoopStarted) return;
   syncLoopStarted = true;
+  pruneOutlineDocJsonQueueToInboxOnly();
   // Media prefetch runs independently of outbox.
   try {
     startMediaPrefetchLoop();

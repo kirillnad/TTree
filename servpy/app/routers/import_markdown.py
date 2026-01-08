@@ -12,7 +12,8 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from ..auth import User, get_current_user
-from ..data_store import _expand_wikilinks, get_article, save_article
+from ..blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
+from ..data_store import _expand_wikilinks, get_article, upsert_article_doc_json_snapshot
 from ..import_assets import _import_attachment_from_bytes
 from ..import_utils import _parse_markdown_blocks, _walk_blocks
 
@@ -58,18 +59,15 @@ async def import_article_from_markdown(
 
     # Сохраняем «пустую» статью, чтобы запись в articles уже существовала
     # перед тем, как создавать записи во вложениях (attachments).
-    skeleton_article = {
-        'id': new_article_id,
-        'title': base_title,
-        'createdAt': now,
-        'updatedAt': now,
-        'deletedAt': None,
-        'blocks': [],
-        'history': [],
-        'redoHistory': [],
-        'authorId': current_user.id,
-    }
-    save_article(skeleton_article)
+    upsert_article_doc_json_snapshot(
+        article_id=new_article_id,
+        author_id=current_user.id,
+        title=base_title,
+        doc_json={'type': 'doc', 'content': []},
+        created_at=now,
+        updated_at=now,
+        reset_history=True,
+    )
 
     base_url = (assets_base_url or '').strip().rstrip('/') or None
 
@@ -154,21 +152,17 @@ async def import_article_from_markdown(
         if text_html:
             block['text'] = _expand_wikilinks(text_html, current_user.id)
 
-    article = {
-        'id': new_article_id,
-        'title': base_title,
-        'createdAt': now,
-        'updatedAt': now,
-        'deletedAt': None,
-        'blocks': blocks_tree,
-        'history': [],
-        'redoHistory': [],
-        'authorId': current_user.id,
-    }
-
-    save_article(article)
+    doc_json = convert_blocks_to_outline_doc_json(blocks_tree, fallback_id=new_article_id)
+    upsert_article_doc_json_snapshot(
+        article_id=new_article_id,
+        author_id=current_user.id,
+        title=base_title,
+        doc_json=doc_json,
+        created_at=now,
+        updated_at=now,
+        reset_history=True,
+    )
     created = get_article(new_article_id, current_user.id)
     if not created:
         raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
     return created
-

@@ -829,10 +829,8 @@ def build_article_from_row(row: RowMapping | None, *, include_blocks: bool = Tru
         'encryptionHint': row.get('encryption_hint'),
         'docJson': doc_json_value,
     }
-    if include_blocks:
-        article['blocks'] = rows_to_tree(row['id'])
-    else:
-        article['blocks'] = []
+    # Legacy HTML blocks storage is deprecated; always return empty blocks.
+    article['blocks'] = []
     return article
 
 
@@ -1136,35 +1134,113 @@ def get_article(
         encrypted_flag = bool(row.get('is_encrypted', 0)) or (
             bool(row.get('encryption_salt')) and bool(row.get('encryption_verifier'))
         )
-        raw_doc = row.get('article_doc_json') or ''
         has_doc_json = bool(article.get('docJson'))
 
-        # Self-heal: if doc_json is missing/invalid but legacy blocks exist, rebuild it once.
-        if (not encrypted_flag) and (not has_doc_json):
-            blocks = (rows_to_tree(article_id) if not include_blocks else (article.get('blocks') or [])) or []
-            if isinstance(blocks, list) and blocks:
-                doc_json = convert_blocks_to_outline_doc_json(blocks, fallback_id=str(article_id))
-                # author_id param can be None; use row author_id for recovery.
-                update_article_doc_json(article_id, str(row.get('author_id') or ''), doc_json)
-                row2 = CONN.execute(sql, tuple(params)).fetchone()
-                article2 = build_article_from_row(row2, include_blocks=include_blocks)
-                return article2 or article
-            # If blocks are also gone (or empty), try to restore doc_json from the latest version.
+        def _touch_doc_json(doc_json: Any) -> bool:
+            """
+            Persist docJson and bump updated_at.
+            This is a recovery-only helper (rare path) so client meta checks notice the change.
+            """
+            try:
+                doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+            except Exception:
+                return False
+            now = iso_now()
+            with CONN:
+                CONN.execute(
+                    'UPDATE articles SET article_doc_json = ?, updated_at = ?, redo_history = ? WHERE id = ?',
+                    (doc_json_str, now, '[]', article_id),
+                )
+            return True
+
+        def _try_restore_from_latest_version() -> bool:
             try:
                 ver = CONN.execute(
                     'SELECT doc_json FROM article_versions WHERE article_id = ? AND doc_json IS NOT NULL ORDER BY created_at DESC LIMIT 1',
                     (article_id,),
                 ).fetchone()
                 raw_ver = (ver.get('doc_json') if ver else None) or ''
-                if raw_ver:
-                    vj = json.loads(raw_ver)
-                    if isinstance(vj, dict) and vj.get('content'):
-                        update_article_doc_json(article_id, str(row.get('author_id') or ''), vj)
-                        row2 = CONN.execute(sql, tuple(params)).fetchone()
-                        article2 = build_article_from_row(row2, include_blocks=include_blocks)
-                        return article2 or article
+                if not raw_ver:
+                    return False
+                vj = json.loads(raw_ver)
+                if isinstance(vj, dict) and vj.get('content'):
+                    return _touch_doc_json(vj)
             except Exception:
-                pass
+                return False
+            return False
+
+        def _try_restore_inbox_from_history() -> bool:
+            # Inbox is outline-first: blocks table is not authoritative and can be incomplete/empty.
+            try:
+                raw_hist = row.get('history') or '[]'
+                hist = json.loads(raw_hist) if isinstance(raw_hist, str) else (raw_hist or [])
+            except Exception:
+                hist = []
+            if not isinstance(hist, list) or not hist:
+                return False
+            latest_by_id: dict[str, dict[str, Any]] = {}
+            ts_by_id: dict[str, float] = {}
+            for e in hist:
+                if not isinstance(e, dict):
+                    continue
+                sid = str(e.get('blockId') or '').strip()
+                if not sid:
+                    continue
+                ts = 0.0
+                try:
+                    ts = datetime.fromisoformat(str(e.get('timestamp') or '')).timestamp()
+                except Exception:
+                    ts = 0.0
+                # Keep newest per section.
+                if sid in ts_by_id and ts <= ts_by_id[sid]:
+                    continue
+                after_heading = e.get('afterHeadingJson')
+                after_body = e.get('afterBodyJson')
+                if not isinstance(after_heading, dict) and not isinstance(after_body, dict):
+                    continue
+                latest_by_id[sid] = {
+                    'heading': after_heading if isinstance(after_heading, dict) else {'type': 'outlineHeading', 'content': []},
+                    'body': after_body if isinstance(after_body, dict) else {'type': 'outlineBody', 'content': [{'type': 'paragraph'}]},
+                }
+                ts_by_id[sid] = ts
+
+            if not latest_by_id:
+                return False
+
+            ordered = sorted(latest_by_id.keys(), key=lambda sid: (ts_by_id.get(sid, 0.0), sid), reverse=True)
+            rebuilt: dict[str, Any] = {'type': 'doc', 'content': []}
+            for sid in ordered:
+                frag = latest_by_id[sid]
+                rebuilt['content'].append(
+                    {
+                        'type': 'outlineSection',
+                        'attrs': {'id': sid, 'collapsed': False},
+                        'content': [
+                            frag.get('heading') or {'type': 'outlineHeading', 'content': []},
+                            frag.get('body') or {'type': 'outlineBody', 'content': [{'type': 'paragraph'}]},
+                            {'type': 'outlineChildren', 'content': []},
+                        ],
+                    }
+                )
+            return _touch_doc_json(rebuilt)
+
+        # Self-heal: if doc_json is missing/invalid, try to restore it.
+        if (not encrypted_flag) and (not has_doc_json):
+            # Inbox is outline-first: never rebuild from legacy blocks.
+            if str(article_id).startswith('inbox-'):
+                if _try_restore_inbox_from_history() or _try_restore_from_latest_version():
+                    row2 = CONN.execute(sql, tuple(params)).fetchone()
+                    article2 = build_article_from_row(row2, include_blocks=include_blocks)
+                    return article2 or article
+                return article
+
+            # For legacy articles, prefer restoring from the latest version snapshot first.
+            if _try_restore_from_latest_version():
+                row2 = CONN.execute(sql, tuple(params)).fetchone()
+                article2 = build_article_from_row(row2, include_blocks=include_blocks)
+                return article2 or article
+
+            # No fallback to legacy blocks: docJson is the only source of truth.
     except Exception:
         return article
     return article
@@ -1177,10 +1253,8 @@ def delete_article(article_id: str, force: bool = False) -> bool:
         if not exists:
             return False
         if force:
-            CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM outline_sections_fts WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM articles_fts WHERE article_id = ?', (article_id,))
-            CONN.execute('DELETE FROM blocks WHERE article_id = ?', (article_id,))
             CONN.execute('DELETE FROM articles WHERE id = ?', (article_id,))
         else:
             now = iso_now()
@@ -1519,7 +1593,13 @@ def upsert_outline_section_content(
         sec = _ensure_outline_section_node(sid, heading=heading_json, body=body_json)
         if not isinstance(doc_json.get('content'), list):
             doc_json['content'] = []
-        doc_json['content'].append(sec)
+        # Inbox should behave like "newest first": when a section is missing from structure,
+        # create it at the top-level root and put it first.
+        # NOTE: the public id is "inbox", but in DB it is "inbox-<user_id>".
+        if str(article_id).startswith('inbox-'):
+            doc_json['content'].insert(0, sec)
+        else:
+            doc_json['content'].append(sec)
     else:
         content = sec.get('content') or []
         if not isinstance(content, list) or len(content) < 3:
@@ -1864,11 +1944,6 @@ def save_article(article: Dict[str, Any]) -> None:
                     public_slug,
                 ),
             )
-        CONN.execute('DELETE FROM blocks WHERE article_id = ?', (normalized['id'],))
-        CONN.execute('DELETE FROM blocks_fts WHERE article_id = ?', (normalized['id'],))
-        insert_blocks_recursive(normalized['id'], normalized['blocks'], now)
-        # Обновляем карту ссылок статьи на другие статьи.
-        _update_article_links_for_article(normalized)
     upsert_article_search_index(normalized['id'], title_value)
 
 
@@ -1911,50 +1986,207 @@ def get_or_create_user_inbox(author_id: str) -> Dict[str, Any]:
     if existing:
         # Если инбокс был в корзине — восстанавливаем.
         if existing.get('deletedAt'):
-            existing['deletedAt'] = None
-            existing['updatedAt'] = iso_now()
-            save_article(existing)
+            now = iso_now()
+            with CONN:
+                CONN.execute(
+                    'UPDATE articles SET deleted_at = NULL, updated_at = ? WHERE id = ? AND author_id = ?',
+                    (now, inbox_id, author_id),
+                )
+            existing = get_article(inbox_id, author_id=author_id, include_deleted=True) or existing
         return existing
 
     now = iso_now()
-    article = {
+    # Outline-first: inbox is stored as docJson and never rebuilt from legacy blocks.
+    section_id = str(uuid.uuid4())
+    doc_json = {'type': 'doc', 'content': [_ensure_outline_section_node(section_id)]}
+    with CONN:
+        CONN.execute(
+            '''
+            INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, block_trash, author_id, public_slug, article_doc_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                inbox_id,
+                'Быстрые заметки',
+                now,
+                now,
+                serialize_history([]),
+                serialize_history([]),
+                serialize_history([]),
+                author_id,
+                None,
+                json.dumps(doc_json, ensure_ascii=False),
+            ),
+        )
+    # Build derived indexes/links/embeddings. (No history diff because docJson already stored.)
+    try:
+        save_article_doc_json(article_id=inbox_id, author_id=author_id, doc_json=doc_json)
+    except Exception:
+        pass
+    return get_article(inbox_id, author_id=author_id, include_deleted=True) or {
         'id': inbox_id,
         'title': 'Быстрые заметки',
         'createdAt': now,
         'updatedAt': now,
-        'blocks': [create_default_block()],
+        'deletedAt': None,
+        'parentId': None,
+        'position': 0,
+        'authorId': author_id,
+        'publicSlug': None,
         'history': [],
         'redoHistory': [],
         'blockTrash': [],
-        'authorId': author_id,
+        'encrypted': False,
+        'docJson': doc_json,
+        'blocks': [],
     }
-    save_article(article)
-    # Outline-first: ensure inbox has docJson immediately (otherwise UI opens it as "empty").
-    try:
-        doc_json = convert_blocks_to_outline_doc_json(article.get('blocks') or [], fallback_id=inbox_id)
-        update_article_doc_json(inbox_id, author_id, doc_json)
-        article['docJson'] = doc_json
-    except Exception:
-        # Self-heal will still catch missing docJson later; keep inbox creation resilient.
-        pass
-    return article
 
 
 def create_article(title: Optional[str] = None, author_id: Optional[str] = None, article_id: Optional[str] = None) -> Dict[str, Any]:
     now = iso_now()
-    article = {
-        'id': str(article_id or uuid.uuid4()),
+    new_id = str(article_id or uuid.uuid4())
+    section_id = str(uuid.uuid4())
+    doc_json = {'type': 'doc', 'content': [_ensure_outline_section_node(section_id)]}
+    created_new = False
+    with CONN:
+        exists = CONN.execute('SELECT author_id FROM articles WHERE id = ?', (new_id,)).fetchone()
+        if exists:
+            if author_id is not None and str(exists.get('author_id') or '') != str(author_id):
+                raise InvalidOperation('Cannot create/update чужую статью')
+            CONN.execute(
+                'UPDATE articles SET title = ?, updated_at = ? WHERE id = ?',
+                (title or 'Новая статья', now, new_id),
+            )
+        else:
+            created_new = True
+            CONN.execute(
+                '''
+                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, block_trash, author_id, public_slug, article_doc_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    new_id,
+                    title or 'Новая статья',
+                    now,
+                    now,
+                    serialize_history([]),
+                    serialize_history([]),
+                    serialize_history([]),
+                    author_id,
+                    None,
+                    json.dumps(doc_json, ensure_ascii=False),
+                ),
+            )
+    if created_new:
+        try:
+            save_article_doc_json(article_id=new_id, author_id=author_id or '', doc_json=doc_json)
+        except Exception:
+            pass
+    return get_article(new_id, author_id=author_id, include_deleted=True) or {
+        'id': new_id,
         'title': title or 'Новая статья',
         'createdAt': now,
         'updatedAt': now,
-        'blocks': [create_default_block()],
+        'deletedAt': None,
+        'parentId': None,
+        'position': 0,
+        'authorId': author_id,
+        'publicSlug': None,
         'history': [],
         'redoHistory': [],
         'blockTrash': [],
-        'authorId': author_id,
+        'encrypted': False,
+        'docJson': doc_json,
+        'blocks': [],
     }
-    save_article(article)
-    return article
+
+
+def upsert_article_doc_json_snapshot(
+    *,
+    article_id: str,
+    author_id: str,
+    title: str,
+    doc_json: Any,
+    created_at: str | None = None,
+    updated_at: str | None = None,
+    public_slug: str | None = None,
+    reset_history: bool = False,
+) -> None:
+    """
+    Upsert article row with `article_doc_json` set to `doc_json`.
+
+    Intended for imports/bootstrap flows:
+    - we store the final docJson first,
+    - then call `save_article_doc_json` with the same docJson to (re)build derived indexes
+      without producing a large history diff.
+    """
+    if not article_id or not author_id:
+        raise ArticleNotFound('Article not found')
+    now = updated_at or iso_now()
+    created = created_at or now
+    try:
+        doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        raise InvalidOperation('Invalid doc_json') from exc
+
+    with CONN:
+        row = CONN.execute('SELECT author_id FROM articles WHERE id = ?', (article_id,)).fetchone()
+        if row:
+            if str(row.get('author_id') or '') != str(author_id):
+                raise InvalidOperation('Cannot overwrite чужую статью')
+            if reset_history:
+                CONN.execute(
+                    '''
+                    UPDATE articles
+                    SET title = ?, updated_at = ?, deleted_at = NULL, history = ?, redo_history = ?, block_trash = ?, public_slug = ?, article_doc_json = ?
+                    WHERE id = ?
+                    ''',
+                    (
+                        title,
+                        now,
+                        serialize_history([]),
+                        serialize_history([]),
+                        serialize_history([]),
+                        public_slug,
+                        doc_json_str,
+                        article_id,
+                    ),
+                )
+            else:
+                CONN.execute(
+                    '''
+                    UPDATE articles
+                    SET title = ?, updated_at = ?, deleted_at = NULL, public_slug = ?, article_doc_json = ?
+                    WHERE id = ?
+                    ''',
+                    (title, now, public_slug, doc_json_str, article_id),
+                )
+        else:
+            CONN.execute(
+                '''
+                INSERT INTO articles (id, title, created_at, updated_at, history, redo_history, block_trash, author_id, public_slug, article_doc_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    article_id,
+                    title,
+                    created,
+                    now,
+                    serialize_history([]),
+                    serialize_history([]),
+                    serialize_history([]),
+                    author_id,
+                    public_slug,
+                    doc_json_str,
+                ),
+            )
+
+    upsert_article_search_index(article_id, title)
+    # Derived indexes/links/embeddings: best-effort.
+    try:
+        save_article_doc_json(article_id=article_id, author_id=author_id, doc_json=doc_json)
+    except Exception:
+        pass
 
 
 def create_default_block() -> Dict[str, Any]:
@@ -1976,7 +2208,7 @@ def count_blocks(blocks: List[Dict[str, Any]]) -> int:
 
 def delete_user_with_data(user_id: str) -> None:
     """
-    Удаляет пользователя, все его статьи и связанные данные (блоки, FTS-индексы, вложения в БД).
+    Удаляет пользователя, все его статьи и связанные данные (FTS-индексы, вложения в БД).
     Файлы uploads для этого пользователя удаляются на уровне сервера (см. main.py).
     """
     with CONN:
@@ -3493,24 +3725,8 @@ def rebuild_search_indexes() -> None:
     Useful after schema migrations or cold start when virtual tables were recreated.
     """
     with CONN:
-        CONN.execute('DELETE FROM blocks_fts')
         CONN.execute('DELETE FROM outline_sections_fts')
         CONN.execute('DELETE FROM articles_fts')
-    block_rows = CONN.execute(
-        'SELECT block_rowid, article_id, text, normalized_text FROM blocks'
-    ).fetchall()
-    with CONN:
-        for row in block_rows:
-            plain_text = strip_html(row['text'] or '')
-            lemma = build_lemma(plain_text)
-            normalized = row['normalized_text'] or build_normalized_tokens(plain_text)
-            upsert_block_search_index(
-                row['block_rowid'],
-                row['article_id'],
-                row['text'] or '',
-                lemma,
-                normalized,
-            )
     article_rows = CONN.execute('SELECT id, title FROM articles').fetchall()
     with CONN:
         for row in article_rows:

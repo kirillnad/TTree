@@ -57,7 +57,7 @@ import {
   indentArticleApi,
   outdentArticleApi,
   createTelegramLinkToken,
-} from './api.js?v=12';
+} from './api.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret, htmlToLines } from './utils.js';
 import {
@@ -71,7 +71,7 @@ import {
   showVersionDiffModal,
   showBlockHistoryModal,
   showArticleHistoryModal,
-} from './modal.js?v=10';
+} from './modal.js';
 import { loadArticle } from './article.js';
 import {
   getMediaProgressForArticle,
@@ -103,11 +103,11 @@ let mediaStatusTimerId = null;
 let mediaStatusInFlight = false;
 
 function loadOutlineEditorModule() {
-  return import('./outline/editor.js?v=125');
+  return import('./outline/editor.js');
 }
 
 function loadExporterModule() {
-  return import('./exporter.js?v=2');
+  return import('./exporter.js');
 }
 
 function normalizeSidebarSearchView(value) {
@@ -1258,7 +1258,7 @@ export function attachEvents() {
         let blockId = state.currentBlockId || null;
         if (state.isOutlineEditing) {
           try {
-		            const outline = await import('./outline/editor.js?v=125');
+		            const outline = await import('./outline/editor.js');
           if (outline?.getOutlineActiveSectionId) {
             blockId = outline.getOutlineActiveSectionId() || blockId;
           }
@@ -1301,7 +1301,7 @@ export function attachEvents() {
         if (!ok) return;
 
         if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=125');
+          const outline = await import('./outline/editor.js');
           const frags = {
             heading: choice.entry.afterHeadingJson || null,
             body: choice.entry.afterBodyJson || null,
@@ -1374,52 +1374,58 @@ export function attachEvents() {
         const outlineEntries = history.filter(
           (e) => e && (e.beforeHeadingJson || e.beforeBodyJson || e.afterHeadingJson || e.afterBodyJson),
         );
-        const choice = await showArticleHistoryModal({
+        await showArticleHistoryModal({
           title: 'История статьи',
           entries: outlineEntries,
           canRestore: true,
           beforeTitle: 'До',
           afterTitle: 'После',
-        });
-        if (!choice || choice.action !== 'restore' || !choice.entry) return;
-        const entry = choice.entry;
-        const blockId = String(entry.blockId || '').trim();
-        if (!blockId) {
-          showToast('Не удалось восстановить: нет ID секции');
-          return;
-        }
-        const ok = await showConfirm({
-          title: 'Восстановить?',
-          message: 'Если секция удалена, она будет вставлена в конец статьи.',
-          confirmText: 'Восстановить',
-          cancelText: 'Отмена',
-        });
-        if (!ok) return;
+          onRestore: async (entry) => {
+            try {
+              if (!state.articleId || !state.article) return;
+              const blockId = String(entry?.blockId || '').trim();
+              if (!blockId) {
+                showToast('Не удалось восстановить: нет ID секции');
+                return;
+              }
+              const ok = await showConfirm({
+                title: 'Восстановить?',
+                message: 'Если секция удалена, она будет вставлена в конец статьи.',
+                confirmText: 'Восстановить',
+                cancelText: 'Отмена',
+              });
+              if (!ok) return;
 
-        if (state.isOutlineEditing) {
-          const outline = await import('./outline/editor.js?v=125');
-          const frags = {
-            heading: entry.afterHeadingJson || null,
-            body: entry.afterBodyJson || null,
-          };
-          if (outline?.restoreOutlineSectionFromSectionFragments) {
-            const restored = outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
-            if (restored) {
-              showToast('Восстановлено (будет сохранено автоматически)');
-              return;
+              if (!state.isOutlineEditing) {
+                showToast('Откройте outline-режим, чтобы восстановить секцию');
+                return;
+              }
+
+              const outline = await import('./outline/editor.js');
+              const frags = {
+                heading: entry.afterHeadingJson || null,
+                body: entry.afterBodyJson || null,
+              };
+              if (outline?.restoreOutlineSectionFromSectionFragments) {
+                const restored = outline.restoreOutlineSectionFromSectionFragments(blockId, frags);
+                if (restored) {
+                  showToast('Восстановлено (будет сохранено автоматически)');
+                  return;
+                }
+              }
+              if (outline?.insertOutlineSectionFromSectionFragmentsAtEnd) {
+                const inserted = outline.insertOutlineSectionFromSectionFragmentsAtEnd(blockId, frags);
+                if (inserted) {
+                  showToast('Вставлено в конец (будет сохранено автоматически)');
+                  return;
+                }
+              }
+              showToast('Не удалось восстановить секцию');
+            } catch (error) {
+              showToast(error?.message || 'Не удалось восстановить секцию');
             }
-          }
-          if (outline?.insertOutlineSectionFromSectionFragmentsAtEnd) {
-            const inserted = outline.insertOutlineSectionFromSectionFragmentsAtEnd(blockId, frags);
-            if (inserted) {
-              showToast('Вставлено в конец (будет сохранено автоматически)');
-              return;
-            }
-          }
-          showToast('Не удалось восстановить секцию');
-          return;
-        }
-        showToast('Откройте outline-режим, чтобы восстановить секцию');
+          },
+        });
       } catch (error) {
         showToast(error?.message || 'Не удалось открыть историю статьи');
       }

@@ -2,9 +2,9 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js?v=12';
+import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js';
 import { showToast } from '../toast.js';
-import { showPrompt } from '../modal.js?v=10';
+import { showPrompt } from '../modal.js';
 import { navigate, routing } from '../routing.js';
 import {
   ensureArticlesIndexLoaded,
@@ -19,7 +19,7 @@ import { flattenVisible, findBlock, setCurrentBlock } from '../block.js';
 import { loadArticle } from './loadCore.js';
 import { renderArticle, setMoveBlockFromInboxHandler } from './render.js';
 import { updateDragModeUi } from './dnd.js';
-import { refreshInboxCacheFromServer, syncQueuedInboxToServer } from '../quickNotes/queuedInbox.js';
+import { refreshInboxCacheFromServer } from '../quickNotes/pending.js';
 
 async function moveBlockFromInbox(blockId) {
   try {
@@ -255,14 +255,12 @@ export async function loadArticleView(id) {
     renderArticle();
     recordArticleOpened(id);
 
-    // Inbox is special: keep it fresh across devices and merge any queued quick-notes.
+    // Inbox is special: keep it fresh across devices.
     if (id === 'inbox' && navigator.onLine && state.serverStatus === 'ok') {
       try {
         // 1) Refresh cached inbox from server (so mobile doesn't stay on stale cache).
         await refreshInboxCacheFromServer().catch(() => {});
-        // 2) Merge queued quick-notes into server inbox (never overwrite).
-        await syncQueuedInboxToServer().catch(() => {});
-        // 3) If user is not actively editing, reload once so UI reflects the refreshed cache.
+        // 2) If user is not actively editing, reload once so UI reflects the refreshed cache.
         if (state.articleId === 'inbox' && !state.editingBlockId) {
           await loadArticle('inbox', { resetUndoStacks: false });
           renderArticle();
@@ -389,7 +387,7 @@ export async function createInboxNote() {
       // the just-created draft section and it "disappears".
       navigate(inboxPath);
     }
-    const outline = await import('../outline/editor.js?v=124');
+    const outline = await import('../outline/editor.js');
     let newSectionId = null;
     const deadline = performance.now() + 15000;
     while (!newSectionId && performance.now() < deadline) {

@@ -1,6 +1,6 @@
 import { initRouting, route } from './routing.js';
-import { attachEvents } from './events.js?v=22';
-import { initAuth, bootstrapAuth } from './auth.js?v=2';
+import { attachEvents } from './events.js';
+import { initAuth, bootstrapAuth } from './auth.js';
 import { initSidebarStateFromStorage } from './sidebar.js';
 import { refs } from './refs.js';
 
@@ -37,7 +37,8 @@ function registerUploadsServiceWorker() {
       .then((reg) => {
         // Ensure the browser checks the SW script immediately (otherwise it can stay on an old SW for a long time).
         try {
-          reg?.update?.();
+          const p = reg?.update?.();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
         } catch {
           // ignore
         }

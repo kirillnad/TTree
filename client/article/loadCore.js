@@ -1,7 +1,7 @@
 // Вынесено из `article.js`: загрузка статьи в state (без DOM-рендера).
 
 import { state } from '../state.js';
-import { fetchArticle } from '../api.js?v=12';
+import { fetchArticle } from '../api.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { showToast } from '../toast.js';
 import { upsertArticleIndex } from '../sidebar.js';
@@ -60,7 +60,7 @@ export async function loadArticle(id, options = {}) {
   if (switchingArticle) {
     try {
       const prevArticleId = state.articleId;
-      const outline = await import('../outline/editor.js?v=124');
+      const outline = await import('../outline/editor.js');
       try {
         const snap = outline?.getOutlineActiveSectionSnapshot?.() || null;
         if (prevArticleId && snap?.sectionId) {
@@ -140,7 +140,7 @@ export async function loadArticle(id, options = {}) {
   // Outline is the only editor mode now: auto-open after load.
   if (!state.isPublicView && !state.isRagView && !article.encrypted) {
     try {
-      const outline = await import('../outline/editor.js?v=124');
+      const outline = await import('../outline/editor.js');
       if (outline?.openOutlineEditor) {
         debugLog('outline.open.start', { id });
         // Don't block article navigation on TipTap mount: on mobile this can take seconds.

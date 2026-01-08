@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from ..auth import User, get_current_user
 from ..db import CONN
-from ..data_store import get_article, save_article
+from ..blocks_to_outline_doc_json import convert_blocks_to_outline_doc_json
+from ..data_store import get_article, upsert_article_doc_json_snapshot
 from ..import_html import _parse_memus_export_payload, _process_block_html_for_import
 
 router = APIRouter()
@@ -78,6 +79,18 @@ async def import_article_from_html(
         title = base_title
     now = datetime.utcnow().isoformat()
 
+    # Ensure the article row exists before processing attachments (create_attachment requires it).
+    empty_doc = {'type': 'doc', 'content': []}
+    upsert_article_doc_json_snapshot(
+        article_id=target_article_id,
+        author_id=current_user.id,
+        title=title,
+        doc_json=empty_doc,
+        created_at=str(article_meta.get('createdAt') or now),
+        updated_at=str(article_meta.get('updatedAt') or now),
+        reset_history=(import_mode == 'overwrite'),
+    )
+
     def build_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
         for meta in blocks or []:
@@ -105,21 +118,17 @@ async def import_article_from_html(
 
     blocks_tree = build_blocks(blocks_meta)
 
-    article = {
-        'id': target_article_id,
-        'title': title,
-        'createdAt': article_meta.get('createdAt') or now,
-        'updatedAt': article_meta.get('updatedAt') or now,
-        'deletedAt': None,
-        'blocks': blocks_tree,
-        'history': [],
-        'redoHistory': [],
-        'authorId': current_user.id,
-    }
-
-    save_article(article)
+    doc_json = convert_blocks_to_outline_doc_json(blocks_tree, fallback_id=target_article_id)
+    upsert_article_doc_json_snapshot(
+        article_id=target_article_id,
+        author_id=current_user.id,
+        title=title,
+        doc_json=doc_json,
+        created_at=str(article_meta.get('createdAt') or now),
+        updated_at=str(article_meta.get('updatedAt') or now),
+        reset_history=(import_mode == 'overwrite'),
+    )
     created = get_article(target_article_id, current_user.id)
     if not created:
         raise HTTPException(status_code=500, detail='Не удалось создать статью при импорте')
     return created
-

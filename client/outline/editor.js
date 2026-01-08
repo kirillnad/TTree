@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { refs } from '../refs.js';
 import { showToast, showPersistentToast, hideToast } from '../toast.js';
 import { extractBlockSections } from '../block.js';
-import { showImagePreview } from '../modal.js?v=10';
+import { showImagePreview } from '../modal.js';
 import {
   replaceArticleBlocksTree,
   updateArticleDocJson,
@@ -12,7 +12,7 @@ import {
   fetchArticlesIndex,
   uploadImageFile,
   uploadFileToYandexDisk,
-} from '../api.js?v=12';
+} from '../api.js';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { updateCachedDocJson } from '../offline/cache.js';
@@ -141,7 +141,7 @@ async function hydratePendingImagesFromIdbForArticle(articleId) {
       if (!t) return;
       const blob = byToken.get(t);
       if (!blob) return;
-      if (src.startsWith('blob:')) return; // already hydrated
+      // Note: blob: URLs do not survive reload. If we have a token+blob in IDB, always re-hydrate.
       let url = pendingUploadObjectUrls.get(t) || null;
       if (!url) {
         try {
@@ -427,7 +427,6 @@ function buildMarkdownFromOutlineSectionNode(sectionNode, { baseLevel = 2, depth
   return lines.filter(Boolean).join('\n\n').trim();
 }
 
-const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 const OUTLINE_SECTION_SEQ_KEY = 'ttree_outline_section_seq_v1';
 
 function getNextSectionSeq(articleId, sectionId) {
@@ -1622,8 +1621,7 @@ function notifyReadOnlyGlobal() {
 
 function readAutosaveQueue() {
   try {
-    const raw = window.localStorage.getItem(OUTLINE_QUEUE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    return {};
   } catch {
     return {};
   }
@@ -1631,39 +1629,26 @@ function readAutosaveQueue() {
 
 function writeAutosaveQueue(queue) {
   try {
-    window.localStorage.setItem(OUTLINE_QUEUE_KEY, JSON.stringify(queue || {}));
+    void queue;
   } catch {
     // ignore
   }
 }
 
 function setQueuedDocJson(articleId, docJson, queuedAtMs = null) {
-  if (!articleId) return;
-  if (state.article?.encrypted) return; // не сохраняем plaintext зашифрованных статей в localStorage
-  const queuedAt = typeof queuedAtMs === 'number' && Number.isFinite(queuedAtMs) ? queuedAtMs : Date.now();
-  const queue = readAutosaveQueue();
-  queue[String(articleId)] = {
-    docJson: docJson && typeof docJson === 'object' ? docJson : null,
-    queuedAt,
-  };
-  writeAutosaveQueue(queue);
-  return queuedAt;
+  void articleId;
+  void docJson;
+  void queuedAtMs;
+  return null;
 }
 
 function getQueuedDocJson(articleId) {
-  const queue = readAutosaveQueue();
-  const entry = queue && articleId ? queue[String(articleId)] : null;
-  if (!entry || !entry.docJson || typeof entry.docJson !== 'object') return null;
-  return { docJson: entry.docJson, queuedAt: Number(entry.queuedAt || 0) || 0 };
+  void articleId;
+  return null;
 }
 
 function clearQueuedDocJson(articleId) {
-  if (!articleId) return;
-  const queue = readAutosaveQueue();
-  if (queue && Object.prototype.hasOwnProperty.call(queue, String(articleId))) {
-    delete queue[String(articleId)];
-    writeAutosaveQueue(queue);
-  }
+  void articleId;
 }
 
 function stripHtml(html = '') {
@@ -2932,7 +2917,7 @@ function mountOutlineToolbar(editor) {
 	    let url = '';
 	    let label = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=10');
+	      const mod = await import('../modal.js');
 	      const res = await mod.showLinkPrompt({
 	        title: 'Ссылка (URL)',
 	        message: 'Введите ссылку (любой формат) и текст (можно пусто).',
@@ -2975,7 +2960,7 @@ function mountOutlineToolbar(editor) {
 	    let selectedId = '';
 	    let labelInput = selectedText;
 	    try {
-	      const mod = await import('../modal.js?v=10');
+	      const mod = await import('../modal.js');
 	      const result = await mod.showArticleLinkPrompt({
 	        title: 'Ссылка на статью',
 	        message: 'Выберите статью и задайте текст ссылки.',
@@ -3817,7 +3802,7 @@ async function loadTiptap() {
   // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
   // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
   const t0 = perfEnabled() ? performance.now() : 0;
-  const mod = await import('./tiptap.bundle.js?v=4');
+  const mod = await import('./tiptap.bundle.js');
   if (t0) perfLog('import tiptap.bundle.js', { ms: Math.round(performance.now() - t0) });
   tiptap = {
     core: mod.core,
@@ -4610,15 +4595,25 @@ async function mountOutlineEditor() {
 		        tr = tr.replaceRangeWith(insertAt, insertAt, imgNode);
 		        const afterImg = tr.mapping.map(insertAt + imgNode.nodeSize, 1);
 		        tr = tr.insertText('  ', afterImg, afterImg);
-		        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, afterImg + 1)), 1));
-		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-		        view.dispatch(tr.scrollIntoView());
+			        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, afterImg + 1)), 1));
+			        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			        view.dispatch(tr.scrollIntoView());
 
-		        uploadImageFile(file)
-		          .then((res) => {
-		            const url = String(res?.url || '').trim();
-		            if (!url) throw new Error('Upload failed');
-		            const pos = findImagePosByUploadToken(view.state.doc, token);
+			        try {
+			          if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+			            // We can still insert the image: it's stored in IndexedDB and will upload on next online session.
+			            showToast('Оффлайн: изображение добавлено и будет загружено при появлении сети');
+			            return;
+			          }
+			        } catch {
+			          // ignore
+			        }
+
+			        uploadImageFile(file)
+			          .then((res) => {
+			            const url = String(res?.url || '').trim();
+			            if (!url) throw new Error('Upload failed');
+			            const pos = findImagePosByUploadToken(view.state.doc, token);
 		            if (typeof pos !== 'number') return;
 		            const node = view.state.doc.nodeAt(pos);
 		            if (!node || node.type?.name !== 'image') return;
@@ -9319,7 +9314,7 @@ async function saveOutlineEditor(options = {}) {
 	    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
 		    if (state.articleId && targetArticleId !== state.articleId) {
 		      try {
-		        setQueuedDocJson(targetArticleId, docJson);
+		        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
 	      } catch {
 	        // ignore
 	      }
@@ -9328,12 +9323,7 @@ async function saveOutlineEditor(options = {}) {
       return;
     }
 		    if (mode === 'queue') {
-		      let clientQueuedAt = null;
-		      try {
-		        clientQueuedAt = setQueuedDocJson(targetArticleId, docJson);
-		      } catch {
-		        // ignore
-		      }
+		      const clientQueuedAt = Date.now();
 	      try {
 	        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
 	        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
@@ -9364,7 +9354,7 @@ async function saveOutlineEditor(options = {}) {
 		                headingJson,
 		                bodyJson,
 		                seq,
-		                clientQueuedAt: clientQueuedAt || Date.now(),
+		                clientQueuedAt,
 		              },
 		              coalesceKey: `content:${targetArticleId}:${sid}`,
 		            });
@@ -9421,7 +9411,6 @@ async function saveOutlineEditor(options = {}) {
       // ignore
     }
 	    docDirty = false;
-	    clearQueuedDocJson(targetArticleId);
 	    outlineLastSavedAt = new Date();
 		    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
 	      try {
@@ -9455,7 +9444,13 @@ async function saveOutlineEditor(options = {}) {
 	    // Сохраняем в локальную очередь, чтобы догнать позже.
 	    try {
 	      const docJson = outlineEditorInstance.getJSON();
-	      if (docJson && typeof docJson === 'object') setQueuedDocJson(targetArticleId, docJson);
+	      if (docJson && typeof docJson === 'object') {
+	        try {
+	          await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
+	        } catch {
+	          // ignore
+	        }
+	      }
 	    } catch {
 	      // ignore
 	    }
@@ -9972,24 +9967,7 @@ export async function openOutlineEditor() {
   refs.blocksContainer.classList.add('hidden');
   renderOutlineShell({ loading: true });
 
-  // Если есть отложенный черновик (предыдущий автосейв не ушёл) — подхватываем.
-  const queued = getQueuedDocJson(outlineArticleId);
-  if (queued && state.article && !state.article.encrypted) {
-    const serverUpdatedAt = Date.parse(state.article.updatedAt || '') || 0;
-    const hasServerDoc =
-      state.article.docJson &&
-      typeof state.article.docJson === 'object' &&
-      Array.isArray(state.article.docJson.content) &&
-      state.article.docJson.content.length > 0;
-    const shouldApply =
-      !hasServerDoc || (queued.queuedAt && serverUpdatedAt && queued.queuedAt > serverUpdatedAt);
-    if (shouldApply && queued.docJson && typeof queued.docJson === 'object') {
-      state.article.docJson = queued.docJson;
-    } else if (queued.queuedAt && serverUpdatedAt && queued.queuedAt <= serverUpdatedAt) {
-      // Stale local draft: don't let it override server content.
-      clearQueuedDocJson(outlineArticleId);
-    }
-  }
+  // Drafts are stored in IndexedDB cache (`updateCachedDocJson`), not in localStorage.
 
   // Restore last-active section/collapsed state on open (only for normal navigation; search deep-links override this).
   try {
@@ -10096,38 +10074,7 @@ export async function openOutlineEditor() {
 	      };
 	    }
 
-		    // Если есть очередь, пробуем сохранить сразу.
-		    if (outlineArticleId && getQueuedDocJson(outlineArticleId)) {
-		      // Не блокируем открытие статьи/редактора сетевым save.
-		      // Досинхронизацию queued docJson делаем в фоне по idle/таймеру.
-		      try {
-		        setOutlineStatus('Оффлайн: есть черновик, синхронизируем…');
-		      } catch {
-		        // ignore
-		      }
-		      const schedule = (fn) => {
-		        try {
-		          if (typeof requestIdleCallback === 'function') {
-		            requestIdleCallback(() => fn(), { timeout: 5000 });
-		            return;
-		          }
-		        } catch {
-		          // ignore
-		        }
-		        setTimeout(() => fn(), 2500);
-		      };
-		      schedule(() => {
-		        try {
-		          if (!outlineArticleId) return;
-		          if (state.articleId !== outlineArticleId) return;
-		          if (!navigator.onLine) return;
-		          if (!getQueuedDocJson(outlineArticleId)) return;
-		          void runAutosave({ force: true });
-		        } catch {
-		          // ignore
-		        }
-		      });
-		    }
+		    // No localStorage queued docJson sync: outbox handles background sync.
 	  } catch (error) {
 	    showToast(error?.message || 'Не удалось загрузить outline-редактор');
 	    closeOutlineEditor();
@@ -10203,7 +10150,11 @@ export async function flushOutlineAutosave(options = {}) {
     if (targetArticleId && !state.article?.encrypted) {
       const docJson = outlineEditorInstance.getJSON();
       if (docJson && typeof docJson === 'object') {
-        setQueuedDocJson(targetArticleId, docJson);
+        try {
+          await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
+        } catch {
+          // ignore
+        }
       }
       // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
       try {

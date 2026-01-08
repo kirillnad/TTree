@@ -1333,6 +1333,7 @@ export function showArticleHistoryModal(options = {}) {
   const root = ensureRoot();
   const entriesRaw = Array.isArray(options.entries) ? options.entries : [];
   const outlineEntries = entriesRaw.filter(isOutlineHistoryEntry);
+  const onRestore = typeof options.onRestore === 'function' ? options.onRestore : null;
 
   const coercePlain = (value) => String(value ?? '').replace(/\u00a0/g, ' ').trim();
   const entries = outlineEntries.map((e) => ({
@@ -1558,6 +1559,7 @@ export function showArticleHistoryModal(options = {}) {
 
   let resolved = false;
   let resolvePromise = () => {};
+  let restoreInFlight = false;
 
   const cleanup = () => {
     overlay.classList.add('modal-overlay--hide');
@@ -1589,7 +1591,35 @@ export function showArticleHistoryModal(options = {}) {
     resolvePromise = resolver;
     confirmBtn.addEventListener('click', () => resolveResult(null));
     if (cancelBtn && options.canRestore) {
-      cancelBtn.addEventListener('click', () => resolveResult({ action: 'restore', entry: getSelectedEntry() }));
+      cancelBtn.addEventListener('click', async () => {
+        const entry = getSelectedEntry();
+        if (!entry) {
+          showToast('История пуста');
+          return;
+        }
+        // Legacy behavior: close modal and return the selected entry.
+        if (!onRestore) {
+          resolveResult({ action: 'restore', entry });
+          return;
+        }
+        // New behavior: perform restore but keep modal open so user can restore multiple entries.
+        if (restoreInFlight) return;
+        restoreInFlight = true;
+        const prevCancelText = cancelBtn.textContent;
+        try {
+          cancelBtn.disabled = true;
+          confirmBtn.disabled = true;
+          cancelBtn.textContent = 'Восстанавливаем…';
+          await onRestore(entry);
+        } catch (err) {
+          showToast(err?.message || 'Не удалось восстановить');
+        } finally {
+          restoreInFlight = false;
+          cancelBtn.textContent = prevCancelText;
+          cancelBtn.disabled = false;
+          confirmBtn.disabled = false;
+        }
+      });
     }
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) resolveResult(null);

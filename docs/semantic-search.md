@@ -10,7 +10,7 @@
 
 - Индексируются **блоки** (текст блока + контекст заголовка статьи).
 - Результат поиска — **похожие блоки** (не генерация ответа).
-  - Для embeddings берётся строка вида: `"<title статьи>\\n<plain text блока>"`, где plain text берётся из `articles.article_doc_json` (outlineSection: heading+body, без детей). HTML `blocks.text` используется только как fallback.
+  - Для embeddings берётся строка вида: `"<title статьи>\\n<plain text блока>"`, где plain text берётся из `articles.article_doc_json` (outlineSection: heading+body, без детей).
   - Если этот текст длиннее `SERVPY_EMBEDDING_MAX_CHARS`, он **не обрезается**, а разбивается на чанки. Embeddings считаются для каждого чанка, а итоговый embedding блока — это **усреднение** по чанкам (с L2-нормализацией), чтобы получить один вектор на блок.
 
 ### Требования
