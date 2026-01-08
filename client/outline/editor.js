@@ -557,7 +557,7 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
       } catch {
         // ignore
       }
-    }, 5000);
+    }, 3000);
   } catch {
     // ignore
   }
