@@ -2979,6 +2979,170 @@ function moveOutlineBodyParagraphBy(editor, dir) {
   }
 }
 
+function moveParagraphWithinParentBy(editor, dir, allowedParentTypeNames) {
+  try {
+    if (!editor?.view) return false;
+    const { state: pmState, view } = editor;
+    const { selection } = pmState;
+    const $from = selection?.$from || null;
+    if (!$from) return false;
+
+    const allowed =
+      allowedParentTypeNames instanceof Set ? allowedParentTypeNames : new Set(Array.from(allowedParentTypeNames || []));
+
+    let paraDepth = null;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'paragraph') {
+        const parentName = $from.node(d - 1)?.type?.name || '';
+        if (allowed.has(parentName)) paraDepth = d;
+        break;
+      }
+    }
+    if (paraDepth == null) return false;
+
+    const parentDepth = paraDepth - 1;
+    const parentNode = $from.node(parentDepth);
+    const idx = $from.index(parentDepth);
+    if (!parentNode) return false;
+
+    const ddir = dir < 0 ? -1 : 1;
+    const targetIdx = idx + ddir;
+    if (!(targetIdx >= 0 && targetIdx < parentNode.childCount)) return false;
+
+    const currNode = parentNode.child(idx);
+    const otherNode = parentNode.child(targetIdx);
+    if (currNode?.type?.name !== 'paragraph') return false;
+    if (otherNode?.type?.name !== 'paragraph') return false;
+
+    const currPos = $from.before(paraDepth);
+    const currSize = currNode.nodeSize;
+    const otherPos = ddir < 0 ? currPos - otherNode.nodeSize : currPos + currSize;
+    const otherSize = otherNode.nodeSize;
+
+    const offsetInPara = Math.max(0, selection.from - $from.start(paraDepth));
+
+    let tr = pmState.tr;
+    if (ddir < 0) {
+      tr = tr.delete(currPos, currPos + currSize);
+      tr = tr.insert(otherPos, currNode);
+      const newPos = otherPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInPara;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    } else {
+      tr = tr.delete(currPos, currPos + currSize);
+      const insertPos = currPos + otherSize;
+      tr = tr.insert(insertPos, currNode);
+      const newPos = insertPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInPara;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    }
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    view.dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function moveOutlineTextParagraphBy(editor, dir) {
+  return moveParagraphWithinParentBy(editor, dir, new Set(['outlineBody', 'tableCell', 'tableHeader']));
+}
+
+function moveOutlineListItemBy(editor, dir) {
+  try {
+    if (!editor?.view) return false;
+    const { state: pmState, view } = editor;
+    const { selection } = pmState;
+    const $from = selection?.$from || null;
+    if (!$from) return false;
+
+    let listItemDepth = null;
+    for (let d = $from.depth; d > 0; d -= 1) {
+      if ($from.node(d)?.type?.name === 'listItem') {
+        listItemDepth = d;
+        break;
+      }
+    }
+    if (listItemDepth == null) return false;
+
+    const listDepth = listItemDepth - 1;
+    const listNode = $from.node(listDepth);
+    const listName = listNode?.type?.name || '';
+    if (listName !== 'bulletList' && listName !== 'orderedList') return false;
+
+    const idx = $from.index(listDepth);
+    const ddir = dir < 0 ? -1 : 1;
+    const targetIdx = idx + ddir;
+    if (!(targetIdx >= 0 && targetIdx < listNode.childCount)) return false;
+
+    const currNode = listNode.child(idx);
+    const otherNode = listNode.child(targetIdx);
+    if (currNode?.type?.name !== 'listItem') return false;
+    if (otherNode?.type?.name !== 'listItem') return false;
+
+    const currPos = $from.before(listItemDepth);
+    const currSize = currNode.nodeSize;
+    const otherSize = otherNode.nodeSize;
+
+    const offsetInItem = Math.max(0, selection.from - $from.start(listItemDepth));
+
+    let tr = pmState.tr;
+    if (ddir < 0) {
+      const insertPos = currPos - otherSize;
+      tr = tr.delete(currPos, currPos + currSize);
+      tr = tr.insert(insertPos, currNode);
+      const newPos = insertPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInItem;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    } else {
+      tr = tr.delete(currPos, currPos + currSize);
+      const insertPos = currPos + otherSize;
+      tr = tr.insert(insertPos, currNode);
+      const newPos = insertPos;
+      const from = newPos + 1;
+      const to = newPos + currNode.nodeSize - 1;
+      const desired = from + offsetInItem;
+      const anchor = Math.min(Math.max(desired, from), to);
+      try {
+        const TextSelection = tiptap?.pmStateMod?.TextSelection;
+        if (TextSelection) tr = tr.setSelection(TextSelection.near(tr.doc.resolve(anchor), 1));
+      } catch {
+        // ignore
+      }
+    }
+
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    view.dispatch(tr.scrollIntoView());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function copyOutlineTableColumn(editor) {
   try {
     const pmState = editor?.state;
@@ -10570,9 +10734,9 @@ async function mountOutlineEditor() {
 	      attributes: {
 	        class: 'outline-prosemirror',
 	      },
-	      handleKeyDown(view, event) {
-	          outlineDebug('editorProps.keydown', {
-	            key: event?.key || null,
+		      handleKeyDown(view, event) {
+		          outlineDebug('editorProps.keydown', {
+		            key: event?.key || null,
 	            repeat: Boolean(event?.repeat),
 	            selection: {
               empty: Boolean(view.state?.selection?.empty),
@@ -10607,17 +10771,13 @@ async function mountOutlineEditor() {
 		                } catch {
 		                  return false;
 		                }
-		              };
+				              };
 
-			              // In tables: do nothing (let TipTap/prosemirror handle it).
-			              // IMPORTANT: when caret is inside a table, Alt+Arrows must not trigger list/paragraph actions.
-			              if (outlineEditorInstance.isActive('table') || isSelectionInsideTable()) return false;
-
-			              // Outside tables: list/paragraph actions.
-			              if (key === 'ArrowLeft' || key === 'ArrowRight') {
-			                const chain = outlineEditorInstance.chain().focus();
-		                chain.command(({ tr }) => {
-		                  tr.setMeta(OUTLINE_ALLOW_META, true);
+				              // Alt+Arrows: list indent/outdent + "move paragraph up/down" in outline body and in table cells.
+				              if (key === 'ArrowLeft' || key === 'ArrowRight') {
+				                const chain = outlineEditorInstance.chain().focus();
+			                chain.command(({ tr }) => {
+			                  tr.setMeta(OUTLINE_ALLOW_META, true);
 		                  return true;
 		                });
 		                let handled = false;
@@ -10635,18 +10795,18 @@ async function mountOutlineEditor() {
 		                if (handled) {
 		                  event.preventDefault();
 		                  event.stopPropagation();
-		                  return true;
-		                }
-		              } else if (key === 'ArrowUp' || key === 'ArrowDown') {
-		                const handled =
-		                  key === 'ArrowUp'
-		                    ? moveOutlineBodyParagraphBy(outlineEditorInstance, -1)
-		                    : moveOutlineBodyParagraphBy(outlineEditorInstance, +1);
-		                if (handled) {
-		                  event.preventDefault();
-		                  event.stopPropagation();
-		                  return true;
-		                }
+				                  return true;
+				                }
+				              } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+				                const handled =
+				                  key === 'ArrowUp'
+				                    ? moveOutlineListItemBy(outlineEditorInstance, -1) || moveOutlineTextParagraphBy(outlineEditorInstance, -1)
+				                    : moveOutlineListItemBy(outlineEditorInstance, +1) || moveOutlineTextParagraphBy(outlineEditorInstance, +1);
+				                if (handled) {
+				                  event.preventDefault();
+				                  event.stopPropagation();
+				                  return true;
+				                }
 		              }
 		            }
 		          }
