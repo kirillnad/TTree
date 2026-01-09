@@ -4,6 +4,7 @@ import {
   getCachedArticle,
   getCachedArticlesIndex,
   getCachedArticlesSyncMeta,
+  touchCachedArticleUpdatedAt,
   updateCachedDocJson,
 } from './cache.js';
 import { listOutbox, markOutboxError, removeOutboxOp } from './outbox.js';
@@ -39,6 +40,11 @@ let isFlushing = false;
 let fullPullStarted = false;
 let fullPullRunning = false;
 let outboxIntervalId = null;
+
+// Avoid hammering the server with structure snapshots while the user is actively dragging/reordering.
+// Snapshot ops are coalesced in the outbox, so it's safe to delay sending the latest one.
+const STRUCTURE_SNAPSHOT_MIN_INTERVAL_MS = 3000;
+const lastStructureSnapshotSentAtByArticle = new Map();
 
 function debugOfflineEnabled() {
   try {
@@ -193,13 +199,6 @@ async function flushOp(op) {
     } catch {
       // ignore embeddings refresh failures
     }
-    // Keep index in sync (lightweight pull)
-    try {
-      const index = await rawApiRequest('/api/articles');
-      cacheArticlesIndex(index).catch(() => {});
-    } catch {
-      // ignore
-    }
     return;
   }
 
@@ -209,7 +208,7 @@ async function flushOp(op) {
     const bodyJson = op.payload?.bodyJson || null;
     const seq = op.payload?.seq || null;
     if (!sectionId || !headingJson || !bodyJson || !seq) return;
-    await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/sections/upsert-content`, {
+    const result = await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/sections/upsert-content`, {
       method: 'PUT',
       body: JSON.stringify({
         opId: op.payload?.opId || op.id,
@@ -220,19 +219,29 @@ async function flushOp(op) {
         createVersionIfStaleHours: 12,
       }),
     });
+    try {
+      if (result?.updatedAt) await touchCachedArticleUpdatedAt(op.articleId, result.updatedAt);
+    } catch {
+      // ignore
+    }
     return;
   }
 
   if (op.type === 'structure_snapshot') {
     const nodes = op.payload?.nodes || null;
     if (!Array.isArray(nodes) || !nodes.length) return;
-    await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/structure/snapshot`, {
+    const result = await rawApiRequest(`/api/articles/${encodeURIComponent(op.articleId)}/structure/snapshot`, {
       method: 'PUT',
       body: JSON.stringify({
         opId: op.payload?.opId || op.id,
         nodes,
       }),
     });
+    try {
+      if (result?.updatedAt) await touchCachedArticleUpdatedAt(op.articleId, result.updatedAt);
+    } catch {
+      // ignore
+    }
     return;
   }
 
@@ -304,8 +313,32 @@ export async function flushOutboxOnce() {
     const ops = await listOutbox(50);
 	    for (const op of ops) {
 		      try {
-		        await flushOp(op);
-		        await removeOutboxOp(op.id);
+		        // Throttle server writes for structure snapshots: at most once per N ms per article.
+		        // Keep the op queued (outbox coalescing ensures we only keep the newest snapshot).
+		        try {
+		          if (op?.type === 'structure_snapshot') {
+		            const aid = String(op.articleId || '').trim();
+		            if (aid) {
+		              const last = Number(lastStructureSnapshotSentAtByArticle.get(aid) || 0) || 0;
+		              const now = Date.now();
+		              if (last && now - last < STRUCTURE_SNAPSHOT_MIN_INTERVAL_MS) {
+		                continue;
+		              }
+		            }
+		          }
+		        } catch {
+		          // ignore throttle failures
+		        }
+			        await flushOp(op);
+			        try {
+			          if (op?.type === 'structure_snapshot') {
+			            const aid = String(op.articleId || '').trim();
+			            if (aid) lastStructureSnapshotSentAtByArticle.set(aid, Date.now());
+			          }
+			        } catch {
+			          // ignore
+			        }
+			        await removeOutboxOp(op.id);
 		        try {
 		          if (op.type === 'section_upsert_content' && String(op.articleId || '') === 'inbox') {
 		            const sid = String(op.payload?.sectionId || '').trim();
@@ -314,16 +347,8 @@ export async function flushOutboxOnce() {
 		        } catch {
 		          // ignore
 		        }
-		        await maybeClearQueuedDocJsonAfterSuccessfulFlush(op);
-		        if (op.type !== 'save_doc_json') {
-		          try {
-		            const index = await rawApiRequest('/api/articles');
-		            cacheArticlesIndex(index).catch(() => {});
-		          } catch {
-            // ignore
-          }
-        }
-      } catch (err) {
+			        await maybeClearQueuedDocJsonAfterSuccessfulFlush(op);
+	      } catch (err) {
         const status = Number(err?.status || 0) || null;
         const msg = status ? `${status}: ${err?.message || 'error'}` : err?.message || String(err || 'error');
         await markOutboxError(op.id, msg);

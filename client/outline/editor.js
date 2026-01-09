@@ -70,6 +70,8 @@ let outlineTagsIndex = {
 };
 let outlineSelectionMode = false;
 let outlineSelectedSectionIds = new Set();
+const OUTLINE_STRUCTURE_SNAPSHOT_DEBOUNCE_MS = 650;
+let lastActiveSnapshotMemo = { articleId: null, sectionId: null, collapsed: null };
 
 const OUTLINE_SECTION_CLIPBOARD_KEY = 'ttree_outline_section_clipboard_v1';
 const OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY = 'ttree_outline_table_column_clipboard_v1';
@@ -466,58 +468,60 @@ function getNextSectionSeq(articleId, sectionId) {
 let structureDirty = false;
 let lastStructureHash = '';
 let structureSnapshotTimer = null;
-let lastStructureSectionIds = new Set();
-let deletedStructureSectionIds = new Set();
+let explicitlyDeletedSectionIds = new Set();
+
+function markExplicitSectionDeletion(sectionId) {
+  try {
+    const sid = String(sectionId || '').trim();
+    if (!sid) return;
+    explicitlyDeletedSectionIds.add(sid);
+  } catch {
+    // ignore
+  }
+}
 
 function computeOutlineStructureNodesFromDoc(pmDoc) {
   const out = [];
-  const walkChildren = (childrenNode, parentId) => {
-    if (!childrenNode) return;
-    const list = childrenNode.content;
-    if (!list) return;
-    let idx = 0;
-    list.forEach((child) => {
-      if (!child || child.type?.name !== 'outlineSection') return;
-      const sid = String(child.attrs?.id || '').trim();
-      if (!sid) return;
-      out.push({
-        sectionId: sid,
-        parentId: parentId || null,
-        position: idx,
-        collapsed: Boolean(child.attrs?.collapsed),
-      });
-      idx += 1;
-      try {
-        const children = child.child(2);
-        walkChildren(children, sid);
-      } catch {
-        // ignore
+
+  const findOutlineChildrenNode = (sectionNode) => {
+    try {
+      if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return null;
+      for (let i = 0; i < sectionNode.childCount; i += 1) {
+        const c = sectionNode.child(i);
+        if (c?.type?.name === 'outlineChildren') return c;
       }
-    });
+      return null;
+    } catch {
+      return null;
+    }
   };
-  try {
-    const root = pmDoc?.content;
-    if (!root) return [];
-    // pmDoc.content is Fragment; iterate via forEach.
-    let idx = 0;
-    pmDoc.content.forEach((child) => {
-      if (!child || child.type?.name !== 'outlineSection') return;
-      const sid = String(child.attrs?.id || '').trim();
-      if (!sid) return;
-      out.push({
-        sectionId: sid,
-        parentId: null,
-        position: idx,
-        collapsed: Boolean(child.attrs?.collapsed),
+
+  const walkSectionList = (listNode, parentId) => {
+    try {
+      if (!listNode) return;
+      let idx = 0;
+      listNode.forEach((child) => {
+        if (!child || child.type?.name !== 'outlineSection') return;
+        const sid = String(child.attrs?.id || '').trim();
+        if (!sid) return;
+        out.push({
+          sectionId: sid,
+          parentId: parentId || null,
+          position: idx,
+          collapsed: Boolean(child.attrs?.collapsed),
+        });
+        idx += 1;
+        const children = findOutlineChildrenNode(child);
+        if (children) walkSectionList(children, sid);
       });
-      idx += 1;
-      try {
-        const children = child.child(2);
-        walkChildren(children, sid);
-      } catch {
-        // ignore
-      }
-    });
+    } catch {
+      // ignore
+    }
+  };
+
+  try {
+    if (!pmDoc) return [];
+    walkSectionList(pmDoc, null);
   } catch {
     return [];
   }
@@ -531,6 +535,73 @@ function computeOutlineStructureHash(pmDoc) {
     return nodes.map((n) => `${n.parentId || ''}|${n.position}|${n.sectionId}|${n.collapsed ? 1 : 0}`).join('\n');
   } catch {
     return '';
+  }
+}
+
+function collectAllOutlineSectionPositions(pmDoc) {
+  const out = [];
+  try {
+    if (!pmDoc) return out;
+    pmDoc.descendants((node, pos) => {
+      if (node?.type?.name !== 'outlineSection') return;
+      out.push(pos);
+    });
+  } catch {
+    // ignore
+  }
+  return out;
+}
+
+function toggleAllOutlineSectionsCollapsed(editor, collapsed) {
+  try {
+    if (!editor || editor.isDestroyed) return false;
+    const next = Boolean(collapsed);
+    return editor.commands.command(({ state: pmState, dispatch }) => {
+      const positions = collectAllOutlineSectionPositions(pmState.doc);
+      if (!positions.length) return false;
+
+      let tr = pmState.tr;
+      for (const pos of positions) {
+        const node = tr.doc.nodeAt(pos);
+        if (!node || node.type?.name !== 'outlineSection') continue;
+        if (Boolean(node.attrs?.collapsed) === next) continue;
+        tr = tr.setNodeMarkup(pos, undefined, { ...node.attrs, collapsed: next });
+      }
+
+      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+      try {
+        if (next && outlineEditModeKey) {
+          const st = outlineEditModeKey.getState(pmState) || {};
+          if (st.editingSectionId) {
+            tr = tr.setMeta(outlineEditModeKey, { type: 'exit' });
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      // When collapsing everything, ensure selection is not inside a now-hidden body.
+      try {
+        if (next && TextSelection) {
+          const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+          const focusPos = typeof sectionPos === 'number' ? sectionPos : positions[0];
+          const focusNode = tr.doc.nodeAt(focusPos);
+          if (focusNode?.type?.name === 'outlineSection') {
+            const heading = focusNode.child(0);
+            const headingStart = focusPos + 1;
+            const headingEnd = headingStart + heading.nodeSize - 1;
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingEnd), -1));
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      dispatch(tr.scrollIntoView());
+      return true;
+    });
+  } catch {
+    return false;
   }
 }
 
@@ -557,7 +628,7 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
       } catch {
         // ignore
       }
-    }, 3000);
+    }, OUTLINE_STRUCTURE_SNAPSHOT_DEBOUNCE_MS);
   } catch {
     // ignore
   }
@@ -3369,6 +3440,8 @@ function mountOutlineToolbar(editor) {
 		          return true;
 		        });
 		      }
+		      if (action === 'collapseAllBlocks') return toggleAllOutlineSectionsCollapsed(editor, true);
+		      if (action === 'expandAllBlocks') return toggleAllOutlineSectionsCollapsed(editor, false);
 		      if (action === 'toggleBold') return chain.toggleBold().run();
 		      if (action === 'toggleItalic') return chain.toggleItalic().run();
 		      if (action === 'toggleStrike') return chain.toggleStrike().run();
@@ -3878,6 +3951,22 @@ function mountOutlineToolbar(editor) {
     }
 
     // Menu items
+    let collapseSummary = null;
+    const getCollapseSummary = () => {
+      if (collapseSummary) return collapseSummary;
+      const s = { total: 0, collapsed: 0 };
+      try {
+        editor.state.doc.descendants((node) => {
+          if (node?.type?.name !== 'outlineSection') return;
+          s.total += 1;
+          if (Boolean(node.attrs?.collapsed)) s.collapsed += 1;
+        });
+      } catch {
+        // ignore
+      }
+      collapseSummary = s;
+      return s;
+    };
     for (const el of actionButtons) {
       const action = el.dataset.outlineAction || '';
       if (!action) continue;
@@ -3885,7 +3974,15 @@ function mountOutlineToolbar(editor) {
       let isActive = false;
       let isDisabled = false;
 
-      if (action === 'toggleBold') {
+      if (action === 'collapseAllBlocks') {
+        const s = getCollapseSummary();
+        isActive = false;
+        isDisabled = s.total === 0 || s.collapsed >= s.total;
+      } else if (action === 'expandAllBlocks') {
+        const s = getCollapseSummary();
+        isActive = false;
+        isDisabled = s.total === 0 || s.collapsed <= 0;
+      } else if (action === 'toggleBold') {
         isActive = editor.isActive('bold');
         isDisabled = !canRun((c) => c.toggleBold());
       } else if (action === 'toggleItalic') {
@@ -4125,6 +4222,7 @@ function mountOutlineToolbar(editor) {
         if (typeof sectionPos !== 'number') return false;
         const sectionNode = pmState.doc.nodeAt(sectionPos);
         if (!sectionNode) return false;
+        const sid = String(sectionNode.attrs?.id || '').trim();
         const $pos = pmState.doc.resolve(sectionPos);
         const idx = $pos.index();
         const parent = $pos.parent;
@@ -4149,6 +4247,7 @@ function mountOutlineToolbar(editor) {
           return true;
         }
 
+        if (sid) markExplicitSectionDeletion(sid);
         const hasPrev = idx > 0;
         const prevNode = hasPrev ? parent.child(idx - 1) : null;
         const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
@@ -4672,6 +4771,33 @@ function writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed) {
     next[aid] = { sectionId: sid, collapsed: Boolean(collapsed), savedAt: new Date().toISOString() };
     window?.localStorage?.setItem?.('ttree_outline_last_active_v1', JSON.stringify(next));
     return true;
+  } catch {
+    return false;
+  }
+}
+
+function maybeWriteActiveOutlineSnapshotFromEditor(editor) {
+  try {
+    const articleId = outlineArticleId || state.articleId || null;
+    if (!articleId) return false;
+    if (!editor || editor.isDestroyed) return false;
+    const pmState = editor.state;
+    const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+    if (typeof sectionPos !== 'number') return false;
+    const node = pmState.doc.nodeAt(sectionPos);
+    if (!node || node.type?.name !== 'outlineSection') return false;
+    const sectionId = String(node.attrs?.id || '').trim();
+    if (!sectionId) return false;
+    const collapsed = Boolean(node.attrs?.collapsed);
+    if (
+      lastActiveSnapshotMemo.articleId === articleId &&
+      lastActiveSnapshotMemo.sectionId === sectionId &&
+      lastActiveSnapshotMemo.collapsed === collapsed
+    ) {
+      return false;
+    }
+    lastActiveSnapshotMemo = { articleId, sectionId, collapsed };
+    return writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed);
   } catch {
     return false;
   }
@@ -6466,6 +6592,7 @@ async function mountOutlineEditor() {
 	  const outlineDeleteCurrentSectionForView = (pmState, dispatch, sectionPos) => {
 	    const sectionNode = pmState.doc.nodeAt(sectionPos);
 	    if (!sectionNode) return false;
+	    const sid = String(sectionNode.attrs?.id || '').trim();
 	    const $pos = pmState.doc.resolve(sectionPos);
 	    const idx = $pos.index();
 	    const parent = $pos.parent;
@@ -6491,6 +6618,7 @@ async function mountOutlineEditor() {
 	        return true;
 	      }
 
+	      if (sid) markExplicitSectionDeletion(sid);
 	      // Deleting the last child: move selection to the owner (parent) section body.
 	      let ownerSectionPos = null;
 	      try {
@@ -6536,6 +6664,7 @@ async function mountOutlineEditor() {
 	    const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
 	    const nextStart = sectionPos + sectionNode.nodeSize;
 
+	    if (sid) markExplicitSectionDeletion(sid);
 	    let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
 	    const selectSectionHeading = (tr, pos) => {
 	      try {
@@ -6924,6 +7053,7 @@ async function mountOutlineEditor() {
 	      const deleteCurrentSection = (pmState, dispatch, sectionPos) => {
 	        const sectionNode = pmState.doc.nodeAt(sectionPos);
 	        if (!sectionNode) return false;
+	        const sid = String(sectionNode.attrs?.id || '').trim();
 	        const $pos = pmState.doc.resolve(sectionPos);
 	        const idx = $pos.index();
 	        const parent = $pos.parent;
@@ -6986,6 +7116,7 @@ async function mountOutlineEditor() {
 	          return true;
 	        }
 
+	        if (sid) markExplicitSectionDeletion(sid);
         const hasPrev = idx > 0;
         const prevNode = hasPrev ? parent.child(idx - 1) : null;
         const prevStart = hasPrev ? sectionPos - prevNode.nodeSize : null;
@@ -7026,10 +7157,12 @@ async function mountOutlineEditor() {
       const mergeSectionIntoPrevious = (pmState, dispatch, sectionPos) => {
         const sectionNode = pmState.doc.nodeAt(sectionPos);
         if (!sectionNode) return false;
+        const sid = String(sectionNode.attrs?.id || '').trim();
         const $pos = pmState.doc.resolve(sectionPos);
         const idx = $pos.index();
         const parent = $pos.parent;
         if (!parent || idx <= 0) return false;
+        if (sid) markExplicitSectionDeletion(sid);
         const prevNode = parent.child(idx - 1);
         const prevStart = sectionPos - prevNode.nodeSize;
         const currentHeading = sectionNode.child(0);
@@ -7087,6 +7220,7 @@ async function mountOutlineEditor() {
       const mergeSectionIntoParentBody = (pmState, dispatch, sectionPos) => {
         const sectionNode = pmState.doc.nodeAt(sectionPos);
         if (!sectionNode) return false;
+        const sid = String(sectionNode.attrs?.id || '').trim();
         const $from = pmState.selection.$from;
 
         // Находим непосредственного родителя секции.
@@ -7112,6 +7246,7 @@ async function mountOutlineEditor() {
         const childChildren = sectionNode.child(2);
 
         // 1) Удаляем текущую секцию из children родителя.
+        if (sid) markExplicitSectionDeletion(sid);
         let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
         const parentAfter = tr.doc.nodeAt(parentPos);
         if (!parentAfter) {
@@ -7624,7 +7759,26 @@ async function mountOutlineEditor() {
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
         // Ctrl+↑: схлопнуть родителя (и всё внутри него)
-	        'Mod-ArrowUp': () => collapseParentSubtree(),
+	        'Mod-ArrowUp': () => {
+	          try {
+	            const pmState = this.editor.state;
+	            const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+	            if (typeof sectionPos === 'number') {
+	              const sectionNode = pmState.doc.nodeAt(sectionPos);
+	              if (sectionNode?.type?.name === 'outlineSection') {
+	                const parentPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+	                const isTopLevel = typeof parentPos !== 'number';
+	                // If a top-level block is already collapsed, Ctrl+↑ collapses the whole article.
+	                if (isTopLevel && Boolean(sectionNode.attrs?.collapsed)) {
+	                  return toggleAllOutlineSectionsCollapsed(this.editor, true);
+	                }
+	              }
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          return collapseParentSubtree();
+	        },
 	        // Ctrl+↓: развернуть текущую секцию (и всех её детей)
 	        'Mod-ArrowDown': () => expandCurrentSubtree(),
 	        // Ctrl+Enter: split секции в позиции курсора (children → в новую секцию)
@@ -11716,12 +11870,9 @@ async function mountOutlineEditor() {
 	        lastStructureHash = computeOutlineStructureHash(editor.state.doc);
 	        structureDirty = false;
 	        try {
-	          const nodes = computeOutlineStructureNodesFromDoc(editor.state.doc);
-	          lastStructureSectionIds = new Set(nodes.map((n) => String(n.sectionId || '')).filter(Boolean));
-	          deletedStructureSectionIds.clear();
+	          explicitlyDeletedSectionIds.clear();
 	        } catch {
-	          lastStructureSectionIds = new Set();
-	          deletedStructureSectionIds.clear();
+	          explicitlyDeletedSectionIds.clear();
 	        }
 	        if (structureSnapshotTimer) {
 	          clearTimeout(structureSnapshotTimer);
@@ -11736,25 +11887,30 @@ async function mountOutlineEditor() {
       // Любое изменение документа считается изменением текущей секции (или нескольких),
       // но “коммит секции” мы делаем при уходе из неё (onSelectionUpdate).
       docDirty = true;
+	      // Spellcheck should run only for sections that were actually edited.
+	      // Mark the currently edited section as dirty on any doc update while in edit-mode.
+	      try {
+	        const st = outlineEditModeKey?.getState?.(outlineEditorInstance?.state) || null;
+	        const editingSectionId = String(st?.editingSectionId || '').trim();
+	        if (editingSectionId) dirtySectionIds.add(editingSectionId);
+	      } catch {
+	        // ignore
+	      }
 	      try {
 	        const pmDoc = outlineEditorInstance?.state?.doc || null;
 	        if (pmDoc) {
 	          const h = computeOutlineStructureHash(pmDoc);
 	          if (h && h !== lastStructureHash) {
 	            lastStructureHash = h;
-	            try {
-	              const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
-	              const nextIds = new Set(nodes.map((n) => String(n.sectionId || '')).filter(Boolean));
-	              for (const sid of lastStructureSectionIds) {
-	                if (!nextIds.has(sid)) deletedStructureSectionIds.add(sid);
-	              }
-	              lastStructureSectionIds = nextIds;
-	            } catch {
-	              // ignore
-	            }
 	            scheduleStructureSnapshot({ articleId: outlineArticleId || state.articleId, editor: outlineEditorInstance });
 	          }
 	        }
+	      } catch {
+	        // ignore
+	      }
+	      // Keep last-active snapshot in sync with collapsed toggles (view-mode collapse doesn't exit edit-mode).
+	      try {
+	        maybeWriteActiveOutlineSnapshotFromEditor(outlineEditorInstance);
 	      } catch {
 	        // ignore
 	      }
@@ -11788,11 +11944,11 @@ async function mountOutlineEditor() {
 		        } catch {
 		          // ignore
 		        }
-		        // Proofread gating should not depend on `changed`:
-		        // autosave can rebuild the committed map while staying in the same section, making `changed=false`
-		        // even though the user edited text. `maybeProofreadOnLeave` is hash-based and will no-op when unchanged.
+		        // Only proofread when the section was edited (i.e. marked dirty).
 		        try {
-		          maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
+		          if (dirtySectionIds.has(lastActiveSectionId)) {
+		            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
+		          }
 		        } catch {
 		          // ignore
 		        }
@@ -11802,6 +11958,11 @@ async function mountOutlineEditor() {
 		        }
 		      }
 		      lastActiveSectionId = sectionId;
+		      try {
+		        maybeWriteActiveOutlineSnapshotFromEditor(editor);
+		      } catch {
+		        // ignore
+		      }
 		    },
 			  });
 			  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
@@ -11961,10 +12122,32 @@ async function saveOutlineEditor(options = {}) {
 		        // ignore
 		      }
 
+		      // Structural changes must be persisted even if the user only moved blocks (no content edits).
+		      // Enqueue snapshot here (autosave runs sooner than the debounce, and Ctrl-F5 can happen any time).
+		      try {
+		        if (structureDirty && !explicitlyDeletedSectionIds.size) {
+		          const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
+		          if (nodes.length) {
+		            await enqueueOp('structure_snapshot', {
+		              articleId: targetArticleId,
+		              payload: { nodes, clientQueuedAt },
+		              coalesceKey: `structure:${targetArticleId}`,
+		            });
+		          }
+		          structureDirty = false;
+		          if (structureSnapshotTimer) {
+		            clearTimeout(structureSnapshotTimer);
+		            structureSnapshotTimer = null;
+		          }
+		        }
+		      } catch {
+		        // ignore
+		      }
+
 		      // Structural deletions must be saved as full docJson so the server actually removes blocks
 		      // (structure snapshots alone can only reorder/parent existing blocks).
-		      if (deletedStructureSectionIds.size) {
-		        deletedStructureSectionIds.clear();
+		      if (explicitlyDeletedSectionIds.size) {
+		        explicitlyDeletedSectionIds.clear();
 		        try {
 		          if (navigator.onLine) {
 		            const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
@@ -12019,9 +12202,12 @@ async function saveOutlineEditor(options = {}) {
 
 			      // Persist only changed section contents (never overwrite the whole article docJson on the server).
 			      try {
-			        const sectionIds = Array.from(
-			          new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)),
-		        );
+			        try {
+			          if (lastActiveSectionId) markSectionDirtyIfChanged(outlineEditorInstance.state.doc, lastActiveSectionId);
+			        } catch {
+			          // ignore
+			        }
+			        const sectionIds = Array.from(new Set([...(dirtySectionIds || [])].filter(Boolean)));
 		        for (const sid of sectionIds) {
 		          try {
 		            const pos = findSectionPosById(outlineEditorInstance.state.doc, sid);
@@ -12804,10 +12990,9 @@ export function closeOutlineEditor() {
 	  structureDirty = false;
 	  lastStructureHash = '';
 	  try {
-	    lastStructureSectionIds = new Set();
-	    deletedStructureSectionIds.clear();
+	    explicitlyDeletedSectionIds.clear();
 	  } catch {
-	    lastStructureSectionIds = new Set();
+	    // ignore
 	  }
 	  autosaveInFlight = false;
   dirtySectionIds.clear();
@@ -12851,7 +13036,7 @@ export async function flushOutlineAutosave(options = {}) {
       }
       // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
       try {
-        if (structureDirty) {
+        if (structureDirty && !explicitlyDeletedSectionIds.size) {
           const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
           if (nodes.length) {
             void enqueueOp('structure_snapshot', {
@@ -12861,6 +13046,19 @@ export async function flushOutlineAutosave(options = {}) {
             });
             structureDirty = false;
           }
+        }
+      } catch {
+        // ignore
+      }
+      // If user deleted sections, we need a full save (queue it locally so navigation doesn't lose it).
+      try {
+        if (explicitlyDeletedSectionIds.size) {
+          explicitlyDeletedSectionIds.clear();
+          await enqueueOp('save_doc_json', {
+            articleId: targetArticleId,
+            payload: { docJson, createVersionIfStaleHours: 12 },
+            coalesceKey: targetArticleId,
+          });
         }
       } catch {
         // ignore

@@ -64,6 +64,15 @@ export async function apiRequest(path, options = {}) {
     }
     throw new Error(details.detail || 'Request failed');
   }
+  // Any successful API response means the server is reachable (even if the app started in offline-fallback mode).
+  try {
+    if (state.serverStatus === 'down') {
+      state.serverStatus = 'ok';
+      state.serverStatusText = '';
+    }
+  } catch {
+    // ignore
+  }
   if (response.status === 204) {
     if (perfStart) {
       // eslint-disable-next-line no-console
@@ -943,9 +952,25 @@ export function moveArticlePosition(articleId, direction) {
     });
   return attempt()
     .then(async (article) => {
+      // We already know the intended move and maintain a cached index locally.
+      // For single-device usage, avoid refetching the entire /api/articles list on every move.
       try {
-        const index = await apiRequest('/api/articles');
-        cacheArticlesIndex(index).catch(() => {});
+        const idx = await getCachedArticlesIndex().catch(() => []);
+        const map = buildChildrenMap(idx);
+        const current = (idx || []).find((a) => a.id === articleId);
+        if (current) {
+          const siblings = map.get(current.parentId ?? null) || [];
+          const pos = siblings.findIndex((a) => a.id === articleId);
+          const delta = direction === 'up' ? -1 : 1;
+          const nextIndex = pos + delta;
+          if (pos !== -1 && nextIndex >= 0 && nextIndex < siblings.length) {
+            const tmp = siblings[pos];
+            siblings[pos] = siblings[nextIndex];
+            siblings[nextIndex] = tmp;
+            const changes = normalizePositions(siblings);
+            updateCachedArticleTreePositions(changes).catch(() => {});
+          }
+        }
       } catch {
         // ignore
       }

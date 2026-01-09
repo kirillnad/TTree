@@ -256,3 +256,35 @@ export async function updateCachedArticleTreePositions(changes) {
   }
   await txDone(tx);
 }
+
+export async function touchCachedArticleUpdatedAt(articleId, updatedAt) {
+  const id = String(articleId || '').trim();
+  const nextUpdatedAt = String(updatedAt || '').trim();
+  if (!id || !nextUpdatedAt) return;
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['articles'], 'readwrite');
+  const store = tx.objectStore('articles');
+  const existing = await reqToPromise(store.get(id)).catch(() => null);
+  if (!existing) {
+    await txDone(tx);
+    return;
+  }
+
+  let article = null;
+  try {
+    article = existing.articleJsonStr ? JSON.parse(existing.articleJsonStr) : null;
+  } catch {
+    article = null;
+  }
+  if (!article || typeof article !== 'object') article = { id };
+  article.id = id;
+  article.updatedAt = nextUpdatedAt;
+
+  const next = {
+    ...existing,
+    updatedAt: nextUpdatedAt,
+    articleJsonStr: JSON.stringify(article),
+  };
+  await reqToPromise(store.put(next));
+  await txDone(tx);
+}

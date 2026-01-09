@@ -589,8 +589,17 @@ export function attachEvents() {
         setBtnState('auth', `Аккаунт · ${label}`);
         return;
       }
-      if (state.serverStatus === 'down') {
-        const label = 'Нет доступа к серверу';
+      const isOnline = (() => {
+        try {
+          return navigator?.onLine !== false;
+        } catch {
+          return true;
+        }
+      })();
+      // If offline cache is ready, still show offline coverage/progress even when the server is down/offline.
+      // Only show "server down" as the primary status when offline features are unavailable.
+      if (state.serverStatus === 'down' && !state.offlineReady) {
+        const label = isOnline ? 'Нет доступа к серверу' : 'Нет интернета';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
         setBtnState('off', `Аккаунт · ${label}`);
