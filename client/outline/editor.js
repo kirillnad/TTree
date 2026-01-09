@@ -21,6 +21,7 @@ import { putPendingUpload, deletePendingUpload, listPendingUploads, markPendingU
 import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
 import { parseMarkdownOutlineSections, buildOutlineSectionTree } from './structuredPaste.js';
+import { revertLog, docJsonHash } from '../debug/revertLog.js';
 
 let mounted = false;
 let tiptap = null;
@@ -619,6 +620,14 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
         const pmDoc = editor.state?.doc;
         const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
         if (!nodes.length) return;
+        try {
+          revertLog('outline.enqueue.structure_snapshot', {
+            articleId: aid,
+            nodesCount: nodes.length,
+          });
+        } catch {
+          // ignore
+        }
         void enqueueOp('structure_snapshot', {
           articleId: aid,
           payload: { nodes },
@@ -4921,6 +4930,70 @@ function patchDocJsonCollapsedForPath(docJson, sectionId, targetCollapsed) {
     };
     visit(docJson);
     return changed;
+  } catch {
+    return false;
+  }
+}
+
+let outlineKeepContextRaf = null;
+function keepOutlineSelectionContextBelow(editor, { lines = 4 } = {}) {
+  try {
+    if (!editor || editor.isDestroyed) return false;
+    const view = editor.view;
+    if (!view || !view.state || !view.dom) return false;
+    const sel = view.state.selection;
+    if (!sel || typeof sel.from !== 'number') return false;
+
+    if (outlineKeepContextRaf) cancelAnimationFrame(outlineKeepContextRaf);
+    outlineKeepContextRaf = requestAnimationFrame(() => {
+      outlineKeepContextRaf = null;
+      try {
+        const coords = view.coordsAtPos(sel.from);
+        if (!coords || typeof coords.bottom !== 'number') return;
+
+        const findScrollContainer = (el) => {
+          try {
+            let node = el;
+            while (node && node !== document.body && node !== document.documentElement) {
+              const style = window.getComputedStyle(node);
+              const oy = String(style.overflowY || '');
+              if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight + 2) {
+                return node;
+              }
+              node = node.parentElement;
+            }
+          } catch {
+            // ignore
+          }
+          return document.scrollingElement || document.documentElement;
+        };
+
+        const container = findScrollContainer(view.dom);
+        const rootStyle = window.getComputedStyle(view.dom);
+        const lhRaw = String(rootStyle.lineHeight || '').trim();
+        const lh = lhRaw === 'normal' ? 20 : Number.parseFloat(lhRaw) || 20;
+        const marginPx = Math.max(24, lh * Math.max(1, Number(lines) || 4) + 12);
+
+        let visibleHeight = window.innerHeight || 0;
+        let containerTop = 0;
+        if (container && container !== document.scrollingElement && container !== document.documentElement && container !== document.body) {
+          const rect = container.getBoundingClientRect();
+          containerTop = rect.top;
+          visibleHeight = rect.height;
+        }
+        if (!visibleHeight) return;
+
+        const bottomInContainer = coords.bottom - containerTop;
+        const threshold = visibleHeight - marginPx;
+        if (bottomInContainer <= threshold) return;
+        const delta = bottomInContainer - threshold;
+        const nextTop = Math.max(0, (container.scrollTop || 0) + delta);
+        container.scrollTop = nextTop;
+      } catch {
+        // ignore
+      }
+    });
+    return true;
   } catch {
     return false;
   }
@@ -12107,9 +12180,20 @@ async function mountOutlineEditor() {
 		          scheduleAutosave({ delayMs: 350 });
 		        }
 		      }
+		      const prevSectionId = lastActiveSectionId;
 		      lastActiveSectionId = sectionId;
 		      try {
 		        maybeWriteActiveOutlineSnapshotFromEditor(editor);
+		      } catch {
+		        // ignore
+		      }
+		      // View-mode UX: keep some content visible below the selected block so navigation doesn't "hit the bottom".
+		      try {
+		        const st = outlineEditModeKey?.getState?.(pmState) || null;
+		        const editingSectionId = st?.editingSectionId || null;
+		        if (!editingSectionId && prevSectionId && prevSectionId !== sectionId) {
+		          keepOutlineSelectionContextBelow(editor, { lines: 4 });
+		        }
 		      } catch {
 		        // ignore
 		      }
@@ -12989,6 +13073,15 @@ export async function openOutlineEditor() {
   refs.outlineEditor.classList.remove('hidden');
   refs.blocksContainer.classList.add('hidden');
   renderOutlineShell({ loading: true });
+  try {
+    revertLog('outline.open', {
+      articleId: outlineArticleId,
+      updatedAt: state.article?.updatedAt || null,
+      docHash: docJsonHash(state.article?.docJson || null),
+    });
+  } catch {
+    // ignore
+  }
 
   // Drafts are stored in IndexedDB cache (`updateCachedDocJson`), not in localStorage.
 

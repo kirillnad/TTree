@@ -12,6 +12,7 @@ import { deleteSectionEmbeddings, upsertArticleEmbeddings } from './embeddings.j
 import { startMediaPrefetchLoop, pruneUnusedMedia, updateMediaRefsForArticle } from './media.js';
 import { fetchArticlesIndex } from '../api.js';
 import { removePendingQuickNoteBySectionId } from '../quickNotes/pending.js';
+import { revertLog, docJsonHash } from '../debug/revertLog.js';
 
 const OUTLINE_QUEUE_KEY = 'ttree_outline_autosave_queue_docjson_v1';
 
@@ -297,6 +298,16 @@ async function flushOp(op) {
     const updatedAt = result?.updatedAt || null;
     await updateCachedDocJson(op.articleId, docJson, updatedAt);
     try {
+      revertLog('sync.flush.save_doc_json.ok', {
+        articleId: op.articleId,
+        opId: op.id,
+        updatedAt,
+        docHash: docJsonHash(docJson),
+      });
+    } catch {
+      // ignore
+    }
+    try {
       const changed = Array.isArray(result?.changedBlockIds) ? result.changedBlockIds : [];
       const removed = Array.isArray(result?.removedBlockIds) ? result.removedBlockIds : [];
       if (removed.length) await deleteSectionEmbeddings(removed);
@@ -341,6 +352,16 @@ async function flushOp(op) {
           // No docJson to patch — don't update updatedAt alone (would pin a null/stale docJson as "fresh").
         }
       }
+      try {
+        revertLog('sync.flush.section_upsert_content.ok', {
+          articleId: op.articleId,
+          opId: op.id,
+          sectionId,
+          updatedAt: result?.updatedAt || null,
+        });
+      } catch {
+        // ignore
+      }
     } catch {
       // ignore
     }
@@ -368,6 +389,16 @@ async function flushOp(op) {
         } else {
           // No docJson to patch — don't update updatedAt alone.
         }
+      }
+      try {
+        revertLog('sync.flush.structure_snapshot.ok', {
+          articleId: op.articleId,
+          opId: op.id,
+          updatedAt: result?.updatedAt || null,
+          nodesCount: Array.isArray(nodes) ? nodes.length : null,
+        });
+      } catch {
+        // ignore
       }
     } catch {
       // ignore

@@ -2,6 +2,7 @@ import { getOfflineDbReady } from './index.js';
 import { reqToPromise, txDone } from './idb.js';
 import { reindexOutlineSections } from './indexer.js';
 import { updateMediaRefsForArticle } from './media.js';
+import { revertLog, docJsonHash } from '../debug/revertLog.js';
 
 function pickArticleIndexRow(article) {
   return {
@@ -104,6 +105,16 @@ export async function cacheArticle(article) {
   };
   await reqToPromise(store.put(next));
   await txDone(tx);
+  try {
+    revertLog('cache.article.put', {
+      articleId: article.id,
+      updatedAt,
+      hasDocJson: Boolean(docJson),
+      docHash: docJsonHash(docJson),
+    });
+  } catch {
+    // ignore
+  }
   if (docJson) {
     reindexOutlineSections(db, { articleId: article.id, docJson, updatedAt }).catch(() => {});
     updateMediaRefsForArticle(article.id, docJson).catch(() => {});
@@ -234,6 +245,15 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
   };
   await reqToPromise(store.put(next));
   await txDone(tx);
+  try {
+    revertLog('cache.docJson.put', {
+      articleId,
+      updatedAt: nextUpdatedAt,
+      docHash: docJsonHash(docJson),
+    });
+  } catch {
+    // ignore
+  }
   if (docJson && typeof docJson === 'object') {
     reindexOutlineSections(db, { articleId, docJson, updatedAt }).catch(() => {});
     updateMediaRefsForArticle(articleId, docJson).catch(() => {});

@@ -10,6 +10,7 @@ import {
 import { enqueueOp } from './offline/outbox.js';
 import { localSemanticSearch } from './offline/semantic.js';
 import { state } from './state.js';
+import { revertLog, docJsonHash } from './debug/revertLog.js';
 
 const PERF_KEY = 'ttree_profile_v1';
 function perfEnabled() {
@@ -305,6 +306,15 @@ export function fetchArticle(id, options = {}) {
   const fetchOnline = () =>
     apiRequest(`/api/articles/${id}?include_history=0`, { ...apiOptions, cache: 'no-store' })
       .then(async (article) => {
+        try {
+          revertLog('article.fetch.network.ok', {
+            articleId: id,
+            updatedAt: article?.updatedAt || null,
+            docHash: docJsonHash(article?.docJson || null),
+          });
+        } catch {
+          // ignore
+        }
         cacheArticle(article).catch(() => {});
         if (article && article.id && String(article.id) !== String(id)) {
           cacheArticleUnderId(article, id).catch(() => {});
@@ -313,6 +323,17 @@ export function fetchArticle(id, options = {}) {
       })
       .catch(async (err) => {
         const cached = await getCachedArticle(id).catch(() => null);
+        try {
+          revertLog('article.fetch.network.err', {
+            articleId: id,
+            message: err?.message || String(err || ''),
+            cachedHit: Boolean(cached),
+            cachedUpdatedAt: cached?.updatedAt || null,
+            cachedDocHash: docJsonHash(cached?.docJson || null),
+          });
+        } catch {
+          // ignore
+        }
         if (cached) return cached;
         throw err;
       });
@@ -450,16 +471,40 @@ export function fetchArticle(id, options = {}) {
         return withPendingQuickNotesOverlay(buildLocalInboxArticle());
       }
       perfLog('[offline-first][article] choose.network.no-cache', { id });
+      try {
+        revertLog('article.choose', { articleId: id, choose: 'network.no_cache' });
+      } catch {
+        // ignore
+      }
       return withPendingQuickNotesOverlay(await fetchOnline());
     }
     if (!navigator.onLine) {
       perfLog('[offline-first][article] choose.cache.offline', { id, updatedAt: cached?.updatedAt || null });
+      try {
+        revertLog('article.choose', {
+          articleId: id,
+          choose: 'cache.offline',
+          cachedUpdatedAt: cached?.updatedAt || null,
+          cachedDocHash: docJsonHash(cached?.docJson || null),
+        });
+      } catch {
+        // ignore
+      }
       return withPendingQuickNotesOverlay(cached);
     }
 
     const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
     if (!cachedUpdatedAt) {
       perfLog('[offline-first][article] choose.network.no-cached-updatedAt', { id });
+      try {
+        revertLog('article.choose', {
+          articleId: id,
+          choose: 'network.no_cached_updatedAt',
+          cachedDocHash: docJsonHash(cached?.docJson || null),
+        });
+      } catch {
+        // ignore
+      }
       return withPendingQuickNotesOverlay(await fetchOnline());
     }
 
@@ -469,6 +514,17 @@ export function fetchArticle(id, options = {}) {
       const serverUpdatedAt = String(meta?.updatedAt || '').trim();
       if (serverUpdatedAt && serverUpdatedAt === cachedUpdatedAt) {
         perfLog('[offline-first][article] choose.cache.meta.same', { id, cachedUpdatedAt });
+        try {
+          revertLog('article.choose', {
+            articleId: id,
+            choose: 'cache.meta.same',
+            cachedUpdatedAt,
+            serverUpdatedAt,
+            cachedDocHash: docJsonHash(cached?.docJson || null),
+          });
+        } catch {
+          // ignore
+        }
         return withPendingQuickNotesOverlay(cached);
       }
       perfLog('[offline-first][article] choose.network.meta.diff', {
@@ -476,6 +532,17 @@ export function fetchArticle(id, options = {}) {
         cachedUpdatedAt,
         serverUpdatedAt: serverUpdatedAt || null,
       });
+      try {
+        revertLog('article.choose', {
+          articleId: id,
+          choose: 'network.meta.diff',
+          cachedUpdatedAt,
+          serverUpdatedAt: serverUpdatedAt || null,
+          cachedDocHash: docJsonHash(cached?.docJson || null),
+        });
+      } catch {
+        // ignore
+      }
       return withPendingQuickNotesOverlay(await fetchOnline());
     } catch (err) {
       // If meta check fails, fall back to cached quickly and refresh in background.
@@ -489,6 +556,20 @@ export function fetchArticle(id, options = {}) {
         perfLog('[offline-first][article] choose.cache.meta.timeout', { id, cachedUpdatedAt, metaTimeoutMs });
       } else {
         perfLog('[offline-first][article] choose.cache.meta.failed', { id, cachedUpdatedAt });
+      }
+      try {
+        revertLog('article.choose', {
+          articleId: id,
+          choose:
+            String(err?.name || '') === 'TimeoutError' || String(err?.message || '') === 'meta_timeout'
+              ? 'cache.meta.timeout'
+              : 'cache.meta.failed',
+          cachedUpdatedAt,
+          cachedDocHash: docJsonHash(cached?.docJson || null),
+          error: err?.message || String(err || ''),
+        });
+      } catch {
+        // ignore
       }
       return withPendingQuickNotesOverlay(cached);
     }
