@@ -1365,7 +1365,8 @@ export function showArticleHistoryModal(options = {}) {
     .sort((a, b) => (b.latestAt || 0) - (a.latestAt || 0));
 
   let selectedSectionId = sectionsAll[0]?.blockId || null;
-  let selectedEntryId = sectionsAll[0]?.entries?.[0]?.id || null;
+  let selectedEntryId = null;
+  let revisionPickedByUser = false;
 
   const formatTime = (iso) => {
     try {
@@ -1486,7 +1487,8 @@ export function showArticleHistoryModal(options = {}) {
           btn.textContent = `${section.label || 'Без названия'}${meta ? ` · ${meta}` : ''}${count ? ` · ${count}` : ''}`;
           btn.addEventListener('click', () => {
             selectedSectionId = section.blockId;
-            selectedEntryId = section.entries?.[0]?.id || null;
+            selectedEntryId = null;
+            revisionPickedByUser = false;
             renderSections();
             renderEvents();
             renderPanes();
@@ -1496,7 +1498,8 @@ export function showArticleHistoryModal(options = {}) {
 
         if (selectedSectionId && !visible.some((s) => s.blockId === selectedSectionId)) {
           selectedSectionId = visible[0]?.blockId || null;
-          selectedEntryId = visible[0]?.entries?.[0]?.id || null;
+          selectedEntryId = null;
+          revisionPickedByUser = false;
           renderEvents();
           renderPanes();
         }
@@ -1506,7 +1509,8 @@ export function showArticleHistoryModal(options = {}) {
         const section = selectedSectionId ? bySection.get(selectedSectionId) : null;
         const ev = Array.isArray(section?.entries) ? section.entries.slice() : [];
         ev.sort((a, b) => (Date.parse(b.timestamp || '') || 0) - (Date.parse(a.timestamp || '') || 0));
-        if (!selectedEntryId) selectedEntryId = ev[0]?.id || null;
+        const hasSelected = selectedEntryId && ev.some((e) => String(e?.id || '') === String(selectedEntryId || ''));
+        if (!revisionPickedByUser || !hasSelected) selectedEntryId = ev[0]?.id || null;
 
         eventsList.innerHTML = '';
         ev.forEach((e) => {
@@ -1520,6 +1524,7 @@ export function showArticleHistoryModal(options = {}) {
           btn.textContent = `${time ? `≠ ${time}` : `≠ ${e.id || ''}`}${preview ? ` · ${preview}` : ''}`;
           btn.addEventListener('click', () => {
             selectedEntryId = e.id || null;
+            revisionPickedByUser = true;
             renderEvents();
             renderPanes();
           });

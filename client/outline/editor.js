@@ -4719,6 +4719,13 @@ function patchDocJsonCollapsedForPath(docJson, sectionId, targetCollapsed) {
 }
 
 function findOutlineSectionPosAtSelection(doc, $from) {
+  try {
+    // When a whole section node is selected (NodeSelection), the resolved $from is placed
+    // before the node, so the section is available as `$from.nodeAfter`.
+    if ($from?.nodeAfter?.type?.name === 'outlineSection') return $from.pos;
+  } catch {
+    // ignore
+  }
   for (let d = $from.depth; d > 0; d -= 1) {
     if ($from.node(d)?.type?.name === 'outlineSection') return $from.before(d);
   }
@@ -7617,15 +7624,27 @@ async function mountOutlineEditor() {
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
         // Ctrl+↑: схлопнуть родителя (и всё внутри него)
-        'Mod-ArrowUp': () => collapseParentSubtree(),
-        // Ctrl+↓: развернуть текущую секцию (и всех её детей)
-        'Mod-ArrowDown': () => expandCurrentSubtree(),
-        // Ctrl+Enter: split секции в позиции курсора (children → в новую секцию)
-        'Mod-Enter': () => splitSectionAtCaret(),
-        Backspace: () =>
-          this.editor.commands.command(({ state: pmState, dispatch }) => {
-            const { selection } = pmState;
-            if (clampHeadingDeletionToHeadingText(pmState, dispatch)) return true;
+	        'Mod-ArrowUp': () => collapseParentSubtree(),
+	        // Ctrl+↓: развернуть текущую секцию (и всех её детей)
+	        'Mod-ArrowDown': () => expandCurrentSubtree(),
+	        // Ctrl+Enter: split секции в позиции курсора (children → в новую секцию)
+	        'Mod-Enter': () => {
+	          // IMPORTANT: In view-mode Ctrl/Cmd+Enter creates a new empty block above/below.
+	          // Section split must work only in edit-mode.
+	          try {
+	            if (outlineEditModeKey) {
+	              const st = outlineEditModeKey.getState(this.editor.state) || {};
+	              if (!st.editingSectionId) return false;
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          return splitSectionAtCaret();
+	        },
+	        Backspace: () =>
+	          this.editor.commands.command(({ state: pmState, dispatch }) => {
+	            const { selection } = pmState;
+	            if (clampHeadingDeletionToHeadingText(pmState, dispatch)) return true;
             if (clampCrossSectionDeletionToBody(pmState, dispatch)) return true;
             if (!selection?.empty) return false;
             const { $from } = selection;
@@ -8465,50 +8484,56 @@ async function mountOutlineEditor() {
                 }
               }
 
-              // Enter в заголовке секции: создавать новую секцию сверху/снизу.
-              // В начале заголовка — сверху, в конце — снизу. Если заголовок пустой — всегда снизу.
+              // Ctrl/Cmd+Enter в view-mode: создать новый блок.
+              // Если курсор в начале заголовка — вставить сверху, иначе — снизу.
               try {
-                if (!state.isPublicView && event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                const isCtrlEnter =
+                  (event.key === 'Enter' || event.code === 'Enter' || event.code === 'NumpadEnter') &&
+                  (event.ctrlKey || event.metaKey) &&
+                  !event.shiftKey &&
+                  !event.altKey;
+                if (!state.isPublicView && !editingSectionId && isCtrlEnter) {
                   const sel = pmState.selection;
                   const $from = sel?.$from || null;
-                  if (sel && sel.empty && $from && $from.parent?.type?.name === 'outlineHeading') {
-                    let sectionPos = null;
-                    for (let d = $from.depth; d > 0; d -= 1) {
-                      if ($from.node(d)?.type?.name === 'outlineSection') {
-                        sectionPos = $from.before(d);
-                        break;
-                      }
-                    }
+                  if ($from) {
+                    const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, $from);
                     const sectionNode = typeof sectionPos === 'number' ? pmState.doc.nodeAt(sectionPos) : null;
-                    if (sectionNode && sectionNode.type?.name === 'outlineSection') {
-                      const headingNode = sectionNode.child(0);
-                      const headingText = String(headingNode?.textContent || '').trim();
-                      const headingEmpty = !headingText;
-                      const atStart = $from.parentOffset === 0;
-                      const atEnd = $from.parentOffset === $from.parent.content.size;
-                      const insertAbove = atStart && !headingEmpty;
-                      const insertBelow = !insertAbove && (headingEmpty || atEnd);
-                      if (insertAbove || insertBelow) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const insertPos = insertAbove ? sectionPos : sectionPos + sectionNode.nodeSize;
-                        const schema = pmState.schema;
-                        const newId = safeUuid();
-                        const newSection = schema.nodes.outlineSection.create(
-                          { id: newId, collapsed: false },
-                          [
-                            schema.nodes.outlineHeading.create({}, []),
-                            schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
-                            schema.nodes.outlineChildren.create({}, []),
-                          ],
-                        );
-                        let tr = pmState.tr.insert(insertPos, newSection);
-                        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
-                        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-                        tr = tr.setMeta(key, { type: 'enter', sectionId: newId });
-                        view.dispatch(tr.scrollIntoView());
-                        return true;
+                    if (typeof sectionPos === 'number' && sectionNode && sectionNode.type?.name === 'outlineSection') {
+                      const isCaret = Boolean(sel && sel.empty);
+                      const inHeading = $from.parent?.type?.name === 'outlineHeading';
+                      const atHeadingStart = isCaret && inHeading && $from.parentOffset === 0;
+                      const insertPos = atHeadingStart ? sectionPos : sectionPos + sectionNode.nodeSize;
+
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const schema = pmState.schema;
+                      const newId = safeUuid();
+                      const newSection = schema.nodes.outlineSection.create(
+                        { id: newId, collapsed: false },
+                        [
+                          schema.nodes.outlineHeading.create({}, []),
+                          schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+                          schema.nodes.outlineChildren.create({}, []),
+                        ],
+                      );
+	                      let tr = pmState.tr.insert(insertPos, newSection);
+	                      try {
+	                        const inserted = tr.doc.nodeAt(insertPos);
+	                        const heading = inserted?.child?.(0) || newSection.child(0);
+	                        const bodyStart = insertPos + 1 + heading.nodeSize;
+	                        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+	                      } catch {
+	                        tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+	                      }
+                      tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+                      tr = tr.setMeta(key, { type: 'enter', sectionId: newId });
+                      view.dispatch(tr.scrollIntoView());
+                      try {
+                        view.focus();
+                      } catch {
+                        // ignore
                       }
+                      return true;
                     }
                   }
                 }
@@ -8521,20 +8546,29 @@ async function mountOutlineEditor() {
                 pendingMerge = null;
               }
 
-	              if (state.isPublicView && !editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-	                event.preventDefault();
-	                event.stopPropagation();
+	              if (
+	                state.isPublicView &&
+	                !editingSectionId &&
+	                ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+	                  (event.key === 'F2' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey))
+	              ) {
+		                event.preventDefault();
+		                event.stopPropagation();
+		                return true;
+		              }
+
+		              if (
+		                !editingSectionId &&
+		                ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+		                  (event.key === 'F2' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey))
+		              ) {
+		                const sectionId = getActiveSectionId(pmState);
+		                if (!sectionId) return false;
+		                event.preventDefault();
+		                event.stopPropagation();
+	                view.dispatch(pmState.tr.setMeta(key, { type: 'enter', sectionId }));
 	                return true;
 	              }
-
-	              if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-	                const sectionId = getActiveSectionId(pmState);
-	                if (!sectionId) return false;
-	                event.preventDefault();
-	                event.stopPropagation();
-                view.dispatch(pmState.tr.setMeta(key, { type: 'enter', sectionId }));
-                return true;
-              }
 
               if (editingSectionId && event.key === 'Escape') {
                 event.preventDefault();
@@ -10745,19 +10779,78 @@ async function mountOutlineEditor() {
 	      },
 		      handleKeyDown(view, event) {
 		          outlineDebug('editorProps.keydown', {
-		            key: event?.key || null,
-	            repeat: Boolean(event?.repeat),
-	            selection: {
-              empty: Boolean(view.state?.selection?.empty),
-              parent: view.state?.selection?.$from?.parent?.type?.name || null,
-              parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
-              pos: view.state?.selection?.$from?.pos ?? null,
-            },
-          });
-			        // Alt+Arrow: our custom table moves are disabled; keep TipTap defaults in tables.
+			            key: event?.key || null,
+		            repeat: Boolean(event?.repeat),
+		            selection: {
+	              empty: Boolean(view.state?.selection?.empty),
+	              parent: view.state?.selection?.$from?.parent?.type?.name || null,
+	              parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
+	              pos: view.state?.selection?.$from?.pos ?? null,
+	            },
+	          });
+			        // Ctrl/Cmd+Enter in view-mode: create a new block above/below and enter edit mode in its body.
 			        try {
-			          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
-			          const key = String(event.key || '');
+			          const TextSelection = tiptap?.pmStateMod?.TextSelection;
+			          if (TextSelection) {
+			            const st = outlineEditModeKey?.getState?.(view.state) || null;
+			            const editingSectionId = st?.editingSectionId || null;
+			            const isCtrlEnter =
+			              (event.key === 'Enter' || event.code === 'Enter' || event.code === 'NumpadEnter') &&
+			              (event.ctrlKey || event.metaKey) &&
+			              !event.shiftKey &&
+			              !event.altKey;
+			            if (!state.isPublicView && !editingSectionId && isCtrlEnter) {
+			              const sel = view.state.selection;
+			              const $from = sel?.$from || null;
+			              if ($from) {
+			                const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, $from);
+			                const sectionNode = typeof sectionPos === 'number' ? view.state.doc.nodeAt(sectionPos) : null;
+			                if (typeof sectionPos === 'number' && sectionNode?.type?.name === 'outlineSection') {
+			                  const isCaret = Boolean(sel && sel.empty);
+			                  const inHeading = $from.parent?.type?.name === 'outlineHeading';
+			                  const atHeadingStart = isCaret && inHeading && $from.parentOffset === 0;
+			                  const insertPos = atHeadingStart ? sectionPos : sectionPos + sectionNode.nodeSize;
+			                  const schema = view.state.schema;
+			                  const newId = safeUuid();
+			                  const newSection = schema.nodes.outlineSection.create(
+			                    { id: newId, collapsed: false },
+			                    [
+			                      schema.nodes.outlineHeading.create({}, []),
+			                      schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
+			                      schema.nodes.outlineChildren.create({}, []),
+			                    ],
+			                  );
+			                  let tr = view.state.tr.insert(insertPos, newSection);
+			                  try {
+			                    const inserted = tr.doc.nodeAt(insertPos);
+			                    const heading = inserted?.child?.(0) || newSection.child(0);
+			                    const bodyStart = insertPos + 1 + heading.nodeSize;
+			                    tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+			                  } catch {
+			                    tr = tr.setSelection(TextSelection.create(tr.doc, insertPos + 2));
+			                  }
+			                  tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			                  if (outlineEditModeKey) tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+			                  view.dispatch(tr.scrollIntoView());
+			                  try {
+			                    view.focus();
+			                  } catch {
+			                    // ignore
+			                  }
+			                  event.preventDefault();
+			                  event.stopPropagation();
+			                  return true;
+			                }
+			              }
+			            }
+			          }
+			        } catch {
+			          // ignore
+			        }
+				        // Alt+Arrow: our custom table moves are disabled; keep TipTap defaults in tables.
+				        try {
+				          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+				          const key = String(event.key || '');
 			          if (isAltOnly && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown')) {
 			            const st = outlineEditModeKey?.getState?.(view.state) || null;
 			            if (st?.editingSectionId && outlineEditorInstance) {
@@ -11172,18 +11265,27 @@ async function mountOutlineEditor() {
             }
           }
 
-	          if (state.isPublicView && !editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-	            event.preventDefault();
-	            event.stopPropagation();
-	            return true;
-	          }
+		          if (
+		            state.isPublicView &&
+		            !editingSectionId &&
+		            ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+		              (event.key === 'F2' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey))
+		          ) {
+		            event.preventDefault();
+		            event.stopPropagation();
+		            return true;
+		          }
 
-	          if (!editingSectionId && (event.key === 'Enter' || event.key === 'F2')) {
-	            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
-	            if (typeof sectionPos !== 'number') return false;
-	            const sectionNode = view.state.doc.nodeAt(sectionPos);
-            const sectionId = String(sectionNode?.attrs?.id || '');
-            if (!sectionId) return false;
+		          if (
+		            !editingSectionId &&
+		            ((event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) ||
+		              (event.key === 'F2' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey))
+		          ) {
+		            const sectionPos = findOutlineSectionPosAtSelection(view.state.doc, view.state.selection.$from);
+		            if (typeof sectionPos !== 'number') return false;
+		            const sectionNode = view.state.doc.nodeAt(sectionPos);
+	            const sectionId = String(sectionNode?.attrs?.id || '');
+	            if (!sectionId) return false;
             event.preventDefault();
             event.stopPropagation();
             // Collapsed sections must not enter edit mode; expand instead.
