@@ -4090,6 +4090,28 @@ function mountOutlineToolbar(editor) {
 
   const TextSelection = tiptap?.pmStateMod?.TextSelection || null;
 
+  const findImmediateParentSectionPosForSectionPos = (doc, sectionPos) => {
+    try {
+      const $inside = doc.resolve(Math.min(doc.content.size, sectionPos + 1));
+      let currentDepth = null;
+      for (let d = $inside.depth; d > 0; d -= 1) {
+        if ($inside.node(d)?.type?.name !== 'outlineSection') continue;
+        const pos = $inside.before(d);
+        if (pos === sectionPos) {
+          currentDepth = d;
+          break;
+        }
+      }
+      if (currentDepth === null) return null;
+      for (let d = currentDepth - 1; d > 0; d -= 1) {
+        if ($inside.node(d)?.type?.name === 'outlineSection') return $inside.before(d);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   const moveActiveSection = (dir) => {
     try {
       if (!TextSelection) return;
@@ -4104,25 +4126,85 @@ function mountOutlineToolbar(editor) {
         if (!sectionNode) return false;
 
         if (dir === 'up') {
-          if (idx <= 0) return false;
-          const prevNode = parent.child(idx - 1);
-          const prevStart = sectionPos - prevNode.nodeSize;
-          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(prevStart, sectionNode);
-          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(prevStart + 2), 1));
+          if (idx > 0) {
+            const prevNode = parent.child(idx - 1);
+            const prevStart = sectionPos - prevNode.nodeSize;
+            let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).insert(prevStart, sectionNode);
+            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(prevStart + 2), 1));
+            dispatch(tr.scrollIntoView());
+            return true;
+          }
+
+          const parentSectionPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+          if (typeof parentSectionPos !== 'number') return false;
+          const $parent = pmState.doc.resolve(parentSectionPos);
+          const parentIdx = $parent.index();
+          const grandParent = $parent.parent;
+          if (!grandParent || parentIdx <= 0) return false;
+          const prevUncleNode = grandParent.child(parentIdx - 1);
+          const prevUncleStart = parentSectionPos - prevUncleNode.nodeSize;
+          const prevUncle = pmState.doc.nodeAt(prevUncleStart);
+          if (!prevUncle || prevUncle.type?.name !== 'outlineSection') return false;
+          const prevHeading = prevUncle.child(0);
+          const prevBody = prevUncle.child(1);
+          const prevChildren = prevUncle.child(2);
+          const childrenStart = prevUncleStart + 1 + prevHeading.nodeSize + prevBody.nodeSize;
+          const baseInsertPos = childrenStart + prevChildren.nodeSize - 1;
+
+          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
+          const mappedPrevUncleStart = tr.mapping.map(prevUncleStart, -1);
+          const mappedInsertPos = tr.mapping.map(baseInsertPos, -1);
+          tr = tr.insert(mappedInsertPos, sectionNode);
+          const prevAfter = tr.doc.nodeAt(mappedPrevUncleStart);
+          if (prevAfter?.type?.name === 'outlineSection' && Boolean(prevAfter.attrs?.collapsed)) {
+            tr = tr.setNodeMarkup(mappedPrevUncleStart, undefined, { ...prevAfter.attrs, collapsed: false });
+          }
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1));
           dispatch(tr.scrollIntoView());
           return true;
         }
         if (dir === 'down') {
-          if (idx >= parent.childCount - 1) return false;
-          const nextStart = sectionPos + sectionNode.nodeSize;
-          const nextNode = pmState.doc.nodeAt(nextStart);
-          if (!nextNode) return false;
-          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
-          const insertPos = sectionPos + nextNode.nodeSize;
-          tr = tr.insert(insertPos, sectionNode);
-          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+          if (idx < parent.childCount - 1) {
+            const nextStart = sectionPos + sectionNode.nodeSize;
+            const nextNode = pmState.doc.nodeAt(nextStart);
+            if (!nextNode) return false;
+            let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize);
+            const insertPos = sectionPos + nextNode.nodeSize;
+            tr = tr.insert(insertPos, sectionNode);
+            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+            dispatch(tr.scrollIntoView());
+            return true;
+          }
+
+          const parentSectionPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+          if (typeof parentSectionPos !== 'number') return false;
+          const parentSectionNode = pmState.doc.nodeAt(parentSectionPos);
+          if (!parentSectionNode || parentSectionNode.type?.name !== 'outlineSection') return false;
+          const $parent = pmState.doc.resolve(parentSectionPos);
+          const parentIdx = $parent.index();
+          const grandParent = $parent.parent;
+          if (!grandParent || parentIdx >= grandParent.childCount - 1) return false;
+
+          const nextUncleStart = parentSectionPos + parentSectionNode.nodeSize;
+          const nextUncle = pmState.doc.nodeAt(nextUncleStart);
+          if (!nextUncle || nextUncle.type?.name !== 'outlineSection') return false;
+          const nextHeading = nextUncle.child(0);
+          const nextBody = nextUncle.child(1);
+          const nextChildren = nextUncle.child(2);
+          const childrenStart = nextUncleStart + 1 + nextHeading.nodeSize + nextBody.nodeSize;
+          const baseInsertPos = childrenStart + 1;
+
+          let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
+          const mappedNextUncleStart = tr.mapping.map(nextUncleStart, -1);
+          const mappedInsertPos = tr.mapping.map(baseInsertPos, -1);
+          tr = tr.insert(mappedInsertPos, sectionNode);
+          const nextAfter = tr.doc.nodeAt(mappedNextUncleStart);
+          if (nextAfter?.type?.name === 'outlineSection' && Boolean(nextAfter.attrs?.collapsed)) {
+            tr = tr.setNodeMarkup(mappedNextUncleStart, undefined, { ...nextAfter.attrs, collapsed: false });
+          }
+          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1));
           dispatch(tr.scrollIntoView());
           return true;
         }
@@ -7366,27 +7448,95 @@ async function mountOutlineEditor() {
           if (!sectionNode) return false;
 
           if (dir === 'up') {
-            if (idx <= 0) return false;
-            const prevNode = parent.child(idx - 1);
-            const prevStart = sectionPos - prevNode.nodeSize;
-            const tr = pmState.tr
-              .delete(sectionPos, sectionPos + sectionNode.nodeSize)
-              .insert(prevStart, sectionNode)
-              .setMeta(OUTLINE_ALLOW_META, true);
-            const sel = TextSelection.near(tr.doc.resolve(prevStart + 2), 1);
+            if (idx > 0) {
+              const prevNode = parent.child(idx - 1);
+              const prevStart = sectionPos - prevNode.nodeSize;
+              const tr = pmState.tr
+                .delete(sectionPos, sectionPos + sectionNode.nodeSize)
+                .insert(prevStart, sectionNode)
+                .setMeta(OUTLINE_ALLOW_META, true);
+              const sel = TextSelection.near(tr.doc.resolve(prevStart + 2), 1);
+              tr.setSelection(sel);
+              dispatch(tr.scrollIntoView());
+              return true;
+            }
+
+            // At the top of siblings: move into the previous sibling of the parent (if any),
+            // as the last child of that "uncle" section.
+            const parentSectionPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+            if (typeof parentSectionPos !== 'number') return false;
+            const $parent = pmState.doc.resolve(parentSectionPos);
+            const parentIdx = $parent.index();
+            const grandParent = $parent.parent;
+            if (!grandParent || parentIdx <= 0) return false;
+            const prevUncleNode = grandParent.child(parentIdx - 1);
+            const prevUncleStart = parentSectionPos - prevUncleNode.nodeSize;
+            const prevUncle = pmState.doc.nodeAt(prevUncleStart);
+            if (!prevUncle || prevUncle.type?.name !== 'outlineSection') return false;
+            const prevHeading = prevUncle.child(0);
+            const prevBody = prevUncle.child(1);
+            const prevChildren = prevUncle.child(2);
+            const childrenStart = prevUncleStart + 1 + prevHeading.nodeSize + prevBody.nodeSize;
+            const baseInsertPos = childrenStart + prevChildren.nodeSize - 1; // append
+
+            let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
+            const mappedPrevUncleStart = tr.mapping.map(prevUncleStart, -1);
+            const mappedInsertPos = tr.mapping.map(baseInsertPos, -1);
+            tr = tr.insert(mappedInsertPos, sectionNode);
+            const prevAfter = tr.doc.nodeAt(mappedPrevUncleStart);
+            if (prevAfter?.type?.name === 'outlineSection' && Boolean(prevAfter.attrs?.collapsed)) {
+              tr = tr.setNodeMarkup(mappedPrevUncleStart, undefined, { ...prevAfter.attrs, collapsed: false });
+            }
+            const sel = TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1);
             tr.setSelection(sel);
             dispatch(tr.scrollIntoView());
             return true;
           }
           if (dir === 'down') {
-            if (idx >= parent.childCount - 1) return false;
-            const nextStart = sectionPos + sectionNode.nodeSize;
-            const nextNode = pmState.doc.nodeAt(nextStart);
-            if (!nextNode) return false;
-            const tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
-            const insertPos = sectionPos + nextNode.nodeSize;
-            tr.insert(insertPos, sectionNode);
-            const sel = TextSelection.near(tr.doc.resolve(insertPos + 2), 1);
+            if (idx < parent.childCount - 1) {
+              const nextStart = sectionPos + sectionNode.nodeSize;
+              const nextNode = pmState.doc.nodeAt(nextStart);
+              if (!nextNode) return false;
+              const tr = pmState.tr
+                .delete(sectionPos, sectionPos + sectionNode.nodeSize)
+                .setMeta(OUTLINE_ALLOW_META, true);
+              const insertPos = sectionPos + nextNode.nodeSize;
+              tr.insert(insertPos, sectionNode);
+              const sel = TextSelection.near(tr.doc.resolve(insertPos + 2), 1);
+              tr.setSelection(sel);
+              dispatch(tr.scrollIntoView());
+              return true;
+            }
+
+            // At the bottom of siblings: move into the next sibling of the parent (if any),
+            // as the first child of that "uncle" section.
+            const parentSectionPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+            if (typeof parentSectionPos !== 'number') return false;
+            const parentSectionNode = pmState.doc.nodeAt(parentSectionPos);
+            if (!parentSectionNode || parentSectionNode.type?.name !== 'outlineSection') return false;
+            const $parent = pmState.doc.resolve(parentSectionPos);
+            const parentIdx = $parent.index();
+            const grandParent = $parent.parent;
+            if (!grandParent || parentIdx >= grandParent.childCount - 1) return false;
+
+            const nextUncleStart = parentSectionPos + parentSectionNode.nodeSize;
+            const nextUncle = pmState.doc.nodeAt(nextUncleStart);
+            if (!nextUncle || nextUncle.type?.name !== 'outlineSection') return false;
+            const nextHeading = nextUncle.child(0);
+            const nextBody = nextUncle.child(1);
+            const nextChildren = nextUncle.child(2);
+            const childrenStart = nextUncleStart + 1 + nextHeading.nodeSize + nextBody.nodeSize;
+            const baseInsertPos = childrenStart + 1; // prepend
+
+            let tr = pmState.tr.delete(sectionPos, sectionPos + sectionNode.nodeSize).setMeta(OUTLINE_ALLOW_META, true);
+            const mappedNextUncleStart = tr.mapping.map(nextUncleStart, -1);
+            const mappedInsertPos = tr.mapping.map(baseInsertPos, -1);
+            tr = tr.insert(mappedInsertPos, sectionNode);
+            const nextAfter = tr.doc.nodeAt(mappedNextUncleStart);
+            if (nextAfter?.type?.name === 'outlineSection' && Boolean(nextAfter.attrs?.collapsed)) {
+              tr = tr.setNodeMarkup(mappedNextUncleStart, undefined, { ...nextAfter.attrs, collapsed: false });
+            }
+            const sel = TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1);
             tr.setSelection(sel);
             dispatch(tr.scrollIntoView());
             return true;
