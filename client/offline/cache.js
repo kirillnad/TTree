@@ -166,13 +166,16 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
   const tx = db.transaction(['articles'], 'readwrite');
   const store = tx.objectStore('articles');
   const existing = await reqToPromise(store.get(articleId)).catch(() => null);
+  // Never clear updatedAt on local draft saves: otherwise offline-first will treat cache as "stale/unknown"
+  // and may refetch from server, overwriting the locally edited docJson.
+  const nextUpdatedAt = (updatedAt || (existing && existing.updatedAt) || null);
 
   // `getCachedArticle()` relies on `articleJsonStr`. If we only store `docJsonStr`, reads will return `null`,
   // which breaks offline-first flows (e.g., inbox quick notes queued offline).
   const minimalArticleJsonStr = () => {
     const titleFallback = String(articleId) === 'inbox' ? 'Быстрые заметки' : '';
     const title = (existing && typeof existing.title === 'string' ? existing.title : '') || titleFallback;
-    const updated = updatedAt || (existing && existing.updatedAt) || null;
+    const updated = nextUpdatedAt;
     const article = {
       id: articleId,
       title,
@@ -208,7 +211,7 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
     }
     // Keep id stable and overwrite docJson/updatedAt to reflect the cached draft.
     article.id = articleId;
-    article.updatedAt = updatedAt || article.updatedAt || null;
+    article.updatedAt = nextUpdatedAt || article.updatedAt || null;
     article.docJson = docJson && typeof docJson === 'object' ? docJson : null;
     // Normalize common fields to avoid undefined creeping in.
     if (!article.title && existing?.title) article.title = existing.title;
@@ -225,7 +228,7 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
     ...(existing || { id: articleId }),
     id: articleId,
     docJsonStr: docJson ? JSON.stringify(docJson) : null,
-    updatedAt: updatedAt || null,
+    updatedAt: nextUpdatedAt,
     // Keep `articleJsonStr` in sync with `docJsonStr`, otherwise reads will use stale docJson/updatedAt.
     articleJsonStr: updateArticleJsonStrWithDoc(),
   };

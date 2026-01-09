@@ -303,7 +303,7 @@ export function fetchArticle(id, options = {}) {
   const cachedPromise = Promise.race([cachedLookupPromise, timeoutPromise]);
 
   const fetchOnline = () =>
-    apiRequest(`/api/articles/${id}?include_history=0`, apiOptions)
+    apiRequest(`/api/articles/${id}?include_history=0`, { ...apiOptions, cache: 'no-store' })
       .then(async (article) => {
         cacheArticle(article).catch(() => {});
         if (article && article.id && String(article.id) !== String(id)) {
@@ -422,6 +422,7 @@ export function fetchArticle(id, options = {}) {
     apiRequest(`/api/articles/${encodeURIComponent(id)}/meta`, {
       method: 'GET',
       headers: { ...(apiOptions.headers || {}) },
+      cache: 'no-store',
     });
   const fetchMetaWithTimeout = () => {
     if (!metaTimeoutMs) return fetchMeta();

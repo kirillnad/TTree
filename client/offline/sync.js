@@ -46,6 +46,116 @@ let outboxIntervalId = null;
 const STRUCTURE_SNAPSHOT_MIN_INTERVAL_MS = 3000;
 const lastStructureSnapshotSentAtByArticle = new Map();
 
+function applyOutlineStructureSnapshotToDocJson(docJson, nodes) {
+  try {
+    const root = docJson && typeof docJson === 'object' ? docJson : { type: 'doc', content: [] };
+    const content = Array.isArray(root.content) ? root.content : [];
+
+    const existingById = new Map();
+    const walk = (items) => {
+      if (!Array.isArray(items)) return;
+      for (const item of items) {
+        if (!item || typeof item !== 'object' || item.type !== 'outlineSection') continue;
+        const sid = String(item?.attrs?.id || '').trim();
+        if (sid) existingById.set(sid, item);
+        const kids = Array.isArray(item.content) ? item.content : [];
+        const childrenNode = kids.find((c) => c && typeof c === 'object' && c.type === 'outlineChildren') || null;
+        if (childrenNode && Array.isArray(childrenNode.content)) walk(childrenNode.content);
+      }
+    };
+    walk(content);
+
+    const ensureSectionShape = (sec, sid) => {
+      const s = sec && typeof sec === 'object' ? sec : { type: 'outlineSection', attrs: { id: sid, collapsed: false }, content: [] };
+      s.type = 'outlineSection';
+      const attrs = s.attrs && typeof s.attrs === 'object' ? s.attrs : {};
+      attrs.id = sid;
+      s.attrs = attrs;
+      const kids = Array.isArray(s.content) ? s.content : [];
+      const heading =
+        kids.find((c) => c && typeof c === 'object' && c.type === 'outlineHeading') || { type: 'outlineHeading', content: [] };
+      const body =
+        kids.find((c) => c && typeof c === 'object' && c.type === 'outlineBody') || { type: 'outlineBody', content: [{ type: 'paragraph' }] };
+      let children = kids.find((c) => c && typeof c === 'object' && c.type === 'outlineChildren') || { type: 'outlineChildren', content: [] };
+      if (!Array.isArray(children.content)) children = { ...children, content: [] };
+      s.content = [heading, body, children];
+      return s;
+    };
+
+    const mentioned = new Set();
+    const byParent = new Map();
+    for (const row of Array.isArray(nodes) ? nodes : []) {
+      const sid = String(row?.sectionId || '').trim();
+      if (!sid) continue;
+      const parentRaw = row?.parentId;
+      const parentId = parentRaw != null && String(parentRaw).trim() ? String(parentRaw).trim() : null;
+      const pos = Number.isFinite(Number(row?.position)) ? Number(row.position) : 0;
+      const collapsed = Boolean(row?.collapsed);
+
+      const sec = ensureSectionShape(existingById.get(sid), sid);
+      sec.attrs = { ...(sec.attrs || {}), id: sid, collapsed };
+      existingById.set(sid, sec);
+      mentioned.add(sid);
+      if (!byParent.has(parentId)) byParent.set(parentId, []);
+      byParent.get(parentId).push({ pos, sid, sec });
+    }
+
+    for (const [parentId, list] of byParent.entries()) {
+      list.sort((a, b) => (a.pos - b.pos) || String(a.sid).localeCompare(String(b.sid)));
+      byParent.set(parentId, list);
+    }
+
+    for (const [sid, sec] of existingById.entries()) {
+      const list = byParent.get(sid) || [];
+      const children = list.map((x) => x.sec);
+      try {
+        if (!Array.isArray(sec.content)) sec.content = [];
+        if (!sec.content[2] || sec.content[2].type !== 'outlineChildren') sec.content[2] = { type: 'outlineChildren', content: [] };
+        sec.content[2].content = children;
+      } catch {
+        // ignore
+      }
+    }
+
+    const rootList = (byParent.get(null) || []).map((x) => x.sec);
+    for (const [sid, sec] of existingById.entries()) {
+      if (mentioned.has(sid)) continue;
+      rootList.push(sec);
+    }
+    root.type = 'doc';
+    root.content = rootList;
+    return root;
+  } catch {
+    return docJson;
+  }
+}
+
+function applySectionUpsertToDocJson(docJson, sectionId, headingJson, bodyJson) {
+  try {
+    const sid = String(sectionId || '').trim();
+    if (!sid) return docJson;
+    const root = docJson && typeof docJson === 'object' ? docJson : { type: 'doc', content: [] };
+    const stack = [root];
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || typeof node !== 'object') continue;
+      if (node.type === 'outlineSection' && String(node?.attrs?.id || '').trim() === sid) {
+        const content = Array.isArray(node.content) ? node.content : [];
+        const children = content.find((c) => c && typeof c === 'object' && c.type === 'outlineChildren') || { type: 'outlineChildren', content: [] };
+        node.content = [headingJson, bodyJson, children];
+        return root;
+      }
+      const c = node.content;
+      if (Array.isArray(c)) {
+        for (const child of c) stack.push(child);
+      }
+    }
+    return root;
+  } catch {
+    return docJson;
+  }
+}
+
 function debugOfflineEnabled() {
   try {
     return window?.localStorage?.getItem?.('ttree_debug_offline_v1') === '1';
@@ -220,7 +330,17 @@ async function flushOp(op) {
       }),
     });
     try {
-      if (result?.updatedAt) await touchCachedArticleUpdatedAt(op.articleId, result.updatedAt);
+      // Keep cached docJson consistent with updatedAt, otherwise offline-first may "trust" stale docJson on reload.
+      if (result?.updatedAt) {
+        const cached = await getCachedArticle(op.articleId).catch(() => null);
+        const cachedDoc = cached?.docJson && typeof cached.docJson === 'object' ? cached.docJson : null;
+        if (cachedDoc) {
+          const nextDoc = applySectionUpsertToDocJson(cachedDoc, sectionId, headingJson, bodyJson);
+          await updateCachedDocJson(op.articleId, nextDoc, result.updatedAt);
+        } else {
+          // No docJson to patch — don't update updatedAt alone (would pin a null/stale docJson as "fresh").
+        }
+      }
     } catch {
       // ignore
     }
@@ -238,7 +358,17 @@ async function flushOp(op) {
       }),
     });
     try {
-      if (result?.updatedAt) await touchCachedArticleUpdatedAt(op.articleId, result.updatedAt);
+      // Keep cached docJson consistent with updatedAt, otherwise offline-first may "trust" stale docJson on reload.
+      if (result?.updatedAt) {
+        const cached = await getCachedArticle(op.articleId).catch(() => null);
+        const cachedDoc = cached?.docJson && typeof cached.docJson === 'object' ? cached.docJson : null;
+        if (cachedDoc) {
+          const nextDoc = applyOutlineStructureSnapshotToDocJson(cachedDoc, nodes);
+          await updateCachedDocJson(op.articleId, nextDoc, result.updatedAt);
+        } else {
+          // No docJson to patch — don't update updatedAt alone.
+        }
+      }
     } catch {
       // ignore
     }

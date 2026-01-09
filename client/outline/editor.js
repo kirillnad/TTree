@@ -12997,15 +12997,8 @@ export async function openOutlineEditor() {
     if (!state.scrollTargetBlockId && outlineArticleId) {
       const snap = readOutlineLastActiveSnapshot(outlineArticleId);
       if (snap?.sectionId) {
-        // Make sure we open the last active section, and keep it in the same collapsed state.
-        // Apply to docJson before TipTap mounts so it doesn't count as an edit/autosave.
-        try {
-          if (state.article?.docJson && typeof state.article.docJson === 'object') {
-            patchDocJsonCollapsedForPath(state.article.docJson, snap.sectionId, snap.collapsed);
-          }
-        } catch {
-          // ignore
-        }
+        // Make sure we open the last active section.
+        // Do NOT force collapsed state from localStorage: server docJson is the source of truth.
         state.currentBlockId = snap.sectionId;
       }
     }
