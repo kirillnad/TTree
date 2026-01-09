@@ -8183,7 +8183,7 @@ async function mountOutlineEditor() {
             // игнорируя секции, скрытые из-за collapsed-родителей.
             const prevVisible = findPrevVisibleSectionPos(pmState.doc, sectionPos);
             if (typeof prevVisible === 'number') {
-              return moveSelectionToSectionEnd(pmState, dispatch, prevVisible);
+              return moveSelectionToSectionHeadingStart(pmState, dispatch, prevVisible);
             }
 
             const $pos = pmState.doc.resolve(sectionPos);
@@ -8195,7 +8195,7 @@ async function mountOutlineEditor() {
             if (idx > 0) {
               const prevNode = parent.child(idx - 1);
               const prevStart = sectionPos - prevNode.nodeSize;
-              return moveSelectionToSectionEnd(pmState, dispatch, prevStart);
+              return moveSelectionToSectionHeadingStart(pmState, dispatch, prevStart);
             }
 
             // Если мы первый child, то предыдущего sibling нет — прыгаем в конец body родителя.
@@ -8212,7 +8212,7 @@ async function mountOutlineEditor() {
             }
             if (parentDepth === null) return false;
             const parentSectionPos = $from.before(parentDepth);
-            return moveSelectionToSectionEnd(pmState, dispatch, parentSectionPos);
+            return moveSelectionToSectionHeadingStart(pmState, dispatch, parentSectionPos);
           }),
       };
     },
