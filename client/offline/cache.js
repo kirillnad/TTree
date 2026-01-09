@@ -90,6 +90,22 @@ export async function cacheArticle(article) {
   const tx = db.transaction(['articles'], 'readwrite');
   const store = tx.objectStore('articles');
   const existing = await reqToPromise(store.get(article.id)).catch(() => null);
+  try {
+    const existingUpdatedAt = String(existing?.updatedAt || '').trim();
+    const nextUpdatedAt = String(updatedAt || '').trim();
+    if (existingUpdatedAt && nextUpdatedAt && nextUpdatedAt < existingUpdatedAt) {
+      revertLog('cache.article.put.skip_older', {
+        articleId: article.id,
+        existingUpdatedAt,
+        incomingUpdatedAt: nextUpdatedAt,
+        incomingDocHash: docJsonHash(docJson),
+      });
+      await txDone(tx);
+      return;
+    }
+  } catch {
+    // ignore
+  }
   const next = {
     ...(existing || {}),
     id: article.id,
@@ -130,6 +146,22 @@ export async function cacheArticleUnderId(article, cacheId) {
   const tx = db.transaction(['articles'], 'readwrite');
   const store = tx.objectStore('articles');
   const existing = await reqToPromise(store.get(id)).catch(() => null);
+  try {
+    const existingUpdatedAt = String(existing?.updatedAt || '').trim();
+    const nextUpdatedAt = String(updatedAt || '').trim();
+    if (existingUpdatedAt && nextUpdatedAt && nextUpdatedAt < existingUpdatedAt) {
+      revertLog('cache.articleUnderId.put.skip_older', {
+        articleId: id,
+        existingUpdatedAt,
+        incomingUpdatedAt: nextUpdatedAt,
+        incomingDocHash: docJsonHash(docJson),
+      });
+      await txDone(tx);
+      return;
+    }
+  } catch {
+    // ignore
+  }
   const next = {
     ...(existing || {}),
     id,
