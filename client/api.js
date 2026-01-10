@@ -751,6 +751,58 @@ export function restoreArticle(id) {
   return apiRequest(`/api/articles/${id}/restore`, { method: 'POST' });
 }
 
+export function deleteOutlineSections(articleId, sectionIds, options = {}) {
+  const ids = Array.isArray(sectionIds) ? sectionIds.filter(Boolean).map((x) => String(x)) : [];
+  if (!articleId) return Promise.reject(new Error('articleId is required'));
+  if (!ids.length) return Promise.resolve({ status: 'ok', removedBlockIds: [] });
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/sections/delete`, {
+    method: 'PUT',
+    cache: 'no-store',
+    body: JSON.stringify({
+      opId: options?.opId || null,
+      sectionIds: ids,
+    }),
+  });
+}
+
+export function putArticleStructureSnapshot(articleId, nodes, options = {}) {
+  if (!articleId) return Promise.reject(new Error('articleId is required'));
+  if (!Array.isArray(nodes)) return Promise.reject(new Error('nodes must be array'));
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/structure/snapshot`, {
+    method: 'PUT',
+    cache: 'no-store',
+    body: JSON.stringify({
+      opId: options?.opId || null,
+      nodes,
+    }),
+  });
+}
+
+export function upsertOutlineSectionContent(articleId, payload, options = {}) {
+  if (!articleId) return Promise.reject(new Error('articleId is required'));
+  if (!payload || typeof payload !== 'object') return Promise.reject(new Error('payload is required'));
+  const sectionId = String(payload.sectionId || '').trim();
+  const headingJson = payload.headingJson || null;
+  const bodyJson = payload.bodyJson || null;
+  const seq = payload.seq;
+  if (!sectionId) return Promise.reject(new Error('sectionId is required'));
+  if (!headingJson || typeof headingJson !== 'object') return Promise.reject(new Error('headingJson is required'));
+  if (!bodyJson || typeof bodyJson !== 'object') return Promise.reject(new Error('bodyJson is required'));
+  if (!Number.isFinite(Number(seq))) return Promise.reject(new Error('seq is required'));
+  return apiRequest(`/api/articles/${encodeURIComponent(articleId)}/sections/upsert-content`, {
+    method: 'PUT',
+    cache: 'no-store',
+    body: JSON.stringify({
+      opId: options?.opId || null,
+      sectionId,
+      headingJson,
+      bodyJson,
+      seq: Number(seq),
+      createVersionIfStaleHours: payload.createVersionIfStaleHours || 12,
+    }),
+  });
+}
+
 export function fetchUsers(adminPassword) {
   const headers = {};
   if (adminPassword) {

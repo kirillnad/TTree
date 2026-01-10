@@ -343,3 +343,33 @@ export async function touchCachedArticleUpdatedAt(articleId, updatedAt) {
   await reqToPromise(store.put(next));
   await txDone(tx);
 }
+
+export async function touchCachedArticleOutlineStructureRev(articleId, outlineStructureRev) {
+  const id = String(articleId || '').trim();
+  if (!id) return;
+  const nextRev = Number(outlineStructureRev);
+  if (!Number.isFinite(nextRev) || nextRev < 0) return;
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['articles'], 'readwrite');
+  const store = tx.objectStore('articles');
+  const existing = await reqToPromise(store.get(id)).catch(() => null);
+  if (!existing) {
+    await txDone(tx);
+    return;
+  }
+  let article = null;
+  try {
+    article = existing.articleJsonStr ? JSON.parse(existing.articleJsonStr) : null;
+  } catch {
+    article = null;
+  }
+  if (!article || typeof article !== 'object') article = { id };
+  article.id = id;
+  article.outlineStructureRev = nextRev;
+  const next = {
+    ...existing,
+    articleJsonStr: JSON.stringify(article),
+  };
+  await reqToPromise(store.put(next));
+  await txDone(tx);
+}

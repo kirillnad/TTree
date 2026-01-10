@@ -14,6 +14,7 @@ from ..data_store import (
     ArticleNotFound,
     InvalidOperation,
     apply_outline_structure_snapshot,
+    delete_outline_sections,
     create_article,
     delete_article,
     get_article,
@@ -30,6 +31,7 @@ from ..data_store import (
     update_article_doc_json,
     save_article_doc_json,
     upsert_outline_section_content,
+    sync_outline_compact,
     get_article_block_embeddings,
 )
 from ..export_utils import _build_backup_article_html, _inline_uploads_for_backup
@@ -118,6 +120,7 @@ def read_article(
             'encryptionSalt': article.get('encryptionSalt'),
             'encryptionVerifier': article.get('encryptionVerifier'),
             'encryptionHint': article.get('encryptionHint'),
+            'outlineStructureRev': int(article.get('outlineStructureRev') or 0),
             'docJson': article.get('docJson') or None,
             # Large arrays: load on demand via /history to avoid slow JSON.parse on mobile.
             'history': (article.get('history') or []) if include_history else [],
@@ -163,6 +166,7 @@ def read_article(
             'encryptionSalt': article.get('encryptionSalt'),
             'encryptionVerifier': article.get('encryptionVerifier'),
             'encryptionHint': article.get('encryptionHint'),
+            'outlineStructureRev': int(article.get('outlineStructureRev') or 0),
             'docJson': article.get('docJson') or None,
             'history': (article.get('history') or []) if include_history else [],
             'redoHistory': (article.get('redoHistory') or []) if include_history else [],
@@ -424,6 +428,37 @@ def put_article_section_upsert_content(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.put('/api/articles/{article_id}/sync/compact')
+def put_article_outline_sync_compact(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Batch sync for outline (content-only + deletions).
+    Payload: { deletes: [{opId, sectionIds}], upserts: [{opId, sectionId, headingJson, bodyJson, seq}] }
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    deletes = payload.get('deletes') if payload else None
+    upserts = payload.get('upserts') if payload else None
+    if deletes is not None and not isinstance(deletes, list):
+        raise HTTPException(status_code=400, detail='deletes must be list')
+    if upserts is not None and not isinstance(upserts, list):
+        raise HTTPException(status_code=400, detail='upserts must be list')
+    try:
+        out = sync_outline_compact(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            deletes=deletes or [],
+            upserts=upserts or [],
+        )
+        return out
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.put('/api/articles/{article_id}/structure/snapshot')
 def put_article_structure_snapshot(
     article_id: str,
@@ -437,13 +472,50 @@ def put_article_structure_snapshot(
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     nodes = payload.get('nodes') if payload else None
     op_id = payload.get('opId') if payload else None
+    base_rev = payload.get('baseStructureRev') if payload else None
     if nodes is None or not isinstance(nodes, list):
         raise HTTPException(status_code=400, detail='nodes must be list')
+    base_rev_num = None
+    if base_rev is not None:
+        try:
+            base_rev_num = int(base_rev)
+        except Exception:
+            raise HTTPException(status_code=400, detail='baseStructureRev must be integer') from None
     try:
         out = apply_outline_structure_snapshot(
             article_id=real_article_id,
             author_id=current_user.id,
             nodes=nodes,
+            op_id=str(op_id or '').strip() or None,
+            base_rev=base_rev_num,
+        )
+        return out
+    except ArticleNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidOperation as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put('/api/articles/{article_id}/sections/delete')
+def put_article_sections_delete(
+    article_id: str,
+    payload: dict[str, Any],
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Delete outline sections by id without sending full docJson.
+    Payload: { sectionIds: string[], opId?: string }
+    """
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    section_ids = payload.get('sectionIds') if payload else None
+    op_id = payload.get('opId') if payload else None
+    if section_ids is None or not isinstance(section_ids, list):
+        raise HTTPException(status_code=400, detail='sectionIds must be list')
+    try:
+        out = delete_outline_sections(
+            article_id=real_article_id,
+            author_id=current_user.id,
+            section_ids=[str(x or '').strip() for x in section_ids],
             op_id=str(op_id or '').strip() or None,
         )
         return out

@@ -39,6 +39,7 @@ def _init_postgres_schema() -> None:
             title TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            outline_structure_rev BIGINT NOT NULL DEFAULT 0,
             parent_id TEXT,
             position INTEGER NOT NULL DEFAULT 0,
             history TEXT NOT NULL DEFAULT '[]',
@@ -322,6 +323,13 @@ def _init_postgres_schema() -> None:
                 WHERE table_name = 'articles' AND column_name = 'block_trash'
             ) THEN
                 ALTER TABLE articles ADD COLUMN block_trash TEXT NOT NULL DEFAULT '[]';
+            END IF;
+            IF NOT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'articles' AND column_name = 'outline_structure_rev'
+            ) THEN
+                ALTER TABLE articles ADD COLUMN outline_structure_rev BIGINT NOT NULL DEFAULT 0;
             END IF;
             IF NOT EXISTS (
                 SELECT 1

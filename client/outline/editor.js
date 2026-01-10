@@ -6,12 +6,14 @@ import { showImagePreview } from '../modal.js';
 import {
   replaceArticleBlocksTree,
   updateArticleDocJson,
-  saveArticleDocJson,
   generateOutlineTitle,
   proofreadOutlineHtml,
   fetchArticlesIndex,
   uploadImageFile,
   uploadFileToYandexDisk,
+  deleteOutlineSections,
+  putArticleStructureSnapshot,
+  upsertOutlineSectionContent,
 } from '../api.js';
 import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
@@ -445,6 +447,7 @@ function buildMarkdownFromOutlineSectionNode(sectionNode, { baseLevel = 2, depth
 }
 
 const OUTLINE_SECTION_SEQ_KEY = 'ttree_outline_section_seq_v1';
+const MAX_OUTLINE_SECTION_BYTES = 262144; // 256 KiB
 
 function getNextSectionSeq(articleId, sectionId) {
   try {
@@ -466,16 +469,51 @@ function getNextSectionSeq(articleId, sectionId) {
   }
 }
 
+function estimateOutlineSectionBytes(headingJson, bodyJson) {
+  try {
+    const raw = JSON.stringify({ headingJson, bodyJson });
+    if (globalThis.TextEncoder) {
+      return new TextEncoder().encode(raw).length;
+    }
+    return raw.length * 2;
+  } catch {
+    return 0;
+  }
+}
+
 let structureDirty = false;
 let lastStructureHash = '';
 let structureSnapshotTimer = null;
 let explicitlyDeletedSectionIds = new Set();
+let deleteEnqueueTimer = null;
 
 function markExplicitSectionDeletion(sectionId) {
   try {
     const sid = String(sectionId || '').trim();
     if (!sid) return;
     explicitlyDeletedSectionIds.add(sid);
+
+    const articleId = outlineArticleId || state.articleId || null;
+    if (!articleId || state.article?.encrypted) return;
+
+    // Delete should enqueue immediately (flush trigger) and coalesce per-article.
+    if (deleteEnqueueTimer) return;
+    deleteEnqueueTimer = setTimeout(() => {
+      deleteEnqueueTimer = null;
+      try {
+        if (!explicitlyDeletedSectionIds.size) return;
+        const ids = Array.from(explicitlyDeletedSectionIds);
+        explicitlyDeletedSectionIds.clear();
+        const clientQueuedAt = Date.now();
+        void enqueueOp('delete_sections', {
+          articleId,
+          payload: { sectionIds: ids, clientQueuedAt },
+          coalesceKey: `delete:${articleId}`,
+        });
+      } catch {
+        // ignore
+      }
+    }, 0);
   } catch {
     // ignore
   }
@@ -5858,6 +5896,59 @@ async function mountOutlineEditor() {
 	                      // ignore
 	                    }
 	                    writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed);
+
+	                    // "Save block" (Variant B): only on exit edit-mode, and only if section really changed.
+	                    try {
+	                      const pos = findSectionPosById(viewNow.state.doc, sectionId);
+	                      const node = typeof pos === 'number' ? viewNow.state.doc.nodeAt(pos) : null;
+	                      if (!node || node.type?.name !== 'outlineSection') return;
+
+	                      markSectionDirtyIfChanged(viewNow.state.doc, sectionId);
+	                      if (!dirtySectionIds.has(sectionId)) return;
+
+	                      const heading = node.child(0);
+	                      const body = node.child(1);
+	                      const headingJson = heading?.toJSON ? heading.toJSON() : null;
+	                      const bodyJson = body?.toJSON ? body.toJSON() : null;
+	                      if (!headingJson || !bodyJson) return;
+
+	                      const bytes = estimateOutlineSectionBytes(headingJson, bodyJson);
+	                      if (bytes > MAX_OUTLINE_SECTION_BYTES) {
+	                        showToast(
+	                          `Блок слишком большой (${Math.ceil(bytes / 1024)} KB). Максимум: ${Math.ceil(
+	                            MAX_OUTLINE_SECTION_BYTES / 1024,
+	                          )} KB. Разбейте блок на несколько.`,
+	                        );
+	                        // Keep edit-mode: immediately re-enter.
+	                        try {
+	                          let tr = viewNow.state.tr.setMeta(OUTLINE_ALLOW_META, true);
+	                          tr = tr.setMeta(key, { type: 'enter', sectionId });
+	                          viewNow.dispatch(tr);
+	                        } catch {
+	                          // ignore
+	                        }
+	                        return;
+	                      }
+
+	                      const clientQueuedAt = Date.now();
+	                      const seq = getNextSectionSeq(articleId, sectionId);
+	                      void enqueueOp('section_upsert_content', {
+	                        articleId,
+	                        payload: { sectionId, headingJson, bodyJson, seq, clientQueuedAt },
+	                        coalesceKey: `content:${articleId}:${sectionId}`,
+	                      });
+
+	                      // Update dirty baseline for this section (local commit).
+	                      try {
+	                        committedSectionIndexText.set(sectionId, computeSectionIndexText(node));
+	                        dirtySectionIds.delete(sectionId);
+	                      } catch {
+	                        // ignore
+	                      }
+	                      setOutlineStatus('В очереди на синхронизацию');
+	                    } catch {
+	                      // ignore
+	                    }
 	                  }
 	                } catch {
 	                  // ignore
@@ -12323,9 +12414,19 @@ async function saveOutlineEditor(options = {}) {
   const targetArticleId = outlineArticleId || state.articleId;
   if (!targetArticleId) return;
   const silent = Boolean(options.silent);
-	    const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
-	    const postSaveTitleSectionIds = Array.from(new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)));
-	    try {
+  const mode = options && typeof options.mode === 'string' ? options.mode : 'network'; // network | queue
+  const postSaveTitleSectionIds = Array.from(
+    new Set([...(dirtySectionIds || []), lastActiveSectionId].filter(Boolean)),
+  );
+  const pickLatestUpdatedAt = (a, b) => {
+    const aa = a ? String(a) : '';
+    const bb = b ? String(b) : '';
+    if (!aa) return bb || null;
+    if (!bb) return aa || null;
+    return aa >= bb ? aa : bb;
+  };
+
+  try {
     if (!silent) showPersistentToast('Сохраняем outline…');
     if (state.article.encrypted) {
       if (!silent) {
@@ -12333,235 +12434,85 @@ async function saveOutlineEditor(options = {}) {
         showToast('Outline-сохранение docJson недоступно для зашифрованных статей');
       }
       return;
-	    }
-		    const docJsonRaw = outlineEditorInstance.getJSON();
-		    const docJson = normalizeDocJsonForSave(docJsonRaw);
-	    // Guard: if state.articleId already switched to another article, never write inbox docJson into it.
-		    if (state.articleId && targetArticleId !== state.articleId) {
-		      try {
-		        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
-	      } catch {
-	        // ignore
-	      }
+    }
+
+    const docJsonRaw = outlineEditorInstance.getJSON();
+    const docJson = normalizeDocJsonForSave(docJsonRaw);
+
+    // Guard: if state.articleId already switched to another article, never write docJson into the wrong one.
+    if (state.articleId && targetArticleId !== state.articleId) {
+      await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null).catch(() => {});
       if (!silent) hideToast();
       setOutlineStatus('Оффлайн: черновик сохранён локально');
       return;
     }
-			    if (mode === 'queue') {
-			      const clientQueuedAt = Date.now();
-		      try {
-		        // Keep server updatedAt (do not bump it locally), to avoid confusing meta checks.
-		        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
-		      } catch {
-		        // ignore
-		      }
 
-		      // Structural changes must be persisted even if the user only moved blocks (no content edits).
-		      // Enqueue snapshot here (autosave runs sooner than the debounce, and Ctrl-F5 can happen any time).
-		      try {
-		        if (structureDirty && !explicitlyDeletedSectionIds.size) {
-		          const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
-		          if (nodes.length) {
-		            await enqueueOp('structure_snapshot', {
-		              articleId: targetArticleId,
-		              payload: { nodes, clientQueuedAt },
-		              coalesceKey: `structure:${targetArticleId}`,
-		            });
-		          }
-		          structureDirty = false;
-		          if (structureSnapshotTimer) {
-		            clearTimeout(structureSnapshotTimer);
-		            structureSnapshotTimer = null;
-		          }
-		        }
-		      } catch {
-		        // ignore
-		      }
+    const clientQueuedAt = Date.now();
 
-		      // Structural deletions must be saved as full docJson so the server actually removes blocks
-		      // (structure snapshots alone can only reorder/parent existing blocks).
-		      if (explicitlyDeletedSectionIds.size) {
-		        explicitlyDeletedSectionIds.clear();
-		        try {
-		          if (navigator.onLine) {
-		            const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
-		            if (state.article) {
-		              state.article.docJson = docJson;
-		              if (result?.updatedAt) state.article.updatedAt = result.updatedAt;
-		            }
-		            try {
-		              rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
-		              dirtySectionIds.clear();
-		            } catch {
-		              // ignore
-		            }
-		            docDirty = false;
-		            outlineLastSavedAt = new Date();
-		            setOutlineStatus(`Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
-		            try {
-		              refreshOutlineTagsFromEditor();
-		            } catch {
-		              // ignore
-		            }
-		            return;
-		          }
-		        } catch {
-		          // fall back to outbox
-		        }
-		        try {
-		          await enqueueOp('save_doc_json', {
-		            articleId: targetArticleId,
-		            payload: { docJson, createVersionIfStaleHours: 12, clientQueuedAt },
-		            coalesceKey: targetArticleId,
-		          });
-		        } catch {
-		          // ignore
-		        }
-		        try {
-		          rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
-		          dirtySectionIds.clear();
-		        } catch {
-		          // ignore
-		        }
-		        docDirty = false;
-		        outlineLastSavedAt = new Date();
-		        setOutlineStatus('Оффлайн: в очереди на синхронизацию');
-		        try {
-		          refreshOutlineTagsFromEditor();
-		        } catch {
-		          // ignore
-		        }
-		        return;
-		      }
+    // Always persist the draft locally first (fast), so Ctrl-F5 or navigation won't lose it.
+    await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null).catch(() => {});
 
-			      // Persist only changed section contents (never overwrite the whole article docJson on the server).
-			      try {
-			        try {
-			          if (lastActiveSectionId) markSectionDirtyIfChanged(outlineEditorInstance.state.doc, lastActiveSectionId);
-			        } catch {
-			          // ignore
-			        }
-			        const sectionIds = Array.from(new Set([...(dirtySectionIds || [])].filter(Boolean)));
-		        for (const sid of sectionIds) {
-		          try {
-		            const pos = findSectionPosById(outlineEditorInstance.state.doc, sid);
-		            if (typeof pos !== 'number') continue;
-		            const node = outlineEditorInstance.state.doc.nodeAt(pos);
-		            if (!node || node.type?.name !== 'outlineSection') continue;
-		            const heading = node.child(0);
-		            const body = node.child(1);
-		            const headingJson = heading?.toJSON ? heading.toJSON() : null;
-		            const bodyJson = body?.toJSON ? body.toJSON() : null;
-		            if (!headingJson || !bodyJson) continue;
-		            const seq = getNextSectionSeq(targetArticleId, sid);
-		            await enqueueOp('section_upsert_content', {
-		              articleId: targetArticleId,
-		              payload: {
-		                sectionId: sid,
-		                headingJson,
-		                bodyJson,
-		                seq,
-		                clientQueuedAt,
-		              },
-		              coalesceKey: `content:${targetArticleId}:${sid}`,
-		            });
-		          } catch {
-		            // ignore this section
-		          }
-		        }
-		      } catch {
-		        // ignore
-		      }
-	      if (!silent) hideToast();
-	      if (state.article) {
-	        state.article.docJson = docJson;
-	      }
-	      try {
-	        rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
-	        dirtySectionIds.clear();
-	      } catch {
-	        // ignore
-	      }
-	      docDirty = false;
-	      outlineLastSavedAt = new Date();
-	      setOutlineStatus('Оффлайн: в очереди на синхронизацию');
-	      try {
-	        refreshOutlineTagsFromEditor();
-	      } catch {
-	        // ignore
-	      }
-	      try {
-	        maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
-	      } catch {
-	        // ignore
-	      }
-		      return;
-		    }
-    const result = await saveArticleDocJson(targetArticleId, docJson, { createVersionIfStaleHours: 12 });
-    if (!silent) hideToast();
-    const isQueued = Boolean(result?.offline) || String(result?.status || '') === 'queued';
-    if (state.article) {
-      state.article.docJson = docJson;
-      if (result?.updatedAt) {
-        state.article.updatedAt = result.updatedAt;
-      }
-      if (Array.isArray(result?.historyEntriesAdded) && result.historyEntriesAdded.length) {
-        state.article.history = [...(state.article.history || []), ...result.historyEntriesAdded];
-        state.article.redoHistory = [];
-        hydrateUndoRedoFromArticle(state.article);
-      }
-    }
+    // Ensure we didn't miss changes in the currently active section.
     try {
-      rebuildCommittedIndexTextMap(outlineEditorInstance.state.doc);
-      dirtySectionIds.clear();
+      if (lastActiveSectionId) markSectionDirtyIfChanged(outlineEditorInstance.state.doc, lastActiveSectionId);
     } catch {
       // ignore
     }
-	    docDirty = false;
-	    outlineLastSavedAt = new Date();
-		    setOutlineStatus(isQueued ? 'Оффлайн: в очереди на синхронизацию' : `Сохранено ${formatTimeShort(outlineLastSavedAt)}`);
-	      try {
-	        refreshOutlineTagsFromEditor();
-	      } catch {
-	        // ignore
-	      }
-	      try {
-	        if (!isQueued) {
-	          maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
-	        }
-	      } catch {
-	        // ignore
-	      }
-		    // Run spellcheck after a successful save, so it doesn't depend on "leaving the section".
-		    try {
-		      if (!isQueued && outlineEditorInstance && !outlineEditorInstance.isDestroyed) {
-		        const sid = lastActiveSectionId || null;
-		        if (sid) maybeProofreadOnLeave(outlineEditorInstance, outlineEditorInstance.state.doc, sid);
-		      }
-		    } catch {
-		      // ignore
-	    }
-	  } catch (error) {
+
+    // Variant B: always local-first + outbox. Network sync happens in the background.
+    const shouldQueue = true;
+    if (shouldQueue) {
+      const deletedIds = explicitlyDeletedSectionIds.size ? Array.from(explicitlyDeletedSectionIds) : [];
+
+      // Deletions
+      try {
+        if (deletedIds.length) {
+          explicitlyDeletedSectionIds.clear();
+          await enqueueOp('delete_sections', {
+            articleId: targetArticleId,
+            payload: { sectionIds: deletedIds, clientQueuedAt },
+            coalesceKey: `delete:${targetArticleId}`,
+          });
+        }
+      } catch {
+        // ignore
+      }
+
+      if (!silent) hideToast();
+      if (state.article) {
+        state.article.docJson = docJson;
+      }
+      docDirty = false;
+      outlineLastSavedAt = new Date();
+      setOutlineStatus('Сохранено локально');
+      try {
+        refreshOutlineTagsFromEditor();
+      } catch {
+        // ignore
+      }
+      try {
+        maybeGenerateTitlesAfterSave(outlineEditorInstance, outlineEditorInstance.state.doc, postSaveTitleSectionIds);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+  } catch (error) {
     if (!silent) {
       hideToast();
       showToast(error?.message || 'Не удалось сохранить outline');
     } else {
       setOutlineStatus('Ошибка сохранения');
     }
-	    // Сохраняем в локальную очередь, чтобы догнать позже.
-	    try {
-	      const docJson = outlineEditorInstance.getJSON();
-	      if (docJson && typeof docJson === 'object') {
-	        try {
-	          await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null);
-	        } catch {
-	          // ignore
-	        }
-	      }
-	    } catch {
-	      // ignore
-	    }
-    // Ретрай чуть позже.
+    // Сохраняем в локальный кэш, чтобы догнать позже.
+    try {
+      const docJson = outlineEditorInstance.getJSON();
+      if (docJson && typeof docJson === 'object') {
+        await updateCachedDocJson(targetArticleId, docJson, state.article?.updatedAt || null).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
     scheduleAutosave({ delayMs: 5000 });
   }
 }
@@ -13272,7 +13223,7 @@ export async function flushOutlineAutosave(options = {}) {
       }
       // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
       try {
-        if (structureDirty && !explicitlyDeletedSectionIds.size) {
+        if (structureDirty) {
           const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
           if (nodes.length) {
             void enqueueOp('structure_snapshot', {
@@ -13289,11 +13240,13 @@ export async function flushOutlineAutosave(options = {}) {
       // If user deleted sections, we need a full save (queue it locally so navigation doesn't lose it).
       try {
         if (explicitlyDeletedSectionIds.size) {
+          const ids = Array.from(explicitlyDeletedSectionIds);
           explicitlyDeletedSectionIds.clear();
-          await enqueueOp('save_doc_json', {
+          const clientQueuedAt = Date.now();
+          await enqueueOp('delete_sections', {
             articleId: targetArticleId,
-            payload: { docJson, createVersionIfStaleHours: 12 },
-            coalesceKey: targetArticleId,
+            payload: { sectionIds: ids, clientQueuedAt },
+            coalesceKey: `delete:${targetArticleId}:${clientQueuedAt}`,
           });
         }
       } catch {

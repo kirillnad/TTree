@@ -142,6 +142,417 @@
 
 Локальная база (IndexedDB) — это **рабочее состояние** приложения. Сервер — “источник истины” и синк, но UI не должен зависеть от наличия сети.
 
+### Варианты синхронизации (старый/новый)
+
+В этом документе фиксируются 2 варианта:
+
+- **Вариант A (старый, текущий в коде на момент написания)** — смешанный: часть изменений отправляется direct, часть через outbox, плюс отдельные правила для структуры (debounce/throttle).
+- **Вариант B (новый, целевой)** — outbox‑only: UI всегда пишет локально, а на сервер изменения уходят только фоном из очереди.
+
+### Вариант B (новый): outbox‑only синхронизация (целевая схема)
+
+ТЗ (строго): отказаться от “отправить сразу” и от смешанного direct/outbox.
+
+Вариант B определяет следующие правила:
+- Любое изменение пользователя **сразу** применяется в UI.
+- Любое изменение пользователя фиксируется локально в IndexedDB **в момент редактирования** (при успешной записи).
+  - Ограничение iOS: IndexedDB — кэш, который может быть эвикчен ОС **после** успешной записи (см. “Ограничения iOS” ниже). Поэтому локальная фиксация не является долговременной гарантией; долговременная гарантия появляется только после синка на сервер.
+- Любое изменение пользователя **на сервер** попадает только через outbox (фоновая синхронизация). Direct‑запросов из outline‑автосейва нет.
+
+#### B0. Инварианты UI
+
+- Если outbox пуст — UI статуса синхронизации **не показывает ничего**.
+- Если outbox не пуст — UI показывает “Изменения не на сервере” + причину, если синк не идёт:
+  - offline → “Нет интернета”,
+  - 401/403 → “Нужна авторизация”,
+  - 5xx/timeout → “Сервер недоступен”.
+
+Инвариант конфликтов контента (строго):
+- Если сервер вернул `UpsertAck.result:"conflict"`, outbox при этом может стать пустым.
+- В этом случае UI обязан:
+  1) создать конфликтную копию блока (см. B9),
+  2) показать toast “Конфликт: создана копия блока”.
+
+#### B1. Что считается “изменением” (dirty detection)
+
+Требование: секция помечается “грязной” **только если она реально изменилась**, а не из‑за навигации курсора.
+
+Строго:
+- Для каждой секции `sectionId` хранится локальный “слепок” `lastCommittedHash`.
+- При изменениях документа для каждой затронутой секции вычисляется `currentHash = hash(headingJson, bodyJson)`.
+- `dirtySectionIds.add(sectionId)` выполняется только если `currentHash !== lastCommittedHash` для этой секции.
+- При local commit слепок обновляется: `lastCommittedHash = currentHash`.
+
+#### B1.1. Pull-контракт статьи (строго)
+
+Требование: при открытии статьи клиент делает pull с сервера и получает как `docJson`, так и метаданные ревизий.
+
+Endpoint (строго):
+- `GET /api/articles/{articleId}`
+
+Response (строго):
+- `{ status:"ok", articleId, updatedAt, docJson, structureRev, sectionsMeta }`, где:
+  - `structureRev: number` — текущая ревизия структуры статьи,
+  - `sectionsMeta: { [sectionId: string]: { contentRev: number, deleted: boolean } }`
+
+Клиент хранит `structureRev` и `contentRev` отдельно от `docJson` (метаданные IndexedDB).
+
+#### B1.2. Откуда берутся `baseContentRev` и `baseStructureRev` (строго)
+
+Источник `contentRev` по секциям:
+1) pull статьи с сервера (при открытии статьи) — сервер возвращает текущие `contentRev` по секциям,
+2) push `sync/compact` — сервер возвращает `upserts[].newContentRev` (для `result:"applied"`/`result:"duplicate"`), клиент обновляет локальные ревизии только по этим подтверждениям.
+
+Источник `structureRev` по статье:
+1) pull статьи с сервера (при открытии статьи) — сервер возвращает текущий `structureRev`,
+2) push `structure/snapshot` — сервер возвращает `newStructureRev`, клиент обновляет локальную ревизию только по этому подтверждению.
+
+#### B1.3. Как определить “затронутые секции” (строго)
+
+Запрещено помечать dirty “только текущую секцию”: paste/split/merge и некоторые команды могут изменить несколько секций одной транзакцией.
+
+Определение `touchedSectionIds` для одной ProseMirror‑транзакции `tr`:
+1) собрать список диапазонов изменений из `tr.mapping.maps`:
+   - для каждого `StepMap` вызвать `forEach((oldStart, oldEnd, newStart, newEnd) => ...)` и добавить диапазоны `old` и `new`,
+2) для каждого диапазона:
+   - найти все `outlineSection` (по `attrs.id`), которые пересекают диапазон:
+     - в документе **до** транзакции (`prevState.doc`), используя `oldStart..oldEnd`,
+     - в документе **после** транзакции (`nextState.doc`), используя `newStart..newEnd`,
+3) объединить ids в множество `touchedSectionIds`.
+
+После вычисления `touchedSectionIds`:
+- для каждого `sectionId` пересчитать `currentHash` и сравнить с `lastCommittedHash`;
+- если секция новая (слепка нет) → считать dirty;
+- если секция была удалена → `sectionId` должен попасть в `delete_sections` (это отдельная логика и не через hash).
+
+Fallback (строго):
+- если по какой‑то причине нельзя надёжно вычислить `touchedSectionIds` для транзакции (например, неизвестная команда/нестандартная трансформация), то считаем затронутыми **все секции статьи** и сравниваем hash для всех секций (это дороже, но корректно).
+
+#### B2. Local commit (единственная точка генерации ops)
+
+Триггеры:
+- debounce автосейва (после паузы в редактировании),
+- уход/переключение статьи (не ждём сеть/сервер).
+
+Действия local commit (строго, в таком порядке):
+1) сохранить актуальный `docJson` статьи в IndexedDB (рабочее состояние),
+2) сформировать outbox ops из dirty‑состояния (см. B3),
+3) очистить dirty‑флаги и обновить слепки.
+
+#### B3. Типы ops (outline) и содержимое
+
+Outbox хранит операции, каждая имеет стабильный `opId` (UUID) и `articleId`.
+
+- `delete_sections`
+  - payload: `{ opId, articleId, sectionIds[] }`
+- `section_upsert_content`
+  - payload: `{ opId, articleId, sectionId, headingJson, bodyJson, baseContentRev, clientEditedAtUtc }`
+  - `baseContentRev` — целое число или `null`:
+    - `null` → клиент считает секцию “новой” (на сервере ещё нет контента/меты),
+    - число → это `contentRev`, который клиент получил с сервера последним “подтверждённым” (см. B6/B7).
+  - `clientEditedAtUtc` — ISO‑строка времени (UTC) **только для диагностики/аудита**, не участвует в разрешении конфликтов.
+- `structure_snapshot`
+  - payload: `{ opId, articleId, baseStructureRev, nodes[] }`, где:
+    - `baseStructureRev` — целое число (последний подтверждённый `structureRev`, который клиент получил с сервера),
+    - `nodes[] = { sectionId, parentId|null, position:number, collapsed:boolean }`
+
+#### B3.1. Нормализация и coalesce (строго)
+
+Локальная очередь хранит **только итоговое состояние**, а не “все мелкие шаги”.
+
+Состояние операции (строго):
+- `pending` — лежит в outbox и ещё не отправлялась,
+- `in_flight` — отправлена и ожидается ответ,
+
+Правило хранения (строго):
+- в IndexedDB/outbox хранятся только операции в состоянии `pending`;
+- `in_flight` — только in-memory и сбрасывается при перезагрузке страницы (операции снова считаются `pending`).
+
+Правила coalesce (строго):
+- `delete_sections` coalesce по ключу `delete:{articleId}`:
+  - в outbox может быть:
+    - не более одной `delete_sections` в состоянии `in_flight` (immutable),
+    - не более одной `delete_sections` в состоянии `pending` (последнее состояние);
+  - `sectionIds[]` — массив уникальных `sectionId` (без дублей), пополняется при следующих local commit;
+  - coalesce применяется только если операция `pending`;
+  - при замене операции создаётся **новый** `opId`, старая операция удаляется из outbox.
+- `section_upsert_content` coalesce по ключу `upsert:{articleId}:{sectionId}`:
+  - в outbox может быть:
+    - не более одного `section_upsert_content` для этой секции в состоянии `in_flight` (immutable),
+    - не более одного `section_upsert_content` для этой секции в состоянии `pending` (последнее состояние);
+  - новый `pending` upsert **заменяет** старый `pending` upsert (в очереди всегда “последнее состояние секции”);
+  - coalesce применяется только если операция `pending`;
+  - при замене операции создаётся **новый** `opId`, старая операция удаляется из outbox.
+- `structure_snapshot` coalesce по ключу `structure:{articleId}`:
+  - в outbox может быть:
+    - не более одного `structure_snapshot` в состоянии `in_flight` (immutable),
+    - не более одного `structure_snapshot` в состоянии `pending` (последняя структура);
+  - новый `pending` snapshot **заменяет** старый `pending` snapshot (в очереди всегда “последняя структура”);
+  - coalesce применяется только если операция `pending`;
+  - при замене операции создаётся **новый** `opId`, старая операция удаляется из outbox.
+
+Правило “delete побеждает” (строго):
+- если `sectionId` попадает в `delete_sections.sectionIds`, то:
+  - любые `section_upsert_content` для этого `sectionId` **удаляются** из outbox;
+  - в `sync/compact` эта секция попадает только в `deletes` (и никогда в `upserts`).
+
+#### B4. Порядок всегда один: delete → upsert → structure
+
+Это строгий порядок применения изменений на сервере и строгий порядок отправки.
+
+Причина:
+- delete должен “выигрывать” у upsert (иначе upsert может создать удалённую секцию заново),
+- структура применяется последней: после удаления/создания/обновления секций.
+
+#### B5. Фоновая синхронизация (автоматически)
+
+Таймер: каждые **15 секунд**, пока outbox не пуст.
+
+Триггеры немедленного запуска: событие `online`.
+
+Правило: синк всегда автоматический; кнопки “Синхронизировать сейчас” нет.
+
+В варианте B синхронизация outline на сервер выполняется **только двумя** HTTP‑запросами:
+- `update` (delete+upsert): `PUT /api/articles/{articleId}/sync/compact` (см. B6),
+- `structure` (структура): `PUT /api/articles/{articleId}/structure/snapshot` (см. B7).
+
+Важно (строго):
+- `update` отправляет **всё**, что есть в outbox на момент flush для `delete_sections` и `section_upsert_content` этой статьи (после coalesce, см. B3.1).
+- `structure` отправляет **последний** `structure_snapshot` этой статьи (после coalesce, см. B3.1).
+
+Алгоритм синка для одной статьи (строго, порядок неизменен):
+1) собрать из outbox для `articleId` все ops `delete_sections` и `section_upsert_content`,
+2) если в этом наборе есть хоть одна операция:
+   - пометить ops, вошедшие в запрос, как `in_flight`,
+   - отправить их одним запросом (см. B6 “compact”),
+    - если ответ `{status:"ok"}` получен:
+      - применить ack к локальным метаданным:
+        - для каждого `UpsertAck`:
+          - если `result:"applied"` или `result:"duplicate"` → установить `sectionsMeta[sectionId].contentRev = newContentRev` и `sectionsMeta[sectionId].conflicted=false`,
+          - если `result:"conflict"` → установить `sectionsMeta[sectionId].contentRev = currentContentRev`,
+        - для каждого `DeleteAck` с `result:"applied"` или `result:"duplicate"`:
+          - для каждого `sectionId` из `DeleteAck.removedBlockIds` локально пометить `sectionsMeta[sectionId].deleted=true` (tombstone),
+      - удалить из outbox:
+        - все `delete_sections`, которые вошли в пакет,
+        - все `section_upsert_content`, чей `opId` получил ack в ответе (applied/duplicate/conflict) (см. B6),
+      - для всех оставшихся ops этого запроса убрать `in_flight` (они снова `pending`),
+   - если ответ не получен/ошибка — убрать `in_flight` у ops этого запроса (они снова `pending`) и закончить попытку (outbox остаётся, будет повтор),
+3) затем, если `update` завершился успехом и в outbox есть `structure_snapshot` для этой статьи — отправить его вторым запросом,
+4) если получен `{ status:"ok" }` — удалить `structure_snapshot` из outbox и обновить локальный `structureRev = newStructureRev`,
+5) если получен `{ status:"ignored" }` — удалить `structure_snapshot` из outbox и обновить локальный `structureRev = currentStructureRev` (структура на сервере уже новее).
+
+#### B5.1. Экстренная доставка при уходе (мобайл/PWA)
+
+Проблема: на мобильных ОС при уходе приложения в фон/закрытии вкладки фоновая синхронизация может не успеть.
+
+Триггеры (строго):
+- `visibilitychange` → `document.visibilityState === "hidden"`,
+- `pagehide`.
+
+Алгоритм (строго):
+1) выполнить local commit (B2) для текущей статьи, **не ожидая сети**,
+2) сделать best‑effort попытку отправить “всё delete+upsert” этой статьи через `sync/compact` (обычный `fetch`, **без** `keepalive`):
+   - если клиент успел получить ответ `{status:"ok"}` — применить ack и очистить outbox как в B5,
+3) если шаг (2) завершился успехом и в outbox есть `structure_snapshot` — сделать best‑effort попытку отправить его вторым запросом,
+4) если вкладка/приложение выгружены раньше, чем пришёл ответ (запрос прерван/ответ потерян) — ничего больше не делаем; при следующем запуске outbox отправится обычным фоном (B5), а повторная отправка безопасна из‑за ack replay по `opId` (B8).
+
+Ограничение (строго):
+- экстренная отправка может постоянно падать по timeout/ошибкам, если payload очень большой (например, огромный paste в одну секцию).
+- В этом случае клиент действует как при TTL‑просрочке (B8): показывает “нужен pull для синхронизации” и не крутит бесконечные ретраи в фоне.
+
+#### B5.4. Триггеры flush (строго)
+
+Операции (`delete_sections` / `section_upsert_content` / `structure_snapshot`) кладутся в outbox **сразу при изменении** (local commit фиксирует `docJson` и формирует ops), но отправка на сервер выполняется только в следующих случаях:
+
+1) Выход из edit‑mode секции, если секция реально изменилась (dirty по B1/B1.3) → запускаем flush.
+2) Удаление секции → запускаем flush.
+3) Изменение структуры → запланировать flush через 3000ms после последнего структурного изменения.
+4) Таймер бездействия (idle) 3000ms: если пользователь не делает действий и outbox не пуст → запускаем flush.
+5) Safety‑timer 15000ms: если outbox не пуст → запускаем flush (для “очистки совести”).
+
+#### B5.5. Частота и блокировка flush (строго)
+
+Правила:
+- flush для одной статьи не стартует чаще, чем 1 раз в 3000ms (между стартами).
+- пока выполняется flush (есть `in_flight` ops этой статьи), новые изменения продолжают попадать в outbox и coalesce’ятся; следующий flush стартует после завершения текущего и соблюдения лимита 3000ms.
+
+#### B5.6. Лимит размера секции (строго)
+
+Техническое ограничение: нельзя “сохранять блок” (выходить из edit‑mode), если размер секции превышает лимит.
+
+Определение размера (строго):
+- `sectionPayloadBytes = utf8Bytes(JSON.stringify({ headingJson, bodyJson }))`
+
+Лимит (строго):
+- `MAX_SECTION_BYTES = 262144` (256 KiB) на одну секцию.
+
+Поведение клиента (строго):
+- при попытке выхода из edit‑mode:
+  - если `sectionPayloadBytes > MAX_SECTION_BYTES`:
+    1) выход из edit‑mode отменяется (остаёмся в редактировании),
+    2) показывается сообщение: “Блок слишком большой для сохранения. Разбейте текст на несколько блоков.”,
+    3) flush не запускается.
+
+Важно (строго):
+- лимит `MAX_SECTION_BYTES` не должен блокировать удаление: удаление секции разрешено всегда (delete может быть единственным способом “выйти” из проблемного состояния).
+
+Поведение сервера (строго, страховка):
+- если клиент всё же отправил oversized payload, сервер возвращает 413 и **не применяет** изменения.
+
+#### B5.2. Поведение при ошибках и backoff (строго)
+
+Если outbox не пуст и синк не проходит, действует следующий алгоритм:
+- `offline` (нет сети): не отправлять запросы; ждать события `online`.
+- `401/403`: не отправлять запросы; ждать успешной авторизации (следующий удачный API‑запрос с 200 сбрасывает стоп‑флаг).
+- `5xx/timeout/сетевые ошибки`: экспоненциальный backoff на статью:
+  - задержки: 1s → 2s → 4s → 8s → 15s → 30s → 60s (cap 60s),
+  - при любом успешном ответе backoff сбрасывается в 0.
+
+#### B5.3. Outbox по нескольким статьям (строго)
+
+Тик синхронизации обрабатывает несколько статей по очереди.
+
+Правила (строго):
+- одновременно может выполняться не более одного `flush(articleId)` (mutex на статью);
+- на каждом тике выбираются статьи с непустым outbox в round‑robin порядке по ключу `leastRecentlyFlushedAt`;
+- за один тик обрабатывается не более 3 статей, остальные ждут следующий тик.
+
+Примечание (строго):
+- `leastRecentlyFlushedAt` хранится только in-memory; после перезагрузки порядок round‑robin начинается заново.
+
+#### B6. Compact endpoint (delete+upsert одним запросом)
+
+Для единообразия и для уменьшения числа запросов вводится batch‑endpoint:
+
+- `PUT /api/articles/{articleId}/sync/compact`
+  - request body:
+    - `deletes`: список `{ opId, sectionIds[] }` (из‑за B3.1: либо пусто, либо ровно 1 элемент; формат допускает несколько),
+    - `upserts`: список `{ opId, sectionId, headingJson, bodyJson, baseContentRev, clientEditedAtUtc }` (по одной записи на секцию; “последнее состояние секции”).
+  - сервер применяет в одной транзакции (и под `SELECT ... FOR UPDATE`) строго в порядке:
+    1) delete_sections,
+    2) section_upsert_content.
+  - response:
+    - `{ status:"ok", articleId, updatedAt, deletes: DeleteAck[], upserts: UpsertAck[] }`
+      - `DeleteAck = { opId, result: "applied" | "duplicate", removedBlockIds: string[] }`
+      - `UpsertAck = { opId, sectionId, result: "applied" | "duplicate" | "conflict", reason?: "rev_mismatch" | "deleted_tombstone" | "id_collision", newContentRev?: number, currentContentRev?: number }`
+      - `result:"duplicate"` означает: сервер уже применял этот `opId` ранее и возвращает **тот же ack**, что и в первый раз (см. B8).
+      - `result:"conflict"` означает: `baseContentRev` не совпал с текущим `contentRev` на сервере; контент **не применяется** (см. B9).
+
+Delete semantics (строго):
+- сервер хранит мету секции `(articleId, sectionId)` с полями `contentRev` и `deleted` (tombstone), вне `docJson`;
+- при delete:
+  - секция удаляется из `article_doc_json`,
+  - `removedBlockIds` включает все реально удалённые секции (включая дочерние, если удаление рекурсивное),
+  - мета обновляется: `deleted=true`, `contentRev = contentRev + 1` (если меты нет — создаётся с `contentRev=1`),
+  - повторный delete той же секции допустим и считается no-op (но ack replay по `opId` обязателен).
+- при upsert:
+  - если `deleted=true` на сервере → `result:"conflict"` (воскрешение запрещено; нужно создать новую секцию с новым `sectionId`).
+
+Derived обновления на сервере при `sync/compact`:
+- Delete: удаление derived‑данных только для `DeleteAck.removedBlockIds`.
+- Upsert: пересчёт derived‑данных только для `UpsertAck`, где `result:"applied"`:
+  - FTS: пересчёт только для этих `sectionId`,
+  - Embeddings: пересчёт только для этих `sectionId`,
+  - Internal links: обновление только для этих `sectionId`,
+    - правило: для `sectionId` сервер делает “delete all outgoing links for sectionId → insert new outgoing links for sectionId”.
+
+Примечание (строго): `result:"duplicate"` не запускает пересчёт derived‑данных, потому что это повтор запроса и сервер ничего не применяет повторно (B8).
+
+#### B7. Структура отдельным запросом
+
+Второй запрос для структуры:
+- `PUT /api/articles/{articleId}/structure/snapshot`
+  - request body: `{ opId, baseStructureRev, nodes[] }`
+  - response:
+    - успех: `{ status:"ok", articleId, updatedAt, newStructureRev }`
+    - stale: `{ status:"ignored", reason:"stale_structure", articleId, currentStructureRev }`
+    - дубликат `opId`: сервер возвращает **тот же response**, что и в первый раз для этого `opId` (ack replay, B8).
+
+Сервер при структуре:
+- применяет только `{parentId, position, collapsed}` и не меняет контент секций.
+
+#### B8. Повторы (повторная отправка) — как это работает
+
+Повторная отправка возможна в двух случаях:
+1) клиент отправил запрос, но не получил ответ (закрытие PWA, обрыв сети),
+2) outbox делает ретраи при ошибках.
+
+Требование для безопасности повторов (строго):
+- сервер хранит таблицу “применённых opId” и для каждого opId делает дедуп + повтор ответа (ack replay):
+  - если opId уже применён → сервер не применяет изменения повторно и возвращает **тот же результат**, что был в первый раз для этого opId.
+- для `section_upsert_content` дополнительно действует `baseContentRev`:
+  - если `baseContentRev` не совпал с текущим `contentRev` на сервере → сервер не применяет контент и возвращает `UpsertAck.result:"conflict"` (см. B9).
+
+Следствие: если клиент не получил ответ и отправил повторно те же ops, сервер их не применит повторно.
+
+GC для ack replay (строго):
+- сервер хранит записи применённых `opId` ограниченное время (TTL), например 30 дней;
+- после TTL сервер может удалять эти записи, и старые повторы `opId` перестают быть идемпотентными (это допустимо, т.к. повторы релевантны только в коротком окне после потери ответа).
+
+Клиент и TTL (строго):
+- каждая операция в outbox хранит `createdAtUtc` (UTC timestamp);
+- если `nowUtc - createdAtUtc > TTL`, клиент:
+  1) прекращает пытаться отправлять эту операцию,
+  2) помечает статью как “нужен pull для синхронизации”,
+  3) после pull пересоздаёт ops через local commit (создаёт новые `opId`).
+
+#### B9. Конфликты с другим устройством (строго)
+
+Конфликты возможны, если та же статья редактируется с другого устройства, пока это устройство оффлайн.
+
+Вариант B запрещает “тихое” перетирание правок между устройствами.
+
+Правило для контента секции (строго):
+- сервер хранит `contentRev` для каждой секции (отдельная мета‑таблица, не в `docJson`);
+- каждый upsert обязан нести `baseContentRev`;
+- сервер применяет upsert **только если**:
+  - секция уже существует → `baseContentRev === current contentRev`,
+  - секции нет на сервере → `baseContentRev === null`;
+- если `baseContentRev` не совпал:
+  1) сервер **не применяет** контент,
+  2) сервер определяет причину и возвращает её в `UpsertAck.reason`:
+     - `rev_mismatch` — на сервере уже есть более новая версия секции,
+     - `deleted_tombstone` — секция удалена (tombstone),
+     - `id_collision` — `baseContentRev=null`, но `sectionId` уже существует на сервере,
+  3) клиент создаёт конфликтную копию блока и сохраняет её как новую секцию (см. ниже).
+
+Конфликтная копия (строго):
+- `rev_mismatch`:
+  1) клиент генерирует новый `sectionIdNew`,
+  2) создаёт новый sibling‑блок **сразу после** конфликтной секции (в том же parent),
+  3) контент новой секции = тот `headingJson/bodyJson`, который клиент пытался отправить,
+  4) заголовок новой секции получает префикс: `Конфликтная копия: `,
+  5) новая секция помечается атрибутом `isConflictCopy=true` (для подсветки в UI),
+  6) для `sectionIdNew` формируется обычный `section_upsert_content` (с `baseContentRev=null`) и уходит на сервер в следующем flush,
+  7) оригинальная конфликтная операция удаляется из outbox; UI показывает toast “Конфликт: создана копия блока”.
+- `deleted_tombstone`:
+  - создаём конфликтную копию как новый root‑блок в конце статьи (parentId=null, position=end), с тем же префиксом и `isConflictCopy=true`.
+- `id_collision`:
+  - трактуем как `rev_mismatch` и создаём конфликтную копию с новым `sectionIdNew`.
+
+Точка создания копии (строго):
+- конфликтная копия создаётся на клиенте немедленно (в `docJson` текущей статьи) при получении `UpsertAck.result:"conflict"`, без ожидания следующего редактирования.
+- после вставки копии клиент обязан:
+  1) пометить структуру dirty,
+  2) положить `structure_snapshot` в outbox (coalesce),
+  3) положить `section_upsert_content` для `sectionIdNew` в outbox,
+  4) запустить flush по правилам B5.4/B5.5.
+
+Ограничение (строго):
+- если payload конфликтной копии превышает `MAX_SECTION_BYTES`, копия не создаётся:
+  - показывается сообщение: “Блок слишком большой. Разбейте текст на несколько блоков.”,
+  - пользователь остаётся в edit‑mode.
+
+Ревизии контента (строго):
+- при успешном применении upsert сервер увеличивает `contentRev` этой секции на 1 и возвращает это значение в `UpsertAck.newContentRev`.
+
+Правило для структуры статьи (строго):
+- сервер хранит `structureRev` для статьи (отдельная мета‑таблица/поле, не в `docJson`);
+- snapshot применяется только если `baseStructureRev === current structureRev`;
+- если `baseStructureRev` не совпал:
+  - сервер **не применяет** структуру и возвращает `{ status:"ignored", reason:"stale_structure", currentStructureRev }`;
+  - клиент удаляет op из outbox (другой клиент уже записал более новую структуру).
+
 ### Ограничения iOS (важно)
 
 iOS Safari/WKWebView может **автоматически очищать** IndexedDB/кэш при нехватке места или по своим политикам. Это означает:
@@ -154,23 +565,232 @@ iOS Safari/WKWebView может **автоматически очищать** In
 - После full pull пересобираем локальные derived-данные (например, `sections`/FTS/кэши).
 - Где возможно, вызываем `navigator.storage.persist()` (не гарантия, но снижает риск эвикшена).
 
-### Локальная очередь (outbox) и ограничения
+### Вариант B: открытые вопросы и ограничения (фиксируем явно)
 
-Чтобы минимизировать риск потери несинхронизированных правок (особенно на iOS):
-- Любые правки пишутся локально и в **outbox**.
+Открытых вопросов по Variant B больше нет; ниже перечислены принятые ограничения (это ожидаемое поведение).
+
+1) Delete — разрушительная операция между устройствами:
+   - delete всегда применяется и ставит tombstone;
+   - если другое устройство успело отредактировать секцию, delete всё равно удалит её.
+
+2) Структура — “stale → ignored”:
+   - если два клиента меняли структуру, более старый snapshot будет проигнорирован;
+   - локальная структура клиента может отличаться от серверной до следующего pull.
+
+3) Ограничение размера секции:
+   - действует `MAX_SECTION_BYTES`; oversized блок нельзя “сохранить” (выход из edit‑mode запрещён), см. B5.6.
+
+### Локальная очередь (outbox) и ограничения (вариант A — старый)
+
+Чтобы минимизировать риск потери несинхронизированных правок (особенно на iOS), текущая логика разделяет 2 вещи:
+1) **Локальное сохранение (IndexedDB)** — всегда.
+2) **Доставка на сервер** — либо “сразу” (direct), либо через **outbox**, в зависимости от операции и условий.
+
+Строго:
+- Любое действие пользователя в outline‑редакторе **сразу** применяет изменения в UI (TipTap state).
+- На каждом автосейве/форс‑флаше клиент **всегда** пишет актуальный `docJson` в IndexedDB (черновик/рабочее состояние) через `updateCachedDocJson(articleId, docJson, preservedUpdatedAt)`.
+- В outbox попадают **не все** изменения:
+- `structure_snapshot` добавляется debounce‑механизмом: при структурном изменении запускается таймер, и через 650ms в outbox кладётся **последний** snapshot структуры (coalesceKey `structure:{articleId}`).
+  - `section_upsert_content` и `delete_sections` добавляются в outbox только когда выбран queue‑путь (оффлайн/нет доступа к серверу) или когда конкретный форс‑флаш “на уход” кладёт их в очередь.
+
 - Outbox коалесится по смыслу:
   - `section_upsert_content` — по секции (`content:<articleId>:<sectionId>`): хранится только последнее состояние секции.
   - `structure_snapshot` — по статье (`structure:<articleId>`): хранится только последний снимок структуры.
 - Агрессивный flush: debounce + `blur/visibilitychange` + `online`.
-- Вводятся лимиты (точные значения уточняются экспериментально):
-  - `maxPendingOps` и/или `maxPendingBytes`.
-- При достижении лимитов показываем постоянный баннер “Нет связи, изменения не будут надёжно сохранены — подключитесь для синка” и временно переводим редактирование в **read-only** до успешного flush.
+- Фактически: `flushOutboxOnce()` запускается при событии `online`, при уходе вкладки в `hidden`, при `offline-outbox-changed` и один раз на старте; если в outbox остаются ops — включается интервал отправки раз в 7000ms (7 секунд).
 - ВАЖНО: запуск UI не должен блокироваться на инициализации offline-базы (IndexedDB). Offline инициализируется в фоне; при долгой инициализации показываем тост “Инициализируем offline-базу…”.
-- Автосейв outline держит черновик doc_json в `localStorage` (`ttree_outline_autosave_queue_docjson_v1`) как “страховку” от потери правок при оффлайне/краше.
-  - черновик **не** используется для перезаписи статьи целиком на сервер (“whole doc”);
-  - черновик очищается только после успешного flush всех ops одной партии (по `clientQueuedAt`) для этой статьи.
 
-### Синхронизация outline: секции + структура
+#### Какие операции попадают в outbox (и что именно отправляется)
+
+Outbox хранит **операции**, а не “состояние статьи целиком” (исключение: legacy `save_doc_json`).
+
+Операции outline‑режима:
+- `section_upsert_content` → `PUT /api/articles/{articleId}/sections/upsert-content`
+  - payload: `{ opId, sectionId, headingJson, bodyJson, seq, createVersionIfStaleHours, clientQueuedAt }`
+  - отправляется **только содержимое одной секции** (heading/body TipTap JSON), без структуры.
+- `structure_snapshot` → `PUT /api/articles/{articleId}/structure/snapshot`
+  - payload: `{ opId, nodes }`, где `nodes[] = { sectionId, parentId|null, position:number, collapsed:boolean }`
+  - отправляется **только структура** (parent/position/collapsed), без контента секций.
+- `delete_sections` → `PUT /api/articles/{articleId}/sections/delete`
+  - payload: `{ opId, sectionIds[] }`
+  - отправляются только id удаляемых секций.
+
+Whole‑doc операция `save_doc_json` (**поддерживается синк‑слоем**, но **не используется** регулярным outline‑автосейвом):
+- `save_doc_json` → `PUT /api/articles/{articleId}/doc-json/save`
+  - payload: `{ docJson, createVersionIfStaleHours, clientQueuedAt }`
+  - смысл: отправить **весь docJson целиком** и попросить сервер сохранить “как есть” (это дороже секционных/структурных ops).
+  - статус: текущий outline‑автосейв (ветка сохранения outline‑редактора) **никогда** не создаёт `save_doc_json`; вместо этого он шлёт `delete_sections` / `structure_snapshot` / `section_upsert_content`.
+  - откуда `save_doc_json` вообще может взяться (строго):
+    1) из fallback‑пути функции `saveArticleDocJson()` — она кладёт `save_doc_json` в outbox при сетевой ошибке `PUT /doc-json/save`;
+    2) из уже сохранённой очереди outbox в браузере, если она была создана более старой сборкой фронтенда (до перехода на секционные ops) и ещё не была успешно “выпушена”.
+  - практическое правило: если `save_doc_json` присутствует в outbox, значит это либо “хвост” старой очереди, либо какой‑то код всё ещё вызывает `saveArticleDocJson()` (что можно найти поиском по `saveArticleDocJson(` в репозитории).
+
+Операции не-outline (структура дерева статей/создание):
+- `create_article` → `POST /api/articles` (создание статьи оффлайн, синк позже)
+- `move_article_position` → `POST /api/articles/{articleId}/move`
+- `indent_article` → `POST /api/articles/{articleId}/indent`
+- `outdent_article` → `POST /api/articles/{articleId}/outdent`
+- `move_article_tree` → `POST /api/articles/{articleId}/move-tree`
+
+#### Какие запросы идут сразу, а какие через outbox
+
+Не все команды всегда идут через outbox. Есть два режима:
+
+1) **Онлайн (direct)** — если интернет есть и запускается сетевой автосейв, клиент делает запросы **сразу на сервер** через `saveOutlineEditor()`:
+   - `delete_sections` отправляется direct только если на момент запуска `saveOutlineEditor()` ещё есть `explicitlyDeletedSectionIds`.
+   - `structure_snapshot` отправляется direct только если на момент запуска `saveOutlineEditor()` ещё `structureDirty = true`.
+   - `section_upsert_content` отправляется direct по всем секциям, которые находятся в `dirtySectionIds` на момент запуска.
+   - важная деталь: форс‑флаш “на уход” (`flushOutlineAutosave`) делает так:
+     - если `structureDirty = true` → кладёт `structure_snapshot` в outbox и ставит `structureDirty = false`;
+     - если `explicitlyDeletedSectionIds.size > 0` → кладёт `delete_sections` в outbox и очищает `explicitlyDeletedSectionIds`.
+     Следствие: при уходе со статьи структура/удаления (если они были) доставляются через outbox, а не direct.
+
+2) **Оффлайн/очередь (outbox)** — если интернета нет или сеть/сервер временно недоступны:
+   - те же операции кладутся в outbox и будут отправлены позже в фоне;
+   - операции коалессятся, поэтому outbox хранит “последнее намерение” (например, последний snapshot структуры).
+
+Важно (строго): direct и outbox — это не “два разных режима приложения”, а два разных пути **для каждой конкретной операции**. Например, структура чаще уезжает через outbox (debounce), даже если интернет есть.
+
+#### Что делает opId (и что он НЕ делает)
+
+`opId` используется для **идемпотентности** (защиты от повторов), а не для “гарантированного порядка”.
+
+Что гарантирует `opId`:
+- если клиент отправит одну и ту же операцию повторно (ретраи outbox, повторная отправка при таймауте, дубли в сети),
+  сервер распознает `opId` и **не применит операцию второй раз** (вернёт `status: duplicate`).
+
+Чего `opId` не гарантирует:
+- `opId` **не обеспечивает**, что операции будут применены на сервере “в точности в том же порядке, как на клиенте”.
+  Причины:
+  - outbox коалесит операции (промежуточные состояния могут быть выброшены);
+  - операции могут быть разного типа (структура/контент/удаление) и их доставка может прерываться;
+  - при нескольких устройствах порядок запросов с разных клиентов не контролируется одним `opId`.
+
+Как реально обеспечивается корректность порядка/устойчивость:
+- для контента секции используется `seq` (монотонный счётчик на `(articleId, sectionId)`): сервер игнорирует stale (`seq <= last_seq`);
+- для структуры (`structure_snapshot`) семантика “last snapshot wins” (eventual): важен итоговый снимок, а не каждый промежуточный шаг;
+- на сервере операции по одной статье выполняются под блокировкой строки (`SELECT ... FOR UPDATE`), чтобы избежать lost updates при конкуренции.
+
+#### Протокол: что происходит при каждом действии (клиент ↔ сервер)
+
+Ниже описаны **строгие** цепочки обмена для трёх операций outline‑редактора. Для каждой операции есть два режима доставки:
+- **Direct (онлайн)**: запросы идут на сервер сразу из автосейва.
+- **Outbox**: операция кладётся в outbox и будет отправлена позже `flushOutboxOnce()`. Порядок — по `createdAtMs`, но с исключением: `structure_snapshot` **пропускается** в текущем проходе, если с момента предыдущей отправки snapshot по этой статье прошло меньше 3000ms (3 секунды) (throttle).
+
+Общее для всех операций:
+- Клиент **всегда сначала** сохраняет текущий `docJson` локально (`IndexedDB`) через `updateCachedDocJson()` (черновик/рабочее состояние).
+- Direct‑путь выполняется функцией `saveOutlineEditor()` и применяет операции **последовательно**, но только те, которые “грязные” на момент запуска:
+  1) `delete_sections` (если есть `explicitlyDeletedSectionIds`)
+  2) `structure_snapshot` (если `structureDirty`)
+  3) `section_upsert_content` (по `dirtySectionIds`)
+- ВАЖНО: форс‑флаш “на уход” (`flushOutlineAutosave`) **всегда** кладёт `delete_sections`/`structure_snapshot` в outbox, если соответствующие флаги/наборы не пустые, и сбрасывает их до запуска `saveOutlineEditor()`.
+  - Если при уходе со статьи интернет доступен и есть изменения контента (`dirtySectionIds`), то `saveOutlineEditor()` отправит контент direct, а структура/удаления (если они были) поедут через outbox.
+  - Если при уходе интернета нет (или выбран queue‑путь), то и контент, и структура/удаления поедут через outbox.
+- В outbox операции коалессятся по ключам (для структуры и контента секций), поэтому на сервер попадёт **последнее намерение** по этим ключам (а не каждый промежуточный шаг).
+
+##### 1) Upsert содержимого секции (`section_upsert_content`)
+
+**Когда создаётся на клиенте**
+- При редактировании текста секции: секция помечается “грязной”.
+- При автосейве (debounce) или при уходе/переключении: выбираются все `dirty` секции и для каждой формируется операция.
+
+**Что отправляется на сервер**
+- Direct: `PUT /api/articles/{articleId}/sections/upsert-content`
+  - body:
+    - `sectionId`
+    - `headingJson` (TipTap JSON узла заголовка секции)
+    - `bodyJson` (TipTap JSON узла тела секции)
+    - `seq` (монотонный номер на `(articleId, sectionId)`)
+    - `createVersionIfStaleHours`
+    - `opId` **не передаётся** в direct‑пути (значит идемпотентность по `opId` на сервере не применяется).
+- Outbox: операция `section_upsert_content` кладётся в outbox (coalesceKey `content:{articleId}:{sectionId}`) и позже отправляется тем же endpoint, но с `opId = id операции outbox`.
+
+**Что делает сервер**
+- Валидирует пользователя/статью, берёт `FOR UPDATE` на строку статьи.
+- Проверяет `seq` по таблице `outline_section_meta` (тоже `FOR UPDATE`):
+  - если `seq <= last_seq`: возвращает `{ status: "ignored", reason: "stale", lastSeq }` и **не меняет** документ.
+  - если `seq > last_seq`: обновляет/вставляет секцию в `article_doc_json` (заменяет `heading/body`, детей не трогает).
+- Обновляет:
+  - `articles.article_doc_json`
+  - `articles.updated_at`
+  - `outline_section_meta.last_seq`
+  - FTS индекс секции
+  - embeddings секции
+  - историю изменений секции (history window)
+
+**Что возвращает сервер**
+- Успех: `{ status: "ok", articleId, updatedAt, changedBlockIds: [sectionId], removedBlockIds: [], historyEntriesAdded: [...] }`
+- Дубликат по `opId` (только outbox‑повторы): `{ status: "duplicate" }`
+- Stale по `seq`: `{ status: "ignored", reason: "stale", lastSeq }`
+
+**Что делает клиент с ответом**
+- Direct: берёт `updatedAt` (максимальный из ответов) и вызывает `updateCachedDocJson(articleId, docJson, updatedAt)`; добавляет `historyEntriesAdded` в `state.article.history`; очищает `dirtySectionIds`.
+- Outbox: после успешной отправки:
+  - патчит локальный кеш `docJson` (подставляет `headingJson/bodyJson` в нужную секцию),
+  - пишет `updatedAt` в кеш,
+  - удаляет op из outbox.
+
+##### 2) Удаление секций (`delete_sections`)
+
+**Когда создаётся на клиенте**
+- При удалении секции в outline‑редакторе id секции добавляется в `explicitlyDeletedSectionIds`.
+- При автосейве/уходе со страницы это превращается в операцию удаления.
+
+**Что отправляется на сервер**
+- Direct: `PUT /api/articles/{articleId}/sections/delete`
+  - body: `{ sectionIds: [ ... ] }` (`opId` в direct‑пути не передаётся).
+- Outbox: операция `delete_sections` отправляется тем же endpoint, но с `opId = id операции outbox`.
+
+**Что делает сервер**
+- Валидирует пользователя/статью, берёт `FOR UPDATE` на строку статьи.
+- Удаляет секции с указанными id из `article_doc_json` (структурно: удаляется целиком узел `outlineSection`).
+- Обновляет:
+  - `articles.article_doc_json`
+  - `articles.updated_at`
+  - ссылки статьи (rebuild)
+  - FTS и embeddings для удалённых секций (удаление)
+
+**Что возвращает сервер**
+- `{ status: "ok", articleId, updatedAt, removedBlockIds: [ ... ] }`
+- Дубликат по `opId` (только outbox‑повторы): `{ status: "duplicate" }`
+
+**Что делает клиент с ответом**
+- Direct: фиксирует `updatedAt` (для `updateCachedDocJson`), очищает `explicitlyDeletedSectionIds`.
+- Outbox: после успеха патчит кеш `docJson` (удаляет секции из дерева), пишет `updatedAt`, удаляет локальные embeddings по `removedBlockIds`, удаляет op из outbox.
+
+##### 3) Изменение структуры (`structure_snapshot`)
+
+**Когда создаётся на клиенте**
+- Любое структурное изменение (перемещение/вложенность/сворачивание) ставит `structureDirty = true`.
+- Операция создаётся:
+- через debounce 650ms после последнего изменения структуры;
+  - и принудительно перед уходом со страницы (flush).
+
+**Что отправляется на сервер**
+- Direct: `PUT /api/articles/{articleId}/structure/snapshot`
+  - body: `{ nodes: [ ... ] }` (`opId` в direct‑пути не передаётся).
+- Outbox: операция `structure_snapshot` (coalesceKey `structure:{articleId}`) отправляется тем же endpoint, но с `opId = id операции outbox`.
+- Дополнительно: отправка snapshot throttled (не чаще одного раза в 3000ms (3 секунды) на статью); при throttle op пропускается в текущем `flushOutboxOnce()` и уезжает в одном из следующих.
+
+**Что делает сервер**
+- Валидирует пользователя/статью, берёт `FOR UPDATE` на строку статьи.
+- Применяет структуру к текущему `article_doc_json`:
+  - обновляет `parent/position/collapsed` для секций;
+  - **не меняет** `headingJson/bodyJson`.
+- Обновляет:
+  - `articles.article_doc_json`
+  - `articles.updated_at`
+  - ссылки статьи (rebuild, т.к. зависят от структуры)
+
+**Что возвращает сервер**
+- `{ status: "ok", articleId, updatedAt }`
+- Дубликат по `opId` (только outbox‑повторы): `{ status: "duplicate" }`
+
+**Что делает клиент с ответом**
+- Direct: фиксирует `updatedAt` (для `updateCachedDocJson`), сбрасывает `structureDirty`.
+- Outbox: после успеха патчит кеш `docJson` (перестраивает дерево секций по `nodes`), пишет `updatedAt`, удаляет op из outbox.
+
+### Синхронизация outline: секции + структура (вариант A — старый)
 
 Цель: устранить гонки и “whole-doc overwrite”. Критично не терять содержимое секции; структура может быть eventual.
 
@@ -195,9 +815,10 @@ iOS Safari/WKWebView может **автоматически очищать** In
 
 #### Структура (некритично, eventual)
 
-- Клиент отправляет `PUT /api/articles/{id}/structure/snapshot` только если структура менялась:
-  - debounce 5 секунд после последнего структурного изменения;
-  - и форс-флаш перед уходом со статьи (если структура грязная).
+- Клиент отправляет `PUT /api/articles/{id}/structure/snapshot` только если структура менялась, но **путь доставки зависит от тайминга**:
+- debounce 650ms после последнего структурного изменения кладёт `structure_snapshot` в outbox;
+  - если сетевой автосейв стартовал раньше debounce‑таймера — snapshot уходит direct (и debounce‑таймер отменяется);
+  - перед уходом со статьи выполняется форс‑флаш: snapshot кладётся в outbox, чтобы не блокировать навигацию.
 - Snapshot содержит только `{sectionId, parentId, position, collapsed}` для всех секций.
 - Сервер применяет только структуру (parent/position/collapsed), не трогая содержимое ячеек/секций.
 
@@ -206,11 +827,19 @@ iOS Safari/WKWebView может **автоматически очищать** In
 Цель: пользователь должен иметь возможность “сразу записать мысль” даже при холодном старте/без сети/до авторизации.
 
 Решение:
-- быстрая заметка на старте пишет **только в `localStorage`**, в очередь outline‑черновиков:
-  - ключ: `ttree_outline_autosave_queue_docjson_v1`
-  - поле: `inbox` (docJson + queuedAt)
+- boot‑модалка “Быстрая заметка (оффлайн‑буфер)” пишет **только текст заметок** в `localStorage`:
+  - ключ: `ttree_pending_quick_notes_v1`
+  - формат: массив `{ id, sectionId, createdAt, text }` (в текущей реализации `id === sectionId` и генерируется сразу).
 - на этапе boot **не трогаем IndexedDB** (не блокируем запуск на инициализации offline‑базы).
-- после успешной авторизации приложение в фоне синхронизирует queued‑inbox на сервер через `PUT /api/articles/inbox/doc-json/save` и очищает `ttree_outline_autosave_queue_docjson_v1.inbox` при успехе.
+- после успешной авторизации (и при появлении интернета) приложение синхронизирует эти заметки в Inbox **строго так**:
+  1) при открытии/рендере Inbox заметки из `ttree_pending_quick_notes_v1` накладываются поверх `inbox.docJson` на клиенте (чтобы они были видны в UI даже до синка);
+  2) фоновый процесс вызывает `enqueuePendingQuickNotesForSync()` и для каждой pending‑заметки ставит в outbox одну операцию `section_upsert_content` с `articleId = "inbox"`:
+     - `sectionId` = `note.sectionId`
+     - `headingJson/bodyJson` генерируются из текста заметки
+     - `seq` берётся из `localStorage.ttree_outline_section_seq_v1`
+     - `payload.opId = sectionId` (для идемпотентности на сервере)
+  3) `flushOutboxOnce()` отправляет эти ops на сервер; сервер создаёт секции, если их ещё нет в `article_doc_json` Inbox;
+  4) после успешной отправки каждой такой операции клиент удаляет соответствующую pending‑заметку из `ttree_pending_quick_notes_v1`.
 
 Компромисс:
 - заметки, созданные в boot‑режиме, могут не попадать в локальный поиск до открытия Inbox/синхронизации, потому что boot не обновляет IDB‑индексы.
@@ -629,15 +1258,16 @@ UX для пустого заголовка при редактировании:
 - История пишется на сервере при сохранении:
   - `section_upsert_content` (контент секции),
   - и/или при сохранении `article_doc_json` (полный снапшот статьи).
+- Конфликты (`UpsertAck.result:"conflict"`) не попадают в историю: вместо этого создаётся “конфликтная копия” секции в тексте статьи (см. Variant B, B9).
 - Восстановление восстанавливает состояние “после выбранного изменения” и в outline-режиме правит TipTap-документ (только `heading/body`, дети сохраняются), затем уходит в автосейв.
 - Вся старая история HTML-блоков очищается (одноразовая миграция в `schema.py`, ключ `schema_meta.purged_legacy_block_history_v1`).
 
-### Скольжение истории (windowed revisions)
+### Скольжение истории (windowed revisions) (вариант A — старый)
 
 Задача: пока пользователь активно редактирует секцию, не писать “каждый автосейв” в историю (для этого есть Undo/Redo).
 
-Правило на сервере:
-- При поступлении нового изменения секции сервер всегда применяет его (если `seq > last_seq`).
+Правило на сервере (вариант A — старый):
+- При поступлении нового изменения секции сервер применяет его (если `seq > last_seq`).
 - История пишется как “окна” по секции:
   - если окно начато < 1 часа назад → обновляем `after*` в последней записи окна (before остаётся прежним), добавляем `updatedAt`;
   - иначе создаём новую запись истории и начинаем новое окно.

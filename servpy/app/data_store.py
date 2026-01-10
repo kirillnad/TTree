@@ -844,6 +844,7 @@ def build_article_from_row(row: RowMapping | None, *, include_blocks: bool = Tru
         'position': row.get('position') or 0,
         'authorId': row.get('author_id'),
         'publicSlug': row.get('public_slug'),
+        'outlineStructureRev': int(row.get('outline_structure_rev') or 0) if row.get('outline_structure_rev') is not None else 0,
         'history': deserialize_history(row['history']),
         'redoHistory': deserialize_history(row['redo_history']),
         'blockTrash': deserialize_history(row.get('block_trash')),
@@ -1360,101 +1361,104 @@ def save_article_doc_json(
     now = iso_now()
     now_dt = datetime.utcnow()
 
-    article_row = CONN.execute(
-        'SELECT id, author_id, title, updated_at, history, redo_history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
-        (article_id,),
-    ).fetchone()
-    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
-        raise ArticleNotFound('Article not found')
-
-    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
-        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
-    )
-    if encrypted_flag:
-        # For encrypted articles we don't accept plaintext doc_json.
-        raise InvalidOperation('Encrypted articles are not supported in outline save')
-
-    history = deserialize_history(article_row.get('history'))
-    history_entries_added: list[dict[str, Any]] = []
-
-    # Auto-version "before first edit after N hours".
-    if create_version_if_stale_hours:
-        try:
-            hours = int(create_version_if_stale_hours)
-        except Exception:
-            hours = 0
-        if hours > 0:
-            updated_at_raw = (article_row.get('updated_at') or '').strip()
-            if updated_at_raw:
-                try:
-                    updated_dt = datetime.fromisoformat(updated_at_raw)
-                    age_seconds = (now_dt - updated_dt).total_seconds()
-                    if age_seconds >= hours * 3600:
-                        CONN.execute(
-                            '''
-                            INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            ''',
-                            (
-                                str(uuid.uuid4()),
-                                article_id,
-                                author_id,
-                                now,
-                                f'auto-{hours}h',
-                                None,
-                                json.dumps([]),
-                                article_row.get('article_doc_json'),
-                            ),
-                        )
-                except Exception:
-                    pass
-
-    # Diff sections based on plain text (heading+body).
-    prev_map: dict[str, str] = {}
-    prev_frags: dict[str, dict[str, Any]] = {}
-    raw_prev = article_row.get('article_doc_json') or ''
-    if raw_prev:
-        try:
-            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
-            prev_map = build_outline_section_plain_text_map(prev_doc)
-            prev_frags = build_outline_section_fragments_map(prev_doc)
-        except Exception:
-            prev_map = {}
-            prev_frags = {}
-    next_map = build_outline_section_plain_text_map(doc_json)
-    next_frags = build_outline_section_fragments_map(doc_json)
-
-    removed_ids = set(prev_map.keys()) - set(next_map.keys())
-    changed_ids: set[str] = set()
-    for sid, new_text in next_map.items():
-        if prev_map.get(sid, '') != (new_text or ''):
-            changed_ids.add(sid)
-
-    def _push_history(section_id: str, before_plain: str, after_plain: str) -> None:
-        if before_plain == after_plain:
-            return
-        before_frag = prev_frags.get(section_id) or {}
-        after_frag = next_frags.get(section_id) or {}
-        entry = {
-            'id': str(uuid.uuid4()),
-            'blockId': section_id,
-            'before': before_plain,
-            'after': after_plain,
-            'beforeHeadingJson': before_frag.get('heading'),
-            'beforeBodyJson': before_frag.get('body'),
-            'afterHeadingJson': after_frag.get('heading'),
-            'afterBodyJson': after_frag.get('body'),
-            'timestamp': now,
-        }
-        history.append(entry)
-        history_entries_added.append(entry)
-
-    for sid in sorted(changed_ids):
-        _push_history(sid, prev_map.get(sid, ''), next_map.get(sid, ''))
-
-    # Persist article_doc_json and metadata.
-    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+    # Concurrency guard: lock the article row and apply save to the latest doc_json.
+    # Otherwise concurrent operations can read stale doc_json and later overwrite newer state.
     with CONN:
+        article_row = CONN.execute(
+            'SELECT id, author_id, title, updated_at, history, redo_history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json '
+            'FROM articles WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+            (article_id,),
+        ).fetchone()
+        if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+            raise ArticleNotFound('Article not found')
+
+        encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+            bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+        )
+        if encrypted_flag:
+            # For encrypted articles we don't accept plaintext doc_json.
+            raise InvalidOperation('Encrypted articles are not supported in outline save')
+
+        history = deserialize_history(article_row.get('history'))
+        history_entries_added: list[dict[str, Any]] = []
+
+        # Auto-version "before first edit after N hours".
+        if create_version_if_stale_hours:
+            try:
+                hours = int(create_version_if_stale_hours)
+            except Exception:
+                hours = 0
+            if hours > 0:
+                updated_at_raw = (article_row.get('updated_at') or '').strip()
+                if updated_at_raw:
+                    try:
+                        updated_dt = datetime.fromisoformat(updated_at_raw)
+                        age_seconds = (now_dt - updated_dt).total_seconds()
+                        if age_seconds >= hours * 3600:
+                            CONN.execute(
+                                '''
+                                INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                ''',
+                                (
+                                    str(uuid.uuid4()),
+                                    article_id,
+                                    author_id,
+                                    now,
+                                    f'auto-{hours}h',
+                                    None,
+                                    json.dumps([]),
+                                    article_row.get('article_doc_json'),
+                                ),
+                            )
+                    except Exception:
+                        pass
+
+        # Diff sections based on plain text (heading+body).
+        prev_map: dict[str, str] = {}
+        prev_frags: dict[str, dict[str, Any]] = {}
+        raw_prev = article_row.get('article_doc_json') or ''
+        if raw_prev:
+            try:
+                prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+                prev_map = build_outline_section_plain_text_map(prev_doc)
+                prev_frags = build_outline_section_fragments_map(prev_doc)
+            except Exception:
+                prev_map = {}
+                prev_frags = {}
+        next_map = build_outline_section_plain_text_map(doc_json)
+        next_frags = build_outline_section_fragments_map(doc_json)
+
+        removed_ids = set(prev_map.keys()) - set(next_map.keys())
+        changed_ids: set[str] = set()
+        for sid, new_text in next_map.items():
+            if prev_map.get(sid, '') != (new_text or ''):
+                changed_ids.add(sid)
+
+        def _push_history(section_id: str, before_plain: str, after_plain: str) -> None:
+            if before_plain == after_plain:
+                return
+            before_frag = prev_frags.get(section_id) or {}
+            after_frag = next_frags.get(section_id) or {}
+            entry = {
+                'id': str(uuid.uuid4()),
+                'blockId': section_id,
+                'before': before_plain,
+                'after': after_plain,
+                'beforeHeadingJson': before_frag.get('heading'),
+                'beforeBodyJson': before_frag.get('body'),
+                'afterHeadingJson': after_frag.get('heading'),
+                'afterBodyJson': after_frag.get('body'),
+                'timestamp': now,
+            }
+            history.append(entry)
+            history_entries_added.append(entry)
+
+        for sid in sorted(changed_ids):
+            _push_history(sid, prev_map.get(sid, ''), next_map.get(sid, ''))
+
+        # Persist article_doc_json and metadata.
+        doc_json_str = json.dumps(doc_json, ensure_ascii=False)
         CONN.execute(
             'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
             (now, serialize_history(history), '[]', doc_json_str, article_id),
@@ -1536,186 +1540,193 @@ def upsert_outline_section_content(
 
     now = iso_now()
     now_dt = datetime.utcnow()
-
-    article_row = CONN.execute(
-        'SELECT id, author_id, title, updated_at, history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
-        (article_id,),
-    ).fetchone()
-    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
-        raise ArticleNotFound('Article not found')
-
-    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
-        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
-    )
-    if encrypted_flag:
-        raise InvalidOperation('Encrypted articles are not supported')
-
-    if op_id:
-        newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='section.upsertContent', section_id=sid)
-        if not newly:
-            return {'status': 'duplicate'}
-
-    meta_row = CONN.execute(
-        'SELECT last_seq, history_window_started_at, history_window_entry_id FROM outline_section_meta WHERE article_id = ? AND section_id = ?',
-        (article_id, sid),
-    ).fetchone()
-    last_seq = int(meta_row['last_seq']) if meta_row and meta_row.get('last_seq') is not None else 0
-    window_started_at_raw = (meta_row.get('history_window_started_at') or '').strip() if meta_row else ''
-    window_entry_id = (meta_row.get('history_window_entry_id') or '').strip() if meta_row else ''
-    window_started_dt: datetime | None = None
-    if window_started_at_raw:
-        try:
-            window_started_dt = datetime.fromisoformat(window_started_at_raw)
-        except Exception:
-            window_started_dt = None
-    if seq_num <= last_seq:
-        return {'status': 'ignored', 'reason': 'stale', 'lastSeq': last_seq}
-
-    # Auto-version best-effort: reuse existing full-save logic only for staleness condition.
-    if create_version_if_stale_hours:
-        try:
-            hours = int(create_version_if_stale_hours)
-        except Exception:
-            hours = 0
-        if hours > 0:
-            updated_at_raw = (article_row.get('updated_at') or '').strip()
-            if updated_at_raw:
-                try:
-                    updated_dt = datetime.fromisoformat(updated_at_raw)
-                    age_seconds = (datetime.utcnow() - updated_dt).total_seconds()
-                    if age_seconds >= hours * 3600:
-                        CONN.execute(
-                            '''
-                            INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            ''',
-                            (
-                                str(uuid.uuid4()),
-                                article_id,
-                                author_id,
-                                now,
-                                f'auto-{hours}h',
-                                None,
-                                json.dumps([]),
-                                article_row.get('article_doc_json'),
-                            ),
-                        )
-                except Exception:
-                    pass
-
-    raw_prev = article_row.get('article_doc_json') or ''
-    prev_doc: Any = None
-    if raw_prev:
-        try:
-            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
-        except Exception:
-            prev_doc = None
-    if not isinstance(prev_doc, dict):
-        prev_doc = {'type': 'doc', 'content': []}
-
-    before_plain = build_outline_section_plain_text(prev_doc, sid)
-    before_frags = build_outline_section_fragments_map(prev_doc).get(sid) or {}
-
-    # Patch the section in-place (keep children intact).
-    doc_json = prev_doc
-    sec = _find_outline_section_by_id(doc_json, sid)
-    if sec is None:
-        sec = _ensure_outline_section_node(sid, heading=heading_json, body=body_json)
-        if not isinstance(doc_json.get('content'), list):
-            doc_json['content'] = []
-        # Inbox should behave like "newest first": when a section is missing from structure,
-        # create it at the top-level root and put it first.
-        # NOTE: the public id is "inbox", but in DB it is "inbox-<user_id>".
-        if str(article_id).startswith('inbox-'):
-            doc_json['content'].insert(0, sec)
-        else:
-            doc_json['content'].append(sec)
-    else:
-        content = sec.get('content') or []
-        if not isinstance(content, list) or len(content) < 3:
-            # keep whatever children we can find
-            children = None
-            for c in content if isinstance(content, list) else []:
-                if isinstance(c, dict) and c.get('type') == 'outlineChildren':
-                    children = c
-                    break
-            sec['content'] = [heading_json, body_json, children or {'type': 'outlineChildren', 'content': []}]
-        else:
-            # Replace heading/body nodes by type.
-            h_idx = None
-            b_idx = None
-            for i, c in enumerate(content):
-                if isinstance(c, dict) and c.get('type') == 'outlineHeading' and h_idx is None:
-                    h_idx = i
-                elif isinstance(c, dict) and c.get('type') == 'outlineBody' and b_idx is None:
-                    b_idx = i
-            if h_idx is None:
-                content.insert(0, heading_json)
-            else:
-                content[h_idx] = heading_json
-            if b_idx is None:
-                insert_at = 1 if h_idx in (None, 0) else h_idx + 1
-                content.insert(insert_at, body_json)
-            else:
-                content[b_idx] = body_json
-            # Ensure children container exists at the end.
-            if not any(isinstance(c, dict) and c.get('type') == 'outlineChildren' for c in content):
-                content.append({'type': 'outlineChildren', 'content': []})
-            sec['content'] = content
-
-    after_plain = build_outline_section_plain_text(doc_json, sid)
-    after_frags = build_outline_section_fragments_map(doc_json).get(sid) or {}
-
-    history = deserialize_history(article_row.get('history'))
-    history_entries_added: list[dict[str, Any]] = []
-
-    history_window_seconds = 3600
-    should_consider_history = before_plain != after_plain
-    should_update_window = (
-        bool(window_entry_id)
-        and window_started_dt is not None
-        and (now_dt - window_started_dt).total_seconds() < history_window_seconds
-    )
-    history_window_entry_updated = False
-    history_window_entry_id_to_set: str | None = None
-    history_window_started_at_to_set: str | None = None
-
-    if should_consider_history:
-        if should_update_window:
-            # Sliding window: update the existing history entry (keep "before" from the first change in the window).
-            try:
-                for e in history:
-                    if isinstance(e, dict) and str(e.get('id') or '') == window_entry_id and str(e.get('blockId') or '') == sid:
-                        e['after'] = after_plain
-                        e['afterHeadingJson'] = after_frags.get('heading')
-                        e['afterBodyJson'] = after_frags.get('body')
-                        # Keep e['timestamp'] as window start; optionally track last update time.
-                        e['updatedAt'] = now
-                        history_window_entry_updated = True
-                        break
-            except Exception:
-                history_window_entry_updated = False
-
-        if not history_window_entry_updated:
-            entry_id = str(uuid.uuid4())
-            entry = {
-                'id': entry_id,
-                'blockId': sid,
-                'before': before_plain,
-                'after': after_plain,
-                'beforeHeadingJson': before_frags.get('heading'),
-                'beforeBodyJson': before_frags.get('body'),
-                'afterHeadingJson': after_frags.get('heading'),
-                'afterBodyJson': after_frags.get('body'),
-                'timestamp': now,
-            }
-            history.append(entry)
-            history_entries_added.append(entry)
-            history_window_entry_id_to_set = entry_id
-            history_window_started_at_to_set = now
-
-    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+    # Concurrency guard: lock the article row and patch against the latest doc_json.
+    # This prevents lost updates when concurrent saves modify different parts of the doc.
     with CONN:
+        article_row = CONN.execute(
+            'SELECT id, author_id, title, updated_at, history, is_encrypted, encryption_salt, encryption_verifier, article_doc_json '
+            'FROM articles WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+            (article_id,),
+        ).fetchone()
+        if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+            raise ArticleNotFound('Article not found')
+
+        encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+            bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+        )
+        if encrypted_flag:
+            raise InvalidOperation('Encrypted articles are not supported')
+
+        if op_id:
+            newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='section.upsertContent', section_id=sid)
+            if not newly:
+                return {'status': 'duplicate'}
+
+        meta_row = CONN.execute(
+            'SELECT last_seq, history_window_started_at, history_window_entry_id '
+            'FROM outline_section_meta WHERE article_id = ? AND section_id = ? FOR UPDATE',
+            (article_id, sid),
+        ).fetchone()
+        last_seq = int(meta_row['last_seq']) if meta_row and meta_row.get('last_seq') is not None else 0
+        window_started_at_raw = (meta_row.get('history_window_started_at') or '').strip() if meta_row else ''
+        window_entry_id = (meta_row.get('history_window_entry_id') or '').strip() if meta_row else ''
+        window_started_dt: datetime | None = None
+        if window_started_at_raw:
+            try:
+                window_started_dt = datetime.fromisoformat(window_started_at_raw)
+            except Exception:
+                window_started_dt = None
+        if seq_num <= last_seq:
+            return {'status': 'ignored', 'reason': 'stale', 'lastSeq': last_seq}
+
+        # Auto-version best-effort: reuse existing full-save logic only for staleness condition.
+        if create_version_if_stale_hours:
+            try:
+                hours = int(create_version_if_stale_hours)
+            except Exception:
+                hours = 0
+            if hours > 0:
+                updated_at_raw = (article_row.get('updated_at') or '').strip()
+                if updated_at_raw:
+                    try:
+                        updated_dt = datetime.fromisoformat(updated_at_raw)
+                        age_seconds = (datetime.utcnow() - updated_dt).total_seconds()
+                        if age_seconds >= hours * 3600:
+                            CONN.execute(
+                                '''
+                                INSERT INTO article_versions (id, article_id, author_id, created_at, reason, label, blocks_json, doc_json)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                ''',
+                                (
+                                    str(uuid.uuid4()),
+                                    article_id,
+                                    author_id,
+                                    now,
+                                    f'auto-{hours}h',
+                                    None,
+                                    json.dumps([]),
+                                    article_row.get('article_doc_json'),
+                                ),
+                            )
+                    except Exception:
+                        pass
+
+        raw_prev = article_row.get('article_doc_json') or ''
+        prev_doc: Any = None
+        if raw_prev:
+            try:
+                prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+            except Exception:
+                prev_doc = None
+        if not isinstance(prev_doc, dict):
+            prev_doc = {'type': 'doc', 'content': []}
+
+        before_plain = build_outline_section_plain_text(prev_doc, sid)
+        before_frags = build_outline_section_fragments_map(prev_doc).get(sid) or {}
+
+        # Patch the section in-place (keep children intact).
+        doc_json = prev_doc
+        sec = _find_outline_section_by_id(doc_json, sid)
+        if sec is None:
+            sec = _ensure_outline_section_node(sid, heading=heading_json, body=body_json)
+            if not isinstance(doc_json.get('content'), list):
+                doc_json['content'] = []
+            # Inbox should behave like "newest first": when a section is missing from structure,
+            # create it at the top-level root and put it first.
+            # NOTE: the public id is "inbox", but in DB it is "inbox-<user_id>".
+            if str(article_id).startswith('inbox-'):
+                doc_json['content'].insert(0, sec)
+            else:
+                doc_json['content'].append(sec)
+        else:
+            content = sec.get('content') or []
+            if not isinstance(content, list) or len(content) < 3:
+                # keep whatever children we can find
+                children = None
+                for c in content if isinstance(content, list) else []:
+                    if isinstance(c, dict) and c.get('type') == 'outlineChildren':
+                        children = c
+                        break
+                sec['content'] = [heading_json, body_json, children or {'type': 'outlineChildren', 'content': []}]
+            else:
+                # Replace heading/body nodes by type.
+                h_idx = None
+                b_idx = None
+                for i, c in enumerate(content):
+                    if isinstance(c, dict) and c.get('type') == 'outlineHeading' and h_idx is None:
+                        h_idx = i
+                    elif isinstance(c, dict) and c.get('type') == 'outlineBody' and b_idx is None:
+                        b_idx = i
+                if h_idx is None:
+                    content.insert(0, heading_json)
+                else:
+                    content[h_idx] = heading_json
+                if b_idx is None:
+                    insert_at = 1 if h_idx in (None, 0) else h_idx + 1
+                    content.insert(insert_at, body_json)
+                else:
+                    content[b_idx] = body_json
+                # Ensure children container exists at the end.
+                if not any(isinstance(c, dict) and c.get('type') == 'outlineChildren' for c in content):
+                    content.append({'type': 'outlineChildren', 'content': []})
+                sec['content'] = content
+
+        after_plain = build_outline_section_plain_text(doc_json, sid)
+        after_frags = build_outline_section_fragments_map(doc_json).get(sid) or {}
+
+        history = deserialize_history(article_row.get('history'))
+        history_entries_added: list[dict[str, Any]] = []
+
+        history_window_seconds = 3600
+        should_consider_history = before_plain != after_plain
+        should_update_window = (
+            bool(window_entry_id)
+            and window_started_dt is not None
+            and (now_dt - window_started_dt).total_seconds() < history_window_seconds
+        )
+        history_window_entry_updated = False
+        history_window_entry_id_to_set: str | None = None
+        history_window_started_at_to_set: str | None = None
+
+        if should_consider_history:
+            if should_update_window:
+                # Sliding window: update the existing history entry (keep "before" from the first change in the window).
+                try:
+                    for e in history:
+                        if (
+                            isinstance(e, dict)
+                            and str(e.get('id') or '') == window_entry_id
+                            and str(e.get('blockId') or '') == sid
+                        ):
+                            e['after'] = after_plain
+                            e['afterHeadingJson'] = after_frags.get('heading')
+                            e['afterBodyJson'] = after_frags.get('body')
+                            # Keep e['timestamp'] as window start; optionally track last update time.
+                            e['updatedAt'] = now
+                            history_window_entry_updated = True
+                            break
+                except Exception:
+                    history_window_entry_updated = False
+
+            if not history_window_entry_updated:
+                entry_id = str(uuid.uuid4())
+                entry = {
+                    'id': entry_id,
+                    'blockId': sid,
+                    'before': before_plain,
+                    'after': after_plain,
+                    'beforeHeadingJson': before_frags.get('heading'),
+                    'beforeBodyJson': before_frags.get('body'),
+                    'afterHeadingJson': after_frags.get('heading'),
+                    'afterBodyJson': after_frags.get('body'),
+                    'timestamp': now,
+                }
+                history.append(entry)
+                history_entries_added.append(entry)
+                history_window_entry_id_to_set = entry_id
+                history_window_started_at_to_set = now
+
+        doc_json_str = json.dumps(doc_json, ensure_ascii=False)
         CONN.execute(
             'UPDATE articles SET updated_at = ?, history = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
             (now, serialize_history(history), '[]', doc_json_str, article_id),
@@ -1777,6 +1788,7 @@ def apply_outline_structure_snapshot(
     author_id: str,
     nodes: list[dict[str, Any]],
     op_id: str | None = None,
+    base_rev: int | None = None,
 ) -> dict[str, Any]:
     if not article_id or not author_id:
         raise ArticleNotFound('Article not found')
@@ -1788,35 +1800,54 @@ def apply_outline_structure_snapshot(
         if not newly:
             return {'status': 'duplicate'}
 
-    now = iso_now()
-    article_row = CONN.execute(
-        'SELECT id, author_id, is_encrypted, encryption_salt, encryption_verifier, article_doc_json FROM articles WHERE id = ? AND deleted_at IS NULL',
-        (article_id,),
-    ).fetchone()
-    if not article_row or str(article_row.get('author_id') or '') != str(author_id):
-        raise ArticleNotFound('Article not found')
-    encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
-        bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
-    )
-    if encrypted_flag:
-        raise InvalidOperation('Encrypted articles are not supported')
-
-    raw_prev = article_row.get('article_doc_json') or ''
-    prev_doc: Any = None
-    if raw_prev:
-        try:
-            prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
-        except Exception:
-            prev_doc = None
-    if not isinstance(prev_doc, dict):
-        prev_doc = {'type': 'doc', 'content': []}
-
-    doc_json = _apply_outline_structure_snapshot(prev_doc, nodes)
-    doc_json_str = json.dumps(doc_json, ensure_ascii=False)
-
+    # Concurrency guard: lock the article row and apply snapshot to the latest doc_json.
+    # Otherwise an older operation can read stale doc_json, wait on a row lock, and later overwrite newer state.
     with CONN:
+        article_row = CONN.execute(
+            'SELECT id, author_id, updated_at, outline_structure_rev, is_encrypted, encryption_salt, encryption_verifier, article_doc_json '
+            'FROM articles WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+            (article_id,),
+        ).fetchone()
+        if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+            raise ArticleNotFound('Article not found')
+        current_rev = int(article_row.get('outline_structure_rev') or 0)
+        if base_rev is not None:
+            try:
+                base_rev_num = int(base_rev)
+            except Exception:
+                base_rev_num = None
+            if base_rev_num is None:
+                raise InvalidOperation('baseStructureRev must be integer')
+            if base_rev_num != current_rev:
+                return {
+                    'status': 'ignored',
+                    'reason': 'stale',
+                    'articleId': article_id,
+                    'updatedAt': article_row.get('updated_at') or iso_now(),
+                    'currentStructureRev': current_rev,
+                }
+        encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+            bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+        )
+        if encrypted_flag:
+            raise InvalidOperation('Encrypted articles are not supported')
+
+        raw_prev = article_row.get('article_doc_json') or ''
+        prev_doc: Any = None
+        if raw_prev:
+            try:
+                prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+            except Exception:
+                prev_doc = None
+        if not isinstance(prev_doc, dict):
+            prev_doc = {'type': 'doc', 'content': []}
+
+        doc_json = _apply_outline_structure_snapshot(prev_doc, nodes)
+        doc_json_str = json.dumps(doc_json, ensure_ascii=False)
+        now = iso_now()
+
         CONN.execute(
-            'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ?, outline_structure_rev = outline_structure_rev + 1 WHERE id = ?',
             (now, '[]', doc_json_str, article_id),
         )
         # Links are structure-dependent; rebuild on snapshot (best-effort).
@@ -1825,7 +1856,206 @@ def apply_outline_structure_snapshot(
         except Exception:
             pass
 
-    return {'status': 'ok', 'articleId': article_id, 'updatedAt': now}
+    return {'status': 'ok', 'articleId': article_id, 'updatedAt': now, 'newStructureRev': current_rev + 1}
+
+
+def delete_outline_sections(
+    *,
+    article_id: str,
+    author_id: str,
+    section_ids: list[str],
+    op_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Delete one or more outline sections by id (structure-only: removes nodes from docJson).
+    This is cheaper than full doc-json/save and avoids rebuilding unrelated derived data.
+    """
+    if not article_id or not author_id:
+        raise ArticleNotFound('Article not found')
+    ids = [str(x or '').strip() for x in (section_ids or []) if str(x or '').strip()]
+    if not ids:
+        raise InvalidOperation('sectionIds is required')
+
+    if op_id:
+        newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='sections.delete', section_id=None)
+        if not newly:
+            return {'status': 'duplicate'}
+
+    with CONN:
+        article_row = CONN.execute(
+            'SELECT id, author_id, is_encrypted, encryption_salt, encryption_verifier, article_doc_json '
+            'FROM articles WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+            (article_id,),
+        ).fetchone()
+        if not article_row or str(article_row.get('author_id') or '') != str(author_id):
+            raise ArticleNotFound('Article not found')
+        encrypted_flag = bool(article_row.get('is_encrypted', 0)) or (
+            bool(article_row.get('encryption_salt')) and bool(article_row.get('encryption_verifier'))
+        )
+        if encrypted_flag:
+            raise InvalidOperation('Encrypted articles are not supported')
+
+        raw_prev = article_row.get('article_doc_json') or ''
+        prev_doc: Any = None
+        if raw_prev:
+            try:
+                prev_doc = json.loads(raw_prev) if isinstance(raw_prev, str) else raw_prev
+            except Exception:
+                prev_doc = None
+        if not isinstance(prev_doc, dict):
+            prev_doc = {'type': 'doc', 'content': []}
+
+        before_ids = {str((sec.get('attrs') or {}).get('id') or '').strip() for sec in _walk_outline_sections(prev_doc)}
+
+        changed = False
+        for sid in ids:
+            try:
+                if _delete_outline_section_by_id(prev_doc, sid):
+                    changed = True
+            except Exception:
+                continue
+
+        after_ids = {str((sec.get('attrs') or {}).get('id') or '').strip() for sec in _walk_outline_sections(prev_doc)}
+        removed_ids = sorted([sid for sid in before_ids if sid and sid not in after_ids])
+
+        # If nothing changed, keep the server state as-is (idempotent).
+        if not changed and not removed_ids:
+            return {'status': 'ok', 'articleId': article_id, 'updatedAt': article_row.get('updated_at') or iso_now(), 'removedBlockIds': []}
+
+        doc_json_str = json.dumps(prev_doc, ensure_ascii=False)
+        now = iso_now()
+        CONN.execute(
+            'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ? WHERE id = ?',
+            (now, '[]', doc_json_str, article_id),
+        )
+
+        # Best-effort derived updates limited to what depends on structure.
+        try:
+            _rebuild_article_links_for_article_id(article_id, doc_json=prev_doc)
+        except Exception:
+            pass
+        try:
+            if removed_ids:
+                delete_outline_sections_search_index(removed_ids)
+        except Exception:
+            pass
+        try:
+            if removed_ids:
+                delete_block_embeddings(list(removed_ids))
+        except Exception:
+            pass
+
+    return {'status': 'ok', 'articleId': article_id, 'updatedAt': now, 'removedBlockIds': removed_ids}
+
+
+def sync_outline_compact(
+    *,
+    article_id: str,
+    author_id: str,
+    deletes: list[dict[str, Any]] | None = None,
+    upserts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """
+    Batch sync for outline:
+    - deletes: [{ opId, sectionIds }]
+    - upserts: [{ opId, sectionId, headingJson, bodyJson, seq }]
+
+    The server applies deletes first, then upserts (content-only). Structure snapshots are handled
+    by /structure/snapshot separately.
+    """
+    latest_updated_at: str | None = None
+    delete_acks: list[dict[str, Any]] = []
+    upsert_acks: list[dict[str, Any]] = []
+
+    def _pick_latest(a: str | None, b: str | None) -> str | None:
+        if not a:
+            return b
+        if not b:
+            return a
+        return b if str(b) > str(a) else a
+
+    for item in deletes or []:
+        op_id = str((item or {}).get('opId') or '').strip()
+        section_ids = (item or {}).get('sectionIds') or []
+        if not op_id:
+            raise InvalidOperation('delete.opId is required')
+        if not isinstance(section_ids, list):
+            raise InvalidOperation('delete.sectionIds must be list')
+        out = delete_outline_sections(
+            article_id=article_id,
+            author_id=author_id,
+            section_ids=[str(x or '').strip() for x in section_ids],
+            op_id=op_id,
+        )
+        latest_updated_at = _pick_latest(latest_updated_at, str(out.get('updatedAt') or '').strip() or None)
+        if out.get('status') == 'duplicate':
+            delete_acks.append({'opId': op_id, 'result': 'duplicate', 'removedBlockIds': []})
+        else:
+            delete_acks.append(
+                {
+                    'opId': op_id,
+                    'result': 'ok',
+                    'removedBlockIds': out.get('removedBlockIds') or [],
+                }
+            )
+
+    for item in upserts or []:
+        op_id = str((item or {}).get('opId') or '').strip()
+        section_id = str((item or {}).get('sectionId') or '').strip()
+        heading_json = (item or {}).get('headingJson')
+        body_json = (item or {}).get('bodyJson')
+        seq = (item or {}).get('seq')
+        if not op_id:
+            raise InvalidOperation('upsert.opId is required')
+        if not section_id:
+            raise InvalidOperation('upsert.sectionId is required')
+        try:
+            seq_num = int(seq) if seq is not None else 0
+        except Exception:
+            raise InvalidOperation('upsert.seq must be integer') from None
+        out = upsert_outline_section_content(
+            article_id=article_id,
+            author_id=author_id,
+            section_id=section_id,
+            heading_json=heading_json,
+            body_json=body_json,
+            seq=seq_num,
+            op_id=op_id,
+            create_version_if_stale_hours=12,
+        )
+        latest_updated_at = _pick_latest(latest_updated_at, str(out.get('updatedAt') or '').strip() or None)
+        status = str(out.get('status') or '')
+        if status == 'duplicate':
+            upsert_acks.append({'opId': op_id, 'sectionId': section_id, 'result': 'duplicate'})
+        elif status == 'ignored' and str(out.get('reason') or '') == 'stale':
+            upsert_acks.append(
+                {
+                    'opId': op_id,
+                    'sectionId': section_id,
+                    'result': 'conflict',
+                    'reason': 'stale',
+                    'lastSeq': out.get('lastSeq'),
+                }
+            )
+        elif status == 'ok':
+            upsert_acks.append({'opId': op_id, 'sectionId': section_id, 'result': 'ok'})
+        else:
+            upsert_acks.append(
+                {
+                    'opId': op_id,
+                    'sectionId': section_id,
+                    'result': 'ignored',
+                    'reason': out.get('reason') or status or 'ignored',
+                }
+            )
+
+    return {
+        'status': 'ok',
+        'articleId': article_id,
+        'updatedAt': latest_updated_at or iso_now(),
+        'deleteAcks': delete_acks,
+        'upsertAcks': upsert_acks,
+    }
 
 
 def get_block_text_history(article_id: str, author_id: str, block_id: str, limit: int = 100) -> dict[str, Any]:
