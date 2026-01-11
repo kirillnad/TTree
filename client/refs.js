@@ -66,7 +66,6 @@ export const refs = {
   trashTabBtn: document.getElementById('trashTabBtn'),
   articlesTabBtn: document.getElementById('articlesTabBtn'),
   semanticReindexBtn: document.getElementById('semanticReindexBtn'),
-  lastChangeValue: document.getElementById('lastChangeValue'),
   graphToggleBtn: document.getElementById('graphToggleBtn'),
   listMenuBtn: document.getElementById('listMenuBtn'),
   listMenu: document.getElementById('listMenu'),

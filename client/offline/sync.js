@@ -1,6 +1,7 @@
 import {
   cacheArticle,
   cacheArticlesIndex,
+  clearCachedArticleLocalDraft,
   getCachedArticle,
   getCachedArticlesIndex,
   getCachedArticlesSyncMeta,
@@ -43,8 +44,8 @@ let fullPullStarted = false;
 let fullPullRunning = false;
 let outboxIntervalId = null;
 
-// Outline sync policy (Variant B): don't start sync more often than once per 3s per article.
-const OUTLINE_FLUSH_MIN_INTERVAL_MS = 3000;
+// Outline sync policy (Variant B): don't start sync more often than once per 2s per article.
+const OUTLINE_FLUSH_MIN_INTERVAL_MS = 2000;
 const lastOutlineFlushStartedAtByArticle = new Map();
 
 // Avoid hammering the server with structure snapshots while the user is actively dragging/reordering.
@@ -714,14 +715,41 @@ async function flushOutlineArticleOps(articleId, ops) {
   if (last && now - last < OUTLINE_FLUSH_MIN_INTERVAL_MS) return;
   lastOutlineFlushStartedAtByArticle.set(aid, now);
 
-  const deleteOps = [];
-  const upsertOps = [];
-  const structureOps = [];
-  for (const op of ops || []) {
-    if (!op || String(op.articleId || '') !== aid) continue;
-    if (op.type === 'delete_sections') deleteOps.push(op);
-    else if (op.type === 'section_upsert_content') upsertOps.push(op);
-    else if (op.type === 'structure_snapshot') structureOps.push(op);
+  const loadLatestOutlineOps = async () => {
+    const latest = await listOutbox(200);
+    const deleteOps = [];
+    const upsertOps = [];
+    const structureOps = [];
+    for (const op of latest || []) {
+      if (!op || String(op.articleId || '') !== aid) continue;
+      if (op.type === 'delete_sections') deleteOps.push(op);
+      else if (op.type === 'section_upsert_content') upsertOps.push(op);
+      else if (op.type === 'structure_snapshot') structureOps.push(op);
+    }
+    return { deleteOps, upsertOps, structureOps };
+  };
+
+  // STRICT ordering requirement:
+  // When flushing, ALWAYS send update (/sync/compact: delete+upsert) before structure (/structure/snapshot).
+  // This prevents the server from applying a structure snapshot that references a section that hasn't been upserted yet.
+  // We do at most 2 compact passes per flush to avoid an unbounded loop when user keeps typing.
+  let passes = 0;
+  let deleteOps = [];
+  let upsertOps = [];
+  let structureOps = [];
+  try {
+    ({ deleteOps, upsertOps, structureOps } = await loadLatestOutlineOps());
+  } catch {
+    // fallback to the snapshot passed in
+    deleteOps = [];
+    upsertOps = [];
+    structureOps = [];
+    for (const op of ops || []) {
+      if (!op || String(op.articleId || '') !== aid) continue;
+      if (op.type === 'delete_sections') deleteOps.push(op);
+      else if (op.type === 'section_upsert_content') upsertOps.push(op);
+      else if (op.type === 'structure_snapshot') structureOps.push(op);
+    }
   }
 
   const deletedSectionIds = new Set();
@@ -775,12 +803,50 @@ async function flushOutlineArticleOps(articleId, ops) {
     })
     .filter(Boolean);
 
-  const outboxIdByOpId = new Map();
-  for (const d of deletes) outboxIdByOpId.set(String(d.opId), d._outboxId);
-  for (const u of upserts) outboxIdByOpId.set(String(u.opId), u._outboxId);
+  const sendCompactOnce = async () => {
+    const deletes = deleteOps
+      .map((op) => {
+        const sectionIds = Array.isArray(op.payload?.sectionIds) ? op.payload.sectionIds : [];
+        return {
+          opId: op.payload?.opId || op.id,
+          sectionIds: sectionIds.filter(Boolean).map((x) => String(x)),
+          _outboxId: op.id,
+        };
+      })
+      .filter((d) => d.sectionIds.length);
 
-  // Update: deletes + upserts
-  if (deletes.length || upserts.length) {
+    const upserts = upsertOps
+      .map((op) => {
+        const sid = String(op.payload?.sectionId || '').trim();
+        if (!sid) return null;
+        if (deletedSectionIds.has(sid)) return null;
+        return {
+          opId: op.payload?.opId || op.id,
+          sectionId: sid,
+          headingJson: op.payload?.headingJson || null,
+          bodyJson: op.payload?.bodyJson || null,
+          seq: op.payload?.seq || null,
+          clientQueuedAt: op.payload?.clientQueuedAt ?? null,
+          _outboxId: op.id,
+        };
+      })
+      .filter(Boolean);
+
+    const outboxIdByOpId = new Map();
+    for (const d of deletes) outboxIdByOpId.set(String(d.opId), d._outboxId);
+    for (const u of upserts) outboxIdByOpId.set(String(u.opId), u._outboxId);
+
+    if (!deletes.length && !upserts.length) return false;
+
+    try {
+      revertLog('sync.flush.outline_compact.start', {
+        articleId: aid,
+        deletesCount: deletes.length,
+        upsertsCount: upserts.length,
+      });
+    } catch {
+      // ignore
+    }
     const result = await rawApiRequest(`/api/articles/${encodeURIComponent(aid)}/sync/compact`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -797,6 +863,16 @@ async function flushOutlineArticleOps(articleId, ops) {
 
     const updatedAt = result?.updatedAt || null;
     if (updatedAt) await touchCachedArticleUpdatedAt(aid, updatedAt).catch(() => {});
+    try {
+      revertLog('sync.flush.outline_compact.ok', {
+        articleId: aid,
+        updatedAt: updatedAt || null,
+        deleteAcks: Array.isArray(result?.deleteAcks) ? result.deleteAcks.length : null,
+        upsertAcks: Array.isArray(result?.upsertAcks) ? result.upsertAcks.length : null,
+      });
+    } catch {
+      // ignore
+    }
 
     // Deletes acks
     const deleteAcks = Array.isArray(result?.deleteAcks) ? result.deleteAcks : [];
@@ -837,15 +913,41 @@ async function flushOutlineArticleOps(articleId, ops) {
     if (conflicts.length) {
       await handleOutlineConflicts(aid, conflicts);
     }
+    return true;
+  };
+
+  while (passes < 2) {
+    passes += 1;
+    // Compact must always be flushed before any structure snapshot.
+    const did = await sendCompactOnce();
+    if (!did) break;
+    try {
+      ({ deleteOps, upsertOps, structureOps } = await loadLatestOutlineOps());
+    } catch {
+      break;
+    }
   }
 
   // Structure snapshot: send at most one coalesced op.
-  const structureOp = structureOps.length ? structureOps[structureOps.length - 1] : null;
+  // After compact pass(es), we intentionally re-check outbox. If new delete/upsert arrived, we MUST NOT
+  // send structure first; it will wait until next flush.
+  let structureOp = null;
+  try {
+    ({ deleteOps, upsertOps, structureOps } = await loadLatestOutlineOps());
+  } catch {
+    // ignore
+  }
+  if (!deleteOps.length && !upsertOps.length) {
+    structureOp = structureOps.length ? structureOps[structureOps.length - 1] : null;
+  }
   if (structureOp) {
     try {
       const lastSent = Number(lastStructureSnapshotSentAtByArticle.get(aid) || 0) || 0;
       const now2 = Date.now();
-      if (lastSent && now2 - lastSent < STRUCTURE_SNAPSHOT_MIN_INTERVAL_MS) return;
+      if (lastSent && now2 - lastSent < STRUCTURE_SNAPSHOT_MIN_INTERVAL_MS) {
+        // Keep the op in outbox; we'll send it on the next flush.
+        return;
+      }
     } catch {
       // ignore
     }
@@ -862,6 +964,16 @@ async function flushOutlineArticleOps(articleId, ops) {
       } catch {
         baseStructureRev = null;
       }
+      try {
+        revertLog('sync.flush.structure_snapshot.start', {
+          articleId: aid,
+          opId: structureOp.id,
+          baseStructureRev,
+          nodesCount: nodes.length,
+        });
+      } catch {
+        // ignore
+      }
       const res = await rawApiRequest(`/api/articles/${encodeURIComponent(aid)}/structure/snapshot`, {
         method: 'PUT',
         body: JSON.stringify({
@@ -877,13 +989,40 @@ async function flushOutlineArticleOps(articleId, ops) {
       } else if (Number.isFinite(Number(res?.currentStructureRev))) {
         await touchCachedArticleOutlineStructureRev(aid, Number(res.currentStructureRev));
       }
-      await removeOutboxOp(structureOp.id).catch(() => {});
       try {
-        lastStructureSnapshotSentAtByArticle.set(aid, Date.now());
+        revertLog('sync.flush.structure_snapshot.done', {
+          articleId: aid,
+          opId: structureOp.id,
+          status: String(res?.status || ''),
+          updatedAt: updatedAt || null,
+          newStructureRev: Number.isFinite(Number(res?.newStructureRev)) ? Number(res.newStructureRev) : null,
+          currentStructureRev: Number.isFinite(Number(res?.currentStructureRev)) ? Number(res.currentStructureRev) : null,
+        });
       } catch {
         // ignore
       }
+      const status = String(res?.status || '');
+      if (status === 'ok' || status === 'duplicate') {
+        await removeOutboxOp(structureOp.id).catch(() => {});
+        try {
+          lastStructureSnapshotSentAtByArticle.set(aid, Date.now());
+        } catch {
+          // ignore
+        }
+      }
     }
+  }
+
+  // If we have no more pending outline ops, allow server fetches to overwrite cache again.
+  try {
+    const remaining = await listOutbox(200);
+    const stillHasOutline = (remaining || []).some((o) => isOutlineOp(o) && String(o.articleId || '') === aid);
+    if (!stillHasOutline) {
+      await clearCachedArticleLocalDraft(aid).catch(() => {});
+      revertLog('sync.flush.localDraft.cleared', { articleId: aid });
+    }
+  } catch {
+    // ignore
   }
 }
 

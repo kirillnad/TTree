@@ -1795,10 +1795,7 @@ def apply_outline_structure_snapshot(
     if nodes is None or not isinstance(nodes, list):
         raise InvalidOperation('nodes must be a list')
 
-    if op_id:
-        newly = _try_mark_op_applied(op_id, article_id=article_id, op_type='structure.snapshot', section_id=None)
-        if not newly:
-            return {'status': 'duplicate'}
+    oid = str(op_id or '').strip() or None
 
     # Concurrency guard: lock the article row and apply snapshot to the latest doc_json.
     # Otherwise an older operation can read stale doc_json, wait on a row lock, and later overwrite newer state.
@@ -1811,6 +1808,14 @@ def apply_outline_structure_snapshot(
         if not article_row or str(article_row.get('author_id') or '') != str(author_id):
             raise ArticleNotFound('Article not found')
         current_rev = int(article_row.get('outline_structure_rev') or 0)
+        if oid:
+            dup = CONN.execute('SELECT 1 AS ok FROM applied_ops WHERE op_id = ?', (oid,)).fetchone()
+            if dup:
+                return {
+                    'status': 'duplicate',
+                    'articleId': article_id,
+                    'updatedAt': article_row.get('updated_at') or iso_now(),
+                }
         if base_rev is not None:
             try:
                 base_rev_num = int(base_rev)
@@ -1845,6 +1850,20 @@ def apply_outline_structure_snapshot(
         doc_json = _apply_outline_structure_snapshot(prev_doc, nodes)
         doc_json_str = json.dumps(doc_json, ensure_ascii=False)
         now = iso_now()
+
+        if oid:
+            # Mark op as applied ONLY if we are going to actually apply it (i.e. base_rev is not stale).
+            try:
+                CONN.execute(
+                    'INSERT INTO applied_ops (op_id, article_id, section_id, op_type, created_at) VALUES (?, ?, ?, ?, ?)',
+                    (oid, article_id, None, 'structure.snapshot', now),
+                )
+            except Exception:
+                return {
+                    'status': 'duplicate',
+                    'articleId': article_id,
+                    'updatedAt': article_row.get('updated_at') or iso_now(),
+                }
 
         CONN.execute(
             'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ?, outline_structure_rev = outline_structure_rev + 1 WHERE id = ?',

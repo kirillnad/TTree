@@ -4,12 +4,24 @@
   const LAST_USER_KEY = 'ttree_last_user_v1';
   const LAST_ACTIVE_KEY = 'ttree_last_active_at_v1';
   const MAX_QUEUED_SECTIONS = 200;
-  const IDLE_MS = 15 * 60 * 1000;
-  const SLOW_BOOT_MS = 2500;
-  const DEBUG_KEY = 'ttree_debug_quick_notes_v1';
-  const KNOWN_USER_KEYS_KEY = 'ttree_offline_known_user_keys_v1';
-  const OFFLINE_DB_PREFIX = 'memus_offline_v1_';
-  const FORCE_CACHED_INDEX_KEY = 'ttree_offline_recovery_force_index_v1';
+	  const IDLE_MS = 15 * 60 * 1000;
+	  const SLOW_BOOT_MS = 2500;
+	  const DEBUG_KEY = 'ttree_debug_quick_notes_v1';
+	  const KNOWN_USER_KEYS_KEY = 'ttree_offline_known_user_keys_v1';
+	  const OFFLINE_DB_PREFIX = 'memus_offline_v1_';
+	  const FORCE_CACHED_INDEX_KEY = 'ttree_offline_recovery_force_index_v1';
+	  const OFFLINE_OPEN_REQUEST_KEY = 'ttree_boot_open_offline_requested_v1';
+
+	  // When user explicitly requested "open offline", avoid:
+	  // - showing the quick-note modal automatically
+	  // - extra reloads on service worker controller changes
+	  let offlineOpenRequested = false;
+	  try {
+	    offlineOpenRequested = window.sessionStorage?.getItem?.(OFFLINE_OPEN_REQUEST_KEY) === '1';
+	    if (offlineOpenRequested) window.sessionStorage?.removeItem?.(OFFLINE_OPEN_REQUEST_KEY);
+	  } catch {
+	    // ignore
+	  }
 
   function debugEnabled() {
     try {
@@ -46,9 +58,9 @@
     }
   }
 
-  function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) return;
-    try {
+	  function registerServiceWorker() {
+	    if (!('serviceWorker' in navigator)) return;
+	    try {
       navigator.serviceWorker
         .register('/uploads-sw.js', { scope: '/', updateViaCache: 'none' })
         .then((reg) => {
@@ -88,22 +100,25 @@
         })
         .catch(() => {});
 
-	      try {
-	        // Avoid a "double reload" after a user-initiated refresh:
-	        // the SW can finish installing/claiming a few seconds later and fire `controllerchange`.
-	        // Only force-reload when the page started controlled (this is an in-place update),
-	        // and it wasn't a manual reload navigation.
-	        const startedControlled = Boolean(navigator.serviceWorker.controller);
-	        const manualReloadNav = isReloadNavigation();
-	        let reloaded = false;
-	        navigator.serviceWorker.addEventListener('controllerchange', () => {
-	          if (reloaded) return;
-	          reloaded = true;
-	          if (!startedControlled) return;
-	          if (manualReloadNav) return;
-	          try {
-	            window.location.reload();
-	          } catch {
+		      try {
+		        // Avoid a "double reload" after a user-initiated refresh:
+		        // the SW can finish installing/claiming a few seconds later and fire `controllerchange`.
+		        // Only force-reload when the page started controlled (this is an in-place update),
+		        // and it wasn't a manual reload navigation.
+		        const startedControlled = Boolean(navigator.serviceWorker.controller);
+		        const manualReloadNav = isReloadNavigation();
+		        let reloaded = false;
+		        navigator.serviceWorker.addEventListener('controllerchange', () => {
+		          if (reloaded) return;
+		          reloaded = true;
+		          // If the user explicitly requested offline open, do not auto-reload again.
+		          // (On some browsers navigation type may not be reported as "reload", which can cause loops.)
+		          if (offlineOpenRequested) return;
+		          if (!startedControlled) return;
+		          if (manualReloadNav) return;
+		          try {
+		            window.location.reload();
+		          } catch {
 	            // ignore
 	          }
 	        });
@@ -1302,12 +1317,233 @@
     }
   }
 
-  // Public pages should load immediately (no boot modal).
-  if (isPublicPath()) {
-    registerServiceWorker();
-    import(APP_MODULE).catch(() => {});
-    return;
-  }
+  // Ensure pending outline structure changes are enqueued before the page is unloaded.
+  // This reduces "F5 reverted my structure" cases when the snapshot debounce hasn't fired yet.
+	  function attachOutlineFlushOnHide() {
+    const flushOnce = () => {
+      try {
+        // Enqueue any pending outline ops (structure/deletes) immediately.
+        import('./outline/editor.js')
+          .then((m) => m.flushOutlineAutosave?.({ mode: 'queue' }))
+          .catch(() => {});
+      } catch {
+        // ignore
+      }
+      try {
+        // Best-effort: start network flush (may be canceled by the browser on unload).
+        import('./offline/sync.js')
+          .then((m) => m.flushOutboxOnce?.())
+          .catch(() => {});
+      } catch {
+        // ignore
+      }
+    };
+    try {
+      window.addEventListener('pagehide', flushOnce);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushOnce();
+      });
+    } catch {
+      // ignore
+    }
+	  }
+
+	  let modalShown = false;
+	  const showOnce = (reason) => {
+	    if (modalShown) return;
+	    modalShown = true;
+	    try {
+	      if (document.readyState === 'loading') {
+	        document.addEventListener('DOMContentLoaded', () => showQuickNoteModal({ reason }), { once: true });
+	      } else {
+	        showQuickNoteModal({ reason });
+	      }
+	    } catch {
+	      // ignore
+	    }
+	  };
+
+		  function setAuthOverlayStatus({ subtitle = null, error = null, showRetry = false, showOffline = false } = {}) {
+		    try {
+		      const overlay = document.getElementById('authOverlay');
+		      if (!overlay) return;
+	      const subtitleEl = document.getElementById('authSubtitle');
+	      const errorEl = document.getElementById('authError');
+	      if (subtitleEl && subtitle != null) subtitleEl.textContent = String(subtitle);
+	      if (errorEl) {
+	        const msg = error != null ? String(error) : '';
+	        errorEl.textContent = msg;
+	        errorEl.classList.toggle('hidden', !msg);
+	      }
+
+	      const card = overlay.querySelector('.auth-card') || overlay;
+
+	      let actions = document.getElementById('bootLoadActions');
+	      if (!actions) {
+	        actions = document.createElement('div');
+	        actions.id = 'bootLoadActions';
+	        actions.style.display = 'flex';
+	        actions.style.gap = '10px';
+	        actions.style.flexWrap = 'wrap';
+	        actions.style.marginTop = '12px';
+	        card.appendChild(actions);
+	      }
+	      actions.innerHTML = '';
+
+		      const mkBtn = (label, onClick) => {
+		        const btn = document.createElement('button');
+		        btn.type = 'button';
+		        btn.className = 'auth-submit';
+	        btn.style.padding = '10px 14px';
+	        btn.style.borderRadius = '999px';
+	        btn.style.fontSize = '13px';
+	        btn.textContent = label;
+	        btn.addEventListener('click', onClick);
+	        return btn;
+	      };
+
+		      if (showRetry) {
+		        actions.appendChild(
+		          mkBtn('Перезагрузить', () => {
+	            try {
+	              window.location.reload();
+	            } catch {
+	              // ignore
+	            }
+	          }),
+	        );
+		      }
+		      if (showOffline) {
+			        const openOffline = () => {
+			          // This button is meant to get the user into the app in "offline-first" mode:
+			          // try to reload under the Service Worker cache, falling back to a foreground app import.
+			          let hasSwController = false;
+			          try {
+			            hasSwController = Boolean('serviceWorker' in navigator && navigator.serviceWorker?.controller);
+			          } catch {
+			            hasSwController = false;
+			          }
+			          const offlineNow = isOffline();
+			          if (offlineNow && !hasSwController) {
+			            setAuthOverlayStatus({
+			              subtitle: 'Нет сети',
+			              error:
+			                'Оффлайн-режим доступен после того, как приложение хотя бы один раз открылось с интернетом и закешировало файлы.\n\n' +
+			                'Если вы только что установили PWA — откройте его онлайн, дождитесь загрузки, затем можно использовать без сети.',
+			              showRetry: true,
+			              showOffline: true,
+			            });
+			            return;
+			          }
+			          try {
+			            window.sessionStorage?.setItem?.(OFFLINE_OPEN_REQUEST_KEY, '1');
+			          } catch {
+			            // ignore
+			          }
+		          try {
+		            const subtitleEl = document.getElementById('authSubtitle');
+		            if (subtitleEl) subtitleEl.textContent = 'Открываем автономный режим…';
+		            const errorEl = document.getElementById('authError');
+		            if (errorEl) {
+		              errorEl.textContent = '';
+		              errorEl.classList.add('hidden');
+		            }
+		          } catch {
+		            // ignore
+		          }
+			          try {
+			            // If SW is controlling, reload should immediately use cached app shell.
+			            if (hasSwController) {
+			              window.location.reload();
+			              return;
+			            }
+			          } catch {
+			            // ignore
+		          }
+		          try {
+		            // Even without SW control, a normal reload may bring it under control.
+		            window.location.reload();
+		            return;
+		          } catch {
+		            // ignore
+		          }
+		          try {
+		            // As a last resort, attempt to load the app module again (foreground).
+		            loadAppModule({ reason: 'offline_button', background: false });
+		          } catch {
+		            // ignore
+		          }
+		        };
+		        actions.appendChild(
+		          mkBtn('Открыть оффлайн-буфер', () => {
+		            try {
+		              openOffline();
+		            } catch {
+		              // ignore
+		            }
+		          }),
+		        );
+		      }
+		    } catch {
+		      // ignore
+	    }
+	  }
+
+	  let appLoadStarted = false;
+	  let appLoadFailed = false;
+		  function loadAppModule({ reason = '', background = false } = {}) {
+	    if (appLoadFailed) return;
+	    if (appLoadStarted && !background) {
+	      // Don't spam multiple foreground imports.
+	      return;
+	    }
+	    appLoadStarted = true;
+	    try {
+	      const p = import(APP_MODULE);
+	      if (p && typeof p.catch === 'function') {
+		        p.catch((err) => {
+		          appLoadFailed = true;
+		          const offline = isOffline();
+		          const msg =
+		            'Не удалось загрузить приложение. ' +
+		            (offline ? 'Похоже, сейчас нет сети.' : 'Похоже, проблема с сетью/соединением.') +
+		            ' Можно продолжить в автономном режиме или попробовать перезагрузить страницу.';
+		          setAuthOverlayStatus({
+		            subtitle: 'Ошибка загрузки',
+		            error: msg,
+		            showRetry: true,
+		            showOffline: true,
+		          });
+		          // Do not auto-open the quick-note modal when user explicitly requested "open offline":
+		          // they are trying to get into the main app UI (under SW cache), not into the buffer modal.
+		          if (!offlineOpenRequested) {
+		            try {
+		              if (!modalShown) showOnce('ошибка загрузки');
+		            } catch {
+		              // ignore
+		            }
+		          }
+		          dlog('app.import.failed', { reason, message: String(err?.message || err || '') });
+		        });
+		      }
+	    } catch (err) {
+	      appLoadFailed = true;
+	      setAuthOverlayStatus({
+	        subtitle: 'Ошибка загрузки',
+	        error: 'Не удалось запустить приложение. Попробуйте перезагрузить страницу.',
+	        showRetry: true,
+	        showOffline: true,
+	      });
+	      dlog('app.import.throw', { reason, message: String(err?.message || err || '') });
+	    }
+	  }
+
+	  // Public pages should load immediately (no boot modal).
+	  if (isPublicPath()) {
+	    registerServiceWorker();
+	    loadAppModule({ reason: 'public', background: false });
+	    return;
+	  }
 
   registerServiceWorker();
 
@@ -1317,49 +1553,42 @@
   const reloadNav = isReloadNavigation();
   const idleTooLong = isIdleTooLong();
   attachActivityTracking();
-  markActiveNow();
+  attachOutlineFlushOnHide();
+	  markActiveNow();
 
-  let modalShown = false;
-  const showOnce = (reason) => {
-    if (modalShown) return;
-    modalShown = true;
-    try {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => showQuickNoteModal({ reason }), { once: true });
-      } else {
-        showQuickNoteModal({ reason });
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const shouldShowNow =
-    offline ||
-    reloadNav ||
-    idleTooLong ||
-    (coldStart && knownUser);
+	  const shouldShowNow =
+	    (offline && !offlineOpenRequested) ||
+	    reloadNav ||
+	    idleTooLong ||
+	    (coldStart && knownUser);
 
   if (shouldShowNow) {
     const reason = offline ? 'нет сети' : reloadNav ? 'перезагрузка' : idleTooLong ? 'простой > 15 мин' : 'холодный старт';
     showOnce(reason);
   }
 
-  // "Slow boot" fallback: if full app hasn't started quickly, show the modal anyway.
-  window.setTimeout(() => {
-    try {
-      if (modalShown) return;
-      if (window.__memusAppStarted) return;
-      showOnce('медленная загрузка');
-    } catch {
-      // ignore
-    }
-  }, SLOW_BOOT_MS);
+	  // "Slow boot" fallback: if full app hasn't started quickly, show the modal anyway.
+		  window.setTimeout(() => {
+		    try {
+		      if (modalShown) return;
+		      if (window.__memusAppStarted) return;
+		      if (offlineOpenRequested) return;
+		      setAuthOverlayStatus({
+		        subtitle: 'Медленная загрузка…',
+		        error: 'Если сеть нестабильна, можно использовать оффлайн-буфер. Приложение продолжит пытаться загрузиться в фоне.',
+		        showRetry: true,
+		        showOffline: true,
+		      });
+	      showOnce('медленная загрузка');
+	    } catch {
+	      // ignore
+	    }
+	  }, SLOW_BOOT_MS);
 
-  // Always load the full app; prefer background/idle when we already show the modal.
-  if (modalShown || offline) {
-    loadFullAppInBackground();
-  } else {
-    import(APP_MODULE).catch(() => {});
-  }
-})();
+	  // Always load the full app; prefer background/idle when we already show the modal.
+	  if (modalShown || offline) {
+	    runOnIdle(() => loadAppModule({ reason: 'idle', background: true }), { timeout: 5000, fallbackDelay: 1200 });
+	  } else {
+	    loadAppModule({ reason: 'foreground', background: false });
+	  }
+	})();

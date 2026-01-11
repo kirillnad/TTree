@@ -57,7 +57,6 @@ export const state = {
   articlesIndex: [],
   deletedArticlesIndex: [],
   articleFilterQuery: '',
-  lastChangeTimestamp: null,
   isMarkdownInserting: false,
   isTrashView: false,
   favoriteArticles: [],

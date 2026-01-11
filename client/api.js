@@ -185,6 +185,7 @@ export async function logout() {
 }
 
 let fetchArticlesIndexInFlight = null;
+let refreshArticlesIndexInFlight = null;
 const FORCE_CACHED_INDEX_KEY = 'ttree_offline_recovery_force_index_v1';
 
 function forceCachedIndexEnabled() {
@@ -195,13 +196,107 @@ function forceCachedIndexEnabled() {
   }
 }
 
+async function fetchArticlesIndexNetwork({ timeoutMs }) {
+  const ms = typeof timeoutMs === 'number' ? Math.max(0, Math.floor(timeoutMs)) : 0;
+  let timer = null;
+  let controller = null;
+  try {
+    if (ms > 0 && typeof AbortController !== 'undefined') {
+      controller = new AbortController();
+      timer = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }, ms);
+    }
+    return await apiRequest('/api/articles', controller ? { signal: controller.signal } : {});
+  } catch (err) {
+    // Treat abort/timeout as "server down" so the UI can switch to offline-first behavior.
+    const msg = err?.message || String(err || '');
+    if (msg.toLowerCase().includes('abort')) {
+      try {
+        state.serverStatus = 'down';
+        state.serverStatusText = 'timeout';
+      } catch {
+        // ignore
+      }
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export function fetchArticlesIndex() {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     return getCachedArticlesIndex().catch(() => []);
   }
   if (fetchArticlesIndexInFlight) return fetchArticlesIndexInFlight;
-  fetchArticlesIndexInFlight = apiRequest('/api/articles')
-    .then(async (index) => {
+
+  // Prefer showing cached index quickly on slow networks, while refreshing in background.
+  const preferCacheMs = state?.offlineReady ? 600 : 250;
+  const networkTimeoutMs = 2200;
+
+  fetchArticlesIndexInFlight = (async () => {
+    const cacheStartedAt = perfEnabled() ? performance.now() : 0;
+    let cacheTimer = null;
+    let cacheSettled = false;
+    const timeoutPromise = new Promise((resolve) => {
+      cacheTimer = setTimeout(() => {
+        if (!cacheSettled && cacheStartedAt) perfLog('[offline-first][articles] cache.lookup.timeout', { preferCacheMs });
+        resolve(null);
+      }, preferCacheMs);
+    });
+    const cachedLookupPromise = getCachedArticlesIndex()
+      .then((index) => {
+        cacheSettled = true;
+        if (cacheTimer) clearTimeout(cacheTimer);
+        cacheTimer = null;
+        if (cacheStartedAt) {
+          perfLog('[offline-first][articles] cache.lookup.done', {
+            ms: Math.round(performance.now() - cacheStartedAt),
+            hit: Boolean(index && index.length),
+          });
+        }
+        return index;
+      })
+      .catch(() => {
+        cacheSettled = true;
+        if (cacheTimer) clearTimeout(cacheTimer);
+        cacheTimer = null;
+        return null;
+      });
+
+    const cachedFast = await Promise.race([cachedLookupPromise, timeoutPromise]);
+
+    if (cachedFast && cachedFast.length) {
+      if (!refreshArticlesIndexInFlight) {
+        refreshArticlesIndexInFlight = fetchArticlesIndexNetwork({ timeoutMs: networkTimeoutMs })
+          .then(async (index) => {
+            // Do not block other IndexedDB transactions (e.g., current article open) on a big index update.
+            // Schedule in idle so article caching/read can proceed first.
+            try {
+              if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => cacheArticlesIndex(index).catch(() => {}), { timeout: 2500 });
+              } else {
+                setTimeout(() => cacheArticlesIndex(index).catch(() => {}), 250);
+              }
+            } catch {
+              cacheArticlesIndex(index).catch(() => {});
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            refreshArticlesIndexInFlight = null;
+          });
+      }
+      return cachedFast;
+    }
+
+    const index = await fetchArticlesIndexNetwork({ timeoutMs: networkTimeoutMs });
+
       // Do not block other IndexedDB transactions (e.g., current article open) on a big index update.
       // Schedule in idle so article caching/read can proceed first.
       try {
@@ -231,7 +326,7 @@ export function fetchArticlesIndex() {
       }
 
       return index;
-    })
+  })()
     .catch(async (err) => {
       const cached = await getCachedArticlesIndex().catch(() => null);
       if (cached && cached.length) return cached;
@@ -464,11 +559,39 @@ export function fetchArticle(id, options = {}) {
   //   - unchanged => return cached, skip full GET
   //   - changed/unknown => fetch full article
   // - If no cached: fetch full article
-  return cachedPromise.then(async (cached) => {
-    if (!cached) {
+  return cachedPromise.then(async (cachedFast) => {
+    if (!cachedFast) {
       if (!navigator.onLine && String(id) === 'inbox') {
         perfLog('[offline-first][article] choose.local.inbox.offline', { id });
         return withPendingQuickNotesOverlay(buildLocalInboxArticle());
+      }
+
+      // We might have a cache hit that arrived slightly after the timeout (IndexedDB busy).
+      // In that case, prefer cached content over a slow network fetch, but still allow the
+      // network request to refresh the cache in background.
+      const taggedCache = cachedLookupPromise
+        .then((cached) => {
+          if (!cached) return new Promise(() => {});
+          return { src: 'cache', article: withPendingQuickNotesOverlay(cached) };
+        })
+        .catch(() => new Promise(() => {}));
+
+      const taggedNetwork = (async () => ({
+        src: 'network',
+        article: await withPendingQuickNotesOverlay(fetchOnline()),
+      }))();
+
+      const winner = await Promise.race([taggedCache, taggedNetwork]);
+      if (winner?.src === 'cache') {
+        perfLog('[offline-first][article] choose.cache.late', { id });
+        try {
+          revertLog('article.choose', { articleId: id, choose: 'cache.late' });
+        } catch {
+          // ignore
+        }
+        // Refresh cache in background (already in flight via taggedNetwork).
+        taggedNetwork.catch(() => {});
+        return winner.article;
       }
       perfLog('[offline-first][article] choose.network.no-cache', { id });
       try {
@@ -476,31 +599,31 @@ export function fetchArticle(id, options = {}) {
       } catch {
         // ignore
       }
-      return withPendingQuickNotesOverlay(await fetchOnline());
+      return winner.article;
     }
     if (!navigator.onLine) {
-      perfLog('[offline-first][article] choose.cache.offline', { id, updatedAt: cached?.updatedAt || null });
+      perfLog('[offline-first][article] choose.cache.offline', { id, updatedAt: cachedFast?.updatedAt || null });
       try {
         revertLog('article.choose', {
           articleId: id,
           choose: 'cache.offline',
-          cachedUpdatedAt: cached?.updatedAt || null,
-          cachedDocHash: docJsonHash(cached?.docJson || null),
+          cachedUpdatedAt: cachedFast?.updatedAt || null,
+          cachedDocHash: docJsonHash(cachedFast?.docJson || null),
         });
       } catch {
         // ignore
       }
-      return withPendingQuickNotesOverlay(cached);
+      return withPendingQuickNotesOverlay(cachedFast);
     }
 
-    const cachedUpdatedAt = String(cached.updatedAt || cached.updated_at || '').trim();
+    const cachedUpdatedAt = String(cachedFast.updatedAt || cachedFast.updated_at || '').trim();
     if (!cachedUpdatedAt) {
       perfLog('[offline-first][article] choose.network.no-cached-updatedAt', { id });
       try {
         revertLog('article.choose', {
           articleId: id,
           choose: 'network.no_cached_updatedAt',
-          cachedDocHash: docJsonHash(cached?.docJson || null),
+          cachedDocHash: docJsonHash(cachedFast?.docJson || null),
         });
       } catch {
         // ignore
@@ -520,12 +643,12 @@ export function fetchArticle(id, options = {}) {
             choose: 'cache.meta.same',
             cachedUpdatedAt,
             serverUpdatedAt,
-            cachedDocHash: docJsonHash(cached?.docJson || null),
+            cachedDocHash: docJsonHash(cachedFast?.docJson || null),
           });
         } catch {
           // ignore
         }
-        return withPendingQuickNotesOverlay(cached);
+        return withPendingQuickNotesOverlay(cachedFast);
       }
       perfLog('[offline-first][article] choose.network.meta.diff', {
         id,
@@ -565,13 +688,13 @@ export function fetchArticle(id, options = {}) {
               ? 'cache.meta.timeout'
               : 'cache.meta.failed',
           cachedUpdatedAt,
-          cachedDocHash: docJsonHash(cached?.docJson || null),
+          cachedDocHash: docJsonHash(cachedFast?.docJson || null),
           error: err?.message || String(err || ''),
         });
       } catch {
         // ignore
       }
-      return withPendingQuickNotesOverlay(cached);
+      return withPendingQuickNotesOverlay(cachedFast);
     }
   });
 }

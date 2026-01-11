@@ -31,6 +31,9 @@ let outlineEditorInstance = null;
 let mountPromise = null;
 let autosaveTimer = null;
 let autosaveInFlight = false;
+let editHeartbeatTimer = null;
+let lastHeartbeatSectionId = null;
+let lastTooBigToastAt = 0;
 let outlineLastSavedAt = null;
 let lastActiveSectionId = null;
 const pendingUploadObjectUrls = new Map(); // token -> objectUrl
@@ -79,6 +82,7 @@ let lastActiveSnapshotMemo = { articleId: null, sectionId: null, collapsed: null
 const OUTLINE_SECTION_CLIPBOARD_KEY = 'ttree_outline_section_clipboard_v1';
 const OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY = 'ttree_outline_table_column_clipboard_v1';
 const PENDING_UPLOAD_IMG_PREFIX = 'pending-attachment:';
+const OUTLINE_EDIT_HEARTBEAT_MS = 2000;
 
 function findImagePosByUploadToken(doc, token) {
   let found = null;
@@ -650,6 +654,21 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
     if (!aid) return;
     if (!editor) return;
     structureDirty = true;
+    // IMPORTANT: While user is in edit-mode, do NOT enqueue/send structure snapshots.
+    // This prevents the server from receiving a structure snapshot for a just-created
+    // section before its content upsert is committed (and avoids "new block falls to bottom").
+    try {
+      const st = outlineEditModeKey?.getState?.(editor.state) || null;
+      if (st?.editingSectionId) {
+        if (structureSnapshotTimer) {
+          clearTimeout(structureSnapshotTimer);
+          structureSnapshotTimer = null;
+        }
+        return;
+      }
+    } catch {
+      // ignore
+    }
     if (structureSnapshotTimer) clearTimeout(structureSnapshotTimer);
     structureSnapshotTimer = setTimeout(() => {
       structureSnapshotTimer = null;
@@ -658,14 +677,25 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
         const pmDoc = editor.state?.doc;
         const nodes = computeOutlineStructureNodesFromDoc(pmDoc);
         if (!nodes.length) return;
-        try {
-          revertLog('outline.enqueue.structure_snapshot', {
-            articleId: aid,
-            nodesCount: nodes.length,
-          });
-        } catch {
-          // ignore
-        }
+	        try {
+	          let rootFirst = null;
+	          try {
+	            rootFirst = nodes
+	              .filter((n) => n && (n.parentId == null || n.parentId === '') && Number(n.position) >= 0)
+	              .sort((a, b) => Number(a.position) - Number(b.position))
+	              .slice(0, 3)
+	              .map((n) => String(n.sectionId || ''));
+	          } catch {
+	            rootFirst = null;
+	          }
+	          revertLog('outline.enqueue.structure_snapshot', {
+	            articleId: aid,
+	            nodesCount: nodes.length,
+	            rootFirst,
+	          });
+	        } catch {
+	          // ignore
+	        }
         void enqueueOp('structure_snapshot', {
           articleId: aid,
           payload: { nodes },
@@ -676,6 +706,153 @@ function scheduleStructureSnapshot({ articleId, editor } = {}) {
         // ignore
       }
     }, OUTLINE_STRUCTURE_SNAPSHOT_DEBOUNCE_MS);
+  } catch {
+    // ignore
+  }
+}
+
+async function enqueueSectionUpsertFromDoc({ articleId, doc, sectionId, reason }) {
+  const aid = String(articleId || '').trim();
+  const sid = String(sectionId || '').trim();
+  if (!aid || !sid || !doc) return false;
+  const pos = findSectionPosById(doc, sid);
+  const node = typeof pos === 'number' ? doc.nodeAt(pos) : null;
+  if (!node || node.type?.name !== 'outlineSection') return false;
+
+  // Only enqueue when section actually changed (relative to last committed baseline).
+  try {
+    const changed = markSectionDirtyIfChanged(doc, sid);
+    if (!changed) return false;
+  } catch {
+    return false;
+  }
+
+  const heading = node.child(0);
+  const body = node.child(1);
+  const headingJson = heading?.toJSON ? heading.toJSON() : null;
+  const bodyJson = body?.toJSON ? body.toJSON() : null;
+  if (!headingJson || !bodyJson) return false;
+
+  const bytes = estimateOutlineSectionBytes(headingJson, bodyJson);
+  if (bytes > MAX_OUTLINE_SECTION_BYTES) {
+    const now = Date.now();
+    if (!lastTooBigToastAt || now - lastTooBigToastAt > 5000) {
+      lastTooBigToastAt = now;
+      showToast(
+        `Блок слишком большой (${Math.ceil(bytes / 1024)} KB). Максимум: ${Math.ceil(
+          MAX_OUTLINE_SECTION_BYTES / 1024,
+        )} KB. Разбейте блок на несколько.`,
+      );
+    }
+    return false;
+  }
+
+  const clientQueuedAt = Date.now();
+  const seq = getNextSectionSeq(aid, sid);
+  try {
+    revertLog('outline.enqueue.section_upsert_content', {
+      articleId: aid,
+      sectionId: sid,
+      seq,
+      bytes,
+      reason: String(reason || ''),
+    });
+  } catch {
+    // ignore
+  }
+
+  await enqueueOp('section_upsert_content', {
+    articleId: aid,
+    payload: { sectionId: sid, headingJson, bodyJson, seq, clientQueuedAt },
+    coalesceKey: `content:${aid}:${sid}`,
+  }).catch(() => {});
+
+  // If structure changed during edit-mode, enqueue snapshot right after the upsert.
+  // This keeps the strict ordering: upsert -> snapshot, even while editing.
+  try {
+    if (structureDirty) {
+      const nodes = computeOutlineStructureNodesFromDoc(doc);
+      if (nodes.length) {
+        let rootFirst = null;
+        try {
+          rootFirst = nodes
+            .filter((n) => n && (n.parentId == null || n.parentId === '') && Number(n.position) >= 0)
+            .sort((a, b) => Number(a.position) - Number(b.position))
+            .slice(0, 3)
+            .map((n) => String(n.sectionId || ''));
+        } catch {
+          rootFirst = null;
+        }
+        try {
+          revertLog('outline.enqueue.structure_snapshot', {
+            articleId: aid,
+            nodesCount: nodes.length,
+            reason: 'after_section_upsert',
+            rootFirst,
+          });
+        } catch {
+          // ignore
+        }
+        void enqueueOp('structure_snapshot', {
+          articleId: aid,
+          payload: { nodes },
+          coalesceKey: `structure:${aid}`,
+        });
+      }
+      structureDirty = false;
+      if (structureSnapshotTimer) {
+        clearTimeout(structureSnapshotTimer);
+        structureSnapshotTimer = null;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // Local commit baseline so heartbeat sends only deltas.
+  try {
+    committedSectionIndexText.set(sid, computeSectionIndexText(node));
+    dirtySectionIds.delete(sid);
+  } catch {
+    // ignore
+  }
+
+  // Best-effort: kick the outbox flush without blocking UI.
+  try {
+    void import('../offline/sync.js').then((m) => m.flushOutboxOnce?.()).catch(() => {});
+  } catch {
+    // ignore
+  }
+  return true;
+}
+
+function scheduleEditHeartbeat(editor) {
+  try {
+    if (!editor || editor.isDestroyed) return;
+    const st = outlineEditModeKey?.getState?.(editor.state) || null;
+    const sid = String(st?.editingSectionId || '').trim();
+    if (!sid) return;
+    const aid = outlineArticleId || state.articleId || null;
+    if (!aid) return;
+    lastHeartbeatSectionId = sid;
+    if (editHeartbeatTimer) clearTimeout(editHeartbeatTimer);
+    editHeartbeatTimer = setTimeout(() => {
+      editHeartbeatTimer = null;
+      try {
+        if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return;
+        const stNow = outlineEditModeKey?.getState?.(outlineEditorInstance.state) || null;
+        const sidNow = String(stNow?.editingSectionId || '').trim();
+        if (!sidNow || sidNow !== lastHeartbeatSectionId) return;
+        void enqueueSectionUpsertFromDoc({
+          articleId: aid,
+          doc: outlineEditorInstance.state.doc,
+          sectionId: sidNow,
+          reason: 'edit_heartbeat',
+        });
+      } catch {
+        // ignore
+      }
+    }, OUTLINE_EDIT_HEARTBEAT_MS);
   } catch {
     // ignore
   }
@@ -5308,6 +5485,13 @@ function maybeGenerateTitlesAfterSave(editor, doc, sectionIds) {
   if (!Array.isArray(sectionIds) || !sectionIds.length) return;
   if (state.article?.encrypted) return;
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
+  // Requirement: generate-title only after leaving edit-mode.
+  try {
+    const st = outlineEditModeKey?.getState?.(editor.state) || null;
+    if (st?.editingSectionId) return;
+  } catch {
+    // ignore
+  }
   for (const sectionId of sectionIds) {
     try {
       maybeGenerateTitleOnLeave(editor, doc, sectionId);
@@ -5877,15 +6061,15 @@ async function mountOutlineEditor() {
 	          },
 	          view(view) {
 	            return {
-	              update(viewNow, prevState) {
-	                try {
-	                  const prevSt = key.getState(prevState) || {};
-	                  const nextSt = key.getState(viewNow.state) || {};
-	                  const wasEditing = prevSt.editingSectionId || null;
-	                  const isEditing = nextSt.editingSectionId || null;
-	                  if (wasEditing && !isEditing) {
-	                    const sectionId = String(wasEditing || '').trim();
-	                    const articleId = outlineArticleId || state.articleId || null;
+		              update(viewNow, prevState) {
+		                try {
+		                  const prevSt = outlineEditModeKey?.getState?.(prevState) || {};
+		                  const nextSt = outlineEditModeKey?.getState?.(viewNow.state) || {};
+		                  const wasEditing = prevSt.editingSectionId || null;
+		                  const isEditing = nextSt.editingSectionId || null;
+		                  if (wasEditing && !isEditing) {
+		                    const sectionId = String(wasEditing || '').trim();
+		                    const articleId = outlineArticleId || state.articleId || null;
 	                    if (!sectionId || !articleId) return;
 	                    let collapsed = false;
 	                    try {
@@ -5897,63 +6081,136 @@ async function mountOutlineEditor() {
 	                    }
 	                    writeOutlineLastActiveSnapshot(articleId, sectionId, collapsed);
 
-	                    // "Save block" (Variant B): only on exit edit-mode, and only if section really changed.
-	                    try {
-	                      const pos = findSectionPosById(viewNow.state.doc, sectionId);
-	                      const node = typeof pos === 'number' ? viewNow.state.doc.nodeAt(pos) : null;
-	                      if (!node || node.type?.name !== 'outlineSection') return;
-
-	                      markSectionDirtyIfChanged(viewNow.state.doc, sectionId);
-	                      if (!dirtySectionIds.has(sectionId)) return;
-
-	                      const heading = node.child(0);
-	                      const body = node.child(1);
-	                      const headingJson = heading?.toJSON ? heading.toJSON() : null;
-	                      const bodyJson = body?.toJSON ? body.toJSON() : null;
-	                      if (!headingJson || !bodyJson) return;
-
-	                      const bytes = estimateOutlineSectionBytes(headingJson, bodyJson);
-	                      if (bytes > MAX_OUTLINE_SECTION_BYTES) {
-	                        showToast(
-	                          `Блок слишком большой (${Math.ceil(bytes / 1024)} KB). Максимум: ${Math.ceil(
-	                            MAX_OUTLINE_SECTION_BYTES / 1024,
-	                          )} KB. Разбейте блок на несколько.`,
-	                        );
-	                        // Keep edit-mode: immediately re-enter.
-	                        try {
-	                          let tr = viewNow.state.tr.setMeta(OUTLINE_ALLOW_META, true);
-	                          tr = tr.setMeta(key, { type: 'enter', sectionId });
-	                          viewNow.dispatch(tr);
-	                        } catch {
-	                          // ignore
-	                        }
-	                        return;
-	                      }
-
-	                      const clientQueuedAt = Date.now();
-	                      const seq = getNextSectionSeq(articleId, sectionId);
-	                      void enqueueOp('section_upsert_content', {
-	                        articleId,
-	                        payload: { sectionId, headingJson, bodyJson, seq, clientQueuedAt },
-	                        coalesceKey: `content:${articleId}:${sectionId}`,
-	                      });
-
-	                      // Update dirty baseline for this section (local commit).
-	                      try {
-	                        committedSectionIndexText.set(sectionId, computeSectionIndexText(node));
-	                        dirtySectionIds.delete(sectionId);
-	                      } catch {
-	                        // ignore
-	                      }
-	                      setOutlineStatus('В очереди на синхронизацию');
-	                    } catch {
-	                      // ignore
-	                    }
-	                  }
-	                } catch {
-	                  // ignore
-	                }
-	              },
+		                    // "Save block" (Variant B): on exit edit-mode.
+		                    // Rule: if we need to send both, we enqueue upsert first, then snapshot.
+		                    // Snapshot must also be enqueued when structure changed even if content was already
+		                    // compact-synced by heartbeat during edit-mode.
+		                    try {
+		                      const pos = findSectionPosById(viewNow.state.doc, sectionId);
+		                      const node = typeof pos === 'number' ? viewNow.state.doc.nodeAt(pos) : null;
+		                      if (!node || node.type?.name !== 'outlineSection') return;
+		
+		                      const isNewSection = !committedSectionIndexText.has(sectionId);
+		                      const contentChanged = isNewSection || markSectionDirtyIfChanged(viewNow.state.doc, sectionId);
+		
+		                      let didEnqueueUpsert = false;
+		                      if (contentChanged) {
+		                        const heading = node.child(0);
+		                        const body = node.child(1);
+		                        const headingJson = heading?.toJSON ? heading.toJSON() : null;
+		                        const bodyJson = body?.toJSON ? body.toJSON() : null;
+		                        if (headingJson && bodyJson) {
+		                          const bytes = estimateOutlineSectionBytes(headingJson, bodyJson);
+		                          if (bytes > MAX_OUTLINE_SECTION_BYTES) {
+		                            showToast(
+		                              `Блок слишком большой (${Math.ceil(bytes / 1024)} KB). Максимум: ${Math.ceil(
+		                                MAX_OUTLINE_SECTION_BYTES / 1024,
+		                              )} KB. Разбейте блок на несколько.`,
+		                            );
+		                            // Keep edit-mode: immediately re-enter.
+		                            try {
+		                              let tr = viewNow.state.tr.setMeta(OUTLINE_ALLOW_META, true);
+		                              tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId });
+		                              viewNow.dispatch(tr);
+		                            } catch {
+		                              // ignore
+		                            }
+		                            return;
+		                          }
+		
+		                          const clientQueuedAt = Date.now();
+		                          const seq = getNextSectionSeq(articleId, sectionId);
+		                          try {
+		                            revertLog('outline.enqueue.section_upsert_content', {
+		                              articleId,
+		                              sectionId,
+		                              seq,
+		                              bytes,
+		                              reason: isNewSection ? 'exit_edit_mode_new_section' : 'exit_edit_mode',
+		                            });
+		                          } catch {
+		                            // ignore
+		                          }
+		                          didEnqueueUpsert = true;
+		                          void enqueueOp('section_upsert_content', {
+		                            articleId,
+		                            payload: { sectionId, headingJson, bodyJson, seq, clientQueuedAt },
+		                            coalesceKey: `content:${articleId}:${sectionId}`,
+		                          });
+		                        }
+		                      }
+		
+		                      let didEnqueueSnapshot = false;
+		                      if (isNewSection || structureDirty || structureSnapshotTimer) {
+		                        const nodes = computeOutlineStructureNodesFromDoc(viewNow.state.doc);
+		                        if (nodes.length) {
+		                          let rootFirst = null;
+		                          try {
+		                            rootFirst = nodes
+		                              .filter((n) => n && (n.parentId == null || n.parentId === '') && Number(n.position) >= 0)
+		                              .sort((a, b) => Number(a.position) - Number(b.position))
+		                              .slice(0, 3)
+		                              .map((n) => String(n.sectionId || ''));
+		                          } catch {
+		                            rootFirst = null;
+		                          }
+		                          try {
+		                            revertLog('outline.enqueue.structure_snapshot', {
+		                              articleId,
+		                              nodesCount: nodes.length,
+		                              reason: isNewSection ? 'exit_edit_mode_new_section' : 'exit_edit_mode',
+		                              rootFirst,
+		                            });
+		                          } catch {
+		                            // ignore
+		                          }
+		                          void enqueueOp('structure_snapshot', {
+		                            articleId,
+		                            payload: { nodes },
+		                            coalesceKey: `structure:${articleId}`,
+		                          });
+		                          didEnqueueSnapshot = true;
+		                        }
+		                        structureDirty = false;
+		                        if (structureSnapshotTimer) {
+		                          clearTimeout(structureSnapshotTimer);
+		                          structureSnapshotTimer = null;
+		                        }
+		                      }
+		
+		                      // Local commit baseline for this section.
+		                      try {
+		                        if (didEnqueueUpsert || isNewSection) {
+		                          committedSectionIndexText.set(sectionId, computeSectionIndexText(node));
+		                          dirtySectionIds.delete(sectionId);
+		                        }
+		                      } catch {
+		                        // ignore
+		                      }
+		                      // generate-title: only after leaving edit-mode, and only when we actually queued the section.
+		                      try {
+		                        if (
+		                          didEnqueueUpsert &&
+		                          outlineEditorInstance &&
+		                          !outlineEditorInstance.isDestroyed &&
+		                          outlineEditorInstance.view === viewNow
+		                        ) {
+		                          maybeGenerateTitleOnLeave(outlineEditorInstance, viewNow.state.doc, sectionId);
+		                        }
+		                      } catch {
+		                        // ignore
+		                      }
+		                      if (didEnqueueUpsert || didEnqueueSnapshot) {
+		                        setOutlineStatus('В очереди на синхронизацию');
+		                      }
+		                    } catch {
+		                      // ignore
+		                    }
+		                  }
+		                } catch {
+		                  // ignore
+		                }
+		              },
 	            };
 	          },
 	        }),
@@ -12197,19 +12454,25 @@ async function mountOutlineEditor() {
       }
       setOutlineStatus('');
     },
-	    onUpdate: () => {
+		    onUpdate: () => {
       // Любое изменение документа считается изменением текущей секции (или нескольких),
       // но “коммит секции” мы делаем при уходе из неё (onSelectionUpdate).
       docDirty = true;
 	      // Spellcheck should run only for sections that were actually edited.
 	      // Mark the currently edited section as dirty on any doc update while in edit-mode.
-	      try {
-	        const st = outlineEditModeKey?.getState?.(outlineEditorInstance?.state) || null;
-	        const editingSectionId = String(st?.editingSectionId || '').trim();
-	        if (editingSectionId) dirtySectionIds.add(editingSectionId);
-	      } catch {
-	        // ignore
-	      }
+		      try {
+		        const st = outlineEditModeKey?.getState?.(outlineEditorInstance?.state) || null;
+		        const editingSectionId = String(st?.editingSectionId || '').trim();
+		        if (editingSectionId) {
+		          const pmDoc = outlineEditorInstance?.state?.doc || null;
+		          if (pmDoc) {
+		            const changed = markSectionDirtyIfChanged(pmDoc, editingSectionId);
+		            if (changed) scheduleEditHeartbeat(outlineEditorInstance);
+		          }
+		        }
+		      } catch {
+		        // ignore
+		      }
 	      try {
 	        const pmDoc = outlineEditorInstance?.state?.doc || null;
 	        if (pmDoc) {
@@ -13174,8 +13437,13 @@ export function closeOutlineEditor() {
     clearTimeout(structureSnapshotTimer);
     structureSnapshotTimer = null;
   }
-	  structureDirty = false;
-	  lastStructureHash = '';
+  if (editHeartbeatTimer) {
+    clearTimeout(editHeartbeatTimer);
+    editHeartbeatTimer = null;
+  }
+  lastHeartbeatSectionId = null;
+		  structureDirty = false;
+		  lastStructureHash = '';
 	  try {
 	    explicitlyDeletedSectionIds.clear();
 	  } catch {
@@ -13221,22 +13489,38 @@ export async function flushOutlineAutosave(options = {}) {
           // ignore
         }
       }
-      // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
-      try {
-        if (structureDirty) {
-          const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
-          if (nodes.length) {
-            void enqueueOp('structure_snapshot', {
-              articleId: targetArticleId,
-              payload: { nodes },
-              coalesceKey: `structure:${targetArticleId}`,
-            });
-            structureDirty = false;
-          }
-        }
-      } catch {
-        // ignore
-      }
+	      // If structure changed, enqueue a snapshot immediately on navigation (debounce may not fire).
+	      try {
+	        // If we are currently editing a section, first commit its content into outbox.
+	        // This reduces the risk of losing edits when the user closes the tab/app without exiting edit-mode.
+	        try {
+	          const st = outlineEditModeKey?.getState?.(outlineEditorInstance?.state) || null;
+	          const editingSectionId = String(st?.editingSectionId || '').trim();
+	          if (editingSectionId) {
+	            await enqueueSectionUpsertFromDoc({
+	              articleId: targetArticleId,
+	              doc: outlineEditorInstance.state.doc,
+	              sectionId: editingSectionId,
+	              reason: 'pagehide',
+	            });
+	          }
+	        } catch {
+	          // ignore
+	        }
+	        if (structureDirty) {
+	          const nodes = computeOutlineStructureNodesFromDoc(outlineEditorInstance.state.doc);
+	          if (nodes.length) {
+	            void enqueueOp('structure_snapshot', {
+	              articleId: targetArticleId,
+	              payload: { nodes },
+	              coalesceKey: `structure:${targetArticleId}`,
+	            });
+	            structureDirty = false;
+	          }
+	        }
+	      } catch {
+	        // ignore
+	      }
       // If user deleted sections, we need a full save (queue it locally so navigation doesn't lose it).
       try {
         if (explicitlyDeletedSectionIds.size) {

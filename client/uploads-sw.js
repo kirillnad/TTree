@@ -2,8 +2,8 @@
 // - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 263;
-const APP_BUILD = 'dcf6830i';
+const APP_VERSION = 315;
+const APP_BUILD = 'c77rwgeg';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
@@ -12,12 +12,25 @@ const APP_SHELL_URLS = [
   '/style.css',
   '/boot.js',
   '/app.js',
+  // Lazy-loaded modules that must stay version-consistent too (avoid mixed cache/network versions).
+  '/exporter.js',
+  '/graph.js',
+  '/tables.js',
   // Core modules required to render list view offline.
   '/routing.js',
   '/events.js',
+  '/events/viewKeys.js',
+  '/events/editKeys.js',
+  '/events/listKeys.js',
+  '/events/sidebarMobile.js',
   '/auth.js',
   '/refs.js',
   '/sidebar.js',
+  '/sidebar/layout.js',
+  '/sidebar/recent.js',
+  '/sidebar/storage.js',
+  '/sidebar/render.js',
+  '/sidebar/dnd.js',
   '/state.js',
   '/api.js',
   '/toast.js',
@@ -31,6 +44,7 @@ const APP_SHELL_URLS = [
   '/block.js',
   '/encryption.js',
   '/article.js',
+  '/article/dnd.js',
   '/markdown.js',
   // Submodules used during startup / offline.
   '/offline/index.js',
@@ -45,6 +59,7 @@ const APP_SHELL_URLS = [
   '/offline/media.js',
   '/offline/search.js',
   '/offline/embeddings.js',
+  '/offline/semantic.js',
   '/debug/revertLog.js',
   '/article/loadCore.js',
   '/article/views.js',
@@ -72,6 +87,9 @@ const APP_SHELL_URLS = [
 // Avoid revalidating the same asset too often (saves bandwidth and removes "double requests" noise).
 const REVALIDATE_TTL_MS = 5 * 60 * 1000;
 const lastRevalidateAtByUrl = new Map();
+// When the network is very slow, "network-first" navigation can stall the whole app startup
+// even though the app shell is already cached. Prefer a quick cache fallback.
+const NAV_NETWORK_TIMEOUT_MS = 1200;
 
 function isUploadsRequest(request) {
   try {
@@ -264,17 +282,32 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         const cache = await caches.open(APP_CACHE);
-        try {
-          const resp = await fetch(req);
-          if (resp && resp.ok) {
-            cache.put('/index.html', resp.clone()).catch(() => {});
-          }
-          return resp;
-        } catch {
-          const cached = (await cache.match('/index.html')) || (await cache.match('/'));
-          if (cached) return cached;
-          return new Response(offlineHtml(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        const cached = (await cache.match('/index.html')) || (await cache.match('/'));
+
+        // Kick off a network fetch to refresh cache, but don't block startup on slow networks.
+        const fetchPromise = fetch(req)
+          .then((resp) => {
+            try {
+              if (resp && resp.ok) cache.put('/index.html', resp.clone()).catch(() => {});
+            } catch {
+              // ignore
+            }
+            return resp;
+          })
+          .catch(() => null);
+
+        // If network doesn't respond quickly, serve cached shell immediately.
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), NAV_NETWORK_TIMEOUT_MS));
+        const fast = await Promise.race([fetchPromise, timeoutPromise]);
+        if (fast) return fast;
+        if (cached) {
+          event.waitUntil(fetchPromise.catch(() => {}));
+          return cached;
         }
+        // No cache yet (e.g. first visit while offline/slow) — wait for network if possible.
+        const resp = await fetchPromise;
+        if (resp) return resp;
+        return new Response(offlineHtml(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       })(),
     );
     return;
@@ -317,38 +350,29 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(APP_CACHE);
         const keyReq = canonicalizeSameOriginAssetRequest(req);
         const cached = await cache.match(keyReq, { ignoreSearch: true });
-        if (cached) {
-          // JS/CSS should update immediately on reload (otherwise SW can "pin" old code).
-          // Use network-first here to avoid duplicates and still fallback to cache offline.
-          try {
-            const url = new URL(req.url);
-            if (isJsOrCssUrl(url)) {
-              try {
-                const resp = await fetch(makeReloadRequest(req));
-                if (resp && resp.ok) {
-                  cache.put(keyReq, resp.clone()).catch(() => {});
-                  return resp;
-                }
-              } catch {
-                // ignore (fallback to cached)
-              }
-              return cached;
-            }
-            // For other assets: stale-while-revalidate but throttle.
-            if (!isImmutableAssetUrl(url) && shouldRevalidateNow(req.url)) {
-              event.waitUntil(
-                fetch(makeReloadRequest(req))
-                  .then((resp) => {
-                    if (resp && resp.ok) cache.put(keyReq, resp.clone());
-                  })
-                  .catch(() => {}),
-              );
-            }
-          } catch {
-            // ignore
-          }
-          return cached;
-        }
+	        if (cached) {
+	          // IMPORTANT: keep app code consistent.
+	          // For JS/CSS we always serve from the currently active APP_CACHE (cache-first),
+	          // so we never mix different app versions (some from cache, some from network).
+	          // Updates are applied by bumping APP_VERSION, which creates a new APP_CACHE on the next SW update.
+	          try {
+	            const url = new URL(req.url);
+	            if (isJsOrCssUrl(url)) return cached;
+	            // For other assets: stale-while-revalidate but throttle.
+	            if (!isImmutableAssetUrl(url) && shouldRevalidateNow(req.url)) {
+	              event.waitUntil(
+	                fetch(makeReloadRequest(req))
+	                  .then((resp) => {
+	                    if (resp && resp.ok) cache.put(keyReq, resp.clone());
+	                  })
+	                  .catch(() => {}),
+	              );
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          return cached;
+	        }
         try {
           const url = new URL(req.url);
           const resp = await fetch(isJsOrCssUrl(url) ? makeReloadRequest(req) : req);

@@ -267,14 +267,6 @@ function startApp() {
       .then((m) => m.initTables?.())
       .catch(() => {});
   });
-  runOnIdle(
-    () => {
-      import('./changelog.js')
-        .then((m) => m.loadLastChangeFromChangelog?.())
-        .catch(() => {});
-    },
-    { timeout: 6000, fallbackDelay: 2500 },
-  );
   route(window.location.pathname);
 }
 

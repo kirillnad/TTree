@@ -97,26 +97,47 @@ const LAST_USER_KEY = 'ttree_last_user_v1';
 
 async function fetchAuthMeWithTimeout(timeoutMs) {
   const ms = typeof timeoutMs === 'number' ? Math.max(0, Math.floor(timeoutMs)) : 8000;
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = setTimeout(() => controller?.abort?.(), ms);
   try {
-    const resp = await fetch('/api/auth/me', {
-      method: 'GET',
-      credentials: 'include',
-      signal: controller?.signal,
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    let finished = false;
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        finished = true;
+        try {
+          controller?.abort?.();
+        } catch {
+          // ignore
+        }
+        resolve({ status: 'down', message: 'timeout' });
+      }, ms);
     });
-    if (resp.status === 401 || resp.status === 403) return { status: 'auth' };
-    if (!resp.ok) {
-      const details = await resp.json().catch(() => ({}));
-      return { status: 'down', message: details?.detail || `HTTP ${resp.status}` };
-    }
-    const user = await resp.json();
-    return { status: 'ok', user };
+
+    const fetchPromise = (async () => {
+      try {
+        const resp = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+          signal: controller?.signal,
+        });
+        if (finished) return null;
+        if (resp.status === 401 || resp.status === 403) return { status: 'auth' };
+        if (!resp.ok) {
+          const details = await resp.json().catch(() => ({}));
+          return { status: 'down', message: details?.detail || `HTTP ${resp.status}` };
+        }
+        const user = await resp.json();
+        return { status: 'ok', user };
+      } catch (err) {
+        if (finished) return null;
+        if (err?.name === 'AbortError') return { status: 'down', message: 'timeout' };
+        return { status: 'down', message: err?.message || 'network' };
+      }
+    })();
+
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    return result && typeof result === 'object' ? result : { status: 'down', message: 'timeout' };
   } catch (err) {
-    if (err?.name === 'AbortError') return { status: 'down', message: 'timeout' };
     return { status: 'down', message: err?.message || 'network' };
-  } finally {
-    clearTimeout(timer);
   }
 }
 

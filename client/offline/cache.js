@@ -90,6 +90,15 @@ export async function cacheArticle(article) {
   const tx = db.transaction(['articles'], 'readwrite');
   const store = tx.objectStore('articles');
   const existing = await reqToPromise(store.get(article.id)).catch(() => null);
+  let existingArticle = null;
+  try {
+    existingArticle = existing?.articleJsonStr ? JSON.parse(existing.articleJsonStr) : null;
+  } catch {
+    existingArticle = null;
+  }
+  const existingLocalDraft = Boolean(existingArticle && existingArticle.localDraft);
+  const incomingOutlineStructureRev =
+    article && Object.prototype.hasOwnProperty.call(article, 'outlineStructureRev') ? Number(article.outlineStructureRev) : null;
   try {
     const existingUpdatedAt = String(existing?.updatedAt || '').trim();
     const nextUpdatedAt = String(updatedAt || '').trim();
@@ -102,6 +111,54 @@ export async function cacheArticle(article) {
       });
       await txDone(tx);
       return;
+    }
+    // Protect local-first outline edits: if we have a local draft and the server doesn't advance updatedAt,
+    // do not overwrite cached docJson with the (stale) server copy.
+    if (existingLocalDraft && existingUpdatedAt && nextUpdatedAt && existingUpdatedAt === nextUpdatedAt) {
+      const existingDocHash = docJsonHash(existing?.docJsonStr ? JSON.parse(existing.docJsonStr) : null);
+      const incomingDocHash = docJsonHash(docJson);
+      if (existingDocHash && incomingDocHash && existingDocHash !== incomingDocHash) {
+        const merged = existingArticle && typeof existingArticle === 'object' ? { ...existingArticle } : {};
+        merged.id = article.id;
+        merged.title = article.title || merged.title || '';
+        merged.updatedAt = existingUpdatedAt;
+        merged.parentId = article.parentId ?? merged.parentId ?? null;
+        merged.position = typeof article.position === 'number' ? article.position : merged.position ?? 0;
+        merged.publicSlug = article.publicSlug ?? merged.publicSlug ?? null;
+        merged.encrypted = Boolean(article.encrypted);
+        if (Object.prototype.hasOwnProperty.call(article, 'outlineStructureRev')) {
+          merged.outlineStructureRev = Number(article.outlineStructureRev) || 0;
+        }
+        merged.localDraft = true;
+        const nextProtected = {
+          ...(existing || {}),
+          id: article.id,
+          title: article.title || '',
+          updatedAt: existingUpdatedAt,
+          parentId: article.parentId ?? null,
+          position: typeof article.position === 'number' ? article.position : 0,
+          publicSlug: article.publicSlug ?? null,
+          encrypted: article.encrypted ? 1 : 0,
+          deletedAt: null,
+          outlineStructureRev:
+            Number.isFinite(incomingOutlineStructureRev) ? incomingOutlineStructureRev : Number(existing?.outlineStructureRev),
+          docJsonStr: existing?.docJsonStr ?? null,
+          articleJsonStr: JSON.stringify(merged),
+        };
+        await reqToPromise(store.put(nextProtected));
+        await txDone(tx);
+        try {
+          revertLog('cache.article.put.skip_localDraft', {
+            articleId: article.id,
+            updatedAt: existingUpdatedAt,
+            existingDocHash,
+            incomingDocHash,
+          });
+        } catch {
+          // ignore
+        }
+        return;
+      }
     }
   } catch {
     // ignore
@@ -116,6 +173,8 @@ export async function cacheArticle(article) {
     publicSlug: article.publicSlug ?? null,
     encrypted: article.encrypted ? 1 : 0,
     deletedAt: null,
+    outlineStructureRev:
+      Number.isFinite(incomingOutlineStructureRev) ? incomingOutlineStructureRev : Number(existing?.outlineStructureRev),
     docJsonStr: docJson ? JSON.stringify(docJson) : null,
     articleJsonStr: JSON.stringify(article),
   };
@@ -199,7 +258,39 @@ export async function getCachedArticle(articleId) {
     }
     return article;
   } catch {
-    return null;
+    // Fallback: articleJsonStr may be corrupted/partial; docJsonStr is the source of truth for offline.
+    try {
+      const docJson = row.docJsonStr ? JSON.parse(row.docJsonStr) : null;
+      const fallback = {
+        id: articleId,
+        title: row.title || '',
+        createdAt: row.createdAt || row.updatedAt || null,
+        updatedAt: row.updatedAt || null,
+        deletedAt: row.deletedAt || null,
+        parentId: row.parentId ?? null,
+        position: typeof row.position === 'number' ? row.position : 0,
+        authorId: null,
+        publicSlug: row.publicSlug ?? null,
+        encrypted: !!row.encrypted,
+        outlineStructureRev: Number.isFinite(Number(row.outlineStructureRev)) ? Number(row.outlineStructureRev) : undefined,
+        docJson: docJson && typeof docJson === 'object' ? docJson : null,
+        history: [],
+        redoHistory: [],
+        blockTrash: [],
+      };
+      try {
+        revertLog('cache.article.get.fallback_docJsonStr', {
+          articleId,
+          updatedAt: fallback.updatedAt || null,
+          docHash: docJsonHash(fallback.docJson),
+        });
+      } catch {
+        // ignore
+      }
+      return fallback;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -256,6 +347,9 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
     article.id = articleId;
     article.updatedAt = nextUpdatedAt || article.updatedAt || null;
     article.docJson = docJson && typeof docJson === 'object' ? docJson : null;
+    if (docJson && typeof docJson === 'object') {
+      article.localDraft = true;
+    }
     // Normalize common fields to avoid undefined creeping in.
     if (!article.title && existing?.title) article.title = existing.title;
     if (article.deletedAt === undefined) article.deletedAt = null;
@@ -270,6 +364,7 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
   const next = {
     ...(existing || { id: articleId }),
     id: articleId,
+    outlineStructureRev: existing?.outlineStructureRev,
     docJsonStr: docJson ? JSON.stringify(docJson) : null,
     updatedAt: nextUpdatedAt,
     // Keep `articleJsonStr` in sync with `docJsonStr`, otherwise reads will use stale docJson/updatedAt.
@@ -290,6 +385,34 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
     reindexOutlineSections(db, { articleId, docJson, updatedAt }).catch(() => {});
     updateMediaRefsForArticle(articleId, docJson).catch(() => {});
   }
+}
+
+export async function clearCachedArticleLocalDraft(articleId) {
+  const id = String(articleId || '').trim();
+  if (!id) return;
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['articles'], 'readwrite');
+  const store = tx.objectStore('articles');
+  const existing = await reqToPromise(store.get(id)).catch(() => null);
+  if (!existing) {
+    await txDone(tx);
+    return;
+  }
+  let article = null;
+  try {
+    article = existing.articleJsonStr ? JSON.parse(existing.articleJsonStr) : null;
+  } catch {
+    article = null;
+  }
+  if (!article || typeof article !== 'object') article = { id };
+  article.id = id;
+  delete article.localDraft;
+  const next = {
+    ...existing,
+    articleJsonStr: JSON.stringify(article),
+  };
+  await reqToPromise(store.put(next));
+  await txDone(tx);
 }
 
 export async function updateCachedArticleTreePositions(changes) {
@@ -368,6 +491,7 @@ export async function touchCachedArticleOutlineStructureRev(articleId, outlineSt
   article.outlineStructureRev = nextRev;
   const next = {
     ...existing,
+    outlineStructureRev: nextRev,
     articleJsonStr: JSON.stringify(article),
   };
   await reqToPromise(store.put(next));
