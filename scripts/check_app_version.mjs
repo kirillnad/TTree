@@ -29,6 +29,8 @@ function isClientBuildInput(filePath) {
   const rel = path.relative(CLIENT_DIR, filePath).replaceAll(path.sep, '/');
   if (!rel || rel.startsWith('..')) return false;
   if (rel.startsWith('uploads/')) return false;
+  if (rel.startsWith('src/')) return false;
+  if (rel.endsWith('.spec.js') || rel.endsWith('.test.js')) return false;
   if (rel.endsWith('.map')) return false;
   return (
     rel.endsWith('.js') ||

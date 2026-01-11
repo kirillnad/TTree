@@ -8,7 +8,9 @@
     "check:app-version": "node scripts/check_app_version.mjs",
     "watch:app-version": "node scripts/watch_app_version.mjs",
     "snap": "node scripts/snap.js",
-    "build:tiptap": "node scripts/build_tiptap_bundle.mjs"
+    "build:tiptap": "node scripts/build_tiptap_bundle.mjs",
+    "build:client": "node scripts/build_client_bundle.mjs",
+    "build": "npm run build:client && npm run gen:app-version && npm run check:app-version"
   },
   "description": "",
   "license": "ISC",

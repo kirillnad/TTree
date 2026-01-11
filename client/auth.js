@@ -340,7 +340,7 @@ export async function bootstrapAuth() {
       // Warm up TipTap bundle on idle so first article open doesn't spend seconds on parsing/initialization.
       // This is especially noticeable on mobile after Ctrl-F5 when caches are cold.
       try {
-        const warm = () => import('./outline/tiptap.bundle.js').catch(() => {});
+        const warm = () => import('/outline/tiptap.bundle.js').catch(() => {});
         if (typeof requestIdleCallback === 'function') {
           requestIdleCallback(() => warm(), { timeout: 2500 });
         } else {

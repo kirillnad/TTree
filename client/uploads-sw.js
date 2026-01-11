@@ -2,8 +2,8 @@
 // - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 315;
-const APP_BUILD = 'c77rwgeg';
+const APP_VERSION = 322;
+const APP_BUILD = '9n67mtrv';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
@@ -12,71 +12,8 @@ const APP_SHELL_URLS = [
   '/style.css',
   '/boot.js',
   '/app.js',
-  // Lazy-loaded modules that must stay version-consistent too (avoid mixed cache/network versions).
-  '/exporter.js',
-  '/graph.js',
-  '/tables.js',
-  // Core modules required to render list view offline.
-  '/routing.js',
-  '/events.js',
-  '/events/viewKeys.js',
-  '/events/editKeys.js',
-  '/events/listKeys.js',
-  '/events/sidebarMobile.js',
-  '/auth.js',
-  '/refs.js',
-  '/sidebar.js',
-  '/sidebar/layout.js',
-  '/sidebar/recent.js',
-  '/sidebar/storage.js',
-  '/sidebar/render.js',
-  '/sidebar/dnd.js',
-  '/state.js',
-  '/api.js',
-  '/toast.js',
-  '/utils.js',
-  '/modal.js',
-  '/users.js',
-  '/search.js',
-  '/title.js',
-  '/undo.js',
-  '/actions.js',
-  '/block.js',
-  '/encryption.js',
-  '/article.js',
-  '/article/dnd.js',
-  '/markdown.js',
-  // Submodules used during startup / offline.
-  '/offline/index.js',
-  '/offline/idb.js',
-  '/offline/cache.js',
-  '/offline/indexer.js',
-  '/offline/outbox.js',
-  '/offline/uploads.js',
-  '/offline/sync.js',
-  '/offline/storage.js',
-  '/offline/status.js',
-  '/offline/media.js',
-  '/offline/search.js',
-  '/offline/embeddings.js',
-  '/offline/semantic.js',
-  '/debug/revertLog.js',
-  '/article/loadCore.js',
-  '/article/views.js',
-  '/article/render.js',
-  '/article/header.js',
-  '/article/encryption.js',
-  '/outline/editor.js',
+  // Keep TipTap bundle cached for offline outline editing (it is still loaded on-demand).
   '/outline/tiptap.bundle.js',
-  '/outline/structuredPaste.js',
-  '/outline/linkProtocols.js',
-  '/block/selection.js',
-  '/block/sanitize.js',
-  '/block/editable.js',
-  '/block/images.js',
-  '/block/lists.js',
-  '/block/paragraphMerge.js',
-  '/quickNotes/pending.js',
   '/manifest.webmanifest',
   '/fonts/SegoeIcons.ttf',
   '/icons/favicon.ico',

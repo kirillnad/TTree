@@ -37,6 +37,13 @@ function shouldIgnoreEvent(filePath) {
   const now = Date.now();
   if (now < ignoreUntil) return true;
   if (!filePath) return false;
+  try {
+    const rel = path.relative(CLIENT_DIR, filePath).replaceAll(path.sep, '/');
+    if (rel.startsWith('src/')) return true;
+    if (rel.endsWith('.spec.js') || rel.endsWith('.test.js')) return true;
+  } catch {
+    // ignore
+  }
   const base = path.basename(filePath);
   // We *do* want manual edits to uploads-sw.js to bump the version,
   // but we must ignore the write that our generator itself performs (self loop).
@@ -98,4 +105,3 @@ log('start', { dir: CLIENT_DIR });
 const dirs = listDirsRecursive(CLIENT_DIR);
 dirs.forEach(watchDir);
 log('watching', { dirs: dirs.length });
-

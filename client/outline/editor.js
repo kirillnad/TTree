@@ -4996,7 +4996,7 @@ async function loadTiptap() {
   // TipTap загружаем локально (собранный bundle), чтобы не зависеть от CDN.
   // Если нужно пересобрать: `cd TTree && npm run build:tiptap`.
   const t0 = perfEnabled() ? performance.now() : 0;
-  const mod = await import('./tiptap.bundle.js');
+  const mod = await import('/outline/tiptap.bundle.js');
   if (t0) perfLog('import tiptap.bundle.js', { ms: Math.round(performance.now() - t0) });
   tiptap = {
     core: mod.core,

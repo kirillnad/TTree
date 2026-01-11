@@ -30,6 +30,10 @@ function isClientBuildInput(filePath) {
   if (!rel || rel.startsWith('..')) return false;
   // Anything under /uploads is user data, not part of the app build.
   if (rel.startsWith('uploads/')) return false;
+  // Bundled client sources (not shipped as-is).
+  if (rel.startsWith('src/')) return false;
+  // Unit tests are not shipped to the browser.
+  if (rel.endsWith('.spec.js') || rel.endsWith('.test.js')) return false;
   // Ignore source maps if any.
   if (rel.endsWith('.map')) return false;
   return (
