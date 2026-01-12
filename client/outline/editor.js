@@ -7859,6 +7859,70 @@ async function mountOutlineEditor() {
 
       const moveSection = (dir) =>
         this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const cssEscape = (value) => {
+            try {
+              // eslint-disable-next-line no-undef
+              if (typeof CSS !== 'undefined' && CSS && typeof CSS.escape === 'function') return CSS.escape(String(value || ''));
+            } catch {
+              // ignore
+            }
+            return String(value || '').replace(/["\\]/g, '\\$&');
+          };
+
+          const findScrollParent = (el) => {
+            try {
+              let cur = el;
+              while (cur && cur !== document.body) {
+                const parent = cur.parentElement;
+                if (!parent) break;
+                const st = window.getComputedStyle(parent);
+                const oy = String(st?.overflowY || '');
+                const canScroll = (oy === 'auto' || oy === 'scroll') && parent.scrollHeight > parent.clientHeight + 1;
+                if (canScroll) return parent;
+                cur = parent;
+              }
+            } catch {
+              // ignore
+            }
+            return document.scrollingElement || document.documentElement;
+          };
+
+          const captureSectionAnchor = (sectionId) => {
+            try {
+              const sid = String(sectionId || '').trim();
+              if (!sid) return null;
+              const el = document.querySelector(`.outline-heading[data-section-id="${cssEscape(sid)}"]`);
+              if (!el) return null;
+              const scrollEl = findScrollParent(el);
+              return { sid, scrollEl, top: el.getBoundingClientRect().top };
+            } catch {
+              return null;
+            }
+          };
+
+          const restoreSectionAnchor = (anchor) => {
+            if (!anchor) return;
+            const { sid, scrollEl, top } = anchor;
+            const run = () => {
+              try {
+                const el2 = document.querySelector(`.outline-heading[data-section-id="${cssEscape(sid)}"]`);
+                if (!el2) return;
+                const afterTop = el2.getBoundingClientRect().top;
+                const delta = afterTop - top;
+                if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+                // Keep the selected section at the same screen position after move/auto-expand.
+                scrollEl.scrollTop += delta;
+              } catch {
+                // ignore
+              }
+            };
+            try {
+              requestAnimationFrame(() => requestAnimationFrame(run));
+            } catch {
+              setTimeout(run, 0);
+            }
+          };
+
           const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
           if (typeof sectionPos !== 'number') return false;
           const $pos = pmState.doc.resolve(sectionPos);
@@ -7867,6 +7931,7 @@ async function mountOutlineEditor() {
           if (!parent) return false;
           const sectionNode = pmState.doc.nodeAt(sectionPos);
           if (!sectionNode) return false;
+          const anchor = captureSectionAnchor(String(sectionNode.attrs?.id || '').trim());
 
           if (dir === 'up') {
             if (idx > 0) {
@@ -7879,6 +7944,7 @@ async function mountOutlineEditor() {
               const sel = TextSelection.near(tr.doc.resolve(prevStart + 2), 1);
               tr.setSelection(sel);
               dispatch(tr.scrollIntoView());
+              restoreSectionAnchor(anchor);
               return true;
             }
 
@@ -7911,6 +7977,7 @@ async function mountOutlineEditor() {
             const sel = TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1);
             tr.setSelection(sel);
             dispatch(tr.scrollIntoView());
+            restoreSectionAnchor(anchor);
             return true;
           }
           if (dir === 'down') {
@@ -7926,6 +7993,7 @@ async function mountOutlineEditor() {
               const sel = TextSelection.near(tr.doc.resolve(insertPos + 2), 1);
               tr.setSelection(sel);
               dispatch(tr.scrollIntoView());
+              restoreSectionAnchor(anchor);
               return true;
             }
 
@@ -7960,6 +8028,7 @@ async function mountOutlineEditor() {
             const sel = TextSelection.near(tr.doc.resolve(mappedInsertPos + 2), 1);
             tr.setSelection(sel);
             dispatch(tr.scrollIntoView());
+            restoreSectionAnchor(anchor);
             return true;
           }
           return false;
