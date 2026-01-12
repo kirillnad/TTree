@@ -8927,6 +8927,12 @@ async function mountOutlineEditor() {
         'Alt-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
         'Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
         'Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
+        // Right-Alt (AltGraph) on many keyboards is reported as Ctrl+Alt.
+        // Treat it the same as Alt for our navigation shortcuts.
+        'Ctrl-Alt-ArrowUp': () => (this.editor.isActive('table') ? false : moveSection('up')),
+        'Ctrl-Alt-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
+        'Ctrl-Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
+        'Ctrl-Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
         // Ctrl+↑: схлопнуть родителя (и всё внутри него)
@@ -9248,9 +9254,22 @@ async function mountOutlineEditor() {
           key: new PluginKey('outlineAltMoveRepeatGuard'),
           props: {
             handleKeyDown: (view, event) => {
+              const isAltGraph = (ev) => {
+                try {
+                  return Boolean(ev?.getModifierState?.('AltGraph'));
+                } catch {
+                  return false;
+                }
+              };
+              const isAltLike = (ev) => {
+                try {
+                  return Boolean(ev?.altKey) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
+                } catch {
+                  return false;
+                }
+              };
               try {
-                if (!event || !event.altKey) return false;
-                if (event.metaKey || event.ctrlKey) return false;
+                if (!event || !isAltLike(event)) return false;
                 const key = String(event.key || '');
                 if (key !== 'ArrowUp' && key !== 'ArrowDown') return false;
                 if (!event.repeat) return false;
@@ -12238,8 +12257,22 @@ async function mountOutlineEditor() {
 		      handleKeyDown(view, event) {
 		        // Guard: holding Alt+Arrow should not cross parent boundaries automatically.
 		        // Crossing into an "uncle" requires a fresh key press.
+		        const isAltGraph = (ev) => {
+		          try {
+		            return Boolean(ev?.getModifierState?.('AltGraph'));
+		          } catch {
+		            return false;
+		          }
+		        };
+		        const isAltLike = (ev) => {
+		          try {
+		            return Boolean(ev?.altKey) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
+		          } catch {
+		            return false;
+		          }
+		        };
 		        try {
-		          if (event?.altKey && !event.ctrlKey && !event.metaKey) {
+		          if (isAltLike(event)) {
 		            const key = String(event.key || '');
 		            if ((key === 'ArrowUp' || key === 'ArrowDown') && Boolean(event.repeat)) {
 		              const $from = view?.state?.selection?.$from;
@@ -12348,7 +12381,7 @@ async function mountOutlineEditor() {
 			        }
 				        // Alt+Arrow: our custom table moves are disabled; keep TipTap defaults in tables.
 				        try {
-				          const isAltOnly = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+				          const isAltOnly = isAltLike(event) && !event.shiftKey;
 				          const key = String(event.key || '');
 			          if (isAltOnly && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown')) {
 			            const st = outlineEditModeKey?.getState?.(view.state) || null;
