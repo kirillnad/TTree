@@ -1167,6 +1167,11 @@ main.content {
 .outline-toolbar__dropdown {
   position: relative;
   display: inline-flex;
+  touch-action: manipulation;
+}
+
+.outline-toolbar__dropdown-btn {
+  touch-action: manipulation;
 }
 
 .outline-toolbar__dropdown-btn::after {
@@ -1234,6 +1239,10 @@ main.content {
 }
 
 .outline-toolbar[data-editing="false"] .outline-toolbar__dropdown:not(.outline-toolbar__dropdown--view) {
+  display: none;
+}
+
+.outline-toolbar[data-editing="true"] .outline-toolbar__dropdown--view {
   display: none;
 }
 

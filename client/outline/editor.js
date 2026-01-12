@@ -3545,6 +3545,7 @@ function mountOutlineToolbar(editor) {
   if (btns.listsMenuBtn) dropdownBtnSet.add(btns.listsMenuBtn);
   if (btns.tableMenuBtn) dropdownBtnSet.add(btns.tableMenuBtn);
   const dropdownBtns = Array.from(dropdownBtnSet);
+  const dropdownWrappers = Array.from(root.querySelectorAll('.outline-toolbar__dropdown'));
   const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
 	  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
 	  const clipboardButtons = Array.from(root.querySelectorAll('[data-outline-clipboard-action]'));
@@ -3559,54 +3560,6 @@ function mountOutlineToolbar(editor) {
     el.addEventListener('click', onClick);
     return () => el.removeEventListener('click', onClick);
   };
-
-	  const tap = (el, handler) => {
-	    if (!el) return () => {};
-	    let lastTapAt = 0;
-	    const invoke = (e) => {
-	      lastTapAt = Date.now();
-	      e.preventDefault();
-	      e.stopPropagation();
-	      handler();
-	    };
-	    const onPointerDown = (e) => invoke(e);
-	    const onTouchStart = (e) => invoke(e);
-	    const onClick = (e) => {
-	      // Avoid double-trigger after pointerdown/touchstart.
-	      if (Date.now() - lastTapAt < 450) {
-	        e.preventDefault();
-	        e.stopPropagation();
-	        return;
-	      }
-	      invoke(e);
-	    };
-
-	    try {
-	      el.addEventListener('pointerdown', onPointerDown);
-	    } catch {
-	      // ignore
-	    }
-	    try {
-	      el.addEventListener('touchstart', onTouchStart, { passive: false });
-	    } catch {
-	      // Some older browsers don't support the options object.
-	      try {
-	        el.addEventListener('touchstart', onTouchStart);
-	      } catch {
-	        // ignore
-	      }
-	    }
-	    el.addEventListener('click', onClick);
-	    return () => {
-	      try {
-	        el.removeEventListener('pointerdown', onPointerDown);
-	      } catch {
-	        // ignore
-	      }
-	      el.removeEventListener('touchstart', onTouchStart);
-	      el.removeEventListener('click', onClick);
-	    };
-	  };
 
   const markActive = (el, active) => {
     if (!el) return;
@@ -3633,7 +3586,7 @@ function mountOutlineToolbar(editor) {
 	    if (!btn) return;
 	    const menuId = btn.getAttribute('aria-controls');
 	    const menu = menuId ? root.querySelector(`#${menuId}`) || document.getElementById(menuId) : null;
-	    if (!menu) return;
+	    if (!menu) return false;
 	    const isOpen = !menu.classList.contains('hidden');
 	    closeAllMenus();
 	    if (!isOpen) {
@@ -3643,6 +3596,7 @@ function mountOutlineToolbar(editor) {
 	      menu.classList.remove('hidden');
 	      btn.setAttribute('aria-expanded', 'true');
 	    }
+	    return true;
 	  };
 
 	  const canRun = (build) => {
@@ -4634,9 +4588,82 @@ function mountOutlineToolbar(editor) {
   cleanups.push(click(btns.indentBtn, () => indentActiveSection()));
   cleanups.push(click(btns.newBelowBtn, () => insertNewSectionBelow()));
 
-  for (const btn of dropdownBtns) {
-    cleanups.push(tap(btn, () => toggleMenu(btn)));
+  // Dropdowns (mobile-safe): open on `pointerdown` for touch/pen (dedupes synthetic click),
+  // fall back to normal click for desktop.
+  for (const wrap of dropdownWrappers) {
+    if (!wrap) continue;
+    let lastHandledAt = 0;
+    const findBtnFromEvent = (event) => {
+      const targetEl = event?.target && event.target.nodeType === 1 ? event.target : event?.target?.parentElement || null;
+      if (!targetEl) return null;
+      const btn = targetEl.closest?.('.outline-toolbar__dropdown-btn') || null;
+      if (!btn || !wrap.contains(btn)) return null;
+      return btn;
+    };
+    const maybeToggle = (event, { source }) => {
+      try {
+        const now = Date.now();
+        if (lastHandledAt && now - lastHandledAt < 700) return;
+        const btn = findBtnFromEvent(event);
+        if (!btn) return;
+        if (btn.disabled) return;
+        if (event?.cancelable) event.preventDefault();
+        event.stopPropagation();
+        const ok = toggleMenu(btn);
+        if (ok) lastHandledAt = now;
+      } catch {
+        // ignore
+      }
+    };
+    const onPointerDown = (event) => {
+      try {
+        const pt = String(event?.pointerType || '');
+        // Only treat touch/pen specially; mouse should use click.
+        if (pt !== 'touch' && pt !== 'pen') return;
+      } catch {
+        return;
+      }
+      maybeToggle(event, { source: 'pointerdown' });
+    };
+    const onClick = (event) => {
+      maybeToggle(event, { source: 'click' });
+    };
+    try {
+      wrap.addEventListener('pointerdown', onPointerDown, true);
+      cleanups.push(() => wrap.removeEventListener('pointerdown', onPointerDown, true));
+    } catch {
+      // ignore
+    }
+    wrap.addEventListener('click', onClick);
+    cleanups.push(() => wrap.removeEventListener('click', onClick));
   }
+
+  // Close menus on "click outside" (mobile browsers may not fire pointerdown).
+  const onDocTouchStart = (event) => {
+    try {
+      if (!state.isOutlineEditing) return;
+      if (!root.contains(event.target)) closeAllMenus();
+    } catch {
+      // ignore
+    }
+  };
+  const onDocClick = (event) => {
+    try {
+      if (!state.isOutlineEditing) return;
+      if (!root.contains(event.target)) closeAllMenus();
+    } catch {
+      // ignore
+    }
+  };
+  try {
+    document.addEventListener('touchstart', onDocTouchStart, { passive: true });
+    cleanups.push(() => document.removeEventListener('touchstart', onDocTouchStart));
+  } catch {
+    // ignore
+  }
+  document.addEventListener('click', onDocClick);
+  cleanups.push(() => document.removeEventListener('click', onDocClick));
+
 		  for (const item of actionButtons) {
 		    cleanups.push(
 		      click(item, () => {
