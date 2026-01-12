@@ -8521,6 +8521,16 @@ async function mountOutlineEditor() {
             if (!selection?.empty) return false;
             const { $from } = selection;
             if ($from.parent?.type?.name !== 'outlineHeading') return false;
+            // This behavior is for edit-mode only. In view-mode Enter is handled in editorProps
+            // (it should enter edit-mode, not restructure content).
+            try {
+              if (outlineEditModeKey) {
+                const st = outlineEditModeKey.getState(pmState) || {};
+                if (!st.editingSectionId) return false;
+              }
+            } catch {
+              // ignore
+            }
             const sectionPos = findSectionPos(pmState.doc, $from);
             if (typeof sectionPos !== 'number') return false;
             const sectionNode = pmState.doc.nodeAt(sectionPos);
@@ -8528,10 +8538,11 @@ async function mountOutlineEditor() {
             const headingNode = sectionNode.child(0);
             const bodyNode = sectionNode.child(1);
             const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+            const headingSize = headingNode.content?.size ?? 0;
 
             // Enter в конце заголовка схлопнутой секции: создаём новый sibling ниже,
             // ничего не переносим и не пытаемся переходить в скрытое body.
-            if (Boolean(sectionNode.attrs?.collapsed) && $from.parentOffset === headingNode.content.size) {
+            if (Boolean(sectionNode.attrs?.collapsed) && $from.parentOffset === headingSize) {
               const insertPos = sectionPos + sectionNode.nodeSize;
               const schema = pmState.doc.type.schema;
               const newId = safeUuid();
@@ -8576,6 +8587,63 @@ async function mountOutlineEditor() {
               return true;
             }
 
+            // Enter in the middle of heading: move the right-side text into the body (first paragraph),
+            // and place the cursor there.
+            if ($from.parentOffset > 0 && $from.parentOffset < headingSize) {
+              const schema = pmState.doc.type.schema;
+              const leftText = headingNode.textBetween(0, Math.max(0, Math.min($from.parentOffset, headingSize)), '', '');
+              const rightText = headingNode.textBetween(Math.max(0, Math.min($from.parentOffset, headingSize)), headingSize, '', '');
+
+              const newHeading = schema.nodes.outlineHeading.create({}, leftText ? [schema.text(leftText)] : []);
+              const childrenNode = sectionNode.child(2);
+
+              const existingBlocks = [];
+              try {
+                for (let i = 0; i < bodyNode.childCount; i += 1) existingBlocks.push(bodyNode.child(i));
+              } catch {
+                // ignore
+              }
+
+              const rightPara = schema.nodes.paragraph.create({}, rightText ? [schema.text(rightText)] : []);
+              let nextBlocks = [];
+
+              if (rightText) {
+                // If body starts with an empty paragraph, reuse it to avoid creating an extra blank line.
+                const first = existingBlocks[0] || null;
+                if (first && first.type?.name === 'paragraph' && isEffectivelyEmptyNode(first)) {
+                  nextBlocks = [rightPara, ...existingBlocks.slice(1)];
+                } else {
+                  nextBlocks = [rightPara, ...existingBlocks];
+                }
+              } else {
+                nextBlocks = existingBlocks;
+              }
+
+              if (!nextBlocks.length) {
+                nextBlocks = [schema.nodes.paragraph.create({}, [])];
+              }
+
+              const newBody = schema.nodes.outlineBody.create({}, nextBlocks);
+              const newSection = schema.nodes.outlineSection.create(
+                { ...sectionNode.attrs, collapsed: false },
+                [newHeading, newBody, childrenNode],
+              );
+
+              let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+              const updated = tr.doc.nodeAt(sectionPos);
+              if (updated) {
+                const h2 = updated.child(0);
+                const bStart = sectionPos + 1 + h2.nodeSize;
+                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bStart + 2), 1));
+              } else {
+                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+              }
+              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+              dispatch(tr.scrollIntoView());
+              return true;
+            }
+
+            // Enter at the end of heading: move caret to the body start.
             let tr = pmState.tr;
             if (!bodyNode.childCount) {
               const schema = pmState.doc.type.schema;
