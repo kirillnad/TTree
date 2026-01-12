@@ -39,6 +39,9 @@ let lastActiveSectionId = null;
 const pendingUploadObjectUrls = new Map(); // token -> objectUrl
 const committedSectionIndexText = new Map();
 const dirtySectionIds = new Set();
+// Proofread trigger should survive mid-edit compacts (edit heartbeat) — compacts clear `dirtySectionIds`,
+// but proofread still needs to run when the user leaves the section.
+const proofreadDirtySectionIds = new Set();
 let docDirty = false;
 let onlineHandlerAttached = false;
 let outlineParseHtmlToNodes = null;
@@ -62,6 +65,7 @@ let tableResizeActive = false;
 const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: boolean }
 const PROOFREAD_RETRY_COOLDOWN_MS = 30 * 1000;
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean, status: 'ok'|'error', lastAttemptAtMs: number }
+const proofreadHeadingState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean, status: 'ok'|'error', lastAttemptAtMs: number }
 let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 let dropGuardCleanup = null;
@@ -5306,6 +5310,42 @@ function bodyNodeToHtml(bodyNode) {
   return (html || '').trim();
 }
 
+function headingNodeToPlain(headingNode) {
+  try {
+    return normalizeWhitespace(String(headingNode?.textContent || '').replace(/\u00a0/g, ' ')).trim();
+  } catch {
+    return '';
+  }
+}
+
+function htmlToPlainText(html) {
+  try {
+    const template = document.createElement('template');
+    template.innerHTML = String(html || '');
+    return normalizeWhitespace(String(template.content.textContent || '').replace(/\u00a0/g, ' ')).trim();
+  } catch {
+    return '';
+  }
+}
+
+function applyHeadingPlainToSection(editor, sectionId, plainTitle) {
+  if (!editor || !sectionId) return false;
+  const pos = findSectionPosById(editor.state.doc, sectionId);
+  if (typeof pos !== 'number') return false;
+  const sectionNode = editor.state.doc.nodeAt(pos);
+  if (!sectionNode) return false;
+  const schema = editor.state.schema;
+  const headingNode = sectionNode.child(0);
+  const headingPos = pos + 1;
+  const title = String(plainTitle || '').replace(/\u00a0/g, ' ').trim();
+  const nextHeading = schema.nodes.outlineHeading.create({}, title ? [schema.text(title)] : []);
+  const tr = editor.state.tr
+    .replaceWith(headingPos, headingPos + headingNode.nodeSize, nextHeading)
+    .setMeta(OUTLINE_ALLOW_META, true);
+  editor.view.dispatch(tr);
+  return true;
+}
+
 function applyBodyHtmlToSection(editor, sectionId, html) {
   if (!editor || !sectionId) return false;
   if (!outlineParseHtmlToNodes) return false;
@@ -5583,74 +5623,167 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
     logSkip('section_not_found', { pos: typeof pos === 'number' ? pos : null });
     return;
   }
+
+  const headingNode = sectionNode.child(0);
   const bodyNode = sectionNode.child(1);
+  const headingPlain = headingNodeToPlain(headingNode);
+  const headingHtml = headingPlain ? `<p>${escapeHtml(headingPlain)}</p>` : '';
   const bodyHtml = bodyNodeToHtml(bodyNode);
-  if (!bodyHtml) {
-    logSkip('empty_body_html');
+
+  if (!headingHtml && !bodyHtml) {
+    logSkip('empty_heading_and_body');
     return;
   }
 
-  const htmlHash = hashTextForProofread(bodyHtml);
-  const prev = proofreadState.get(sid) || null;
-  if (prev?.inFlight) {
-    logSkip('already_in_flight', { htmlHash });
-    return;
-  }
-  if (prev?.status === 'ok' && prev?.htmlHash === htmlHash) {
-    logSkip('already_ok_same_hash', { htmlHash });
-    return;
-  }
-  if (prev?.status === 'error' && prev?.htmlHash === htmlHash) {
-    const lastAttemptAtMs = Number(prev?.lastAttemptAtMs || 0) || 0;
-    if (Date.now() - lastAttemptAtMs < PROOFREAD_RETRY_COOLDOWN_MS) {
-      logSkip('error_cooldown', { htmlHash, lastAttemptAtMs, cooldownMs: PROOFREAD_RETRY_COOLDOWN_MS });
-      return;
+  const headingHash = headingHtml ? hashTextForProofread(headingHtml) : '';
+  const bodyHash = bodyHtml ? hashTextForProofread(bodyHtml) : '';
+
+  const shouldSkipByState = (prev, hash) => {
+    if (!hash) return true;
+    if (prev?.inFlight) return true;
+    if (prev?.status === 'ok' && prev?.htmlHash === hash) return true;
+    if (prev?.status === 'error' && prev?.htmlHash === hash) {
+      const lastAttemptAtMs = Number(prev?.lastAttemptAtMs || 0) || 0;
+      if (Date.now() - lastAttemptAtMs < PROOFREAD_RETRY_COOLDOWN_MS) return true;
     }
+    return false;
+  };
+
+  const prevHeading = proofreadHeadingState.get(sid) || null;
+  const prevBody = proofreadState.get(sid) || null;
+  const skipHeading = shouldSkipByState(prevHeading, headingHash);
+  const skipBody = shouldSkipByState(prevBody, bodyHash);
+
+  if (skipHeading && skipBody) {
+    logSkip('already_ok_or_in_flight', { headingHash: headingHash || null, bodyHash: bodyHash || null });
+    try {
+      // If both hashes are already clean, avoid re-triggering on every leave.
+      proofreadDirtySectionIds.delete(sid);
+    } catch {
+      // ignore
+    }
+    return;
   }
 
-  proofreadDebug('start', { sectionId: sid, htmlHash });
-  proofreadState.set(sid, { htmlHash, inFlight: true, status: prev?.status || 'ok', lastAttemptAtMs: Date.now() });
-  proofreadOutlineHtml(bodyHtml)
-    .then((res) => {
-      const correctedHtml = String(res?.html || '').trim();
-      if (!correctedHtml) {
-        proofreadDebug('skip_apply', { sectionId: sid, reason: 'empty_corrected_html' });
-        return;
-      }
-      const currentDoc = editor.state.doc;
-      const currentPos = findSectionPosById(currentDoc, sid);
-      const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
-      if (!currentNode) {
-        proofreadDebug('skip_apply', { sectionId: sid, reason: 'section_not_found_current_doc' });
-        return;
-      }
-      const currentBodyHtml = bodyNodeToHtml(currentNode.child(1));
-      if (hashTextForProofread(currentBodyHtml) !== htmlHash) {
-        proofreadDebug('skip_apply', { sectionId: sid, reason: 'body_changed_since_request' });
-        return;
-      }
-      if (hashTextForProofread(correctedHtml) === htmlHash) {
-        proofreadDebug('skip_apply', { sectionId: sid, reason: 'no_changes_from_server' });
-        return;
-      }
-      const applied = applyBodyHtmlToSection(editor, sid, correctedHtml);
-      if (!applied) {
-        proofreadDebug('skip_apply', { sectionId: sid, reason: 'apply_failed' });
-        return;
-      }
-      docDirty = true;
-      scheduleAutosave({ delayMs: 900 });
-    })
-    .catch(() => {
-      proofreadDebug('error', { sectionId: sid, htmlHash });
-      proofreadState.set(sid, { htmlHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
-    })
-    .finally(() => {
-      const next = proofreadState.get(sid) || null;
-      if (next?.status === 'error') return;
-      proofreadState.set(sid, { htmlHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
-      proofreadDebug('done', { sectionId: sid, htmlHash });
+  let headingDone = skipHeading;
+  let bodyDone = skipBody;
+  const tryClearDirty = () => {
+    try {
+      if (headingDone && bodyDone) proofreadDirtySectionIds.delete(sid);
+    } catch {
+      // ignore
+    }
+  };
+
+  if (!skipHeading) {
+    proofreadDebug('start_heading', { sectionId: sid, htmlHash: headingHash });
+    proofreadHeadingState.set(sid, {
+      htmlHash: headingHash,
+      inFlight: true,
+      status: prevHeading?.status || 'ok',
+      lastAttemptAtMs: Date.now(),
     });
+    proofreadOutlineHtml(headingHtml)
+      .then((res) => {
+        const correctedHtml = String(res?.html || '').trim();
+        if (!correctedHtml) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'empty_corrected_html' });
+          return;
+        }
+        const correctedPlain = htmlToPlainText(correctedHtml);
+        if (!correctedPlain) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'empty_corrected_plain' });
+          return;
+        }
+        const currentDoc = editor.state.doc;
+        const currentPos = findSectionPosById(currentDoc, sid);
+        const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
+        if (!currentNode) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'section_not_found_current_doc' });
+          return;
+        }
+        const currentHeadingPlain = headingNodeToPlain(currentNode.child(0));
+        const currentHeadingHtml = currentHeadingPlain ? `<p>${escapeHtml(currentHeadingPlain)}</p>` : '';
+        if (hashTextForProofread(currentHeadingHtml) !== headingHash) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'heading_changed_since_request' });
+          return;
+        }
+        const correctedHash = hashTextForProofread(`<p>${escapeHtml(correctedPlain)}</p>`);
+        if (correctedHash === headingHash) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'no_changes_from_server' });
+          return;
+        }
+        const applied = applyHeadingPlainToSection(editor, sid, correctedPlain);
+        if (!applied) {
+          proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'apply_failed' });
+          return;
+        }
+        docDirty = true;
+        scheduleAutosave({ delayMs: 900 });
+      })
+      .catch(() => {
+        proofreadDebug('error_heading', { sectionId: sid, htmlHash: headingHash });
+        proofreadHeadingState.set(sid, { htmlHash: headingHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
+      })
+      .finally(() => {
+        const next = proofreadHeadingState.get(sid) || null;
+        if (next?.status !== 'error') {
+          proofreadHeadingState.set(sid, { htmlHash: headingHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
+        }
+        proofreadDebug('done_heading', { sectionId: sid, htmlHash: headingHash });
+        headingDone = true;
+        tryClearDirty();
+      });
+  }
+
+  if (!skipBody) {
+    proofreadDebug('start', { sectionId: sid, htmlHash: bodyHash });
+    proofreadState.set(sid, { htmlHash: bodyHash, inFlight: true, status: prevBody?.status || 'ok', lastAttemptAtMs: Date.now() });
+    proofreadOutlineHtml(bodyHtml)
+      .then((res) => {
+        const correctedHtml = String(res?.html || '').trim();
+        if (!correctedHtml) {
+          proofreadDebug('skip_apply', { sectionId: sid, reason: 'empty_corrected_html' });
+          return;
+        }
+        const currentDoc = editor.state.doc;
+        const currentPos = findSectionPosById(currentDoc, sid);
+        const currentNode = typeof currentPos === 'number' ? currentDoc.nodeAt(currentPos) : null;
+        if (!currentNode) {
+          proofreadDebug('skip_apply', { sectionId: sid, reason: 'section_not_found_current_doc' });
+          return;
+        }
+        const currentBodyHtml = bodyNodeToHtml(currentNode.child(1));
+        if (hashTextForProofread(currentBodyHtml) !== bodyHash) {
+          proofreadDebug('skip_apply', { sectionId: sid, reason: 'body_changed_since_request' });
+          return;
+        }
+        if (hashTextForProofread(correctedHtml) === bodyHash) {
+          proofreadDebug('skip_apply', { sectionId: sid, reason: 'no_changes_from_server' });
+          return;
+        }
+        const applied = applyBodyHtmlToSection(editor, sid, correctedHtml);
+        if (!applied) {
+          proofreadDebug('skip_apply', { sectionId: sid, reason: 'apply_failed' });
+          return;
+        }
+        docDirty = true;
+        scheduleAutosave({ delayMs: 900 });
+      })
+      .catch(() => {
+        proofreadDebug('error', { sectionId: sid, htmlHash: bodyHash });
+        proofreadState.set(sid, { htmlHash: bodyHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
+      })
+      .finally(() => {
+        const next = proofreadState.get(sid) || null;
+        if (next?.status !== 'error') {
+          proofreadState.set(sid, { htmlHash: bodyHash, inFlight: false, status: 'ok', lastAttemptAtMs: Date.now() });
+        }
+        proofreadDebug('done', { sectionId: sid, htmlHash: bodyHash });
+        bodyDone = true;
+        tryClearDirty();
+      });
+  }
 }
 
 function markSectionDirtyIfChanged(doc, sectionId) {
@@ -5663,6 +5796,11 @@ function markSectionDirtyIfChanged(doc, sectionId) {
   const committed = committedSectionIndexText.get(sectionId) || '';
   if (current === committed) return false;
   dirtySectionIds.add(sectionId);
+  try {
+    proofreadDirtySectionIds.add(sectionId);
+  } catch {
+    // ignore
+  }
   return true;
 }
 
@@ -9937,6 +10075,18 @@ async function mountOutlineEditor() {
 		        const body = doc?.body;
 		        if (!body) return normalized;
 		        try {
+		          // Some web-app clipboards wrap content in custom elements (e.g. <ms-cmark-node>).
+		          // They are not part of our schema, and can break mark parsing (e.g. <strong>).
+		          for (const w of Array.from(body.querySelectorAll('ms-cmark-node'))) {
+		            const parent = w.parentNode;
+		            if (!parent) continue;
+		            while (w.firstChild) parent.insertBefore(w.firstChild, w);
+		            parent.removeChild(w);
+		          }
+		        } catch {
+		          // ignore
+		        }
+		        try {
 		          // Outline body doesn't support nested headings; downgrade them to paragraphs.
 		          for (const h of Array.from(body.querySelectorAll('h1,h2,h3,h4,h5,h6'))) {
 		            const p = doc.createElement('p');
@@ -9952,7 +10102,10 @@ async function mountOutlineEditor() {
 		        } catch {
 		          // ignore
 		        }
-		        return String(body.innerHTML || '').trim();
+		        return String(body.innerHTML || '')
+		          .replace(/<!--\s*StartFragment\s*-->/gi, '')
+		          .replace(/<!--\s*EndFragment\s*-->/gi, '')
+		          .trim();
 		      };
 
 		      const looksLikeHtmlSource = (text) => {
@@ -10069,8 +10222,11 @@ async function mountOutlineEditor() {
 		          // Keep the existing "paste as outline sections" behavior.
 		          if (html) {
 		            try {
-		              const htmlParsed = /<h[1-6][\s>]/i.test(html) ? true : false;
-		              if (htmlParsed) return false;
+		              // Only keep the "HTML headings => outline sections" path when the clipboard
+		              // clearly contains multiple headings (i.e. multiple sections).
+		              const matches = String(html).match(/<h[1-6][\s>]/gi);
+		              const headingCount = Array.isArray(matches) ? matches.length : 0;
+		              if (headingCount >= 2) return false;
 		            } catch {
 		              // ignore
 		            }
@@ -12819,6 +12975,11 @@ async function mountOutlineEditor() {
         // ignore
       }
       dirtySectionIds.clear();
+      try {
+        proofreadDirtySectionIds.clear();
+      } catch {
+        // ignore
+      }
       docDirty = false;
       outlineLastSavedAt = null;
       lastActiveSectionId = null;
@@ -12906,9 +13067,9 @@ async function mountOutlineEditor() {
 		        } catch {
 		          // ignore
 		        }
-		        // Only proofread when the section was edited (i.e. marked dirty).
+		        // Proofread when the section was edited, even if it was already compact-synced during edit-mode.
 		        try {
-		          if (dirtySectionIds.has(lastActiveSectionId)) {
+		          if (proofreadDirtySectionIds.has(lastActiveSectionId)) {
 		            maybeProofreadOnLeave(editor, pmState.doc, lastActiveSectionId);
 		          }
 		        } catch {
@@ -13836,6 +13997,11 @@ export function closeOutlineEditor() {
 	  }
 	  autosaveInFlight = false;
   dirtySectionIds.clear();
+  try {
+    proofreadDirtySectionIds.clear();
+  } catch {
+    // ignore
+  }
   committedSectionIndexText.clear();
   lastActiveSectionId = null;
   docDirty = false;

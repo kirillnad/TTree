@@ -496,17 +496,118 @@ export function attachRichContentHandlers(element, blockId) {
       logDebug('paste: non-image files detected', otherFiles.map((f) => ({ name: f.name, type: f.type, size: f.size })));
       otherFiles.forEach((file) => insertAttachmentFromFile(element, file, blockId));
     } else {
-      const htmlData = (event.clipboardData?.getData('text/html') || '').trim();
       event.preventDefault();
 
-      if (htmlData) {
-        const safeHtml = sanitizePastedHtml(htmlData);
-        const trimmed = trimPastedHtml(safeHtml);
+      const extractClipboardHtmlFragment = (rawHtml) => {
+        const html = String(rawHtml || '').trim();
+        if (!html) return '';
+        const template = document.createElement('template');
+        template.innerHTML = html;
+        const body = template.content.querySelector('body');
+        const inner = (body ? body.innerHTML : template.innerHTML) || '';
+        return inner.replace(/<!--\s*StartFragment\s*-->/gi, '').replace(/<!--\s*EndFragment\s*-->/gi, '').trim();
+      };
+
+      const convertBlockHtmlToInlineBreaks = (html) => {
+        const input = String(html || '').trim();
+        if (!input) return '';
+        // If the payload contains complex structures, keep it as-is.
+        // (Tables/lists are better handled by the normal HTML paste path.)
+        if (/<\s*(table|ul|ol)\b/i.test(input)) return input;
+        if (!/<\s*(p|div|h[1-6])\b/i.test(input)) return input;
+
+        const template = document.createElement('template');
+        template.innerHTML = input;
+
+        // Unwrap some known "wrapper" tags from web-app clipboards.
+        const unwrapAll = (selector) => {
+          template.content.querySelectorAll(selector).forEach((node) => {
+            const parent = node.parentNode;
+            if (!parent) return;
+            while (node.firstChild) {
+              parent.insertBefore(node.firstChild, node);
+            }
+            parent.removeChild(node);
+          });
+        };
+        unwrapAll('ms-cmark-node');
+
+        const blocks = [];
+        const pushBlock = (raw) => {
+          const v = String(raw || '')
+            .replace(/^\s*(<br\s*\/?>\s*)+/gi, '')
+            .replace(/(\s*<br\s*\/?>\s*)+$/gi, '')
+            .trim();
+          if (!v) return;
+          blocks.push(v);
+        };
+
+        const children = Array.from(template.content.childNodes || []);
+        for (const node of children) {
+          if (!node) continue;
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+            if (text) pushBlock(escapeHtml(text));
+            continue;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          const tag = (node.tagName || '').toUpperCase();
+          if (/^H[1-6]$/.test(tag)) {
+            pushBlock(`<strong>${node.innerHTML || ''}</strong>`);
+            continue;
+          }
+          if (tag === 'P' || tag === 'DIV' || tag === 'LI' || tag === 'BLOCKQUOTE') {
+            pushBlock(node.innerHTML || '');
+            continue;
+          }
+          if (tag === 'BR') {
+            pushBlock('<br />');
+            continue;
+          }
+          // Unknown top-level tag: keep its HTML to avoid losing inline formatting.
+          pushBlock(node.outerHTML || node.innerHTML || '');
+        }
+
+        if (!blocks.length) return '';
+        return blocks.join('<br /><br />');
+      };
+
+      const insertHtmlIntoEditable = (html) => {
         clearEmptyPlaceholder(element);
-        insertHtmlAtCaret(element, linkifyHtml(trimmed));
+        try {
+          element.focus({ preventScroll: true });
+        } catch {
+          element.focus();
+        }
+        try {
+          if (typeof document.execCommand === 'function') {
+            const ok = document.execCommand('insertHTML', false, html);
+            if (ok) return true;
+          }
+        } catch {
+          // ignore
+        }
+        insertHtmlAtCaret(element, html);
+        return true;
+      };
+
+      const insertHtml = (rawHtml) => {
+        const htmlData = extractClipboardHtmlFragment(rawHtml);
+        if (!htmlData) return false;
+        const safeHtml = sanitizePastedHtml(htmlData);
+        const normalizedHtml = convertBlockHtmlToInlineBreaks(safeHtml);
+        if (!normalizedHtml) return false;
+        const trimmed = trimPastedHtml(safeHtml);
+        // Use the normalized HTML for insertion to avoid block tags being flattened inside <p>.
+        // (Still apply trimming to remove accidental leading/trailing empties.)
+        const insertCandidate = trimPastedHtml(normalizedHtml) || trimmed;
+        insertHtmlIntoEditable(linkifyHtml(insertCandidate));
         notifyEditingInput(element);
-      } else {
-        const text = event.clipboardData?.getData('text/plain') || '';
+        return true;
+      };
+
+      const insertPlainText = (rawText) => {
+        const text = String(rawText || '');
         const trimmed = text.trim();
         const isLikelyUrl = /^https?:\/\/\S+$/i.test(trimmed);
         if (isLikelyUrl) {
@@ -517,20 +618,51 @@ export function attachRichContentHandlers(element, blockId) {
             `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`,
           );
           notifyEditingInput(element);
-        } else {
-          const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-          // Для обычного текста считаем, что одна пустая строка между абзацами —
-          // это «настоящий» перенос, а одиночные переводы строк внутри абзаца
-          // можно схлопнуть до пробела. Поэтому оставляем <br /><br /> только
-          // на местах двойных (и более) переводов строк.
-          const safeTextHtml = escapeHtml(normalized)
-            .replace(/\n{2,}/g, '<br /><br />')
-            .replace(/\n/g, ' ');
-          const safeHtml = linkifyHtml(trimPastedHtml(safeTextHtml));
-          clearEmptyPlaceholder(element);
-          insertHtmlAtCaret(element, safeHtml);
-          notifyEditingInput(element);
+          return true;
         }
+        const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const safeTextHtml = escapeHtml(normalized)
+          .replace(/\n{2,}/g, '<br /><br />')
+          .replace(/\n/g, '<br />');
+        const safeHtml = linkifyHtml(trimPastedHtml(safeTextHtml));
+        insertHtmlIntoEditable(safeHtml);
+        notifyEditingInput(element);
+        return true;
+      };
+
+      // Prefer synchronous `text/html` when available.
+      const htmlData = (event.clipboardData?.getData('text/html') || '').trim();
+      if (htmlData && insertHtml(htmlData)) return;
+
+      // Some browsers/apps (incl. some “copy from web apps”) expose `text/html` only via clipboard items.
+      // Use DataTransferItem.getAsString() as a fallback before degrading to plain text.
+      try {
+        const items = Array.from(event.clipboardData?.items || []);
+        const htmlItem = items.find((i) => i && i.kind === 'string' && i.type === 'text/html');
+        if (htmlItem && typeof htmlItem.getAsString === 'function') {
+          htmlItem.getAsString((raw) => {
+            try {
+              if (insertHtml(raw)) return;
+            } catch {
+              // ignore
+            }
+            try {
+              const text = event.clipboardData?.getData('text/plain') || '';
+              insertPlainText(text);
+            } catch {
+              // ignore
+            }
+          });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      // Plain text fallback.
+      {
+        const text = event.clipboardData?.getData('text/plain') || '';
+        insertPlainText(text);
       }
     }
   });
