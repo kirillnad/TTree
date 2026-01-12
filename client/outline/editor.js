@@ -5019,6 +5019,43 @@ function moveCursorToSectionPreferredStart(editor, sectionId) {
   }
 }
 
+function ensureOutlineSectionDomVisible(editor, sectionId, { block = 'center' } = {}) {
+  try {
+    const sid = String(sectionId || '').trim();
+    if (!editor || !sid) return false;
+    const view = editor.view;
+    if (!view?.dom?.querySelector) return false;
+    const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(sid) : sid.replace(/"/g, '\\"');
+    const scrollOnce = () => {
+      try {
+        const el =
+          view.dom?.querySelector?.(`[data-outline-section][data-section-id="${escaped}"]`) ||
+          view.dom?.querySelector?.(`[data-section-id="${escaped}"]`);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ block: block || 'center', inline: 'nearest' });
+        }
+      } catch {
+        // ignore
+      }
+    };
+    // ProseMirror's `tr.scrollIntoView()` can be insufficient right after mount on some browsers.
+    // Do a DOM-based scroll after layout settles.
+    try {
+      window.requestAnimationFrame(scrollOnce);
+    } catch {
+      // ignore
+    }
+    try {
+      setTimeout(scrollOnce, 80);
+    } catch {
+      // ignore
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function moveCursorToActiveSectionBodyStart(editor) {
   if (!editor) return false;
   try {
@@ -13882,6 +13919,7 @@ export async function openOutlineEditor() {
 	      const targetId = state.currentBlockId || null;
 	      if (targetId) {
 	        moveCursorToSectionPreferredStart(outlineEditorInstance, targetId);
+	        ensureOutlineSectionDomVisible(outlineEditorInstance, targetId, { block: 'center' });
 	      }
 	    } catch {
 	      // ignore
