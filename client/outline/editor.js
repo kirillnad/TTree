@@ -87,6 +87,7 @@ const OUTLINE_SECTION_CLIPBOARD_KEY = 'ttree_outline_section_clipboard_v1';
 const OUTLINE_TABLE_COLUMN_CLIPBOARD_KEY = 'ttree_outline_table_column_clipboard_v1';
 const PENDING_UPLOAD_IMG_PREFIX = 'pending-attachment:';
 const OUTLINE_EDIT_HEARTBEAT_MS = 2000;
+const pendingUploadRevokeTimers = new Map(); // token -> timeoutId
 
 function findImagePosByUploadToken(doc, token) {
   let found = null;
@@ -109,6 +110,30 @@ function revokePendingUploadObjectUrl(token) {
   pendingUploadObjectUrls.delete(t);
   try {
     URL.revokeObjectURL(url);
+  } catch {
+    // ignore
+  }
+}
+
+function scheduleRevokePendingUploadObjectUrl(token, delayMs = 30000) {
+  const t = String(token || '').trim();
+  if (!t) return;
+  try {
+    const existing = pendingUploadRevokeTimers.get(t) || null;
+    if (existing) clearTimeout(existing);
+  } catch {
+    // ignore
+  }
+  try {
+    const timeoutId = setTimeout(() => {
+      try {
+        pendingUploadRevokeTimers.delete(t);
+      } catch {
+        // ignore
+      }
+      revokePendingUploadObjectUrl(t);
+    }, Math.max(0, Number(delayMs) || 0));
+    pendingUploadRevokeTimers.set(t, timeoutId);
   } catch {
     // ignore
   }
@@ -263,7 +288,9 @@ async function flushPendingImageUploadsForArticle(articleId) {
           // ignore
         }
 
-        revokePendingUploadObjectUrl(token);
+        // Don't revoke the blob URL immediately: the DOM may still be decoding it while ProseMirror updates.
+        // Immediate revoke can cause flicker and "ERR_FILE_NOT_FOUND" for blob: URLs.
+        scheduleRevokePendingUploadObjectUrl(token);
         await deletePendingUpload(token).catch(() => {});
         didAny = true;
       } catch (err) {
@@ -6160,6 +6187,28 @@ async function mountOutlineEditor() {
 	          },
 	          renderHTML: () => ({}),
 	        },
+	        aspectRatio: {
+	          default: null,
+	          parseHTML: (element) => {
+	            try {
+	              const el = element;
+	              const wrapper =
+	                el && el.classList && el.classList.contains('resizable-image')
+	                  ? el
+	                  : el?.closest?.('.resizable-image');
+	              const raw =
+	                wrapper?.style?.aspectRatio ||
+	                wrapper?.getAttribute?.('data-aspect-ratio') ||
+	                el?.getAttribute?.('data-aspect-ratio') ||
+	                '';
+	              const n = Number.parseFloat(String(raw || '').replace(',', '.'));
+	              return Number.isFinite(n) && n > 0 ? n : null;
+	            } catch {
+	              return null;
+	            }
+	          },
+	          renderHTML: () => ({}),
+	        },
 	        uploadToken: {
 	          default: null,
 	          parseHTML: () => null,
@@ -6198,13 +6247,22 @@ async function mountOutlineEditor() {
 	    renderHTML({ node, HTMLAttributes }) {
 	      const rawWidth = node?.attrs?.width;
 	      const width = Number.isFinite(Number(rawWidth)) ? Math.round(Number(rawWidth)) : 320;
+	      const ratioRaw = node?.attrs?.aspectRatio;
+	      const ratio = Number.isFinite(Number(ratioRaw)) && Number(ratioRaw) > 0 ? Number(ratioRaw) : null;
 	      const imgAttrs = { ...HTMLAttributes };
 	      delete imgAttrs.width;
+	      delete imgAttrs.aspectRatio;
 	      delete imgAttrs.uploadToken;
+	      // Ensure consistent sizing + avoid 0-height "collapse" while image src swaps/loads.
+	      imgAttrs.style = `${String(imgAttrs.style || '').trim()};width:100%;height:auto;display:block;`.replace(/^;\s*/,'');
 	      return [
 	        'span',
 	        mergeAttributes(
-	          { class: 'resizable-image', style: `width:${width}px;max-width:100%;` },
+	          {
+	            class: 'resizable-image',
+	            style: `width:${width}px;max-width:100%;${ratio ? `aspect-ratio:${ratio.toFixed(6)};` : ''}`,
+	            ...(ratio ? { 'data-aspect-ratio': String(ratio) } : {}),
+	          },
 	          {},
 	        ),
 	        ['span', { class: 'resizable-image__inner' }, ['img', mergeAttributes(imgAttrs, { draggable: 'false' })]],
@@ -6277,16 +6335,50 @@ async function mountOutlineEditor() {
 		        let tr = view.state.tr;
 		        const selFrom = tr.selection.from;
 		        const selTo = tr.selection.to;
-		        // Удаляем выделение (если было) и вставляем пробелы/картинку.
+		        const pad = '\u00a0\u00a0';
+		        // Удаляем выделение (если было).
 		        if (selTo > selFrom) tr = tr.delete(selFrom, selTo);
-		        tr = tr.insertText('  ', selFrom, selFrom);
-		        const insertAt = tr.mapping.map(selFrom, 1);
-		        tr = tr.replaceRangeWith(insertAt, insertAt, imgNode);
-		        const afterImg = tr.mapping.map(insertAt + imgNode.nodeSize, 1);
-		        tr = tr.insertText('  ', afterImg, afterImg);
-			        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, afterImg + 1)), 1));
+		        // Позиции считаем детерминированно, без `tr.mapping.map(...)`,
+		        // чтобы избежать out-of-range при серии быстрых вставок.
+		        const start = Math.max(0, Math.min(tr.doc.content.size, selFrom));
+		        tr = tr.insertText(pad, start, start);
+		        const imagePos = Math.max(0, Math.min(tr.doc.content.size, start + pad.length));
+		        tr = tr.replaceRangeWith(imagePos, imagePos, imgNode);
+		        const afterImagePos = Math.max(0, Math.min(tr.doc.content.size, imagePos + imgNode.nodeSize));
+		        tr = tr.insertText(pad, afterImagePos, afterImagePos);
+		        const caretPos = Math.max(0, Math.min(tr.doc.content.size, afterImagePos + pad.length));
+		        tr = tr.setSelection(TextSelection.create(tr.doc, caretPos));
 			        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
 			        view.dispatch(tr.scrollIntoView());
+
+			        // Compute aspect ratio asynchronously to prevent 0-height collapse on src swaps/loads.
+			        try {
+			          const probe = new Image();
+			          probe.decoding = 'async';
+			          probe.onload = () => {
+			            try {
+			              const w = Number(probe.naturalWidth || 0);
+			              const h = Number(probe.naturalHeight || 0);
+			              if (!(w > 0 && h > 0)) return;
+			              const ratio = w / h;
+			              const pos = findImagePosByUploadToken(view.state.doc, token);
+			              if (typeof pos !== 'number') return;
+			              const node = view.state.doc.nodeAt(pos);
+			              if (!node || node.type?.name !== 'image') return;
+			              if (Number.isFinite(Number(node.attrs?.aspectRatio)) && Number(node.attrs.aspectRatio) > 0) return;
+			              const nextAttrs = { ...node.attrs, aspectRatio: ratio };
+			              let trR = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+			              trR = trR.setMeta(OUTLINE_ALLOW_META, true);
+			              view.dispatch(trR);
+			            } catch {
+			              // ignore
+			            }
+			          };
+			          probe.onerror = () => {};
+			          probe.src = objectUrl;
+			        } catch {
+			          // ignore
+			        }
 
 			        try {
 			          if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
@@ -6310,7 +6402,8 @@ async function mountOutlineEditor() {
 		            let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
 		            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
 		            view.dispatch(tr2);
-		            revokePendingUploadObjectUrl(token);
+		            // See comment in `flushPendingImageUploadsForArticle`: avoid immediate revoke to prevent flicker.
+		            scheduleRevokePendingUploadObjectUrl(token);
 		            void deletePendingUpload(token).catch(() => {});
 		          })
 		          .catch((err) => {
@@ -6619,7 +6712,10 @@ async function mountOutlineEditor() {
 		              const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 		              const minWidth = rootFontSize;
 		              const viewportMax = Math.max(minWidth, document.documentElement.clientWidth - 32);
+		              const step = 10;
 		              let width = session.startWidth + delta;
+		              width = Math.max(minWidth, Math.min(width, viewportMax));
+		              width = Math.round(width / step) * step;
 		              width = Math.max(minWidth, Math.min(width, viewportMax));
 		              session.lastWidth = width;
 		              session.wrapper.style.width = `${Math.round(width)}px`;
@@ -6635,7 +6731,9 @@ async function mountOutlineEditor() {
 		                  : resolveImagePos(wrapper, null);
 		              const node = typeof resolvedPos === 'number' ? view.state.doc.nodeAt(resolvedPos) : null;
 		              if (node && node.type?.name === 'image') {
-		                const width = Math.max(1, Math.round(Number(session.lastWidth || 0) || wrapper.getBoundingClientRect().width));
+		                const step = 10;
+		                const raw = Number(session.lastWidth || 0) || wrapper.getBoundingClientRect().width;
+		                const width = Math.max(1, Math.round(raw / step) * step);
 		                const nextAttrs = { ...node.attrs, width };
 		                let tr = view.state.tr.setNodeMarkup(resolvedPos, undefined, nextAttrs);
 		                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
@@ -14135,6 +14233,30 @@ export function closeOutlineEditor() {
   committedSectionIndexText.clear();
   lastActiveSectionId = null;
   docDirty = false;
+  try {
+    for (const [, timer] of pendingUploadRevokeTimers) {
+      try {
+        clearTimeout(timer);
+      } catch {
+        // ignore
+      }
+    }
+    pendingUploadRevokeTimers.clear();
+  } catch {
+    // ignore
+  }
+  try {
+    for (const [, url] of pendingUploadObjectUrls) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore
+      }
+    }
+    pendingUploadObjectUrls.clear();
+  } catch {
+    // ignore
+  }
   if (outlineEditorInstance) {
     try {
       outlineEditorInstance.destroy();
