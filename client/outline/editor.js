@@ -8642,6 +8642,53 @@ async function mountOutlineEditor() {
       };
 
       return [
+        // Prevent "accidental" cross-parent moves when holding Alt+Arrow:
+        // - within siblings: holding repeats is fine (block "runs" inside the same parent)
+        // - crossing a parent boundary (to an uncle): requires a fresh key press (repeat=false)
+        new Plugin({
+          key: new PluginKey('outlineAltMoveRepeatGuard'),
+          props: {
+            handleKeyDown: (view, event) => {
+              try {
+                if (!event || !event.altKey) return false;
+                if (event.metaKey || event.ctrlKey) return false;
+                const key = String(event.key || '');
+                if (key !== 'ArrowUp' && key !== 'ArrowDown') return false;
+                if (!event.repeat) return false;
+
+                const pmState = view?.state;
+                const $from = pmState?.selection?.$from;
+                if (!$from) return false;
+
+                // Do not interfere inside tables: Alt+Arrows should keep TipTap defaults there.
+                for (let d = $from.depth; d > 0; d -= 1) {
+                  const name = $from.node(d)?.type?.name;
+                  if (name && String(name).startsWith('table')) return false;
+                }
+
+                let sectionPos = null;
+                for (let d = $from.depth; d > 0; d -= 1) {
+                  if ($from.node(d)?.type?.name === 'outlineSection') {
+                    sectionPos = $from.before(d);
+                    break;
+                  }
+                }
+                if (typeof sectionPos !== 'number') return false;
+
+                const $pos = pmState.doc.resolve(sectionPos);
+                const parent = $pos.parent;
+                if (!parent) return false;
+                const idx = $pos.index();
+
+                if (key === 'ArrowUp' && idx <= 0) return true;
+                if (key === 'ArrowDown' && idx >= parent.childCount - 1) return true;
+                return false;
+              } catch {
+                return false;
+              }
+            },
+          },
+        }),
         new Plugin({
           props: {
             handleDOMEvents: {
@@ -11572,6 +11619,47 @@ async function mountOutlineEditor() {
 	        class: 'outline-prosemirror',
 	      },
 		      handleKeyDown(view, event) {
+		        // Guard: holding Alt+Arrow should not cross parent boundaries automatically.
+		        // Crossing into an "uncle" requires a fresh key press.
+		        try {
+		          if (event?.altKey && !event.ctrlKey && !event.metaKey) {
+		            const key = String(event.key || '');
+		            if ((key === 'ArrowUp' || key === 'ArrowDown') && Boolean(event.repeat)) {
+		              const $from = view?.state?.selection?.$from;
+		              if ($from) {
+		                // Do not interfere inside tables: keep TipTap defaults there.
+		                let inTable = false;
+		                for (let d = $from.depth; d > 0; d -= 1) {
+		                  const name = $from.node(d)?.type?.name;
+		                  if (name && String(name).startsWith('table')) {
+		                    inTable = true;
+		                    break;
+		                  }
+		                }
+		                if (!inTable) {
+		                  let sectionPos = null;
+		                  for (let d = $from.depth; d > 0; d -= 1) {
+		                    if ($from.node(d)?.type?.name === 'outlineSection') {
+		                      sectionPos = $from.before(d);
+		                      break;
+		                    }
+		                  }
+		                  if (typeof sectionPos === 'number') {
+		                    const $pos = view.state.doc.resolve(sectionPos);
+		                    const parent = $pos.parent;
+		                    if (parent) {
+		                      const idx = $pos.index();
+		                      if (key === 'ArrowUp' && idx <= 0) return true;
+		                      if (key === 'ArrowDown' && idx >= parent.childCount - 1) return true;
+		                    }
+		                  }
+		                }
+		              }
+		            }
+		          }
+		        } catch {
+		          // ignore
+		        }
 		          outlineDebug('editorProps.keydown', {
 			            key: event?.key || null,
 		            repeat: Boolean(event?.repeat),
