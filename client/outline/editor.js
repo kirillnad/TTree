@@ -7168,7 +7168,15 @@ async function mountOutlineEditor() {
 		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
 		        view.dispatch(tr.scrollIntoView());
 
-		        uploadFileToYandexDisk(state.articleId, file)
+		        let sectionId = null;
+		        try {
+		          const st = outlineEditModeKey?.getState?.(view.state) || null;
+		          sectionId = st?.editingSectionId || null;
+		        } catch {
+		          sectionId = null;
+		        }
+
+		        uploadFileToYandexDisk(state.articleId, file, { sectionId })
 		          .then((attachment) => {
 		            const hrefRaw = String(attachment?.storedPath || attachment?.url || attachment?.path || '').trim();
 		            if (!hrefRaw) throw new Error('Не удалось получить ссылку на файл');
@@ -12824,12 +12832,8 @@ async function mountOutlineEditor() {
 	            const anchor = event.target?.closest?.('a[href]');
 	            if (!anchor) return false;
 	            if (!outlineEditModeKey) return false;
-	            const st = outlineEditModeKey.getState(view.state) || {};
-	            const editingSectionId = st.editingSectionId || null;
-	            if (editingSectionId) return false;
-
-		            const href = String(anchor.getAttribute('href') || '').trim();
-		            if (!href) return false;
+	            const href = String(anchor.getAttribute('href') || '').trim();
+	            if (!href) return false;
 
 		            if (state.isPublicView) {
 		              const relRaw = String(anchor.getAttribute('rel') || '');
@@ -12855,6 +12859,10 @@ async function mountOutlineEditor() {
 	                return true;
 	              }
 	            }
+
+	            const st = outlineEditModeKey.getState(view.state) || {};
+	            const editingSectionId = st.editingSectionId || null;
+	            if (editingSectionId) return false;
 
 	            const looksLikeBareDomain = (value) => {
 	              const s = String(value || '').trim();

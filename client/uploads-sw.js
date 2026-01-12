@@ -2,8 +2,8 @@
 // - UPLOADS_CACHE: user files (/uploads/...) for offline media; should rarely change.
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 445;
-const APP_BUILD = 'd3aahse';
+const APP_VERSION = 451;
+const APP_BUILD = '5jgzvgpz';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
@@ -215,7 +215,9 @@ self.addEventListener('fetch', (event) => {
   if (!req || req.method !== 'GET') return;
 
   // SPA navigation fallback: serve cached app shell when offline.
-  if (isNavigationRequest(req) && isSameOrigin(req)) {
+  // IMPORTANT: never apply this to /api/* navigations (e.g. /api/yandex/disk/file),
+  // otherwise we can end up serving index.html instead of the actual API response/redirect.
+  if (isNavigationRequest(req) && isSameOrigin(req) && !isApiRequest(req)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(APP_CACHE);

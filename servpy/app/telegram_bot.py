@@ -22,6 +22,7 @@ from .data_store import (
 )
 from .import_assets import _save_image_bytes_for_user
 from .yandex_disk_utils import _upload_bytes_to_yandex_for_user
+from .audio_transcripts import enqueue_audio_transcript_job
 
 # Вынесено из app/main.py → app/telegram_bot.py
 
@@ -245,6 +246,7 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
         parts.append(f'<p>{safe}</p>')
 
     attachments: list[tuple[str, str]] = []
+    audio_attachments: list[dict[str, Any]] = []
 
     # Фото: берём последнюю (самую большую) версию и сохраняем
     # как обычное изображение в uploads, как если бы пользователь
@@ -288,9 +290,21 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
                 raw,
                 mime_type or 'application/octet-stream',
             )
-            create_attachment(article_id, disk_path, original_name, mime_type or '', len(raw))
+            att = create_attachment(article_id, disk_path, original_name, mime_type or '', len(raw))
             label = original_name
             attachments.append((disk_path, label))
+            try:
+                name_lc = original_name.lower()
+                mime_lc = (mime_type or '').lower()
+                is_audio_oga = key in ('audio', 'voice') and (
+                    name_lc.endswith('.oga') or name_lc.endswith('.ogg') or name_lc.endswith('.opus')
+                    or mime_lc in ('audio/ogg', 'audio/opus', 'audio/ogg; codecs=opus')
+                )
+                if is_audio_oga and isinstance(att, dict):
+                    # Keep full attachment dict: it contains `id`, `url` (stored_path), and `originalName`.
+                    audio_attachments.append(att)
+            except Exception:
+                pass
         except Exception as exc:  # noqa: BLE001
             logger.error('Telegram bot: failed to store %s on Yandex Disk: %r', key, exc)
 
@@ -357,6 +371,14 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
             body_paragraphs.extend(make_text_paragraphs(text))
         for href, label in attachments:
             body_paragraphs.append(make_link_paragraph(href, label))
+        if audio_attachments:
+            body_paragraphs.append({'type': 'paragraph'})
+            body_paragraphs.append(
+                {
+                    'type': 'paragraph',
+                    'content': [{'type': 'text', 'text': 'Расшифровываем аудио… Результат появится ниже автоматически.'}],
+                },
+            )
 
         new_section = {
             'type': 'outlineSection',
@@ -374,6 +396,21 @@ def _handle_telegram_message(message: dict[str, Any]) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.error('Telegram bot: failed to append inbox section: %r', exc)
         return
+
+    # Enqueue audio transcription jobs (async background worker).
+    try:
+        for att in audio_attachments:
+            try:
+                enqueue_audio_transcript_job(
+                    user_id=user.id,
+                    article_id=article_id,
+                    section_id=section_id,
+                    attachment=att,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.error('Telegram bot: failed to enqueue audio transcript: %r', exc)
+    except Exception:
+        pass
 
     if chat_id is not None:
         _telegram_send_message(chat_id, 'Заметка сохранена в «Быстрые заметки».')

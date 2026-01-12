@@ -125,6 +125,8 @@ from .import_utils import _parse_markdown_blocks, _walk_blocks
 from .routers import import_markdown as import_markdown_routes
 from .routers import import_html as import_html_routes
 from .routers import import_logseq as import_logseq_routes
+from .audio_transcripts import kick_audio_transcript_worker
+from .attachments_gc import kick_attachments_gc_worker
 from .import_html import _parse_memus_export_payload, _process_block_html_for_import
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -152,6 +154,10 @@ USERS_PANEL_PASSWORD = os.environ.get('USERS_PANEL_PASSWORD') or 'zZ141400'
 
 ensure_sample_article()
 ensure_inbox_article()
+# Audio transcript worker: process any queued Telegram voice jobs after restart.
+kick_audio_transcript_worker()
+# Auto-GC orphan attachments (unreferenced for TTL days).
+kick_attachments_gc_worker()
 # Полная перестройка поисковых индексов может занимать много времени
 # на больших базах и замедлять запуск сервера, поэтому по умолчанию
 # она отключена. При необходимости её можно включить через

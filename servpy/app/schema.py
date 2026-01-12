@@ -85,8 +85,16 @@ def _init_postgres_schema() -> None:
             original_name TEXT NOT NULL,
             content_type TEXT,
             size BIGINT NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            last_referenced_at TEXT,
+            unreferenced_since TEXT
         )
+        ''',
+        '''
+        ALTER TABLE attachments ADD COLUMN IF NOT EXISTS last_referenced_at TEXT
+        ''',
+        '''
+        ALTER TABLE attachments ADD COLUMN IF NOT EXISTS unreferenced_since TEXT
         ''',
         '''
         CREATE TABLE IF NOT EXISTS article_versions (
@@ -228,6 +236,33 @@ def _init_postgres_schema() -> None:
             op_type TEXT NOT NULL,
             created_at TEXT NOT NULL
         )
+        ''',
+        '''
+        CREATE TABLE IF NOT EXISTS audio_transcript_jobs (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            article_id TEXT NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+            section_id TEXT NOT NULL,
+            attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+            stored_path TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'queued',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            next_attempt_at TEXT NOT NULL,
+            raw_text TEXT NOT NULL DEFAULT '',
+            clean_text TEXT NOT NULL DEFAULT '',
+            error_message TEXT NOT NULL DEFAULT ''
+        )
+        ''',
+        '''
+        CREATE INDEX IF NOT EXISTS idx_audio_transcript_jobs_status_next
+        ON audio_transcript_jobs(status, next_attempt_at)
+        ''',
+        '''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_audio_transcript_jobs_attachment
+        ON audio_transcript_jobs(attachment_id)
         ''',
     ]
 

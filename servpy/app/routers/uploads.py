@@ -10,12 +10,13 @@ from typing import Any
 from uuid import uuid4
 
 import aiofiles
-from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
 
 from ..auth import User, get_current_user
 from ..data_store import create_attachment, get_article
+from ..audio_transcripts import enqueue_audio_transcript_job, is_audio_attachment
 from .common import _resolve_article_id_for_user
 
 router = APIRouter()
@@ -39,6 +40,14 @@ ALLOWED_ATTACHMENT_TYPES = {
     'text/csv',
     'text/html',
     'application/rtf',
+    # Audio (for fallback when direct Yandex upload fails).
+    'audio/ogg',
+    'audio/opus',
+    'audio/mpeg',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/mp4',
+    'audio/webm',
 }
 
 
@@ -127,7 +136,12 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
 
 # Вынесено из app/main.py → app/routers/uploads.py
 @router.post('/api/articles/{article_id}/attachments')
-async def upload_attachment(article_id: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+async def upload_attachment(
+    article_id: str,
+    file: UploadFile = File(...),
+    sectionId: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+):
     real_article_id = _resolve_article_id_for_user(article_id, current_user)
     article = get_article(real_article_id, current_user.id)
     if not article:
@@ -179,6 +193,17 @@ async def upload_attachment(article_id: str, file: UploadFile = File(...), curre
 
     stored_path = f'/uploads/{current_user.id}/attachments/{real_article_id}/{filename}'
     attachment = create_attachment(real_article_id, stored_path, file.filename or filename, content_type or '', size)
+    try:
+        sid = str(sectionId or '').strip()
+        if sid and is_audio_attachment(original_name=attachment.get('originalName') or '', content_type=attachment.get('contentType') or ''):
+            enqueue_audio_transcript_job(
+                user_id=current_user.id,
+                article_id=real_article_id,
+                section_id=sid,
+                attachment=attachment,
+            )
+    except Exception:
+        pass
     return attachment
 
 
@@ -211,6 +236,7 @@ def register_yandex_attachment(
     original_name = (payload.get('originalName') or '').strip() or 'attachment'
     content_type = (payload.get('contentType') or '').strip()
     size = int(payload.get('size') or 0) or 0
+    section_id = (payload.get('sectionId') or '').strip()
 
     attachment = create_attachment(
         real_article_id,
@@ -219,6 +245,16 @@ def register_yandex_attachment(
         content_type or '',
         size,
     )
+    try:
+        if section_id and is_audio_attachment(original_name=original_name, content_type=content_type):
+            enqueue_audio_transcript_job(
+                user_id=current_user.id,
+                article_id=real_article_id,
+                section_id=section_id,
+                attachment=attachment,
+            )
+    except Exception:
+        pass
     return attachment
 
 

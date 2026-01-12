@@ -1134,12 +1134,13 @@ export function fetchArticleVersion(articleId, versionId) {
   );
 }
 
-export function uploadAttachmentFile(articleId, file) {
+export function uploadAttachmentFile(articleId, file, { sectionId } = {}) {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     return Promise.reject(new Error('Нет интернета: загрузка файлов недоступна оффлайн'));
   }
   const formData = new FormData();
   formData.append('file', file);
+  if (sectionId) formData.append('sectionId', String(sectionId));
   return fetch(`/api/articles/${articleId}/attachments`, {
     method: 'POST',
     credentials: 'include',
@@ -1154,7 +1155,7 @@ export function uploadAttachmentFile(articleId, file) {
   });
 }
 
-export function uploadAttachmentFileWithProgress(articleId, file, onProgress = () => {}) {
+export function uploadAttachmentFileWithProgress(articleId, file, onProgress = () => {}, { sectionId } = {}) {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     return Promise.reject(new Error('Нет интернета: загрузка файлов недоступна оффлайн'));
   }
@@ -1191,6 +1192,7 @@ export function uploadAttachmentFileWithProgress(articleId, file, onProgress = (
     xhr.onerror = () => reject(new Error('Network error during upload'));
     const formData = new FormData();
     formData.append('file', file);
+    if (sectionId) formData.append('sectionId', String(sectionId));
     xhr.send(formData);
   });
 }
@@ -1418,7 +1420,7 @@ export async function getYandexUploadUrl({ articleId, filename, overwrite = fals
   return data;
 }
 
-export async function registerYandexAttachment(articleId, { path, originalName, contentType, size }) {
+export async function registerYandexAttachment(articleId, { path, originalName, contentType, size, sectionId }) {
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
     throw new Error('Нет интернета: загрузка файлов недоступна оффлайн');
   }
@@ -1428,6 +1430,7 @@ export async function registerYandexAttachment(articleId, { path, originalName, 
     contentType: contentType || '',
     size: typeof size === 'number' ? size : 0,
   };
+  if (sectionId) payload.sectionId = String(sectionId);
   const res = await fetch(`/api/articles/${articleId}/attachments/yandex`, {
     method: 'POST',
     credentials: 'include',
@@ -1444,7 +1447,7 @@ export async function registerYandexAttachment(articleId, { path, originalName, 
   return data;
 }
 
-export async function uploadFileToYandexDisk(articleId, file, { onProgress } = {}) {
+export async function uploadFileToYandexDisk(articleId, file, { onProgress, sectionId } = {}) {
   if (!file) throw new Error('Файл не указан');
   let sha256 = '';
   try {
@@ -1477,6 +1480,7 @@ export async function uploadFileToYandexDisk(articleId, file, { onProgress } = {
       originalName: file.name || 'attachment',
       contentType: file.type || '',
       size: file.size || 0,
+      sectionId,
     });
     return attachment;
   }
@@ -1525,12 +1529,13 @@ export async function uploadFileToYandexDisk(articleId, file, { onProgress } = {
       originalName: file.name || 'attachment',
       contentType: file.type || '',
       size: file.size || 0,
+      sectionId,
     });
     return attachment;
   }
 
   // Fallback: загружаем файл через обычный endpoint вложений.
-  const attachment = await uploadAttachmentFileWithProgress(articleId, file, onProgress);
+  const attachment = await uploadAttachmentFileWithProgress(articleId, file, onProgress, { sectionId });
   return attachment;
 }
 
