@@ -594,7 +594,37 @@ export function attachRichContentHandlers(element, blockId) {
       const insertHtml = (rawHtml) => {
         const htmlData = extractClipboardHtmlFragment(rawHtml);
         if (!htmlData) return false;
-        const safeHtml = sanitizePastedHtml(htmlData);
+        // Некоторые приложения/сайты кладут в clipboard HTML с <img src="blob:...">.
+        // Такой URL существует только в текущей вкладке и ломается после перезагрузки,
+        // а «достать» исходное изображение по blob: из чужого контекста невозможно.
+        const stripUnstableClipboardImages = (inputHtml) => {
+          const template = document.createElement('template');
+          template.innerHTML = String(inputHtml || '');
+          let hadUnstable = false;
+          template.content.querySelectorAll('img').forEach((img) => {
+            const src = String(img.getAttribute('src') || '').trim();
+            if (!/^(blob:|filesystem:)/i.test(src)) return;
+            hadUnstable = true;
+            const alt = String(img.getAttribute('alt') || '').trim() || 'image';
+            const wrapper = img.closest?.('.resizable-image') || img;
+            try {
+              wrapper.replaceWith(
+                document.createTextNode(`[${alt} — изображение из буфера обмена (blob:) не сохранено]`),
+              );
+            } catch {
+              // ignore
+            }
+          });
+          return { html: template.innerHTML, hadUnstable };
+        };
+
+        const stripped = stripUnstableClipboardImages(htmlData);
+        if (stripped.hadUnstable) {
+          showToast(
+            'Картинка была вставлена как blob: URL и не сохранится после перезагрузки. Вставьте изображение как файл (перетащите/вставьте файл или скриншот).',
+          );
+        }
+        const safeHtml = sanitizePastedHtml(stripped.html);
         const normalizedHtml = convertBlockHtmlToInlineBreaks(safeHtml);
         if (!normalizedHtml) return false;
         const trimmed = trimPastedHtml(safeHtml);

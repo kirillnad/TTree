@@ -142,6 +142,25 @@ export function cleanupEditableHtml(html = '') {
   const template = document.createElement('template');
   template.innerHTML = html || '';
 
+  // blob:/filesystem: URL'ы в <img> существуют только в рамках конкретной вкладки/сессии
+  // и всегда ломаются после перезагрузки. Если такие попали в сохранение — заменяем
+  // на текстовый плейсхолдер, чтобы не хранить «битые» картинки.
+  {
+    template.content.querySelectorAll('img').forEach((img) => {
+      const src = String(img.getAttribute('src') || '').trim();
+      if (!/^(blob:|filesystem:)/i.test(src)) return;
+      const alt = String(img.getAttribute('alt') || '').trim() || 'image';
+      const wrapper = img.closest?.('.resizable-image') || img;
+      try {
+        wrapper.replaceWith(
+          document.createTextNode(`[${alt} — изображение было blob: и не было сохранено]`),
+        );
+      } catch {
+        // ignore
+      }
+    });
+  }
+
   // Специальный случай: блок состоит только из строк вида "|...|...|"
   // Превращаем их сразу в HTML-таблицу и выходим.
   const tryConvertPipeTable = () => {

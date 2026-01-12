@@ -138,6 +138,30 @@ function normalizeDocJsonForSave(docJson) {
   }
 }
 
+function normalizeSectionJsonForSave(nodeJson) {
+  try {
+    if (!nodeJson || typeof nodeJson !== 'object') return nodeJson;
+    const root =
+      typeof structuredClone === 'function' ? structuredClone(nodeJson) : JSON.parse(JSON.stringify(nodeJson));
+    const visit = (node) => {
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 'image' && node.attrs && typeof node.attrs === 'object') {
+        const token = String(node.attrs.uploadToken || '').trim();
+        const src = String(node.attrs.src || '');
+        if (token && src.startsWith('blob:')) {
+          node.attrs = { ...node.attrs, src: `${PENDING_UPLOAD_IMG_PREFIX}${token}` };
+        }
+      }
+      const content = node.content;
+      if (Array.isArray(content)) content.forEach(visit);
+    };
+    visit(root);
+    return root;
+  } catch {
+    return nodeJson;
+  }
+}
+
 async function hydratePendingImagesFromIdbForArticle(articleId) {
   try {
     if (!outlineEditorInstance || outlineEditorInstance.isDestroyed) return;
@@ -733,9 +757,18 @@ async function enqueueSectionUpsertFromDoc({ articleId, doc, sectionId, reason }
 
   const heading = node.child(0);
   const body = node.child(1);
-  const headingJson = heading?.toJSON ? heading.toJSON() : null;
-  const bodyJson = body?.toJSON ? body.toJSON() : null;
+  let headingJson = heading?.toJSON ? heading.toJSON() : null;
+  let bodyJson = body?.toJSON ? body.toJSON() : null;
   if (!headingJson || !bodyJson) return false;
+
+  // Never send transient blob: URLs to the server. Persist them as a stable token reference instead.
+  // The actual blob is stored in IndexedDB (pending uploads) and re-hydrated on load.
+  try {
+    headingJson = normalizeSectionJsonForSave(headingJson);
+    bodyJson = normalizeSectionJsonForSave(bodyJson);
+  } catch {
+    // ignore
+  }
 
   const bytes = estimateOutlineSectionBytes(headingJson, bodyJson);
   if (bytes > MAX_OUTLINE_SECTION_BYTES) {
@@ -5365,7 +5398,64 @@ function htmlToPlainText(html) {
   }
 }
 
-function applyHeadingPlainToSection(editor, sectionId, plainTitle) {
+function captureOutlineSelectionSnapshot(editor) {
+  try {
+    if (!editor) return null;
+    const sel = editor.state?.selection || null;
+    if (!sel) return null;
+    const anchor = Number.isFinite(sel.anchor) ? sel.anchor : sel.from;
+    const head = Number.isFinite(sel.head) ? sel.head : sel.to;
+    const $from = sel.$from || null;
+    let sectionId = null;
+    try {
+      const sectionPos = $from ? findOutlineSectionPosAtSelection(editor.state.doc, $from) : null;
+      if (typeof sectionPos === 'number') {
+        const node = editor.state.doc.nodeAt(sectionPos);
+        sectionId = String(node?.attrs?.id || '') || null;
+      }
+    } catch {
+      sectionId = null;
+    }
+    if (!Number.isFinite(anchor) || !Number.isFinite(head)) return null;
+    return { anchor, head, sectionId };
+  } catch {
+    return null;
+  }
+}
+
+function applyTransactionPreservingSelection(editor, tr, preserve) {
+  try {
+    if (!editor?.view || !tr) return false;
+    const { TextSelection } = tiptap?.pmStateMod || {};
+    if (!TextSelection || !preserve) {
+      editor.view.dispatch(tr);
+      return true;
+    }
+    const maxPos = tr.doc?.content?.size ?? null;
+    if (!Number.isFinite(maxPos)) {
+      editor.view.dispatch(tr);
+      return true;
+    }
+    const mappedAnchor = tr.mapping.map(Math.max(0, Math.min(preserve.anchor, maxPos)), 1);
+    const mappedHead = tr.mapping.map(Math.max(0, Math.min(preserve.head, maxPos)), 1);
+    try {
+      tr = tr.setSelection(TextSelection.create(tr.doc, mappedAnchor, mappedHead));
+    } catch {
+      // ignore selection restore failures
+    }
+    editor.view.dispatch(tr);
+    return true;
+  } catch {
+    try {
+      editor?.view?.dispatch?.(tr);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function applyHeadingPlainToSection(editor, sectionId, plainTitle, options = {}) {
   if (!editor || !sectionId) return false;
   const pos = findSectionPosById(editor.state.doc, sectionId);
   if (typeof pos !== 'number') return false;
@@ -5376,14 +5466,15 @@ function applyHeadingPlainToSection(editor, sectionId, plainTitle) {
   const headingPos = pos + 1;
   const title = String(plainTitle || '').replace(/\u00a0/g, ' ').trim();
   const nextHeading = schema.nodes.outlineHeading.create({}, title ? [schema.text(title)] : []);
-  const tr = editor.state.tr
+  let tr = editor.state.tr
     .replaceWith(headingPos, headingPos + headingNode.nodeSize, nextHeading)
     .setMeta(OUTLINE_ALLOW_META, true);
-  editor.view.dispatch(tr);
+  const preserve = options?.preserveSelection ? captureOutlineSelectionSnapshot(editor) : null;
+  applyTransactionPreservingSelection(editor, tr, preserve);
   return true;
 }
 
-function applyBodyHtmlToSection(editor, sectionId, html) {
+function applyBodyHtmlToSection(editor, sectionId, html, options = {}) {
   if (!editor || !sectionId) return false;
   if (!outlineParseHtmlToNodes) return false;
   const pos = findSectionPosById(editor.state.doc, sectionId);
@@ -5410,10 +5501,11 @@ function applyBodyHtmlToSection(editor, sectionId, html) {
     nodes = [schema.nodes.paragraph.create({}, [])];
   }
   const newBody = schema.nodes.outlineBody.create({}, nodes);
-  const tr = editor.state.tr
+  let tr = editor.state.tr
     .replaceWith(bodyPos, bodyPos + bodyNode.nodeSize, newBody)
     .setMeta(OUTLINE_ALLOW_META, true);
-  editor.view.dispatch(tr);
+  const preserve = options?.preserveSelection ? captureOutlineSelectionSnapshot(editor) : null;
+  applyTransactionPreservingSelection(editor, tr, preserve);
   return true;
 }
 
@@ -5750,7 +5842,7 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
           proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'no_changes_from_server' });
           return;
         }
-        const applied = applyHeadingPlainToSection(editor, sid, correctedPlain);
+        const applied = applyHeadingPlainToSection(editor, sid, correctedPlain, { preserveSelection: true });
         if (!applied) {
           proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'apply_failed' });
           return;
@@ -5799,7 +5891,7 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
           proofreadDebug('skip_apply', { sectionId: sid, reason: 'no_changes_from_server' });
           return;
         }
-        const applied = applyBodyHtmlToSection(editor, sid, correctedHtml);
+        const applied = applyBodyHtmlToSection(editor, sid, correctedHtml, { preserveSelection: true });
         if (!applied) {
           proofreadDebug('skip_apply', { sectionId: sid, reason: 'apply_failed' });
           return;
