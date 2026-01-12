@@ -933,13 +933,9 @@ function mdTableDebugEnabled() {
   }
 }
 function mdTableDebug(...args) {
-  try {
-    if (!mdTableDebugEnabled()) return;
-    // eslint-disable-next-line no-console
-    console.log('[outline][md-table]', ...args);
-  } catch {
-    // ignore
-  }
+  // Old console debug removed (to keep console clean).
+  void args;
+  if (!mdTableDebugEnabled()) return;
 }
 
 const PERF_KEY = 'ttree_profile_v1';
@@ -951,13 +947,10 @@ function perfEnabled() {
   }
 }
 function perfLog(label, data = {}) {
-  try {
-    if (!perfEnabled()) return;
-    // eslint-disable-next-line no-console
-    console.log('[perf][outline]', label, data);
-  } catch {
-    // ignore
-  }
+  // Old console debug removed (to keep console clean).
+  void label;
+  void data;
+  if (!perfEnabled()) return;
 }
 
 const OUTLINE_PROOFREAD_DEBUG_KEY = 'ttree_outline_debug_proofread_v1';
@@ -969,13 +962,10 @@ function proofreadDebugEnabled() {
   }
 }
 function proofreadDebug(label, data = {}) {
-  try {
-    if (!proofreadDebugEnabled()) return;
-    // eslint-disable-next-line no-console
-    console.log('[outline][proofread]', label, data);
-  } catch {
-    // ignore
-  }
+  // Old console debug removed (to keep console clean).
+  void label;
+  void data;
+  if (!proofreadDebugEnabled()) return;
 }
 
 function normalizeTagLabel(raw) {
@@ -1461,22 +1451,11 @@ function tryMergeWithPreviousTableOnBackspace(pmState, dispatch) {
 function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionId, TextSelection) {
   try {
     const dbg = (reason, extra = {}) => {
-      try {
-        if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') !== '1') return;
-        // eslint-disable-next-line no-console
-        console.log('[outline][keys]', 'bodyToHeading.skip', { reason, sectionId: sectionId || null, ...extra });
-      } catch {
-        // ignore
-      }
+      void reason;
+      void extra;
     };
     const dbgStart = (extra = {}) => {
-      try {
-        if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') !== '1') return;
-        // eslint-disable-next-line no-console
-        console.log('[outline][keys]', 'bodyToHeading.check', { sectionId: sectionId || null, ...extra });
-      } catch {
-        // ignore
-      }
+      void extra;
     };
     if (!sectionId) return false;
     if (!TextSelection) {
@@ -1608,18 +1587,7 @@ function tryPromoteBodyFirstLineToHeadingOnBackspace(pmState, dispatch, sectionI
     dispatch(tr.scrollIntoView());
     return true;
   } catch (err) {
-    try {
-      if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') === '1') {
-        // eslint-disable-next-line no-console
-        console.log('[outline][keys]', 'bodyToHeading.error', {
-          sectionId: sectionId || null,
-          message: String(err?.message || err || ''),
-          stack: String(err?.stack || ''),
-        });
-      }
-    } catch {
-      // ignore
-    }
+    void err;
     return false;
   }
 }
@@ -3609,7 +3577,6 @@ function mountOutlineToolbar(editor) {
   if (btns.listsMenuBtn) dropdownBtnSet.add(btns.listsMenuBtn);
   if (btns.tableMenuBtn) dropdownBtnSet.add(btns.tableMenuBtn);
   const dropdownBtns = Array.from(dropdownBtnSet);
-  const dropdownWrappers = Array.from(root.querySelectorAll('.outline-toolbar__dropdown'));
   const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
 	  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
 	  const clipboardButtons = Array.from(root.querySelectorAll('[data-outline-clipboard-action]'));
@@ -3662,6 +3629,24 @@ function mountOutlineToolbar(editor) {
 	    }
 	    return true;
 	  };
+
+  const OUTLINE_DROPDOWN_DEBUG_KEY = 'ttree_outline_debug_dropdown_v1';
+  const dropdownDebugEnabled = () => {
+    try {
+      return window?.localStorage?.getItem?.(OUTLINE_DROPDOWN_DEBUG_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+  const dropdownDebug = (label, data = {}) => {
+    try {
+      if (!dropdownDebugEnabled()) return;
+      // eslint-disable-next-line no-console
+      console.log('[outline][dropdown]', label, data);
+    } catch {
+      // ignore
+    }
+  };
 
 	  const canRun = (build) => {
 	    try {
@@ -4652,55 +4637,75 @@ function mountOutlineToolbar(editor) {
   cleanups.push(click(btns.indentBtn, () => indentActiveSection()));
   cleanups.push(click(btns.newBelowBtn, () => insertNewSectionBelow()));
 
-  // Dropdowns (mobile-safe): open on `pointerdown` for touch/pen (dedupes synthetic click),
-  // fall back to normal click for desktop.
-  for (const wrap of dropdownWrappers) {
-    if (!wrap) continue;
-    let lastHandledAt = 0;
-    const findBtnFromEvent = (event) => {
-      const targetEl = event?.target && event.target.nodeType === 1 ? event.target : event?.target?.parentElement || null;
-      if (!targetEl) return null;
-      const btn = targetEl.closest?.('.outline-toolbar__dropdown-btn') || null;
-      if (!btn || !wrap.contains(btn)) return null;
-      return btn;
-    };
-    const maybeToggle = (event, { source }) => {
-      try {
-        const now = Date.now();
-        if (lastHandledAt && now - lastHandledAt < 700) return;
-        const btn = findBtnFromEvent(event);
-        if (!btn) return;
-        if (btn.disabled) return;
-        if (event?.cancelable) event.preventDefault();
-        event.stopPropagation();
-        const ok = toggleMenu(btn);
-        if (ok) lastHandledAt = now;
-      } catch {
-        // ignore
-      }
-    };
-    const onPointerDown = (event) => {
-      try {
-        const pt = String(event?.pointerType || '');
-        // Only treat touch/pen specially; mouse should use click.
-        if (pt !== 'touch' && pt !== 'pen') return;
-      } catch {
+  // Dropdowns: event delegation (toolbar DOM is re-rendered; per-node listeners go stale after Ctrl-F5).
+  let lastDropdownHandledAt = 0;
+  const getTargetEl = (event) => {
+    try {
+      if (event?.target && event.target.nodeType === 1) return event.target;
+      return event?.target?.parentElement || null;
+    } catch {
+      return null;
+    }
+  };
+  const findDropdownBtnFromEvent = (event) => {
+    const targetEl = getTargetEl(event);
+    if (!targetEl) return null;
+    const btn = targetEl.closest?.('.outline-toolbar__dropdown-btn') || null;
+    if (!btn) return null;
+    if (!root.contains(btn)) return null;
+    return btn;
+  };
+  const maybeToggleDropdown = (event, { source }) => {
+    try {
+      const now = Date.now();
+      if (lastDropdownHandledAt && now - lastDropdownHandledAt < 700) {
+        dropdownDebug('toggle.skip.dedupe', { source, dtMs: now - lastDropdownHandledAt });
         return;
       }
-      maybeToggle(event, { source: 'pointerdown' });
-    };
-    const onClick = (event) => {
-      maybeToggle(event, { source: 'click' });
-    };
-    try {
-      wrap.addEventListener('pointerdown', onPointerDown, true);
-      cleanups.push(() => wrap.removeEventListener('pointerdown', onPointerDown, true));
-    } catch {
-      // ignore
+      const btn = findDropdownBtnFromEvent(event);
+      if (!btn) {
+        dropdownDebug('toggle.skip.no-btn', { source, targetClass: String(getTargetEl(event)?.className || '') });
+        return;
+      }
+      if (btn.disabled) {
+        dropdownDebug('toggle.skip.disabled', { source, btnId: btn.id || null });
+        return;
+      }
+      if (event?.cancelable) event.preventDefault();
+      event.stopPropagation();
+      const ok = toggleMenu(btn);
+      dropdownDebug('toggle', {
+        source,
+        ok,
+        btnId: btn.id || null,
+        menuId: btn.getAttribute('aria-controls') || null,
+        expanded: btn.getAttribute('aria-expanded') || null,
+      });
+      if (ok) lastDropdownHandledAt = now;
+    } catch (err) {
+      dropdownDebug('toggle.error', { source, message: String(err?.message || err || '') });
     }
-    wrap.addEventListener('click', onClick);
-    cleanups.push(() => wrap.removeEventListener('click', onClick));
+  };
+  const onRootPointerDown = (event) => {
+    try {
+      const pt = String(event?.pointerType || '');
+      if (pt !== 'touch' && pt !== 'pen') return;
+    } catch {
+      return;
+    }
+    maybeToggleDropdown(event, { source: 'pointerdown' });
+  };
+  const onRootClick = (event) => {
+    maybeToggleDropdown(event, { source: 'click' });
+  };
+  try {
+    root.addEventListener('pointerdown', onRootPointerDown, true);
+    cleanups.push(() => root.removeEventListener('pointerdown', onRootPointerDown, true));
+  } catch {
+    // ignore
   }
+  root.addEventListener('click', onRootClick, true);
+  cleanups.push(() => root.removeEventListener('click', onRootClick, true));
 
   // Close menus on "click outside" (mobile browsers may not fire pointerdown).
   const onDocTouchStart = (event) => {
@@ -6410,14 +6415,7 @@ async function mountOutlineEditor() {
 		            // IMPORTANT: if upload fails (offline/timeout), we must NOT delete the image.
 		            // Keep the local preview (objectUrl) and mark it as failed so the user doesn't lose content.
 		            showToast(err?.message || 'Не удалось загрузить изображение');
-		            try {
-		              if (window?.localStorage?.getItem?.('ttree_debug_outline_keys_v1') === '1') {
-		                // eslint-disable-next-line no-console
-		                console.log('[outline][image]', 'upload.failed', { token, message: String(err?.message || err || '') });
-		              }
-		            } catch {
-		              // ignore
-		            }
+		            void err;
 		            try {
 		              const pos = findImagePosByUploadToken(view.state.doc, token);
 		              if (typeof pos !== 'number') return;
@@ -14407,11 +14405,8 @@ export async function openPublicOutlineViewer({ docJson } = {}) {
     }
   };
   const outlineDebug = (label, data = {}) => {
-    try {
-      if (!outlineDebugEnabled()) return;
-      // eslint-disable-next-line no-console
-      console.log('[outline][keys]', label, data);
-    } catch {
-      // ignore
-    }
+    // Old console debug removed (to keep console clean).
+    void label;
+    void data;
+    if (!outlineDebugEnabled()) return;
   };
