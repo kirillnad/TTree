@@ -156,6 +156,14 @@ export async function mergeAllBlocksIntoFirst() {
 }
 
 export async function loadArticleView(id) {
+  // Inbox has a stable public id "inbox". Any internal ids like `inbox-<userId>` must never be used on the client,
+  // otherwise we can open a stale/foreign inbox and show only a subset of notes.
+  try {
+    const raw = String(id || '');
+    if (raw.startsWith('inbox-')) id = 'inbox';
+  } catch {
+    // ignore
+  }
   state.isPublicView = false;
   state.isRagView = false;
   document.body.classList.remove('public-embedded');

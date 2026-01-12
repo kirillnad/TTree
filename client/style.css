@@ -176,6 +176,41 @@ html {
   margin-top: auto;
 }
 
+.sidebar-sync-status {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+
+.sidebar-sync-status[data-net='online'] {
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.22);
+}
+.sidebar-sync-status[data-net='offline'] {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+.sidebar-sync-status[data-net='auth'] {
+  background: rgba(251, 191, 36, 0.16);
+  border-color: rgba(251, 191, 36, 0.24);
+}
+.sidebar-sync-status[data-sync='dirty'] {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.24);
+}
+.sidebar-sync-status:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .sidebar-version {
   opacity: 0.7;
 }
@@ -3213,25 +3248,32 @@ h4.block-title {
 .sidebar-user-avatar[data-offline="loading"]::after,
 .sidebar-user-avatar[data-offline="off"]::after,
 .sidebar-user-avatar[data-offline="auth"]::after {
+  content: none;
+}
+
+.sidebar-sync-status[data-offline="ok"]::after,
+.sidebar-sync-status[data-offline="loading"]::after,
+.sidebar-sync-status[data-offline="off"]::after,
+.sidebar-sync-status[data-offline="auth"]::after {
   content: '';
   position: absolute;
-  right: -1px;
-  bottom: -1px;
+  right: -2px;
+  top: -2px;
   width: 9px;
   height: 9px;
   border-radius: 999px;
   border: 2px solid #0f172a;
 }
-.sidebar-user-avatar[data-offline="ok"]::after {
+.sidebar-sync-status[data-offline="ok"]::after {
   background: #22c55e;
 }
-.sidebar-user-avatar[data-offline="loading"]::after {
+.sidebar-sync-status[data-offline="loading"]::after {
   background: #eab308;
 }
-.sidebar-user-avatar[data-offline="off"]::after {
+.sidebar-sync-status[data-offline="off"]::after {
   background: #ef4444;
 }
-.sidebar-user-avatar[data-offline="auth"]::after {
+.sidebar-sync-status[data-offline="auth"]::after {
   background: #f97316;
 }
 
@@ -3242,6 +3284,16 @@ h4.block-title {
   left: auto;
   top: auto;
   bottom: 2.5rem;
+}
+
+.sidebar-sync-menu {
+  display: flex;
+  flex-direction: column;
+  left: 0.5rem;
+  right: auto;
+  top: auto;
+  bottom: 2.5rem;
+  min-width: 220px;
 }
 
 .sidebar-user-menu__item {

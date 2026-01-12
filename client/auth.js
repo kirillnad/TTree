@@ -94,6 +94,25 @@ function attachPendingQuickNotesFlushListener() {
 let appStarted = false;
 let onAuthenticated = null;
 const LAST_USER_KEY = 'ttree_last_user_v1';
+const OFFLINE_USER_KEY = 'ttree_offline_user_key_v1';
+
+function rememberOfflineUserKey(user) {
+  try {
+    const id = String(user?.id || '').trim();
+    if (!id) return;
+    window.localStorage.setItem(OFFLINE_USER_KEY, id);
+  } catch {
+    // ignore
+  }
+}
+
+function clearOfflineUserKey() {
+  try {
+    window.localStorage.removeItem(OFFLINE_USER_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 async function fetchAuthMeWithTimeout(timeoutMs) {
   const ms = typeof timeoutMs === 'number' ? Math.max(0, Math.floor(timeoutMs)) : 8000;
@@ -149,6 +168,7 @@ async function startOfflineSessionFromCachedUser(options = {}) {
     if (!cachedUser || (!cachedUser.id && !cachedUser.username)) return false;
 
     applyUserToUi(cachedUser);
+    rememberOfflineUserKey(cachedUser);
     hideAuthOverlay();
     ensureAppStarted();
     attachPendingQuickNotesFlushListener();
@@ -222,6 +242,7 @@ function setAuthMode(mode) {
 
 function applyUserToUi(user) {
   state.currentUser = user;
+  rememberOfflineUserKey(user);
   try {
     const minimal = {
       id: user?.id || null,
@@ -285,6 +306,7 @@ export function initAuth(callback) {
       } catch (_) {
         /* ignore */
       }
+      clearOfflineUserKey();
       state.currentUser = null;
       showAuthOverlay();
       showToast('Вы вышли из аккаунта');
@@ -350,15 +372,35 @@ export async function bootstrapAuth() {
         // ignore
       }
       const startOfflineLater = (fn) => {
+        // Some mobile browsers implement `requestIdleCallback` inconsistently (or never fire it in PWAs).
+        // We always add a `setTimeout` fallback so offline init is guaranteed to start.
+        let done = false;
+        const runOnce = () => {
+          if (done) return;
+          done = true;
+          try {
+            fn();
+          } catch {
+            // ignore
+          }
+        };
+        const fallbackId = setTimeout(runOnce, 1500);
         try {
           if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => fn(), { timeout: 3000 });
+            requestIdleCallback(() => {
+              try {
+                clearTimeout(fallbackId);
+              } catch {
+                // ignore
+              }
+              runOnce();
+            }, { timeout: 3000 });
             return;
           }
         } catch {
           // ignore
         }
-        setTimeout(() => fn(), 1500);
+        // Fallback `setTimeout` is already scheduled above.
       };
       startOfflineLater(() => {
         (async () => {

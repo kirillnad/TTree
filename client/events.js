@@ -83,6 +83,7 @@ import {
 import { setMediaPrefetchPaused } from './offline/media.js';
 import { getOfflineCoverageSummary } from './offline/status.js';
 import { startBackgroundFullPull, getBackgroundFullPullStatus } from './offline/sync.js';
+import { countOutbox } from './offline/outbox.js';
 // Вынесено из этого файла: обработка клавиш в режиме просмотра → `./events/viewKeys.js`.
 import { handleViewKey, isEditableTarget } from './events/viewKeys.js';
 // Вынесено из этого файла: обработка клавиш в режиме редактирования → `./events/editKeys.js`.
@@ -562,6 +563,8 @@ export function attachEvents() {
   startMediaStatusPolling();
   let offlineStatusInFlight = false;
   let lastOfflineInitWarnAt = 0;
+  let lastOfflineUiLogAt = 0;
+  let syncStatusInFlight = false;
   const offlineDebugEnabled = () => {
     try {
       return window?.localStorage?.getItem?.('ttree_debug_offline_v1') === '1';
@@ -569,15 +572,60 @@ export function attachEvents() {
       return false;
     }
   };
+  const shouldSendOfflineUiLog = () => {
+    try {
+      const ua = String(navigator?.userAgent || '');
+      // Only auto-log on mobile Huawei browser where DevTools are not available.
+      if (!/HuaweiBrowser/i.test(ua)) return false;
+    } catch {
+      return false;
+    }
+    const now = Date.now();
+    if (now - lastOfflineUiLogAt < 15_000) return false;
+    lastOfflineUiLogAt = now;
+    return true;
+  };
+  const postClientLog = (kind, data) => {
+    try {
+      fetch('/api/client/log', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, data }),
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
+  };
   const refreshOfflineStatusOnce = async () => {
     if (offlineStatusInFlight) return;
-    if (!refs.userMenuBtn && !refs.offlineStatusLabel && !refs.offlineFetchBtn) return;
+    if (!refs.sidebarSyncStatusPill && !refs.offlineStatusLabel && !refs.offlineFetchBtn) return;
     offlineStatusInFlight = true;
     try {
+      if (shouldSendOfflineUiLog()) {
+        postClientLog('offline.ui.tick', {
+          t: new Date().toISOString(),
+          serverStatus: String(state.serverStatus || ''),
+          serverStatusText: String(state.serverStatusText || ''),
+          offlineReady: Boolean(state.offlineReady),
+          offlineInitStatus: String(state.offlineInitStatus || ''),
+          offlineInitError: String(state.offlineInitError || ''),
+          offlineInitStartedAt: state.offlineInitStartedAt || null,
+          buildId: (() => {
+            try {
+              return String(window.__BUILD_ID__ || '');
+            } catch {
+              return '';
+            }
+          })(),
+          hasOfflineStatusLabel: Boolean(refs.offlineStatusLabel),
+        });
+      }
+
       const setBtnState = (stateId, title) => {
-        if (refs.userMenuBtn) {
-          refs.userMenuBtn.dataset.offline = stateId;
-          if (title) refs.userMenuBtn.title = title;
+        if (refs.sidebarSyncStatusPill) {
+          refs.sidebarSyncStatusPill.dataset.offline = stateId;
+          if (title) refs.sidebarSyncStatusPill.title = title;
         }
       };
 
@@ -603,6 +651,30 @@ export function attachEvents() {
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
         setBtnState('off', `Аккаунт · ${label}`);
+        if (shouldSendOfflineUiLog()) {
+          postClientLog('offline.ui.not_ready', {
+            t: new Date().toISOString(),
+            reason: 'server_down_no_offline',
+            serverStatus: state.serverStatus,
+            offlineReady: Boolean(state.offlineReady),
+            offlineInitStatus: String(state.offlineInitStatus || ''),
+            offlineInitError: String(state.offlineInitError || ''),
+            onLine: (() => {
+              try {
+                return navigator?.onLine !== false;
+              } catch {
+                return null;
+              }
+            })(),
+            buildId: (() => {
+              try {
+                return String(window.__BUILD_ID__ || '');
+              } catch {
+                return '';
+              }
+            })(),
+          });
+        }
         return;
       }
 
@@ -627,18 +699,62 @@ export function attachEvents() {
           if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: инициализация…';
           if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
           setBtnState('loading', 'Аккаунт · Оффлайн: инициализация…');
+          if (shouldSendOfflineUiLog()) {
+            postClientLog('offline.ui.not_ready', {
+              t: new Date().toISOString(),
+              reason: 'initializing',
+              initStatus,
+              offlineInitError: errText,
+              offlineInitStartedAt: state.offlineInitStartedAt || null,
+              buildId: (() => {
+                try {
+                  return String(window.__BUILD_ID__ || '');
+                } catch {
+                  return '';
+                }
+              })(),
+            });
+          }
           return;
         }
         const label = errText ? `Оффлайн: недоступно (${errText})` : 'Оффлайн: недоступно';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
         setBtnState('off', `Аккаунт · ${label}`);
+        if (shouldSendOfflineUiLog()) {
+          postClientLog('offline.ui.not_ready', {
+            t: new Date().toISOString(),
+            reason: 'not_ready',
+            initStatus,
+            offlineInitError: errText,
+            serverStatus: state.serverStatus,
+            onLine: (() => {
+              try {
+                return navigator?.onLine !== false;
+              } catch {
+                return null;
+              }
+            })(),
+            buildId: (() => {
+              try {
+                return String(window.__BUILD_ID__ || '');
+              } catch {
+                return '';
+              }
+            })(),
+          });
+        }
         return;
       }
 
       let summary = null;
       try {
-        summary = await getOfflineCoverageSummary();
+        summary = await Promise.race([
+          getOfflineCoverageSummary(),
+          // Some mobile browsers can be extremely slow at large IDB scans.
+          // Never block UI status on a full coverage calculation.
+          new Promise((resolve) => setTimeout(() => resolve(null), 700)),
+        ]);
       } catch {
         summary = null;
       }
@@ -646,6 +762,20 @@ export function attachEvents() {
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: …';
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.remove('hidden');
         setBtnState('loading', 'Аккаунт · Оффлайн: …');
+        if (shouldSendOfflineUiLog()) {
+          postClientLog('offline.ui.summary_pending', {
+            t: new Date().toISOString(),
+            serverStatus: state.serverStatus,
+            offlineReady: Boolean(state.offlineReady),
+            buildId: (() => {
+              try {
+                return String(window.__BUILD_ID__ || '');
+              } catch {
+                return '';
+              }
+            })(),
+          });
+        }
         return;
       }
 
@@ -676,7 +806,7 @@ export function attachEvents() {
       const pullLastError = String(pull?.lastError || '').trim();
 
       if (ok) {
-        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн OK';
+        if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн режим OK';
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
         setBtnState('ok', 'Аккаунт · Оффлайн OK');
       } else {
@@ -735,9 +865,77 @@ export function attachEvents() {
     }
   };
 
+  const refreshSidebarSyncStatusOnce = async () => {
+    if (syncStatusInFlight) return;
+    if (!refs.sidebarSyncStatusPill) return;
+    syncStatusInFlight = true;
+    try {
+      const pill = refs.sidebarSyncStatusPill;
+      let net = 'offline';
+      if (state.serverStatus === 'auth') net = 'auth';
+      else if (state.serverStatus === 'ok') net = 'online';
+      else {
+        // `serverStatus` is set based on a real server request; while it's unknown/down,
+        // still show a best-effort network hint based on the browser signal.
+        try {
+          net = navigator?.onLine === false ? 'offline' : 'online';
+        } catch {
+          net = 'offline';
+        }
+      }
+
+      // Never block the UI on IndexedDB init: show network state immediately,
+      // and only append outbox count when offline DB is ready.
+      let outboxN = null;
+      if (state.offlineReady) {
+        try {
+          outboxN = await Promise.race([
+            countOutbox(),
+            new Promise((resolve) => setTimeout(() => resolve(null), 300)),
+          ]);
+          if (!Number.isFinite(Number(outboxN))) outboxN = null;
+          outboxN = outboxN == null ? null : Number(outboxN) || 0;
+        } catch {
+          outboxN = null;
+        }
+      }
+
+      const sync = outboxN != null && outboxN > 0 ? 'dirty' : 'clean';
+      let text = '';
+      if (net === 'auth') text = outboxN != null && outboxN > 0 ? `Вход · ${outboxN}` : 'Вход';
+      else if (net === 'online') text = outboxN != null && outboxN > 0 ? `Синхр… ${outboxN}` : 'Онлайн';
+      else text = outboxN != null && outboxN > 0 ? `Оффлайн · ${outboxN}` : 'Оффлайн';
+
+      pill.dataset.net = net;
+      pill.dataset.sync = sync;
+      pill.textContent = text;
+      pill.title =
+        outboxN != null && outboxN > 0
+          ? `В очереди изменений: ${outboxN}`
+          : net === 'online'
+            ? 'Онлайн: синхронизировано'
+            : net === 'auth'
+              ? 'Требуется вход'
+              : 'Оффлайн: изменений нет';
+
+      if (refs.syncMenuStatusLabel) {
+        refs.syncMenuStatusLabel.textContent =
+          net === 'online' ? 'Статус: онлайн' : net === 'auth' ? 'Статус: требуется вход' : 'Статус: оффлайн';
+      }
+      if (refs.syncMenuOutboxLabel) {
+        refs.syncMenuOutboxLabel.textContent =
+          outboxN == null ? 'Очередь: —' : outboxN > 0 ? `Очередь: ${outboxN}` : 'Очередь: пусто';
+      }
+    } finally {
+      syncStatusInFlight = false;
+    }
+  };
+
   refreshOfflineStatusOnce().catch(() => {});
+  refreshSidebarSyncStatusOnce().catch(() => {});
   window.setInterval(() => {
     refreshOfflineStatusOnce().catch(() => {});
+    refreshSidebarSyncStatusOnce().catch(() => {});
   }, 4000);
 
   window.addEventListener('offline-full-pull-status', () => {
@@ -747,15 +945,44 @@ export function attachEvents() {
   window.addEventListener('media-prefetch-paused', () => {
     refreshMediaStatusOnce().catch(() => {});
     refreshOfflineStatusOnce().catch(() => {});
+    refreshSidebarSyncStatusOnce().catch(() => {});
   });
   window.addEventListener('online', () => {
     refreshMediaStatusOnce().catch(() => {});
     refreshOfflineStatusOnce().catch(() => {});
+    refreshSidebarSyncStatusOnce().catch(() => {});
   });
   window.addEventListener('offline', () => {
     refreshMediaStatusOnce().catch(() => {});
     refreshOfflineStatusOnce().catch(() => {});
+    refreshSidebarSyncStatusOnce().catch(() => {});
   });
+  window.addEventListener('offline-outbox-changed', () => {
+    refreshSidebarSyncStatusOnce().catch(() => {});
+  });
+
+  if (refs.sidebarSyncStatusPill && refs.syncMenu) {
+    refs.sidebarSyncStatusPill.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = !refs.syncMenu.classList.contains('hidden');
+      try {
+        refs.userMenu?.classList.add('hidden');
+        refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
+      } catch {
+        // ignore
+      }
+      if (isOpen) {
+        refs.syncMenu.classList.add('hidden');
+        refs.sidebarSyncStatusPill.setAttribute('aria-expanded', 'false');
+      } else {
+        refs.syncMenu.classList.remove('hidden');
+        refs.sidebarSyncStatusPill.setAttribute('aria-expanded', 'true');
+        refreshSidebarSyncStatusOnce().catch(() => {});
+        refreshOfflineStatusOnce().catch(() => {});
+      }
+    });
+  }
 
   if (refs.mediaPrefetchToggleBtn) {
     refs.mediaPrefetchToggleBtn.addEventListener('click', (event) => {
@@ -786,8 +1013,8 @@ export function attachEvents() {
         }
         startBackgroundFullPull({ force: true });
         showToast('Докачиваем офлайн‑данные в фоне…');
-        refs.userMenu?.classList.add('hidden');
-        refs.userMenuBtn?.setAttribute('aria-expanded', 'false');
+        refs.syncMenu?.classList.add('hidden');
+        refs.sidebarSyncStatusPill?.setAttribute('aria-expanded', 'false');
         refreshOfflineStatusOnce().catch(() => {});
       } catch (err) {
         showToast(err?.message || 'Не удалось запустить докачку');
@@ -1965,6 +2192,12 @@ export function attachEvents() {
         refs.userMenu.classList.add('hidden');
         refs.userMenuBtn.setAttribute('aria-expanded', 'false');
       } else {
+        try {
+          refs.syncMenu?.classList.add('hidden');
+          refs.sidebarSyncStatusPill?.setAttribute('aria-expanded', 'false');
+        } catch {
+          // ignore
+        }
         refs.userMenu.classList.remove('hidden');
         refs.userMenuBtn.setAttribute('aria-expanded', 'true');
         refreshSemanticReindexBtnStatus();
@@ -2152,15 +2385,25 @@ export function attachEvents() {
     }
     if (refs.userMenu && refs.userMenuBtn) {
       const target = event.target;
-      if (
+      const keepOpen =
         refs.userMenu.classList.contains('hidden') ||
         refs.userMenu.contains(target) ||
-        refs.userMenuBtn.contains(target)
-      ) {
-        return;
+        refs.userMenuBtn.contains(target);
+      if (!keepOpen) {
+        refs.userMenu.classList.add('hidden');
+        refs.userMenuBtn.setAttribute('aria-expanded', 'false');
       }
-      refs.userMenu.classList.add('hidden');
-      refs.userMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (refs.syncMenu && refs.sidebarSyncStatusPill) {
+      const target = event.target;
+      const keepOpen =
+        refs.syncMenu.classList.contains('hidden') ||
+        refs.syncMenu.contains(target) ||
+        refs.sidebarSyncStatusPill.contains(target);
+      if (!keepOpen) {
+        refs.syncMenu.classList.add('hidden');
+        refs.sidebarSyncStatusPill.setAttribute('aria-expanded', 'false');
+      }
     }
   });
 }

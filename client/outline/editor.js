@@ -3523,6 +3523,7 @@ function mountOutlineToolbar(editor) {
   if (!editor) return;
 
   const root = refs.outlineToolbar;
+  let lastEditing = null;
 	  const btns = {
 	    undo: refs.outlineUndoBtn,
 	    redo: refs.outlineRedoBtn,
@@ -3537,7 +3538,13 @@ function mountOutlineToolbar(editor) {
 	    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
 	    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
 	  };
-  const dropdownBtns = Array.from(root.querySelectorAll('.outline-toolbar__dropdown-btn'));
+  const dropdownBtnSet = new Set(Array.from(root.querySelectorAll('.outline-toolbar__dropdown-btn')));
+  // Ensure critical dropdown buttons are always wired even if DOM was re-rendered.
+  if (btns.blocksMenuBtn) dropdownBtnSet.add(btns.blocksMenuBtn);
+  if (btns.textMenuBtn) dropdownBtnSet.add(btns.textMenuBtn);
+  if (btns.listsMenuBtn) dropdownBtnSet.add(btns.listsMenuBtn);
+  if (btns.tableMenuBtn) dropdownBtnSet.add(btns.tableMenuBtn);
+  const dropdownBtns = Array.from(dropdownBtnSet);
   const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
 	  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
 	  const clipboardButtons = Array.from(root.querySelectorAll('[data-outline-clipboard-action]'));
@@ -3625,7 +3632,7 @@ function mountOutlineToolbar(editor) {
 	  const toggleMenu = (btn) => {
 	    if (!btn) return;
 	    const menuId = btn.getAttribute('aria-controls');
-	    const menu = menuId ? root.querySelector(`#${menuId}`) : null;
+	    const menu = menuId ? root.querySelector(`#${menuId}`) || document.getElementById(menuId) : null;
 	    if (!menu) return;
 	    const isOpen = !menu.classList.contains('hidden');
 	    closeAllMenus();
@@ -4138,7 +4145,14 @@ function mountOutlineToolbar(editor) {
 
     const editing = isEditing();
     root.dataset.editing = editing ? 'true' : 'false';
-    if (!editing) closeAllMenus();
+    // Keep dropdowns usable: don't close menus on every sync tick.
+    // Only close when transitioning between view/edit modes (buttons/menus differ).
+    if (lastEditing === null) {
+      lastEditing = editing;
+    } else if (lastEditing !== editing) {
+      closeAllMenus();
+      lastEditing = editing;
+    }
 
 	    if (btns.deleteBtn) btns.deleteBtn.hidden = editing;
 	    if (btns.moveUpBtn) btns.moveUpBtn.hidden = editing;
@@ -5472,6 +5486,20 @@ function maybeGenerateTitleOnLeave(editor, doc, sectionId) {
       const applied = applyGeneratedHeading(editor, sectionId, title);
       if (!applied) return;
       docDirty = true;
+      try {
+        const aid = outlineArticleId || state.articleId || null;
+        if (aid) {
+          void enqueueSectionUpsertFromDoc({
+            articleId: aid,
+            doc: editor.state.doc,
+            sectionId,
+            reason: 'generate_title',
+          });
+          setOutlineStatus('В очереди на синхронизацию');
+        }
+      } catch {
+        // ignore
+      }
       scheduleAutosave({ delayMs: 900 });
     })
     .catch(() => {})
@@ -8372,6 +8400,111 @@ async function mountOutlineEditor() {
           return true;
         });
 
+      const collectSectionPositionsInChildrenContainer = (doc, sectionPos) => {
+        try {
+          const sectionNode = doc.nodeAt(sectionPos);
+          if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return [];
+          if (sectionNode.childCount < 3) return [];
+          const heading = sectionNode.child(0);
+          const body = sectionNode.child(1);
+          const childrenNode = sectionNode.child(2);
+          if (!childrenNode || childrenNode.type?.name !== 'outlineChildren') return [];
+          const childrenPos = sectionPos + 1 + heading.nodeSize + body.nodeSize;
+          const out = [];
+          childrenNode.descendants((node, pos) => {
+            if (node?.type?.name !== 'outlineSection') return;
+            out.push(childrenPos + 1 + pos);
+          });
+          return out;
+        } catch {
+          return [];
+        }
+      };
+
+      const collectSectionPositionsInSiblingsContainer = (doc, sectionPos) => {
+        try {
+          const parentPos = findImmediateParentSectionPosForSectionPos(doc, sectionPos);
+          if (typeof parentPos !== 'number') {
+            // Top-level siblings: container is the whole doc.
+            return collectAllOutlineSectionPositions(doc);
+          }
+          const parentNode = doc.nodeAt(parentPos);
+          if (!parentNode || parentNode.type?.name !== 'outlineSection' || parentNode.childCount < 3) {
+            return collectAllOutlineSectionPositions(doc);
+          }
+          const heading = parentNode.child(0);
+          const body = parentNode.child(1);
+          const childrenNode = parentNode.child(2);
+          if (!childrenNode || childrenNode.type?.name !== 'outlineChildren') return collectAllOutlineSectionPositions(doc);
+          const childrenPos = parentPos + 1 + heading.nodeSize + body.nodeSize;
+          const out = [];
+          childrenNode.descendants((node, pos) => {
+            if (node?.type?.name !== 'outlineSection') return;
+            out.push(childrenPos + 1 + pos);
+          });
+          return out;
+        } catch {
+          return collectAllOutlineSectionPositions(doc);
+        }
+      };
+
+      const hasAnyCollapsedAtPositions = (doc, positions) => {
+        try {
+          for (const pos of positions || []) {
+            const node = doc.nodeAt(pos);
+            if (!node || node.type?.name !== 'outlineSection') continue;
+            if (Boolean(node.attrs?.collapsed)) return true;
+          }
+        } catch {
+          // ignore
+        }
+        return false;
+      };
+
+      // Ctrl+↓ progressive expand in view-mode:
+      // 1) if current is collapsed -> expand it
+      // 2) else expand children subtree
+      // 3) else expand siblings subtree
+      // 4) else expand parent's siblings subtree ... up to the whole article
+      const expandProgressively = () =>
+        this.editor.commands.command(({ state: pmState, dispatch }) => {
+          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+          if (typeof sectionPos !== 'number') return false;
+          const sectionNode = pmState.doc.nodeAt(sectionPos);
+          if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+
+          if (Boolean(sectionNode.attrs?.collapsed)) {
+            applyCollapsedToPositions(pmState, dispatch, [sectionPos], false);
+            return true;
+          }
+
+          const childPositions = collectSectionPositionsInChildrenContainer(pmState.doc, sectionPos);
+          if (childPositions.length && hasAnyCollapsedAtPositions(pmState.doc, childPositions)) {
+            applyCollapsedToPositions(pmState, dispatch, childPositions, false);
+            return true;
+          }
+
+          let curPos = sectionPos;
+          for (let i = 0; i < 64; i += 1) {
+            const siblingPositions = collectSectionPositionsInSiblingsContainer(pmState.doc, curPos);
+            if (siblingPositions.length && hasAnyCollapsedAtPositions(pmState.doc, siblingPositions)) {
+              applyCollapsedToPositions(pmState, dispatch, siblingPositions, false);
+              return true;
+            }
+            const parentPos = findImmediateParentSectionPosForSectionPos(pmState.doc, curPos);
+            if (typeof parentPos !== 'number') break;
+            curPos = parentPos;
+          }
+
+          // Final fallback: expand everything (idempotent).
+          const allPositions = collectAllOutlineSectionPositions(pmState.doc);
+          if (allPositions.length && hasAnyCollapsedAtPositions(pmState.doc, allPositions)) {
+            applyCollapsedToPositions(pmState, dispatch, allPositions, false);
+            return true;
+          }
+          return false;
+        });
+
       const toggleCollapsedRecursive = (collapsed) =>
         this.editor.commands.command(({ state: pmState, dispatch }) => {
           const { selection } = pmState;
@@ -8420,7 +8553,7 @@ async function mountOutlineEditor() {
 	          return collapseParentSubtree();
 	        },
 	        // Ctrl+↓: развернуть текущую секцию (и всех её детей)
-	        'Mod-ArrowDown': () => expandCurrentSubtree(),
+	        'Mod-ArrowDown': () => expandProgressively(),
 	        // Ctrl+Enter: split секции в позиции курсора (children → в новую секцию)
 	        'Mod-Enter': () => {
 	          // IMPORTANT: In view-mode Ctrl/Cmd+Enter creates a new empty block above/below.

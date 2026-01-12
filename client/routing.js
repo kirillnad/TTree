@@ -23,7 +23,19 @@ export function route(pathname) {
   }
   const match = pathname.match(/^\/article\/([0-9a-zA-Z-]+)/);
   if (match) {
-    loadArticleView(match[1]);
+    const rawId = String(match[1] || '');
+    // Canonicalize inbox route: server expects `/article/inbox` and maps it to the current user's internal inbox ID.
+    // Internal IDs like `inbox-<userId>` can be stale (e.g. after user id migration) and must not be routable.
+    if (rawId.startsWith('inbox-')) {
+      try {
+        window.history.replaceState({}, '', routing.article('inbox'));
+      } catch {
+        // ignore
+      }
+      loadArticleView('inbox');
+      return;
+    }
+    loadArticleView(rawId);
     return;
   }
   loadListView();

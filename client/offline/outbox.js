@@ -99,6 +99,15 @@ export async function listOutbox(limit = 50) {
   });
 }
 
+export async function countOutbox() {
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['outbox'], 'readonly');
+  const store = tx.objectStore('outbox');
+  const n = await reqToPromise(store.count()).catch(() => 0);
+  await txDone(tx);
+  return Number(n || 0) || 0;
+}
+
 export async function markOutboxError(opId, message) {
   const db = await getOfflineDbReady();
   const tx = db.transaction(['outbox'], 'readwrite');

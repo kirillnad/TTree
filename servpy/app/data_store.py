@@ -211,6 +211,11 @@ def _apply_outline_structure_snapshot(doc_json: Any, nodes: list[dict[str, Any]]
         sid = str(row.get('sectionId') or '').strip()
         if not sid:
             continue
+        # Structure snapshots must not create missing sections.
+        # Section creation is done via content upsert; snapshots only re-parent/reorder/collapse existing nodes.
+        sec = existing_by_id.get(sid)
+        if not sec:
+            continue
         parent_raw = row.get('parentId')
         parent_id = str(parent_raw).strip() if parent_raw is not None and str(parent_raw).strip() else None
         try:
@@ -218,7 +223,6 @@ def _apply_outline_structure_snapshot(doc_json: Any, nodes: list[dict[str, Any]]
         except Exception:
             pos = 0
         collapsed = bool(row.get('collapsed', False))
-        sec = existing_by_id.get(sid) or _ensure_outline_section_node(sid)
         attrs = sec.get('attrs') or {}
         attrs['id'] = sid
         attrs['collapsed'] = collapsed

@@ -349,6 +349,9 @@ export function fetchDeletedArticlesIndex() {
 }
 
 export function fetchArticle(id, options = {}) {
+  const requestedId = String(id || '').trim();
+  const canonicalId = requestedId.startsWith('inbox-') ? 'inbox' : requestedId;
+  id = canonicalId;
   const { cacheTimeoutMs: _cacheTimeoutMs, metaTimeoutMs: _metaTimeoutMs, ...apiOptions } = options || {};
 
   // IndexedDB can be briefly busy (e.g. background index caching). If offline is ready, prefer waiting a bit longer
@@ -562,6 +565,25 @@ export function fetchArticle(id, options = {}) {
   return cachedPromise.then(async (cachedFast) => {
     if (!cachedFast) {
       if (!navigator.onLine && String(id) === 'inbox') {
+        // On mobile (especially iOS), IDB can be slow and our cache timeout can fire even when
+        // the inbox is actually cached. Prefer a late cache hit over showing a 1-section stub.
+        try {
+          const late = await Promise.race([
+            cachedLookupPromise,
+            new Promise((resolve) => setTimeout(() => resolve(null), Math.max(500, metaTimeoutMs * 5))),
+          ]);
+          if (late) {
+            perfLog('[offline-first][article] choose.cache.late.offline.inbox', { id });
+            try {
+              revertLog('article.choose', { articleId: id, choose: 'cache.late.offline.inbox' });
+            } catch {
+              // ignore
+            }
+            return withPendingQuickNotesOverlay(late);
+          }
+        } catch {
+          // ignore
+        }
         perfLog('[offline-first][article] choose.local.inbox.offline', { id });
         return withPendingQuickNotesOverlay(buildLocalInboxArticle());
       }

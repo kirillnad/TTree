@@ -30,7 +30,17 @@ export function attachSidebarMobileHandlers() {
       (event) => {
         if (!state.isSidebarMobileOpen) return;
         const target = event.target;
-        const btn = target.closest('button');
+        const btn = (() => {
+          try {
+            if (target && typeof target.closest === 'function') return target.closest('button');
+            if (target && target.parentElement && typeof target.parentElement.closest === 'function') {
+              return target.parentElement.closest('button');
+            }
+          } catch {
+            // ignore
+          }
+          return null;
+        })();
         if (!btn) return;
         // Не закрываем мобильный сайдбар при клике по статьям в дереве сайдбара:
         // там одиночный клик используется только для сворачивания/разворачивания узлов.
@@ -42,6 +52,14 @@ export function attachSidebarMobileHandlers() {
         if (
           (refs.userMenuBtn && btn === refs.userMenuBtn) ||
           (refs.userMenu && refs.userMenu.contains(target))
+        ) {
+          return;
+        }
+        // Не закрываем мобильный сайдбар при клике по меню синхронизации
+        // и по самому попапу статуса.
+        if (
+          (refs.sidebarSyncStatusPill && (btn === refs.sidebarSyncStatusPill || btn.id === 'sidebarSyncStatusPill')) ||
+          (refs.syncMenu && refs.syncMenu.contains(target))
         ) {
           return;
         }

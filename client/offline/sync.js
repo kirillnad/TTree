@@ -1276,6 +1276,19 @@ export function startBackgroundFullPull(options = {}) {
         // small delay to avoid hammering server
         await new Promise((r) => setTimeout(r, 120));
       }
+
+      // Inbox is not part of `/api/articles` index (it is per-user and hidden),
+      // but we still want it cached for offline.
+      try {
+        fullPullStatus = { ...fullPullStatus, phase: 'inbox' };
+        emitFullPullStatus();
+        const inbox = await rawApiRequest('/api/articles/inbox?include_history=0');
+        await cacheArticle(inbox);
+      } catch {
+        // ignore inbox pull failures
+        fullPullStatus = { ...fullPullStatus, errors: Number(fullPullStatus.errors || 0) + 1 };
+        emitFullPullStatus();
+      }
       // Best-effort cleanup for removed media refs.
       pruneUnusedMedia().catch(() => {});
 
