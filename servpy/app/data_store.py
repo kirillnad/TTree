@@ -1823,7 +1823,11 @@ def apply_outline_structure_snapshot(
                 base_rev_num = None
             if base_rev_num is None:
                 raise InvalidOperation('baseStructureRev must be integer')
-            if base_rev_num != current_rev:
+            # Guard against stale clients only.
+            # If client is behind (base_rev < current_rev) — ignore to prevent overwriting newer structure.
+            # If client is ahead (base_rev > current_rev) — allow applying snapshot as a repair:
+            # this can happen after cache/db restores or other incidents where server structure_rev lags behind.
+            if base_rev_num < current_rev:
                 return {
                     'status': 'ignored',
                     'reason': 'stale',
