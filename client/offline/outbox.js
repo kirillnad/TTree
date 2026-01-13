@@ -99,6 +99,38 @@ export async function listOutbox(limit = 50) {
   });
 }
 
+export async function hasPendingOpsByTypeAndArticleId(types = [], articleId = null) {
+  const aid = String(articleId || '').trim();
+  const wanted = Array.isArray(types) ? types.map((t) => String(t || '').trim()).filter(Boolean) : [];
+  if (!aid || !wanted.length) return false;
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['outbox'], 'readonly');
+  const store = tx.objectStore('outbox');
+  const byTypeArticleId = store.index('byTypeArticleId');
+  for (const type of wanted) {
+    try {
+      const key = [String(type), aid];
+      const cursor = await reqToPromise(byTypeArticleId.openCursor(IDBKeyRange.only(key))).catch(() => null);
+      if (cursor) {
+        await txDone(tx);
+        return true;
+      }
+    } catch {
+      // ignore per-type
+    }
+  }
+  await txDone(tx);
+  return false;
+}
+
+export async function hasPendingOutlineOps(articleId) {
+  // Variant B: outline sync uses only these op types.
+  return hasPendingOpsByTypeAndArticleId(
+    ['delete_sections', 'section_upsert_content', 'structure_snapshot', 'save_doc_json'],
+    articleId,
+  );
+}
+
 export async function countOutbox() {
   const db = await getOfflineDbReady();
   const tx = db.transaction(['outbox'], 'readonly');

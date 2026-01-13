@@ -2,6 +2,7 @@ import { getOfflineDbReady } from './index.js';
 import { reqToPromise, txDone } from './idb.js';
 import { reindexOutlineSections } from './indexer.js';
 import { updateMediaRefsForArticle } from './media.js';
+import { hasPendingOutlineOps } from './outbox.js';
 import { revertLog, docJsonHash } from '../debug/revertLog.js';
 
 function pickArticleIndexRow(article) {
@@ -115,6 +116,24 @@ export async function cacheArticle(article) {
     // Protect local-first outline edits: if we have a local draft and the server doesn't advance updatedAt,
     // do not overwrite cached docJson with the (stale) server copy.
     if (existingLocalDraft && existingUpdatedAt && nextUpdatedAt && existingUpdatedAt === nextUpdatedAt) {
+      // If outbox has no pending ops for this article, localDraft is stale and MUST NOT block server refresh.
+      // This prevents "resurrected" deleted blocks and old structures after Ctrl-F5.
+      let hasPending = false;
+      try {
+        hasPending = await hasPendingOutlineOps(article.id);
+      } catch {
+        hasPending = false;
+      }
+      if (!hasPending) {
+        try {
+          revertLog('cache.article.put.clear_stale_localDraft', {
+            articleId: article.id,
+            updatedAt: existingUpdatedAt,
+          });
+        } catch {
+          // ignore
+        }
+      } else {
       const existingDocHash = docJsonHash(existing?.docJsonStr ? JSON.parse(existing.docJsonStr) : null);
       const incomingDocHash = docJsonHash(docJson);
       if (existingDocHash && incomingDocHash && existingDocHash !== incomingDocHash) {
@@ -158,6 +177,7 @@ export async function cacheArticle(article) {
           // ignore
         }
         return;
+      }
       }
     }
   } catch {
