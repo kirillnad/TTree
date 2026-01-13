@@ -3,6 +3,7 @@ from __future__ import annotations
 import html as html_mod
 import json
 import logging
+import os
 import re
 import uuid
 from datetime import datetime
@@ -69,6 +70,27 @@ class InvalidOperation(DataStoreError):
 
 
 logger = logging.getLogger('uvicorn.error')
+
+
+def _should_log_structure_snapshot(article_id: str) -> bool:
+    """
+    Debug logging for /api/articles/{id}/structure/snapshot.
+
+    Enable:
+      - SERVPY_DEBUG_STRUCTURE_SNAPSHOT_V1=1
+    Optional filter:
+      - SERVPY_DEBUG_STRUCTURE_SNAPSHOT_ARTICLE_ID=<article uuid>
+    """
+    try:
+        flag = str(os.environ.get('SERVPY_DEBUG_STRUCTURE_SNAPSHOT_V1') or '').strip().lower()
+        if flag not in {'1', 'true', 'yes'}:
+            return False
+        only_id = str(os.environ.get('SERVPY_DEBUG_STRUCTURE_SNAPSHOT_ARTICLE_ID') or '').strip()
+        if only_id and str(article_id or '') != only_id:
+            return False
+        return True
+    except Exception:
+        return False
 
 
 def _json_is_outline_heading(node: Any) -> bool:
@@ -594,41 +616,31 @@ def _rebuild_article_links_for_article_id(article_id: str, *, doc_json: Any | No
             link_map = build_outline_section_internal_links_map(doc_json)
         except Exception:
             link_map = {}
-        # Only insert links to existing articles (article_links.to_id has a FK to articles.id).
-        existing_targets: set[str] = set()
-        try:
-            all_targets: set[str] = set()
-            for targets in (link_map or {}).values():
-                for tid in targets or set():
-                    if tid and tid != article_id:
-                        all_targets.add(str(tid))
-            if all_targets:
-                ids = list(all_targets)
-                # Chunk to avoid huge IN lists.
-                for i in range(0, len(ids), 200):
-                    chunk = ids[i : i + 200]
-                    placeholders = ','.join('?' for _ in chunk)
-                    rows = CONN.execute(f'SELECT id FROM articles WHERE id IN ({placeholders})', tuple(chunk)).fetchall()
-                    for row in rows or []:
-                        eid = str(row.get('id') or '').strip()
-                        if eid:
-                            existing_targets.add(eid)
-        except Exception:
-            existing_targets = set()
         for section_id, targets in (link_map or {}).items():
             for target_id in targets or set():
                 if not target_id or target_id == article_id:
                     continue
-                if existing_targets and str(target_id) not in existing_targets:
-                    continue
                 values.append((article_id, section_id, target_id, 'internal'))
         if values:
-            CONN.executemany(
-                '''
+            # IMPORTANT:
+            # `article_links.to_id` has a FK to `articles.id`. Links to missing articles MUST be skipped,
+            # otherwise Postgres marks the whole transaction as aborted and callers (like structure snapshots)
+            # get rolled back.
+            #
+            # Do it in a single statement with a JOIN to `articles` to guarantee FK safety.
+            placeholders = ','.join(['(?, ?, ?)'] * len(values))
+            params: list[Any] = []
+            for _, block_id, to_id, kind in values:
+                params.extend([block_id, to_id, kind])
+            CONN.execute(
+                f'''
                 INSERT INTO article_links (from_id, block_id, to_id, kind)
-                VALUES (?, ?, ?, ?)
+                SELECT ?, v.block_id, v.to_id, v.kind
+                FROM (VALUES {placeholders}) AS v(block_id, to_id, kind)
+                JOIN articles a ON a.id = v.to_id
+                ON CONFLICT (from_id, block_id, to_id) DO NOTHING
                 ''',
-                values,
+                (article_id, *params),
             )
         return
 
@@ -1812,9 +1824,27 @@ def apply_outline_structure_snapshot(
         if not article_row or str(article_row.get('author_id') or '') != str(author_id):
             raise ArticleNotFound('Article not found')
         current_rev = int(article_row.get('outline_structure_rev') or 0)
+        if _should_log_structure_snapshot(article_id):
+            logger.error(
+                '[structure/snapshot][enter] articleId=%s opId=%s baseRev=%s currentRev=%s updatedAt=%s nodesCount=%s',
+                article_id,
+                oid,
+                base_rev,
+                current_rev,
+                str(article_row.get('updated_at') or ''),
+                len(nodes or []),
+            )
         if oid:
             dup = CONN.execute('SELECT 1 AS ok FROM applied_ops WHERE op_id = ?', (oid,)).fetchone()
             if dup:
+                if _should_log_structure_snapshot(article_id):
+                    logger.error(
+                        '[structure/snapshot][duplicate] articleId=%s opId=%s currentRev=%s updatedAt=%s',
+                        article_id,
+                        oid,
+                        current_rev,
+                        str(article_row.get('updated_at') or ''),
+                    )
                 return {
                     'status': 'duplicate',
                     'articleId': article_id,
@@ -1832,6 +1862,15 @@ def apply_outline_structure_snapshot(
             # If client is ahead (base_rev > current_rev) — allow applying snapshot as a repair:
             # this can happen after cache/db restores or other incidents where server structure_rev lags behind.
             if base_rev_num < current_rev:
+                if _should_log_structure_snapshot(article_id):
+                    logger.error(
+                        '[structure/snapshot][ignored-stale] articleId=%s opId=%s baseRev=%s currentRev=%s updatedAt=%s',
+                        article_id,
+                        oid,
+                        base_rev_num,
+                        current_rev,
+                        str(article_row.get('updated_at') or ''),
+                    )
                 return {
                     'status': 'ignored',
                     'reason': 'stale',
@@ -1877,13 +1916,36 @@ def apply_outline_structure_snapshot(
             'UPDATE articles SET updated_at = ?, redo_history = ?, article_doc_json = ?, outline_structure_rev = outline_structure_rev + 1 WHERE id = ?',
             (now, '[]', doc_json_str, article_id),
         )
-        # Links are structure-dependent; rebuild on snapshot (best-effort).
-        try:
-            _rebuild_article_links_for_article_id(article_id, doc_json=doc_json)
-        except Exception:
-            pass
+        if _should_log_structure_snapshot(article_id):
+            after_row = CONN.execute(
+                'SELECT updated_at, outline_structure_rev FROM articles WHERE id = ?',
+                (article_id,),
+            ).fetchone()
+            logger.error(
+                '[structure/snapshot][applied] articleId=%s opId=%s updatedAt_before=%s updatedAt_after=%s rev_before=%s rev_after=%s',
+                article_id,
+                oid,
+                str(article_row.get('updated_at') or ''),
+                str((after_row or {}).get('updated_at') or ''),
+                current_rev,
+                int((after_row or {}).get('outline_structure_rev') or 0),
+            )
+        # NOTE: We intentionally DO NOT rebuild `article_links` here.
+        # `structure/snapshot` is a structure-only operation (parent/position/collapsed) and does not change
+        # section contents, so the set of internal links is unchanged. Rebuilding derived data here would be
+        # redundant work and increases the risk of unnecessary failures.
 
-    return {'status': 'ok', 'articleId': article_id, 'updatedAt': now, 'newStructureRev': current_rev + 1}
+    out = {'status': 'ok', 'articleId': article_id, 'updatedAt': now, 'newStructureRev': current_rev + 1}
+    if _should_log_structure_snapshot(article_id):
+        logger.error(
+            '[structure/snapshot][response] articleId=%s opId=%s status=%s updatedAt=%s newStructureRev=%s',
+            article_id,
+            oid,
+            out.get('status'),
+            out.get('updatedAt'),
+            out.get('newStructureRev'),
+        )
+    return out
 
 
 def delete_outline_sections(

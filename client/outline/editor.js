@@ -8929,10 +8929,15 @@ async function mountOutlineEditor() {
         'Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
         // Right-Alt (AltGraph) on many keyboards is reported as Ctrl+Alt.
         // Treat it the same as Alt for our navigation shortcuts.
+        // NOTE: ProseMirror key naming order is implementation-dependent; support both Ctrl-Alt-* and Alt-Ctrl-*.
         'Ctrl-Alt-ArrowUp': () => (this.editor.isActive('table') ? false : moveSection('up')),
+        'Alt-Ctrl-ArrowUp': () => (this.editor.isActive('table') ? false : moveSection('up')),
         'Ctrl-Alt-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
+        'Alt-Ctrl-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
         'Ctrl-Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
+        'Alt-Ctrl-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
         'Ctrl-Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
+        'Alt-Ctrl-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
         'Mod-ArrowRight': () => toggleCollapsed(false),
         'Mod-ArrowLeft': () => toggleCollapsed(true),
         // Ctrl+↑: схлопнуть родителя (и всё внутри него)
@@ -9263,7 +9268,7 @@ async function mountOutlineEditor() {
               };
               const isAltLike = (ev) => {
                 try {
-                  return Boolean(ev?.altKey) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
+                  return (Boolean(ev?.altKey) || isAltGraph(ev)) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
                 } catch {
                   return false;
                 }
@@ -12257,6 +12262,52 @@ async function mountOutlineEditor() {
 		      handleKeyDown(view, event) {
 		        // Guard: holding Alt+Arrow should not cross parent boundaries automatically.
 		        // Crossing into an "uncle" requires a fresh key press.
+		        if (event && event.__memusSyntheticAltProxy) {
+		          return false;
+		        }
+		        const OUTLINE_ALT_DEBUG_KEY = 'ttree_outline_debug_alt_v1';
+		        const altDebugEnabled = () => {
+		          try {
+		            return window?.localStorage?.getItem?.(OUTLINE_ALT_DEBUG_KEY) === '1';
+		          } catch {
+		            return false;
+		          }
+		        };
+		        const getAltGraph = (ev) => {
+		          try {
+		            return Boolean(ev?.getModifierState?.('AltGraph'));
+		          } catch {
+		            return false;
+		          }
+		        };
+		        const logAltKeyEvent = (ev, stage) => {
+		          try {
+		            if (!altDebugEnabled()) return;
+		            const key = String(ev?.key || '');
+		            const code = String(ev?.code || '');
+		            if (!key.startsWith('Arrow') && code !== 'Enter' && code !== 'NumpadEnter') return;
+		            const mods = {
+		              altKey: Boolean(ev?.altKey),
+		              ctrlKey: Boolean(ev?.ctrlKey),
+		              metaKey: Boolean(ev?.metaKey),
+		              shiftKey: Boolean(ev?.shiftKey),
+		              altGraph: getAltGraph(ev),
+		              repeat: Boolean(ev?.repeat),
+		              location: ev?.location ?? null,
+		            };
+		            const nameParts = [];
+		            if (mods.metaKey) nameParts.push('Meta');
+		            if (mods.ctrlKey) nameParts.push('Ctrl');
+		            if (mods.altKey) nameParts.push(mods.altGraph ? 'AltGraph' : 'Alt');
+		            if (mods.shiftKey) nameParts.push('Shift');
+		            nameParts.push(code || key || '?');
+		            // eslint-disable-next-line no-console
+		            console.log('[outline][alt-debug]', stage, { key, code, name: nameParts.join('-'), ...mods });
+		          } catch {
+		            // ignore
+		          }
+		        };
+		        logAltKeyEvent(event, 'keydown');
 		        const isAltGraph = (ev) => {
 		          try {
 		            return Boolean(ev?.getModifierState?.('AltGraph'));
@@ -12266,11 +12317,75 @@ async function mountOutlineEditor() {
 		        };
 		        const isAltLike = (ev) => {
 		          try {
-		            return Boolean(ev?.altKey) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
+		            return (Boolean(ev?.altKey) || isAltGraph(ev)) && !ev?.metaKey && (!ev?.ctrlKey || isAltGraph(ev));
 		          } catch {
 		            return false;
 		          }
 		        };
+		        // Right Alt may come as AltGraph without `altKey`. In view-mode, emulate Alt-Arrow shortcuts
+		        // by calling ProseMirror key handlers with a synthetic `altKey:true` event.
+		        try {
+		          const st = outlineEditModeKey?.getState?.(view.state) || null;
+		          const editingSectionId = st?.editingSectionId || null;
+		          const isAltGraphOnly =
+		            Boolean(getAltGraph(event)) &&
+		            !event?.altKey &&
+		            !event?.ctrlKey &&
+		            !event?.metaKey &&
+		            !event?.shiftKey;
+		          const key = String(event?.key || '');
+		          const code = String(event?.code || '');
+		          const isArrow = key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight';
+		          if (!editingSectionId && isAltGraphOnly && isArrow) {
+		            let synthetic = null;
+		            try {
+		              synthetic = new KeyboardEvent('keydown', {
+		                key,
+		                code: code || key,
+		                altKey: true,
+		                ctrlKey: false,
+		                metaKey: false,
+		                shiftKey: false,
+		                bubbles: true,
+		                cancelable: true,
+		              });
+		              try {
+		                Object.defineProperty(synthetic, '__memusSyntheticAltProxy', { value: true });
+		              } catch {
+		                // ignore
+		              }
+		            } catch {
+		              synthetic = null;
+		            }
+		            if (!synthetic) {
+		              synthetic = {
+		                key,
+		                code: code || key,
+		                altKey: true,
+		                ctrlKey: false,
+		                metaKey: false,
+		                shiftKey: false,
+		                bubbles: true,
+		                cancelable: true,
+		                __memusSyntheticAltProxy: true,
+		                preventDefault() {},
+		                stopPropagation() {},
+		                getModifierState(name) {
+		                  return name === 'AltGraph' ? false : false;
+		                },
+		              };
+		            }
+
+		            const handled = Boolean(view?.someProp?.('handleKeyDown', (f) => f(view, synthetic)));
+		            if (handled) {
+		              event.preventDefault();
+		              event.stopPropagation();
+		              return true;
+		            }
+		          }
+		        } catch {
+		          // ignore
+		        }
 		        try {
 		          if (isAltLike(event)) {
 		            const key = String(event.key || '');

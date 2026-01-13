@@ -954,21 +954,10 @@ async function flushOutlineArticleOps(articleId, ops) {
 
     const nodes = structureOp.payload?.nodes || null;
     if (Array.isArray(nodes) && nodes.length) {
-      const cached = await getCachedArticle(aid).catch(() => null);
-      let baseStructureRev = null;
-      try {
-        if (cached && Object.prototype.hasOwnProperty.call(cached, 'outlineStructureRev')) {
-          const n = Number(cached.outlineStructureRev);
-          if (Number.isFinite(n) && n >= 0) baseStructureRev = n;
-        }
-      } catch {
-        baseStructureRev = null;
-      }
       try {
         revertLog('sync.flush.structure_snapshot.start', {
           articleId: aid,
           opId: structureOp.id,
-          baseStructureRev,
           nodesCount: nodes.length,
         });
       } catch {
@@ -979,7 +968,6 @@ async function flushOutlineArticleOps(articleId, ops) {
         body: JSON.stringify({
           opId: structureOp.payload?.opId || structureOp.id,
           nodes,
-          ...(baseStructureRev != null ? { baseStructureRev } : {}),
         }),
       });
       const updatedAt = res?.updatedAt || null;
