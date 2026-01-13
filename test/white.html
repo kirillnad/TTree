@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Memus.pro — ваша личная база знаний.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/style.css?v=44" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
+    <!-- Meta theme changed to white -->
+    <meta name="theme-color" content="#ffffff" />
+    
+    <!-- iOS Safari PWA meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Memus" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    
+    <!-- MODERN LIGHT THEME OVERRIDE -->
+    <style>
+      :root {
+        /* --- Light Theme Palette --- */
+        --bg-body: #ffffff;      /* Pure white content */
+        --bg-sidebar: #f8fafc;   /* Slate 50 - Very light gray for sidebar */
+        --bg-card: #ffffff;
+        --bg-glass: rgba(255, 255, 255, 0.85); /* Frosted glass effect */
+        
+        --bg-hover: #f1f5f9;     /* Slate 100 */
+        --bg-active: #e0f2fe;    /* Sky 100 */
+        
+        --text-main: #0f172a;    /* Slate 900 - nearly black */
+        --text-muted: #64748b;   /* Slate 500 */
+        
+        --primary: #0284c7;      /* Sky 600 - darker for contrast on white */
+        --primary-hover: #0369a1;
+        --danger: #ef4444;
+        
+        --border-color: #e2e8f0; /* Slate 200 */
+        
+        /* UI Metrics */
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 16px;
+        
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+
+        --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        margin: 0;
+        overflow: hidden;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Scrollbars - customized for light theme */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; /* Slate 300 */
+        border-radius: 4px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+      }
+
+      /* Layout */
+      .app-shell {
+        display: flex;
+        height: 100dvh;
+        width: 100%;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 280px;
+        background-color: var(--bg-sidebar);
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 50;
+        flex-shrink: 0;
+      }
+
+      .sidebar-header {
+        padding: 24px 20px 16px;
+      }
+
+      .app-logo {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 0;
+        /* Gradient text for logo */
+        background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.03em;
+      }
+
+      .sidebar-caption {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin: 4px 0 0 0;
+        font-weight: 500;
+      }
+
+      .sidebar-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* Search */
+      .search-panel__row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      
+      .search-panel__input-wrap {
+        position: relative;
+        flex: 1;
+      }
+
+      #searchInput {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 8px 12px;
+        color: var(--text-main);
+        font-size: 0.9rem;
+        outline: none;
+        transition: all 0.2s;
+        box-sizing: border-box;
+        box-shadow: var(--shadow-sm);
+      }
+
+      #searchInput:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+      }
+      
+      #searchInput::placeholder {
+        color: #cbd5e1;
+      }
+
+      /* Buttons (Ghost) */
+      button.ghost {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        padding: 6px 10px;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.15s ease;
+        font-weight: 500;
+      }
+
+      button.ghost:hover {
+        background-color: var(--bg-hover);
+        color: var(--text-main);
+      }
+      
+      button.ghost.active, button.ghost[aria-pressed="true"] {
+        background-color: var(--bg-active);
+        color: var(--primary);
+      }
+
+      button.small {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+      }
+
+      button.icon-button {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        color: var(--text-muted);
+      }
+      
+      button.icon-button:hover {
+        color: var(--text-main);
+      }
+
+      /* Lists */
+      .sidebar-article-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .sidebar-article-list li {
+        margin-bottom: 2px;
+      }
+      .sidebar-article-list a, .sidebar-article-list button {
+        display: block;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: background 0.15s;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-article-list a:hover {
+        background-color: var(--bg-hover);
+        color: var(--text-main);
+      }
+
+      /* Sidebar Footer */
+      .sidebar-footer {
+        padding: 16px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background-color: var(--bg-sidebar);
+      }
+
+      .sidebar-version {
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+
+      /* Main Content */
+      .content {
+        flex: 1;
+        position: relative;
+        background-color: var(--bg-body);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .panel.hidden { display: none; }
+
+      /* Sticky Headers with Blur */
+      .panel-header, .article-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg-glass);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--border-color);
+        padding: 16px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-main);
+        flex: 1;
+        letter-spacing: -0.02em;
+      }
+
+      /* Article Area */
+      .blocks {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 32px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* Menus & Popovers */
+      .article-menu, .outline-toolbar__menu, .hint-popover {
+        position: absolute;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        padding: 6px;
+        min-width: 200px;
+        z-index: 100;
+        color: var(--text-main);
+      }
+      
+      .menu-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        text-align: left;
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+        font-size: 0.9rem;
+        gap: 10px;
+      }
+
+      .menu-item:hover {
+        background-color: var(--bg-hover);
+      }
+      
+      .menu-item.danger { color: var(--danger); }
+      .menu-item.danger:hover { background-color: #fef2f2; }
+
+      /* Auth Overlay */
+      .auth-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+
+      .auth-card {
+        background: #ffffff;
+        padding: 40px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border-color);
+        text-align: center;
+        max-width: 380px;
+        width: 90%;
+      }
+
+      .auth-title {
+        font-size: 2rem;
+        margin-bottom: 8px;
+        color: var(--text-main);
+        font-weight: 800;
+      }
+
+      .auth-submit {
+        background-color: var(--text-main);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        margin-top: 24px;
+        transition: opacity 0.2s;
+        box-shadow: var(--shadow-md);
+      }
+      
+      .auth-submit:hover { opacity: 0.9; }
+
+      /* Helper Classes */
+      .hidden { display: none !important; }
+      
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary);
+        color: var(--text-main);
+        padding: 12px 20px;
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-lg);
+        z-index: 2000;
+        animation: slideUp 0.3s ease;
+        font-weight: 500;
+      }
+      
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      /* Mobile */
+      @media (max-width: 768px) {
+        .sidebar {
+          position: fixed;
+          height: 100%;
+          transform: translateX(-100%);
+          box-shadow: var(--shadow-lg);
+        }
+        .sidebar.open { transform: translateX(0); }
+        .app-shell { flex-direction: column; }
+        .panel-header { padding: 12px 16px; }
+        .blocks { padding: 20px 16px; }
+      }
+      
+      /* Icons */
+      svg { fill: currentColor; }
+      
+      /* Tabs */
+      .list-tabs {
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 8px;
+        display: inline-flex;
+      }
+      .list-tabs button.active {
+        background: #ffffff;
+        box-shadow: var(--shadow-sm);
+        color: var(--text-main);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="authOverlay" class="auth-overlay">
+      <div class="auth-card">
+        <h1 class="auth-title">Memus.pro</h1>
+        <p id="authSubtitle" class="auth-subtitle" style="color: var(--text-muted);">Вход в базу знаний</p>
+        <button id="authYandexLoginBtn" type="button" class="auth-submit auth-yandex-btn hidden">
+          <span class="auth-yandex-icon" aria-hidden="true" style="font-weight:bold; color:#fc3f1d; background:white; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;">
+            Я
+          </span>
+          <span class="auth-yandex-label">Войти через Яндекс</span>
+        </button>
+        <p id="authStorageInfo" class="auth-storage-info hidden" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 20px; line-height: 1.4;">
+          Безопасное хранение заметок. Файлы сохраняются на ваш Яндекс.Диск.
+        </p>
+        <p id="authError" class="auth-error hidden" aria-live="polite" style="color: var(--danger); margin-top: 10px;"></p>
+      </div>
+    </div>
+    
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <button
+          id="sidebarToggle"
+          class="ghost sidebar-toggle"
+          type="button"
+          title="Свернуть"
+          style="position: absolute; right: 10px; top: 10px;"
+        >
+          ✕
+        </button>
+        
+        <div class="sidebar-header">
+          <h2 class="app-logo">Memus</h2>
+          <p class="sidebar-caption">Ваши мысли здесь</p>
+        </div>
+
+        <div class="sidebar-content">
+          <!-- Quick Actions -->
+          <div class="quick-notes-row" style="display: flex; gap: 8px;">
+            <button id="openInboxBtn" class="ghost small" style="flex:1; justify-content: flex-start; background: #fff; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);" type="button">
+                📥 Inbox
+            </button>
+            <button id="quickNoteAddBtn" class="ghost small icon-button" style="background: #fff; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);" type="button" title="Новая заметка">
+                +
+            </button>
+          </div>
+          
+          <!-- Search -->
+          <div class="search-panel sidebar-section" style="margin-top: 12px;">
+                <div class="search-panel__row">
+                  <div class="search-panel__input-wrap">
+                    <input
+                      id="searchInput"
+                      type="text"
+                      placeholder="Поиск..."
+                      autocomplete="off"
+                    />
+                    <button
+                      id="searchClearBtn"
+                      class="search-panel__clear hidden"
+                      type="button"
+                      style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer;"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <button id="sidebarSearchViewToggle" class="ghost icon-button" type="button" title="Фильтр">🔍</button>
+                  <button id="ragOpenBtn" class="ghost icon-button hidden" type="button">R</button>
+                  <button id="searchModeToggle" class="ghost icon-button" type="button" title="AI Поиск">🧠</button>
+            </div>
+            <div id="searchResults" class="search-results hidden" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;"></div>
+          </div>
+          
+            <!-- Articles List -->
+            <div class="sidebar-articles sidebar-section">
+              <div class="sidebar-articles__header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="sidebar-articles__header-left" style="display: flex; gap: 4px;">
+                  <button id="backToList" class="ghost small" type="button">Все</button>
+                  <button id="sidebarRecentBtn" class="ghost small" type="button">Недавние</button>
+                </div>
+                <div class="sidebar-articles__header-right" style="display: flex; gap: 4px;">
+                  <button id="graphToggleBtn" class="ghost icon-button small" type="button" title="Граф">🕸</button>
+                  <button id="sidebarNewArticleBtn" class="ghost small icon-button" title="Создать">+</button>
+                </div>
+              </div>
+              <ul id="sidebarArticleList" class="sidebar-article-list"></ul>
+            </div>
+          </div> 
+          
+          <!-- User Footer -->
+          <div class="sidebar-footer">
+                <button
+                  id="userMenuBtn"
+                  class="ghost icon-button sidebar-user-avatar"
+              type="button"
+              style="background: #e2e8f0; color: #475569;"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+                </button>
+                <div style="flex:1; overflow:hidden;">
+                    <div id="currentUserLabel" style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Guest</div>
+                    <span class="sidebar-version">v7.4 Light</span>
+                </div>
+                
+                <!-- Popup Menu (Hidden by default) -->
+                <div id="userMenu" class="article-menu hidden" role="menu" style="bottom: 70px; left: 16px;">
+                  <div id="offlineStatusItem" class="menu-item" style="cursor: default; color: var(--text-muted);">
+                    Оффлайн: —
+                  </div>
+                  <button id="logoutBtn" class="menu-item" type="button" role="menuitem" style="color: var(--danger);">
+                    Выйти
+                  </button>
+                </div>
+          </div>
+      </aside>
+
+      <main id="app" class="content">
+        <!-- List View -->
+        <section id="articleListView" class="panel">
+          <div class="panel-header list-header">
+            <button id="listSidebarBtn" class="ghost icon-button mobile-only" type="button">☰</button>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h2>Статьи</h2>
+                <div class="list-tabs">
+                  <button id="articlesTabBtn" class="ghost small active" type="button">Активные</button>
+                  <button id="trashTabBtn" class="ghost small" type="button">Корзина</button>
+                </div>
+            </div>
+            
+            <div class="list-header-actions" style="margin-top: 8px;">
+              <button id="listMenuBtn" class="ghost small" type="button">⚙️ Опции</button>
+              <div id="listMenu" class="article-menu hidden" role="menu" style="top: 100%; right: 20px;">
+                <button id="exportAllHtmlZipBtn" class="menu-item" type="button">Экспорт (ZIP)</button>
+                <button id="importMarkdownBtn" class="menu-item" type="button">Импорт MD</button>
+              </div>
+            </div>
+          </div>
+          <ul id="articleList" style="padding: 20px 32px; list-style: none;"></ul>
+        </section>
+
+        <!-- Article View -->
+        <div id="articleHeader" class="panel-header article-header hidden">
+          <div class="title-block">
+                <div class="title-row">
+                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button">☰</button>
+                  <!-- Title Input -->
+                  <h2 id="articleTitle" style="outline: none; color: var(--text-main);" contenteditable="plaintext-only"></h2>
+                  <input id="articleTitleInput" class="hidden" type="text" style="background: transparent; border: none; border-bottom: 2px solid var(--primary); color: var(--text-main); font-size: 1.5rem; font-weight: 700; width: 100%; outline: none;" />
+                  
+                  <div style="display: flex; gap: 2px;">
+                      <button id="articleFavoriteBtn" class="ghost icon-button small" type="button" title="Избранное">☆</button>
+                      <button id="articlePublicLinkBtn" class="ghost icon-button small" type="button" title="Ссылка">🔗</button>
+                      <button id="articleMenuBtn" class="ghost icon-button small" type="button" title="Меню">•••</button>
+                  </div>
+
+                  <div id="articleMenu" class="article-menu hidden" role="menu" style="top: 100%; right: 20px;">
+                    <p id="updatedAt" class="meta" style="font-size: 0.75rem; color: var(--text-muted); padding: 8px 12px; margin: 0; border-bottom: 1px solid var(--border-color);"></p>
+                    <button id="deleteArticleBtn" class="menu-item danger" type="button">Удалить</button>
+                  </div>
+                </div>
+                
+                <!-- Toolbar -->
+                <div id="articleToolbar" class="article-toolbar" style="display:flex; gap: 4px; padding-top: 4px;">
+                  <button id="articleUndoBtn" class="ghost small" type="button">↩</button>
+                  <button id="articleRedoBtn" class="ghost small" type="button">↪</button>
+                  <span style="border-right: 1px solid var(--border-color); margin: 0 4px;"></span>
+                  <button id="dragModeToggleBtn" class="ghost small" type="button">✋</button>
+                  <button id="insertTableBtn" class="ghost small" type="button">Таблица</button>
+                  <button id="articleNewBlockBtn" class="ghost small" type="button" style="color: var(--primary); background: var(--bg-active);">+ Блок</button>
+                </div>
+                
+                <!-- Outline Toolbar (Contextual) -->
+                <div id="outlineToolbar" class="outline-toolbar hidden" style="display:flex; gap: 4px; padding-top: 4px;">
+                    <button id="outlineUndoBtn" class="ghost small" type="button">↩</button>
+                    <button id="outlineRedoBtn" class="ghost small" type="button">↪</button>
+                    <span style="border-right: 1px solid var(--border-color); margin: 0 4px;"></span>
+                    <button id="outlineTextMenuBtn" class="ghost small" type="button">Aa ▼</button>
+                    <!-- Submenus rendered by JS, styled by CSS classes above -->
+                    <div id="outlineTextMenu" class="outline-toolbar__menu hidden" role="menu">
+                        <button class="menu-item" data-outline-action="toggleBold"><strong>B</strong> Жирный</button>
+                        <button class="menu-item" data-outline-action="toggleItalic"><em>i</em> Курсив</button>
+                        <button class="menu-item" data-outline-action="toggleCodeBlock">&lt;/&gt; Код</button>
+                    </div>
+                </div>
+            </div>
+            
+          <div id="pasteProgress" class="inline-progress hidden" style="font-size: 0.8rem; color: var(--primary); margin-top: 4px; font-weight: 500;">
+            ⏳ Обработка...
+          </div>
+        </div>
+
+        <section id="articleView" class="panel hidden">
+          <div id="outlineTagsBar" class="outline-tags-panel hidden" style="padding: 16px 32px; display:flex; gap:8px;"></div>
+          <div id="outlineEditor" class="outline-editor hidden" style="padding: 0 32px;"></div>
+          <div id="blocksContainer" class="blocks"></div>
+        </section>
+
+        <section id="usersView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Пользователи</h2>
+            <button id="usersBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <ul id="usersList" style="padding: 32px;"></ul>
+        </section>
+
+        <section id="graphView" class="panel hidden">
+          <div class="panel-header">
+            <h2>Граф связей</h2>
+            <button id="graphBackBtn" class="ghost small" type="button">Назад</button>
+          </div>
+          <!-- Dark background for graph looks better even in light mode for contrast with nodes, or use light gray -->
+          <div class="graph-container" style="flex: 1; background: #f1f5f9;">
+            <div id="graphCanvas" style="width: 100%; height: 100%;"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="modal-root"></div>
+    <div id="sidebarBackdrop" class="sidebar-backdrop hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 40;"></div>
+
+    <script>
+      window.__memusAppModule = "/app.js?v=27";
+    </script>
+    <script type="module" src="/boot.js?v=8"></script>
+  </body>
+</html>

@@ -847,23 +847,23 @@
     const style = document.createElement('style');
     style.id = 'quickNoteBootStyles';
     style.textContent = `
-      .boot-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
-      .boot-modal{width:min(720px,100%);background:#0b1220;border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5);color:#e5e7eb}
-      .boot-modal__hdr{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;gap:12px}
+      .boot-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px}
+      .boot-modal{width:min(720px,100%);background:rgba(255,255,255,.92);border:1px solid rgba(203,213,225,.9);border-radius:16px;box-shadow:0 24px 80px rgba(15,23,42,.18);color:#0f172a}
+      .boot-modal__hdr{padding:14px 16px;border-bottom:1px solid rgba(203,213,225,.7);display:flex;align-items:center;justify-content:space-between;gap:12px}
       .boot-modal__title{font-size:14px;font-weight:600;letter-spacing:.2px}
-      .boot-modal__meta{font-size:12px;color:#9ca3af}
+      .boot-modal__meta{font-size:12px;color:#64748b}
       .boot-modal__body{padding:12px 16px}
-      .boot-note{width:100%;min-height:34vh;max-height:52vh;resize:vertical;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 12px;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;outline:none}
-      .boot-note:focus{border-color:rgba(59,130,246,.6);box-shadow:0 0 0 3px rgba(59,130,246,.25)}
-      .boot-modal__ftr{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .boot-note{width:100%;min-height:34vh;max-height:52vh;resize:vertical;background:rgba(255,255,255,.95);color:#0f172a;border:1px solid rgba(203,213,225,.9);border-radius:12px;padding:12px 12px;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;outline:none}
+      .boot-note:focus{border-color:rgba(37,99,235,.65);box-shadow:0 0 0 4px rgba(37,99,235,.14)}
+      .boot-modal__ftr{padding:12px 16px;border-top:1px solid rgba(203,213,225,.7);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
       .boot-actions{display:flex;gap:10px;flex-wrap:wrap}
-      .boot-btn{appearance:none;border:1px solid rgba(255,255,255,.14);background:#111827;color:#e5e7eb;border-radius:999px;padding:10px 14px;font:600 13px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;cursor:pointer}
-      .boot-btn:hover{background:#0f172a}
-      .boot-btn--primary{background:#2563eb;border-color:#2563eb}
+      .boot-btn{appearance:none;border:1px solid rgba(203,213,225,.9);background:rgba(255,255,255,.7);color:#0f172a;border-radius:999px;padding:10px 14px;font:600 13px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;cursor:pointer}
+      .boot-btn:hover{background:rgba(241,245,249,.9)}
+      .boot-btn--primary{background:#2563eb;border-color:#2563eb;color:#ffffff}
       .boot-btn--primary:hover{background:#1d4ed8}
       .boot-btn--ghost{background:transparent}
-      .boot-hint{font-size:12px;color:#9ca3af}
-      .boot-toast{margin-left:auto;font-size:12px;color:#a7f3d0}
+      .boot-hint{font-size:12px;color:#64748b}
+      .boot-toast{margin-left:auto;font-size:12px;color:#16a34a}
     `;
     document.head.appendChild(style);
   }
