@@ -971,7 +971,8 @@ function proofreadDebug(label, data = {}) {
 function normalizeTagLabel(raw) {
   const label = String(raw || '')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .toLowerCase();
   if (!label) return null;
   if (label.length > 60) return label.slice(0, 60);
   return label;
@@ -981,7 +982,7 @@ function normalizeTagKey(label) {
   return String(label || '')
     .replace(/\s+/g, ' ')
     .trim()
-    .toUpperCase();
+    .toLowerCase();
 }
 
 function computeOutlineTagsIndex(pmDoc, tagNodeTypeName = 'tag') {
@@ -5154,6 +5155,7 @@ async function loadTiptap() {
     pmTablesMod: mod.pmTablesMod,
     linkMod: mod.linkMod,
     imageMod: mod.imageMod,
+    mentionMod: mod.mentionMod,
     tableMod: mod.tableMod,
     tableRowMod: mod.tableRowMod,
     tableCellMod: mod.tableCellMod,
@@ -6029,6 +6031,7 @@ async function mountOutlineEditor() {
 		  const { Decoration, DecorationSet } = pmViewMod;
 	  const Link = tiptap.linkMod.default || tiptap.linkMod.Link || tiptap.linkMod;
 	  const Image = tiptap.imageMod.default || tiptap.imageMod.Image || tiptap.imageMod;
+	  const Mention = tiptap.mentionMod?.default || tiptap.mentionMod?.Mention || tiptap.mentionMod;
 	  const TableKit = tiptap.tableMod.TableKit || tiptap.tableMod.tableKit;
 		  outlineTableApi = {
 		    TableMap: tiptap.pmTablesMod?.TableMap || null,
@@ -6058,73 +6061,255 @@ async function mountOutlineEditor() {
 
   const outlineTagHighlighterKey = new PluginKey('outlineTagHighlighter');
 
-  const OutlineTag = Node.create({
-    name: 'tag',
-    group: 'inline',
-    inline: true,
-    atom: true,
-    selectable: false,
-    renderText({ node }) {
-      try {
-        return String(node?.attrs?.label || '').trim();
-      } catch {
-        return '';
-      }
-    },
-    addAttributes() {
-      return {
-        label: { default: '' },
-        key: { default: '' },
-      };
-    },
-    parseHTML() {
-      return [{ tag: 'span[data-tt-tag="1"]' }];
-    },
-    renderHTML({ node, HTMLAttributes }) {
-      const label = String(node?.attrs?.label || '').trim();
-      const key = String(node?.attrs?.key || '').trim();
-      return [
-        'span',
-        mergeAttributes(HTMLAttributes, {
-          'data-tt-tag': '1',
-          'data-tag-key': key,
-          class: 'tt-tag',
-        }),
-        label || key || '',
-      ];
-    },
-    addInputRules() {
-      const find = /(^|[\s([{"'«„–—-])\\([^\\\n]{1,60}?)\\$/;
-      return [
-        new InputRule({
-          find,
-          handler: ({ state: pmState, range, match }) => {
-            const prefix = String(match?.[1] || '');
-            const raw = String(match?.[2] || '');
-            const label = normalizeTagLabel(raw);
-            if (!label) return null;
-            const key = normalizeTagKey(label);
-            if (!key) return null;
-            const type = pmState.schema.nodes?.tag;
-            if (!type) return null;
-            const tagNode = type.create({ label: key, key });
+  let outlineTagSuggestController = null;
 
-            let tr = pmState.tr.delete(range.from, range.to);
-            let insertPos = range.from;
-            if (prefix) {
-              tr = tr.insertText(prefix, insertPos);
-              insertPos += prefix.length;
-            }
-            tr = tr.insert(insertPos, tagNode);
-            const sel = TextSelection.near(tr.doc.resolve(Math.min(tr.doc.content.size, insertPos + tagNode.nodeSize)), 1);
-            tr = tr.setSelection(sel);
-            tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-            return tr;
+  const OutlineTagSuggestKeys = Extension.create({
+    name: 'outlineTagSuggestKeys',
+    addProseMirrorPlugins() {
+      return [
+        new Plugin({
+          key: new PluginKey('outlineTagSuggestKeys'),
+          props: {
+            handleKeyDown(_view, event) {
+              try {
+                if (!outlineTagSuggestController?.isOpen?.()) return false;
+                return !!outlineTagSuggestController.handleKeyDown?.(event);
+              } catch {
+                return false;
+              }
+            },
           },
         }),
       ];
     },
   });
+
+  const OutlineTag = (() => {
+    if (!Mention || typeof Mention.extend !== 'function') return null;
+
+    const createTagSuggestion = () => {
+      let popup = null;
+      let list = null;
+      let currentItems = [];
+      let selectedIndex = 0;
+      let lastProps = null;
+      let controller = null;
+
+      const ensure = () => {
+        if (popup) return;
+        popup = document.createElement('div');
+        popup.className = 'tt-tag-suggest';
+        list = document.createElement('div');
+        list.className = 'tt-tag-suggest__list';
+        popup.appendChild(list);
+        document.body.appendChild(popup);
+      };
+
+      const destroy = () => {
+        try {
+          popup?.remove();
+        } catch {
+          // ignore
+        }
+        popup = null;
+        list = null;
+        currentItems = [];
+        selectedIndex = 0;
+        lastProps = null;
+        if (outlineTagSuggestController === controller) outlineTagSuggestController = null;
+      };
+
+      const position = (clientRect) => {
+        if (!popup || !clientRect) return;
+        const rect = clientRect();
+        if (!rect) return;
+        popup.style.left = `${Math.max(8, rect.left)}px`;
+        popup.style.top = `${Math.max(8, rect.bottom + 6)}px`;
+      };
+
+      const render = (props) => {
+        if (!popup || !list) return;
+        lastProps = props || null;
+        currentItems = Array.isArray(props?.items) ? props.items : [];
+        list.innerHTML = '';
+        currentItems.forEach((it, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = idx === selectedIndex ? 'tt-tag-suggest__item active' : 'tt-tag-suggest__item';
+          btn.textContent = String(it?.label || it?.key || '');
+          btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            props.command(it);
+          });
+          list.appendChild(btn);
+        });
+        if (!currentItems.length) {
+          const empty = document.createElement('div');
+          empty.className = 'tt-tag-suggest__empty';
+          empty.textContent = 'Нет совпадений';
+          list.appendChild(empty);
+        }
+      };
+
+      const move = (dir) => {
+        const n = currentItems.length;
+        if (!n) return;
+        selectedIndex = (selectedIndex + dir + n) % n;
+      };
+
+      const handleKeyDown = (ev) => {
+        if (!ev) return false;
+        if (!popup) return false;
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          destroy();
+          return true;
+        }
+        if (ev.key === ' ' || ev.code === 'Space') {
+          if (!lastProps) return false;
+          if (!currentItems.length) {
+            const q = normalizeTagKey(lastProps?.query || '');
+            if (!q) return false;
+            ev.preventDefault();
+            ev.stopPropagation();
+            lastProps.command({ key: q, label: q });
+            return true;
+          }
+          ev.preventDefault();
+          ev.stopPropagation();
+          const it = currentItems[selectedIndex];
+          if (it) lastProps.command(it);
+          return true;
+        }
+        if (ev.key === 'ArrowDown') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          move(+1);
+          render(lastProps);
+          return true;
+        }
+        if (ev.key === 'ArrowUp') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          move(-1);
+          render(lastProps);
+          return true;
+        }
+        if (ev.key === 'Enter') {
+          if (!lastProps) return false;
+          ev.preventDefault();
+          ev.stopPropagation();
+          const it = currentItems[selectedIndex];
+          if (it) lastProps.command(it);
+          return true;
+        }
+        return false;
+      };
+
+      controller = {
+        isOpen: () => !!popup,
+        handleKeyDown,
+      };
+
+      outlineTagSuggestController = controller;
+
+      return {
+        char: '\\',
+        // Backslash tags should be allowed in any context (not only after space).
+        allowedPrefixes: null,
+        allowSpaces: false,
+        startOfLine: false,
+        items: ({ query }) => {
+          const qRaw = String(query || '');
+          const q = normalizeTagKey(qRaw);
+          const entries = Array.from(outlineTagsIndex.counts.entries())
+            .map(([key, count]) => ({ key, label: outlineTagsIndex.labelByKey.get(key) || key, count }))
+            .sort((a, b) => (b.count || 0) - (a.count || 0));
+          const filtered = q
+            ? entries.filter((e) => String(e.key || '').includes(q) || String(e.label || '').toLowerCase().includes(q.toLowerCase()))
+            : entries;
+          const top = filtered.slice(0, 8);
+          return top;
+        },
+        command: ({ editor, range, props }) => {
+          try {
+            const raw = String(props?.key || props?.label || '');
+            const label = normalizeTagLabel(raw);
+            const key = normalizeTagKey(label);
+            if (!key) return;
+            editor
+              .chain()
+              .focus()
+              .insertContentAt(range, [{ type: 'tag', attrs: { label: key, key } }])
+              .insertContent(' ')
+              .run();
+          } catch {
+            // ignore
+          }
+        },
+        render: () => ({
+          onStart: (props) => {
+            selectedIndex = 0;
+            ensure();
+            render(props);
+            position(props.clientRect);
+          },
+          onUpdate: (props) => {
+            selectedIndex = 0;
+            ensure();
+            render(props);
+            position(props.clientRect);
+          },
+          onKeyDown: (props) => {
+            return handleKeyDown(props?.event);
+          },
+          onExit: () => destroy(),
+        }),
+      };
+    };
+
+    return Mention.extend({
+      name: 'tag',
+      group: 'inline',
+      inline: true,
+      atom: true,
+      selectable: false,
+      addAttributes() {
+        return {
+          label: { default: '' },
+          key: { default: '' },
+        };
+      },
+      parseHTML() {
+        return [{ tag: 'span[data-tt-tag="1"]' }];
+      },
+      renderText({ node }) {
+        try {
+          const label = normalizeTagLabel(node?.attrs?.label || node?.attrs?.key || '') || '';
+          return label;
+        } catch {
+          return '';
+        }
+      },
+      renderHTML({ node, HTMLAttributes }) {
+        const label = normalizeTagLabel(node?.attrs?.label || node?.attrs?.key || '') || '';
+        const key = normalizeTagKey(node?.attrs?.key || label) || '';
+        return [
+          'span',
+          mergeAttributes(HTMLAttributes, {
+            'data-tt-tag': '1',
+            'data-tag-key': key,
+            class: 'tt-tag',
+          }),
+          label || key || '',
+        ];
+      },
+    }).configure({
+      suggestion: createTagSuggestion(),
+    });
+  })();
 
   const OutlineTagHighlighter = Extension.create({
     name: 'outlineTagHighlighter',
@@ -12220,6 +12405,7 @@ async function mountOutlineEditor() {
 		      OutlineChildren,
 	        OutlineTag,
 	        OutlineTagHighlighter,
+	        OutlineTagSuggestKeys,
 			      OutlineActiveSection,
 			      OutlineEditMode,
 			      OutlineImageUpload,
@@ -12260,6 +12446,58 @@ async function mountOutlineEditor() {
 	        class: 'outline-prosemirror',
 	      },
 		      handleKeyDown(view, event) {
+		        try {
+		          if (outlineTagSuggestController?.isOpen?.() && outlineTagSuggestController.isOpen()) {
+		            const handled = !!outlineTagSuggestController.handleKeyDown?.(event);
+		            if (handled) return true;
+		          }
+		        } catch {
+		          // ignore
+		        }
+		        // Some mobile/IME/browser combos don't reliably insert "\" into ProseMirror.
+		        // We use "\" as the trigger for tag suggestions, so ensure the character is inserted.
+		        try {
+		          const plain =
+		            event &&
+		            !event.defaultPrevented &&
+		            !event.isComposing &&
+		            !event.metaKey &&
+		            !event.ctrlKey &&
+		            !event.altKey;
+		          const isBackslash =
+		            plain && String(event?.key || '') === '\\';
+		          const isBackslashCode =
+		            plain && (String(event?.code || '') === 'Backslash' || String(event?.code || '') === 'IntlBackslash');
+		          if (isBackslash) {
+		            event.preventDefault();
+		            const { from, to } = view.state.selection;
+		            const tr = view.state.tr.insertText('\\', from, to).setMeta(OUTLINE_ALLOW_META, true);
+		            view.dispatch(tr);
+		            return true;
+		          }
+		          // Optional debug for keyboards/layouts where `key` isn't "\" even though the physical key is Backslash.
+		          // Enable via: localStorage.setItem('ttree_outline_debug_tag_v1','1')
+		          if (isBackslashCode) {
+		            try {
+		              const enabled = window?.localStorage?.getItem?.('ttree_outline_debug_tag_v1') === '1';
+		              if (enabled) {
+		                // eslint-disable-next-line no-console
+		                console.log('[outline][tag-debug] backslash-code', {
+		                  key: String(event?.key || ''),
+		                  code: String(event?.code || ''),
+		                  shiftKey: Boolean(event?.shiftKey),
+		                  altKey: Boolean(event?.altKey),
+		                  ctrlKey: Boolean(event?.ctrlKey),
+		                  metaKey: Boolean(event?.metaKey),
+		                });
+		              }
+		            } catch {
+		              // ignore
+		            }
+		          }
+		        } catch {
+		          // ignore
+		        }
 		        // Guard: holding Alt+Arrow should not cross parent boundaries automatically.
 		        // Crossing into an "uncle" requires a fresh key press.
 		        if (event && event.__memusSyntheticAltProxy) {
