@@ -53,6 +53,88 @@ export function extractOutlineSections(docJson) {
   return extractSectionsRecursive(content, []);
 }
 
+function normalizeTagKey(key) {
+  return String(key || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9а-яё_-]/gi, '');
+}
+
+function extractTagsRecursive(nodes, acc) {
+  for (const node of nodes || []) {
+    if (!node) continue;
+    if (node.type === 'tag') {
+      const raw = node.attrs?.key || node.attrs?.label || '';
+      const k = normalizeTagKey(raw);
+      if (k) acc.add(k);
+    }
+    const content = Array.isArray(node.content) ? node.content : [];
+    if (content.length) extractTagsRecursive(content, acc);
+  }
+}
+
+export function extractOutlineTags(docJson) {
+  const acc = new Set();
+  const content = Array.isArray(docJson?.content) ? docJson.content : [];
+  extractTagsRecursive(content, acc);
+  return Array.from(acc);
+}
+
+export async function reindexOutlineTags(db, { articleId, docJson, updatedAt }) {
+  if (!db || !articleId) return;
+  if (!docJson || typeof docJson !== 'object') return;
+  const id = String(articleId);
+  const nextTags = extractOutlineTags(docJson);
+  const now = Date.now();
+
+  const tx = db.transaction(['tags_by_article', 'tags_global'], 'readwrite');
+  const byArticle = tx.objectStore('tags_by_article');
+  const global = tx.objectStore('tags_global');
+
+  const prevRow = await reqToPromise(byArticle.get(id)).catch(() => null);
+  const prevTags = new Set(Array.isArray(prevRow?.tags) ? prevRow.tags.map((t) => String(t || '').trim()).filter(Boolean) : []);
+  const nextSet = new Set(nextTags);
+  const removed = [];
+  const added = [];
+  for (const t of prevTags) if (!nextSet.has(t)) removed.push(t);
+  for (const t of nextSet) if (!prevTags.has(t)) added.push(t);
+
+  for (const key of removed) {
+    const row = await reqToPromise(global.get(key)).catch(() => null);
+    const count = Math.max(0, (Number(row?.count || 0) || 0) - 1);
+    if (count <= 0) {
+      await reqToPromise(global.delete(key)).catch(() => {});
+    } else {
+      await reqToPromise(global.put({ ...(row || {}), key, label: String(row?.label || key), count, lastSeenAtMs: Number(row?.lastSeenAtMs || 0) || 0 })).catch(() => {});
+    }
+  }
+
+  for (const key of nextSet) {
+    const row = await reqToPromise(global.get(key)).catch(() => null);
+    const count = (Number(row?.count || 0) || 0) + (added.includes(key) ? 1 : 0);
+    await reqToPromise(
+      global.put({
+        ...(row || {}),
+        key,
+        label: String(row?.label || key),
+        count: Math.max(1, count),
+        lastSeenAtMs: now,
+      }),
+    ).catch(() => {});
+  }
+
+  await reqToPromise(
+    byArticle.put({
+      articleId: id,
+      tags: nextTags,
+      updatedAt: updatedAt || null,
+      indexedAtMs: now,
+    }),
+  );
+  await txDone(tx);
+}
+
 export async function reindexOutlineSections(db, { articleId, docJson, updatedAt }) {
   if (!db || !articleId) return;
   if (!docJson || typeof docJson !== 'object') return;

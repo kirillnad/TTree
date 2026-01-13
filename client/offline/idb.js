@@ -21,7 +21,7 @@ function dbNameForUser(userKey) {
   return `memus_offline_v1_${sanitizeKey(userKey)}`;
 }
 
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const KNOWN_USER_KEYS_KEY = 'ttree_offline_known_user_keys_v1';
 
@@ -105,6 +105,17 @@ export async function openOfflineIdb({ userKey } = {}) {
       const store = db.createObjectStore('pending_uploads', { keyPath: 'token' });
       store.createIndex('byArticleId', 'articleId', { unique: false });
       store.createIndex('byCreatedAtMs', 'createdAtMs', { unique: false });
+    }
+
+    if (!db.objectStoreNames.contains('tags_global')) {
+      const store = db.createObjectStore('tags_global', { keyPath: 'key' });
+      store.createIndex('byCount', 'count', { unique: false });
+      store.createIndex('byLastSeenAtMs', 'lastSeenAtMs', { unique: false });
+    }
+
+    if (!db.objectStoreNames.contains('tags_by_article')) {
+      const store = db.createObjectStore('tags_by_article', { keyPath: 'articleId' });
+      store.createIndex('byUpdatedAt', 'updatedAt', { unique: false });
     }
   };
 

@@ -19,6 +19,7 @@ import { encryptBlockTree } from '../encryption.js';
 import { hydrateUndoRedoFromArticle } from '../undo.js';
 import { updateCachedDocJson } from '../offline/cache.js';
 import { enqueueOp } from '../offline/outbox.js';
+import { ensureGlobalTagsIndexLoaded, getGlobalTagsIndexSnapshot } from '../offline/tags.js';
 import { putPendingUpload, deletePendingUpload, listPendingUploads, markPendingUploadError } from '../offline/uploads.js';
 import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
@@ -6016,6 +6017,8 @@ async function mountOutlineEditor() {
     return;
   }
 
+  ensureGlobalTagsIndexLoaded();
+
   // Защита от двойного mount (например, если юзер кликнул дважды пока грузим tiptap).
   if (mountPromise) return mountPromise;
   mountPromise = (async () => {
@@ -6224,8 +6227,27 @@ async function mountOutlineEditor() {
         items: ({ query }) => {
           const qRaw = String(query || '');
           const q = normalizeTagKey(qRaw);
-          const entries = Array.from(outlineTagsIndex.counts.entries())
-            .map(([key, count]) => ({ key, label: outlineTagsIndex.labelByKey.get(key) || key, count }))
+          const global = getGlobalTagsIndexSnapshot();
+          const mergedCounts = new Map();
+          const mergedLabels = new Map();
+          try {
+            for (const [key, count] of global?.counts?.entries?.() || []) {
+              const k = String(key || '').trim();
+              if (!k) continue;
+              mergedCounts.set(k, Number(count || 0) || 0);
+              mergedLabels.set(k, String(global?.labelByKey?.get?.(k) || k));
+            }
+          } catch {
+            // ignore
+          }
+          for (const [key, count] of outlineTagsIndex.counts.entries()) {
+            const k = String(key || '').trim();
+            if (!k) continue;
+            if (!mergedCounts.has(k)) mergedCounts.set(k, Number(count || 0) || 0);
+            if (!mergedLabels.has(k)) mergedLabels.set(k, String(outlineTagsIndex.labelByKey.get(k) || k));
+          }
+          const entries = Array.from(mergedCounts.entries())
+            .map(([key, count]) => ({ key, label: mergedLabels.get(key) || key, count }))
             .sort((a, b) => (b.count || 0) - (a.count || 0));
           const filtered = q
             ? entries.filter((e) => String(e.key || '').includes(q) || String(e.label || '').toLowerCase().includes(q.toLowerCase()))

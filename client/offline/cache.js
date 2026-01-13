@@ -1,8 +1,9 @@
 import { getOfflineDbReady } from './index.js';
 import { reqToPromise, txDone } from './idb.js';
-import { reindexOutlineSections } from './indexer.js';
+import { reindexOutlineSections, reindexOutlineTags } from './indexer.js';
 import { updateMediaRefsForArticle } from './media.js';
 import { hasPendingOutlineOps } from './outbox.js';
+import { markGlobalTagsIndexStale } from './tags.js';
 import { revertLog, docJsonHash } from '../debug/revertLog.js';
 
 function pickArticleIndexRow(article) {
@@ -212,6 +213,7 @@ export async function cacheArticle(article) {
   }
   if (docJson) {
     reindexOutlineSections(db, { articleId: article.id, docJson, updatedAt }).catch(() => {});
+    reindexOutlineTags(db, { articleId: article.id, docJson, updatedAt }).then(markGlobalTagsIndexStale).catch(() => {});
     updateMediaRefsForArticle(article.id, docJson).catch(() => {});
   }
 }
@@ -259,6 +261,7 @@ export async function cacheArticleUnderId(article, cacheId) {
   await txDone(tx);
   if (docJson) {
     reindexOutlineSections(db, { articleId: id, docJson, updatedAt }).catch(() => {});
+    reindexOutlineTags(db, { articleId: id, docJson, updatedAt }).then(markGlobalTagsIndexStale).catch(() => {});
     updateMediaRefsForArticle(id, docJson).catch(() => {});
   }
 }
@@ -403,6 +406,7 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
   }
   if (docJson && typeof docJson === 'object') {
     reindexOutlineSections(db, { articleId, docJson, updatedAt }).catch(() => {});
+    reindexOutlineTags(db, { articleId, docJson, updatedAt }).then(markGlobalTagsIndexStale).catch(() => {});
     updateMediaRefsForArticle(articleId, docJson).catch(() => {});
   }
 }
