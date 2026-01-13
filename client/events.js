@@ -2162,12 +2162,9 @@ export function attachEvents() {
         }
         const cmd = `/link ${token}`;
         const messageLines = [
-          'Чтобы привязать этот аккаунт Memus к чату в Telegram:',
-          '',
+          'Чтобы создавать быстрые заметки из Телеграмм',
           '1. Откройте чат с ботом.',
           '2. Отправьте ему эту команду:',
-          '',
-          cmd,
         ];
         await showPrompt({
           title: 'Привязать Telegram',

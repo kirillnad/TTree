@@ -367,8 +367,24 @@ html {
   pointer-events: auto;
   font-size: 22px;
   font-weight: 700;
-  line-height: 1.1;
-  color: var(--sidebar-text);
+  line-height: 1;
+  letter-spacing: 0.005em;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  /* color: var(--sidebar-text); */
+    color: #0f172a26;
+}
+
+.app-logo__brand {
+  font-weight: 800;
+  letter-spacing: inherit;
+}
+
+.app-logo__tld {
+  font-weight: 600;
+  letter-spacing: inherit;
 }
 
 /* убираем наложение подзаголовка */
