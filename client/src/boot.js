@@ -905,13 +905,8 @@
     const left = document.createElement('div');
     const title = document.createElement('div');
     title.className = 'boot-modal__title';
-    title.textContent = 'Быстрая заметка (оффлайн-буфер)';
-    const meta = document.createElement('div');
-    meta.className = 'boot-modal__meta';
-    const count = readPendingQuickNotes().length;
-    meta.textContent = count ? `В очереди: ${count}` : (reason ? `Причина: ${reason}` : 'Можно без интернета и без входа');
+    title.textContent = 'Быстрая заметка';
     left.appendChild(title);
-    left.appendChild(meta);
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
@@ -963,11 +958,6 @@
     modal.appendChild(footer);
     backdrop.appendChild(modal);
 
-    const updateMeta = () => {
-      const c = readPendingQuickNotes().length;
-      meta.textContent = c ? `В очереди: ${c}` : (reason ? `Причина: ${reason}` : 'Можно без интернета и без входа');
-    };
-
     const close = () => {
       try {
         backdrop.remove();
@@ -981,7 +971,6 @@
       if (!note) return;
       textarea.value = '';
       toast.textContent = 'Сохранено локально';
-      updateMeta();
       markActiveNow();
       try {
         window.dispatchEvent(new CustomEvent('memus:queued-inbox-changed', { detail: { note } }));
