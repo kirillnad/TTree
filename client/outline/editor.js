@@ -67,6 +67,7 @@ const titleGenState = new Map(); // sectionId -> { bodyHash: string, inFlight: b
 const PROOFREAD_RETRY_COOLDOWN_MS = 30 * 1000;
 const proofreadState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean, status: 'ok'|'error', lastAttemptAtMs: number }
 const proofreadHeadingState = new Map(); // sectionId -> { htmlHash: string, inFlight: boolean, status: 'ok'|'error', lastAttemptAtMs: number }
+let lastProofreadUnavailableToastAt = 0;
 let outlineToolbarCleanup = null;
 let outlineEditModeKey = null;
 let dropGuardCleanup = null;
@@ -5849,6 +5850,21 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
     });
     proofreadOutlineHtml(headingHtml)
       .then((res) => {
+        if (res && res.ok === false) {
+          proofreadDebug('unavailable_heading', { sectionId: sid, reason: String(res.reason || '') });
+          proofreadHeadingState.set(sid, {
+            htmlHash: headingHash,
+            inFlight: false,
+            status: 'error',
+            lastAttemptAtMs: Date.now(),
+          });
+          const now = Date.now();
+          if (now - lastProofreadUnavailableToastAt > 60000) {
+            lastProofreadUnavailableToastAt = now;
+            showToast('Корректура недоступна (нет доступа к OpenAI).');
+          }
+          return;
+        }
         const correctedHtml = String(res?.html || '').trim();
         if (!correctedHtml) {
           proofreadDebug('skip_apply_heading', { sectionId: sid, reason: 'empty_corrected_html' });
@@ -5905,6 +5921,16 @@ function maybeProofreadOnLeave(editor, doc, sectionId) {
     proofreadState.set(sid, { htmlHash: bodyHash, inFlight: true, status: prevBody?.status || 'ok', lastAttemptAtMs: Date.now() });
     proofreadOutlineHtml(bodyHtml)
       .then((res) => {
+        if (res && res.ok === false) {
+          proofreadDebug('unavailable', { sectionId: sid, reason: String(res.reason || '') });
+          proofreadState.set(sid, { htmlHash: bodyHash, inFlight: false, status: 'error', lastAttemptAtMs: Date.now() });
+          const now = Date.now();
+          if (now - lastProofreadUnavailableToastAt > 60000) {
+            lastProofreadUnavailableToastAt = now;
+            showToast('Корректура недоступна (нет доступа к OpenAI).');
+          }
+          return;
+        }
         const correctedHtml = String(res?.html || '').trim();
         if (!correctedHtml) {
           proofreadDebug('skip_apply', { sectionId: sid, reason: 'empty_corrected_html' });

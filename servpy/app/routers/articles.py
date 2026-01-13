@@ -89,7 +89,17 @@ def post_article(payload: dict[str, Any], current_user: User = Depends(get_curre
     article_id = payload.get('id') if payload else None
     if article_id is not None and not isinstance(article_id, str):
         raise HTTPException(status_code=400, detail='id must be string')
+    parent_id = payload.get('parentId') if payload else None
+    if parent_id is not None and not isinstance(parent_id, str):
+        raise HTTPException(status_code=400, detail='parentId must be string')
+    parent_id = str(parent_id).strip() if parent_id is not None and str(parent_id).strip() else None
+
     article = create_article(payload.get('title'), current_user.id, article_id=article_id)
+    if parent_id:
+        try:
+            article = move_article_to_parent(article.get('id') or article_id, parent_id, current_user.id, placement='inside')
+        except (ArticleNotFound, InvalidOperation) as e:
+            raise HTTPException(status_code=400, detail=str(e))
     return article
 
 
@@ -528,10 +538,12 @@ def put_article_sections_delete(
 # Вынесено из app/main.py → app/routers/articles.py
 @router.delete('/api/articles/{article_id}')
 def remove_article(article_id: str, force: bool = False, current_user: User = Depends(get_current_user)):
-    article = get_article(article_id, current_user.id)
+    real_article_id = _resolve_article_id_for_user(article_id, current_user)
+    # For permanent deletion (`force=true`) we must allow deleting already-soft-deleted articles.
+    article = get_article(real_article_id, current_user.id, include_deleted=bool(force))
     if not article:
         raise HTTPException(status_code=404, detail='Article not found')
-    deleted = delete_article(article_id, force=force)
+    deleted = delete_article(real_article_id, force=force)
     if not deleted:
         raise HTTPException(status_code=404, detail='Article not found')
     return {'status': 'deleted' if not force else 'purged'}

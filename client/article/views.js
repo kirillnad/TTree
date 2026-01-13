@@ -10,6 +10,7 @@ import {
   ensureArticlesIndexLoaded,
   ensureDeletedArticlesIndexLoaded,
   renderMainArticleList,
+  removeArticleFromIndex,
   upsertArticleIndex,
 } from '../sidebar.js';
 import { recordArticleOpened } from '../sidebar.js';
@@ -278,6 +279,17 @@ export async function loadArticleView(id) {
       }
     }
   } catch (error) {
+    try {
+      const status = Number(error?.status || 0) || null;
+      if (status === 404 && id && id !== 'inbox') {
+        removeArticleFromIndex(id);
+        showToast('Статья не найдена (возможно, удалена).');
+        navigate(routing.list);
+        return;
+      }
+    } catch {
+      // ignore
+    }
     refs.blocksContainer.innerHTML = `<p class="meta">Не удалось загрузить статью: ${error.message}</p>`;
   }
 }
@@ -351,22 +363,35 @@ export async function createArticle() {
   if (refs.sidebarNewArticleBtn) refs.sidebarNewArticleBtn.disabled = true;
   try {
     let title = '';
+    let parentId = null;
+    const candidateId = String(state.sidebarSelectedArticleId || '').trim();
+    const candidate =
+      candidateId && candidateId !== 'inbox' ? state.articlesIndex.find((a) => String(a?.id || '') === candidateId) : null;
+    const candidateTitle = candidate ? String(candidate.title || '').trim() : '';
     try {
-      title = await showPrompt({
+      const result = await showPrompt({
         title: 'Новая страница',
         message: 'Введите заголовок для новой страницы.',
         confirmText: 'Создать',
         cancelText: 'Отмена',
         placeholder: 'Заголовок страницы',
         defaultValue: '',
+        returnMeta: true,
+        checkbox:
+          candidateTitle && candidateId
+            ? { label: `Создать внутри "${candidateTitle}"?`, checked: false, disabled: false }
+            : null,
       });
+      title = typeof result === 'object' ? result?.value : result;
+      parentId =
+        typeof result === 'object' && result?.checkboxChecked && candidateId && candidateTitle ? candidateId : null;
     } catch (error) {
       title = window.prompt('Введите заголовок страницы') || '';
     }
     title = (title || '').trim();
     if (!title) return;
 
-    const article = await createArticleApi(title);
+    const article = await createArticleApi(title, { parentId });
     upsertArticleIndex(article);
     state.pendingEditBlockId = article?.blocks?.[0]?.id || null;
     state.scrollTargetBlockId = state.pendingEditBlockId;

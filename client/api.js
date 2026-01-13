@@ -6,6 +6,7 @@ import {
   getCachedArticlesIndex,
   updateCachedArticleTreePositions,
   updateCachedDocJson,
+  markCachedArticleDeleted,
 } from './offline/cache.js';
 import { enqueueOp } from './offline/outbox.js';
 import { localSemanticSearch } from './offline/semantic.js';
@@ -63,7 +64,14 @@ export async function apiRequest(path, options = {}) {
         fetchMs: perfHeadersAt ? Math.round(perfHeadersAt - perfFetchStart) : null,
       });
     }
-    throw new Error(details.detail || 'Request failed');
+    const err = new Error(details.detail || 'Request failed');
+    try {
+      err.status = response.status;
+      err.path = path;
+    } catch {
+      // ignore
+    }
+    throw err;
   }
   // Any successful API response means the server is reachable (even if the app started in offline-fallback mode).
   try {
@@ -755,8 +763,13 @@ export function ragSummary(query, results) {
   });
 }
 
-export function createArticle(title) {
-  const runOnline = () => apiRequest('/api/articles', { method: 'POST', body: JSON.stringify({ title }) });
+export function createArticle(title, options = {}) {
+  const parentId = options && typeof options === 'object' ? options.parentId ?? null : null;
+  const runOnline = () => {
+    const payload = { title };
+    if (parentId) payload.parentId = parentId;
+    return apiRequest('/api/articles', { method: 'POST', body: JSON.stringify(payload) });
+  };
   if (navigator.onLine) {
     return runOnline().then(async (article) => {
       cacheArticle(article).catch(() => {});
@@ -771,8 +784,9 @@ export function createArticle(title) {
   return getCachedArticlesIndex()
     .catch(() => [])
     .then((idx) => {
-      const root = (idx || []).filter((a) => !a.parentId);
-      const maxPos = root.reduce((acc, a) => Math.max(acc, Number(a.position || 0)), -1);
+      const list = Array.isArray(idx) ? idx : [];
+      const siblings = list.filter((a) => String(a?.parentId || '') === String(parentId || ''));
+      const maxPos = siblings.reduce((acc, a) => Math.max(acc, Number(a.position || 0)), -1);
       const localArticle = {
         id,
         title: title || 'Новая статья',
@@ -781,11 +795,13 @@ export function createArticle(title) {
         docJson: null,
         blocks: [],
         encrypted: false,
-        parentId: null,
+        parentId: parentId || null,
         position: maxPos + 1,
       };
       cacheArticle(localArticle).catch(() => {});
-      enqueueOp('create_article', { articleId: id, payload: { id, title: localArticle.title } }).catch(() => {});
+      enqueueOp('create_article', { articleId: id, payload: { id, title: localArticle.title, parentId: parentId || null } }).catch(
+        () => {},
+      );
       return localArticle;
     });
 }
@@ -889,7 +905,11 @@ export function proofreadOutlineHtml(html) {
 
 export function deleteArticle(id, options = {}) {
   const force = options.force ? '?force=true' : '';
-  return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' });
+  return apiRequest(`/api/articles/${id}${force}`, { method: 'DELETE' }).then((resp) => {
+    const deletedAt = force ? new Date().toISOString() : new Date().toISOString();
+    markCachedArticleDeleted(id, deletedAt).catch(() => {});
+    return resp;
+  });
 }
 
 export function restoreArticle(id) {

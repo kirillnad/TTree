@@ -222,6 +222,7 @@ export function showConfirm(options = {}) {
 export function showPrompt(options = {}) {
   const root = ensureRoot();
   let inputRef = null;
+  let checkboxRef = null;
   let suggestions = Array.isArray(options.suggestions) ? options.suggestions : [];
   let suggestionsBox = null;
   const { overlay, card, confirmBtn, cancelBtn, form } = buildModal({
@@ -241,6 +242,23 @@ export function showPrompt(options = {}) {
       input.value = options.defaultValue || '';
       input.autocomplete = 'off';
       fragment.appendChild(input);
+
+      if (options.checkbox && typeof options.checkbox === 'object') {
+        const cbWrap = document.createElement('label');
+        cbWrap.className = 'modal-checkbox';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = Boolean(options.checkbox.checked);
+        cb.disabled = Boolean(options.checkbox.disabled);
+        const cbText = document.createElement('span');
+        cbText.className = 'modal-checkbox__label';
+        cbText.textContent = String(options.checkbox.label || '').trim();
+        cbWrap.appendChild(cb);
+        cbWrap.appendChild(cbText);
+        fragment.appendChild(cbWrap);
+        checkboxRef = cb;
+      }
+
       if (suggestions.length) {
         suggestionsBox = document.createElement('div');
         suggestionsBox.className = 'modal-suggestions';
@@ -268,6 +286,7 @@ export function showPrompt(options = {}) {
       const payload = {
         value: value ?? null,
         selectedId: inputRef?.dataset?.selectedId || null,
+        checkboxChecked: checkboxRef ? Boolean(checkboxRef.checked) : null,
       };
       resolvePromise(payload);
     } else {

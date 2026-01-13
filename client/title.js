@@ -196,6 +196,23 @@ export async function handleDeleteArticle(event) {
     navigate(routing.list);
     showToast(isPermanent ? 'Статья удалена безвозвратно' : 'Статья перемещена в корзину');
   } catch (error) {
+    const status = Number(error?.status || 0) || null;
+    if (status === 404) {
+      // If the article is already deleted on the server (or was deleted from another device),
+      // treat it as success to avoid getting stuck on a broken route.
+      if (isPermanent) {
+        removeArticleFromTrashIndex(state.articleId);
+        removeArticleFromIndex(state.articleId);
+      } else {
+        removeArticleFromIndex(state.articleId);
+      }
+      state.article = null;
+      state.articleId = null;
+      state.currentBlockId = null;
+      navigate(routing.list);
+      showToast('Статья уже удалена');
+      return;
+    }
     showToast(error.message);
   }
 }

@@ -411,6 +411,36 @@ export async function updateCachedDocJson(articleId, docJson, updatedAt) {
   }
 }
 
+export async function markCachedArticleDeleted(articleId, deletedAt) {
+  const id = String(articleId || '').trim();
+  if (!id) return;
+  const ts = String(deletedAt || new Date().toISOString()).trim();
+  const db = await getOfflineDbReady();
+  const tx = db.transaction(['articles'], 'readwrite');
+  const store = tx.objectStore('articles');
+  const existing = await reqToPromise(store.get(id)).catch(() => null);
+  if (!existing) {
+    await txDone(tx);
+    return;
+  }
+  let article = null;
+  try {
+    article = existing.articleJsonStr ? JSON.parse(existing.articleJsonStr) : null;
+  } catch {
+    article = null;
+  }
+  if (!article || typeof article !== 'object') article = { id };
+  article.id = id;
+  article.deletedAt = ts;
+  const next = {
+    ...existing,
+    deletedAt: ts,
+    articleJsonStr: JSON.stringify(article),
+  };
+  await reqToPromise(store.put(next));
+  await txDone(tx);
+}
+
 export async function clearCachedArticleLocalDraft(articleId) {
   const id = String(articleId || '').trim();
   if (!id) return;

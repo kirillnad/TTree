@@ -421,9 +421,10 @@ async function flushOp(op) {
   if (op.type === 'create_article') {
     const title = op.payload?.title || 'Новая статья';
     const id = op.payload?.id || op.articleId;
+    const parentId = op.payload?.parentId ?? null;
     const article = await rawApiRequest('/api/articles', {
       method: 'POST',
-      body: JSON.stringify({ title, id }),
+      body: JSON.stringify({ title, id, parentId }),
     });
     await cacheArticle(article);
     return;

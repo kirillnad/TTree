@@ -31,5 +31,11 @@ def post_outline_proofread_html(payload: dict[str, Any], current_user: User = De
     try:
         corrected = proofread_outline_html_ru(html=html)
     except EmbeddingsUnavailable as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {'html': corrected or ''}
+        # Proofread is a best-effort UX enhancement. When the external service is unavailable,
+        # return 200 but explicitly mark it as unavailable (so client can surface status without spamming).
+        try:
+            print('[outline][proofread] unavailable:', str(exc))
+        except Exception:
+            pass
+        return {'ok': False, 'reason': str(exc), 'html': html}
+    return {'ok': True, 'html': corrected or ''}
