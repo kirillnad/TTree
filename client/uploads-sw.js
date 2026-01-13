@@ -3,8 +3,8 @@
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 // (Manual bump note) This file is the single source of truth for app shell cache-busting.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 545;
-const APP_BUILD = 'ct8l67xe';
+const APP_VERSION = 554;
+const APP_BUILD = 'dmkau4fa';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
@@ -17,6 +17,10 @@ const APP_SHELL_URLS = [
   '/outline/tiptap.bundle.js',
   '/manifest.webmanifest',
   '/fonts/SegoeIcons.ttf',
+  '/fonts/Manrope.cyrillic-ext.woff2',
+  '/fonts/Manrope.cyrillic.woff2',
+  '/fonts/Manrope.latin-ext.woff2',
+  '/fonts/Manrope.latin.woff2',
   '/icons/favicon.ico',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
