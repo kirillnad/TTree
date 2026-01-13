@@ -1,6 +1,7 @@
 import { state, isSavingTitle, setSavingTitle } from './state.js';
 import { refs } from './refs.js';
 import { apiRequest, deleteArticle } from './api.js';
+import { markCachedArticleDeleted } from './offline/cache.js';
 import { showToast } from './toast.js';
 import { upsertArticleIndex, removeArticleFromIndex, removeArticleFromTrashIndex } from './sidebar.js';
 import { renderSearchResults } from './search.js';
@@ -200,6 +201,11 @@ export async function handleDeleteArticle(event) {
     if (status === 404) {
       // If the article is already deleted on the server (or was deleted from another device),
       // treat it as success to avoid getting stuck on a broken route.
+      try {
+        markCachedArticleDeleted(state.articleId, new Date().toISOString()).catch(() => {});
+      } catch {
+        // ignore
+      }
       if (isPermanent) {
         removeArticleFromTrashIndex(state.articleId);
         removeArticleFromIndex(state.articleId);

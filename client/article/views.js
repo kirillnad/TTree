@@ -6,6 +6,7 @@ import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js
 import { showToast } from '../toast.js';
 import { showPrompt } from '../modal.js';
 import { navigate, routing } from '../routing.js';
+import { markCachedArticleDeleted } from '../offline/cache.js';
 import {
   ensureArticlesIndexLoaded,
   ensureDeletedArticlesIndexLoaded,
@@ -282,6 +283,7 @@ export async function loadArticleView(id) {
     try {
       const status = Number(error?.status || 0) || null;
       if (status === 404 && id && id !== 'inbox') {
+        markCachedArticleDeleted(id, new Date().toISOString()).catch(() => {});
         removeArticleFromIndex(id);
         showToast('Статья не найдена (возможно, удалена).');
         navigate(routing.list);
