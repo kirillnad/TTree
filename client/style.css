@@ -56,7 +56,7 @@
   background: transparent !important;
 
   /* Professional Slate (2024–2025) */
-  --primary: #2563eb;
+  --primary: #007ACC;
   --primary-hover: #1d4ed8;
   --primary-light: #eff6ff;
   --primary-border: #bfdbfe;
@@ -374,7 +374,7 @@ html {
   justify-content: center;
   gap: 0;
   /* color: var(--sidebar-text); */
-    color: #0f172a26;
+    color: #0f172a38;
 }
 
 .app-logo__brand {
@@ -1180,7 +1180,7 @@ main.content {
 }
 
 .outline-tag-pill[aria-pressed='true'] {
-  border-color: #2563eb;
+  border-color: #007ACC;
   color: #1d4ed8;
   background: rgba(37, 99, 235, 0.12);
 }
@@ -1237,7 +1237,7 @@ main.content {
 
 .outline-toolbar .ghost.small.is-active,
 .outline-toolbar .ghost.small[aria-pressed='true'] {
-  border-color: #2563eb;
+  border-color: #007ACC;
   color: #1d4ed8;
   background: rgba(37, 99, 235, 0.12);
 }
@@ -2159,7 +2159,7 @@ button.icon-button.small {
   --outline-placeholder: rgba(100, 116, 139, 0.75);
 
   /* depth accents */
-  --outline-accent-1: #2563eb;
+  --outline-accent-1: #007ACC;
   --outline-accent-2: #06b6d4;
   --outline-accent-3: #10b981;
   --outline-accent-4: #f59e0b;
@@ -2286,7 +2286,7 @@ button.icon-button.small {
   display: inline-flex;
 }
 .outline-heading__select[aria-checked='true'] {
-  border-color: #2563eb;
+  border-color: #007ACC;
   background: rgba(37, 99, 235, 0.14);
   color: #1d4ed8;
 }
@@ -2444,7 +2444,7 @@ button.icon-button.small {
   font-size: 0.95em;
 }
 .outline-body a {
-  color: #2563eb;
+  color: #007ACC;
   text-decoration: underline;
 }
 .outline-body a:hover {
@@ -2882,7 +2882,7 @@ body.tt-table-dragging {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #2563eb;
+  background: #007ACC;
   border: 2px solid #fff;
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
   cursor: ew-resize;
@@ -2892,7 +2892,7 @@ body.tt-table-dragging {
 }
 
 .resizable-image--resizing {
-  border-color: #2563eb;
+  border-color: #007ACC;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
 }
 
@@ -4415,7 +4415,7 @@ body.export-static blockquote {
 
 /* Ссылки */
 body.export-static a {
-  color: #2563eb;
+  color: #007ACC;
   text-decoration: none;
 }
 
