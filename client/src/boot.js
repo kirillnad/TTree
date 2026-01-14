@@ -860,7 +860,7 @@
       .boot-btn{appearance:none;border:1px solid rgba(203,213,225,.9);background:rgba(255,255,255,.7);color:#0f172a;border-radius:999px;padding:10px 14px;font:600 13px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;cursor:pointer}
       .boot-btn:hover{background:rgba(241,245,249,.9)}
       .boot-btn--primary{background:#007ACC;border-color:#007ACC;color:#ffffff}
-      .boot-btn--primary:hover{background:#1d4ed8}
+      .boot-btn--primary:hover{background:#0062A3}
       .boot-btn--ghost{background:transparent}
       .boot-hint{font-size:12px;color:#64748b}
       .boot-toast{margin-left:auto;font-size:12px;color:#16a34a}

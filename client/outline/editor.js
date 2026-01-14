@@ -12728,25 +12728,116 @@ async function mountOutlineEditor() {
 			      OutlineTablePercentWidths,
 			      OutlineMarkdown,
 		    ].filter(Boolean),
-	    content,
-		    editorProps: {
-	      attributes: {
-	        class: 'outline-prosemirror',
-	      },
-		      handleKeyDown(view, event) {
-		        try {
-		          if (outlineTagSuggestController?.isOpen?.() && outlineTagSuggestController.isOpen()) {
-		            const handled = !!outlineTagSuggestController.handleKeyDown?.(event);
-		            if (handled) return true;
-		          }
-		        } catch {
-		          // ignore
-		        }
-		        // Some mobile/IME/browser combos don't reliably insert "\" into ProseMirror.
-		        // We use "\" as the trigger for tag suggestions, so ensure the character is inserted.
-		        try {
-		          const plain =
-		            event &&
+		    content,
+			    editorProps: {
+		      attributes: {
+		        class: 'outline-prosemirror',
+		      },
+			      handleKeyDown(view, event) {
+			        try {
+			          if (outlineTagSuggestController?.isOpen?.() && outlineTagSuggestController.isOpen()) {
+			            const handled = !!outlineTagSuggestController.handleKeyDown?.(event);
+			            if (handled) return true;
+			          }
+			        } catch {
+			          // ignore
+			        }
+			        // View-mode: Ctrl/Cmd+V should paste copied outline blocks (sections) without entering edit-mode.
+			        try {
+			          const isModV =
+			            (event?.ctrlKey || event?.metaKey) &&
+			            !event?.shiftKey &&
+			            !event?.altKey &&
+			            (String(event?.key || '').toLowerCase() === 'v' || String(event?.code || '') === 'KeyV');
+			          if (isModV && !state.isPublicView) {
+			            const st = outlineEditModeKey?.getState?.(view.state) || null;
+			            const editingSectionId = st?.editingSectionId || null;
+			            if (!editingSectionId) {
+			              const clip = readOutlineSectionClipboard();
+			              if (clip && Array.isArray(clip.sections) && clip.sections.length) {
+			                event.preventDefault();
+			                event.stopPropagation();
+
+			                const pmState = view.state;
+			                const sel = pmState.selection;
+			                const $from = sel?.$from || null;
+			                const sectionPos = $from ? findOutlineSectionPosAtSelection(pmState.doc, $from) : null;
+			                const sectionNode =
+			                  typeof sectionPos === 'number' ? pmState.doc.nodeAt(sectionPos) : null;
+			                let insertPos = pmState.doc.content.size;
+			                if (typeof sectionPos === 'number' && sectionNode) {
+			                  insertPos = sectionPos + sectionNode.nodeSize;
+			                }
+
+			                const existingIds = new Set();
+			                try {
+			                  pmState.doc.descendants((n) => {
+			                    if (n?.type?.name !== 'outlineSection') return;
+			                    const sid = String(n.attrs?.id || '').trim();
+			                    if (sid) existingIds.add(sid);
+			                  });
+			                } catch {
+			                  // ignore
+			                }
+
+			                const sectionJsons = [];
+			                if (clip.mode === 'copy') {
+			                  for (const s of clip.sections) {
+			                    sectionJsons.push(remapOutlineSectionIds(s, () => safeUuid()));
+			                  }
+			                } else {
+			                  for (const s of clip.sections) {
+			                    const sid = String(s?.attrs?.id || '').trim();
+			                    if (sid && existingIds.has(sid)) {
+			                      showToast('Нельзя вставить: блок с таким id уже есть');
+			                      return true;
+			                    }
+			                    sectionJsons.push(cloneJson(s));
+			                  }
+			                }
+
+			                const schema = pmState.doc.type.schema;
+			                const nodes = [];
+			                for (const j of sectionJsons) {
+			                  try {
+			                    const n = schema.nodeFromJSON(j);
+			                    if (n?.type?.name === 'outlineSection') nodes.push(n);
+			                  } catch {
+			                    // ignore
+			                  }
+			                }
+			                if (!nodes.length) {
+			                  showToast('Не удалось вставить блоки');
+			                  return true;
+			                }
+
+			                let tr = pmState.tr;
+			                let pos = insertPos;
+			                for (const n of nodes) {
+			                  tr = tr.insert(pos, n);
+			                  pos += n.nodeSize;
+			                }
+			                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			                view.dispatch(tr.scrollIntoView());
+			                docDirty = true;
+			                scheduleAutosave({ delayMs: 200 });
+			                if (clip.mode === 'cut') {
+			                  writeOutlineSectionClipboard(null);
+			                }
+			                setOutlineSelectionMode(false);
+			                showToast(`Вставлено блоков: ${nodes.length}`);
+			                return true;
+			              }
+			            }
+			          }
+			        } catch {
+			          // ignore
+			        }
+			        // Some mobile/IME/browser combos don't reliably insert "\" into ProseMirror.
+			        // We use "\" as the trigger for tag suggestions, so ensure the character is inserted.
+			        try {
+			          const plain =
+			            event &&
 		            !event.defaultPrevented &&
 		            !event.isComposing &&
 		            !event.metaKey &&
