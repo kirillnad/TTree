@@ -3799,28 +3799,30 @@ function mountOutlineToolbar(editor) {
 
   const root = refs.outlineToolbar;
   let lastEditing = null;
-	  const btns = {
-	    undo: refs.outlineUndoBtn,
-	    redo: refs.outlineRedoBtn,
-	    attachBtn: root.querySelector('#outlineAttachBtn'),
-	    attachInput: root.querySelector('#outlineAttachInput'),
-	    deleteBtn: refs.outlineDeleteBtn,
-	    moveUpBtn: refs.outlineMoveUpBtn,
-	    moveDownBtn: refs.outlineMoveDownBtn,
-	    outdentBtn: refs.outlineOutdentBtn,
-	    indentBtn: refs.outlineIndentBtn,
-	    newBelowBtn: refs.outlineNewBelowBtn,
-	    blocksMenuBtn: root.querySelector('#outlineBlocksMenuBtn'),
-	    textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
-	    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
-	    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
-	  };
+		  const btns = {
+		    undo: refs.outlineUndoBtn,
+		    redo: refs.outlineRedoBtn,
+		    attachBtn: root.querySelector('#outlineAttachBtn'),
+		    attachInput: root.querySelector('#outlineAttachInput'),
+		    deleteBtn: refs.outlineDeleteBtn,
+		    moveUpBtn: refs.outlineMoveUpBtn,
+		    moveDownBtn: refs.outlineMoveDownBtn,
+		    outdentBtn: refs.outlineOutdentBtn,
+		    indentBtn: refs.outlineIndentBtn,
+		    newBelowBtn: refs.outlineNewBelowBtn,
+		    blocksMenuBtn: root.querySelector('#outlineBlocksMenuBtn'),
+		    textMenuBtn: root.querySelector('#outlineTextMenuBtn'),
+		    calloutMenuBtn: root.querySelector('#outlineCalloutMenuBtn'),
+		    listsMenuBtn: root.querySelector('#outlineListsMenuBtn'),
+		    tableMenuBtn: root.querySelector('#outlineTableMenuBtn'),
+		  };
   const dropdownBtnSet = new Set(Array.from(root.querySelectorAll('.outline-toolbar__dropdown-btn')));
   // Ensure critical dropdown buttons are always wired even if DOM was re-rendered.
-  if (btns.blocksMenuBtn) dropdownBtnSet.add(btns.blocksMenuBtn);
-  if (btns.textMenuBtn) dropdownBtnSet.add(btns.textMenuBtn);
-  if (btns.listsMenuBtn) dropdownBtnSet.add(btns.listsMenuBtn);
-  if (btns.tableMenuBtn) dropdownBtnSet.add(btns.tableMenuBtn);
+	  if (btns.blocksMenuBtn) dropdownBtnSet.add(btns.blocksMenuBtn);
+	  if (btns.textMenuBtn) dropdownBtnSet.add(btns.textMenuBtn);
+	  if (btns.calloutMenuBtn) dropdownBtnSet.add(btns.calloutMenuBtn);
+	  if (btns.listsMenuBtn) dropdownBtnSet.add(btns.listsMenuBtn);
+	  if (btns.tableMenuBtn) dropdownBtnSet.add(btns.tableMenuBtn);
   const dropdownBtns = Array.from(dropdownBtnSet);
   const menus = Array.from(root.querySelectorAll('.outline-toolbar__menu'));
 	  const actionButtons = Array.from(root.querySelectorAll('[data-outline-action]'));
@@ -3963,9 +3965,36 @@ function mountOutlineToolbar(editor) {
 		          dispatch(tr.scrollIntoView());
 		          return true;
 		        });
-		      }
-		      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
-		      if (action === 'unsetLink') return chain.unsetLink().run();
+			      }
+			      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
+			      if (action.startsWith('setCallout:')) {
+			        try {
+			          const st = outlineEditModeKey?.getState?.(editor.state) || null;
+			          if (!st?.editingSectionId) {
+			            notifyReadOnlyGlobal();
+			            return false;
+			          }
+			        } catch {
+			          notifyReadOnlyGlobal();
+			          return false;
+			        }
+			        const kind = action.split(':')[1] || '';
+			        return editor.commands.setCallout(kind);
+			      }
+			      if (action === 'unsetCallout') {
+			        try {
+			          const st = outlineEditModeKey?.getState?.(editor.state) || null;
+			          if (!st?.editingSectionId) {
+			            notifyReadOnlyGlobal();
+			            return false;
+			          }
+			        } catch {
+			          notifyReadOnlyGlobal();
+			          return false;
+			        }
+			        return editor.commands.unsetCallout();
+			      }
+			      if (action === 'unsetLink') return chain.unsetLink().run();
 		      if (action === 'toggleBulletList') {
 	        // UX: allow switching ordered -> bullet in one click.
 	        if (editor.isActive('orderedList')) {
@@ -4431,13 +4460,18 @@ function mountOutlineToolbar(editor) {
       markActive(btns.listsMenuBtn, active);
       btns.listsMenuBtn.hidden = !editing;
     }
-    if (btns.tableMenuBtn) {
-      const active = editor.isActive('table');
-      markActive(btns.tableMenuBtn, active);
-      btns.tableMenuBtn.hidden = !editing;
-    }
+	    if (btns.tableMenuBtn) {
+	      const active = editor.isActive('table');
+	      markActive(btns.tableMenuBtn, active);
+	      btns.tableMenuBtn.hidden = !editing;
+	    }
+	    if (btns.calloutMenuBtn) {
+	      const active = editor.isActive('callout');
+	      markActive(btns.calloutMenuBtn, active);
+	      btns.calloutMenuBtn.hidden = !editing;
+	    }
 
-    // Menu items
+	    // Menu items
     let collapseSummary = null;
     const getCollapseSummary = () => {
       if (collapseSummary) return collapseSummary;
@@ -4482,13 +4516,20 @@ function mountOutlineToolbar(editor) {
 	        isActive = editor.isActive('codeBlock');
 	        // We use a custom command for merge-into-one behavior; `can()` doesn't know about it.
 	        isDisabled = !isEditing();
-		      } else if (action === 'toggleBlockquote') {
-		        isActive = editor.isActive('blockquote');
-		        isDisabled = !canRun((c) => c.toggleBlockquote());
-	      } else if (action === 'insertHttpLink' || action === 'insertArticleLink') {
-	        isActive = false;
-	        isDisabled = !isEditing();
-	      } else if (action === 'unsetLink') {
+			      } else if (action === 'toggleBlockquote') {
+			        isActive = editor.isActive('blockquote');
+			        isDisabled = !canRun((c) => c.toggleBlockquote());
+		      } else if (action.startsWith('setCallout:')) {
+		        const kind = action.split(':')[1] || '';
+		        isActive = editor.isActive('callout', { kind });
+		        isDisabled = !isEditing() || !canRun((c) => c.setCallout(kind));
+		      } else if (action === 'unsetCallout') {
+		        isActive = false;
+		        isDisabled = !isEditing() || !editor.isActive('callout') || !canRun((c) => c.unsetCallout());
+		      } else if (action === 'insertHttpLink' || action === 'insertArticleLink') {
+		        isActive = false;
+		        isDisabled = !isEditing();
+		      } else if (action === 'unsetLink') {
 	        isActive = editor.isActive('link');
 	        isDisabled = !canRun((c) => c.unsetLink());
 	      } else if (action === 'toggleBulletList') {
@@ -7631,10 +7672,10 @@ async function mountOutlineEditor() {
 	    }
 	  };
 
-	  const OutlineBody = Node.create({
-	    name: 'outlineBody',
-	    content: 'block*',
-	    defining: true,
+		  const OutlineBody = Node.create({
+		    name: 'outlineBody',
+		    content: 'block*',
+		    defining: true,
 	    renderHTML() {
 	      return ['div', { class: 'outline-body', 'data-outline-body': 'true' }, 0];
 	    },
@@ -7662,12 +7703,71 @@ async function mountOutlineEditor() {
 	        };
 	      };
 	    },
-	  });
+		  });
 
-  const OutlineHeading = Node.create({
-    name: 'outlineHeading',
-    content: 'inline*',
-    defining: true,
+		  const OUTLINE_CALLOUT_KINDS = ['note', 'info', 'success', 'warning', 'danger'];
+		  const normalizeCalloutKind = (value) => {
+		    const kind = String(value || '').trim().toLowerCase();
+		    return OUTLINE_CALLOUT_KINDS.includes(kind) ? kind : 'note';
+		  };
+
+		  const OutlineCallout = Node.create({
+		    name: 'callout',
+		    group: 'block',
+		    content: 'block+',
+		    defining: true,
+		    addAttributes() {
+		      return {
+		        kind: {
+		          default: 'note',
+		          parseHTML: (el) => normalizeCalloutKind(el?.getAttribute?.('data-kind')),
+		          renderHTML: (attrs) => ({ 'data-kind': normalizeCalloutKind(attrs?.kind) }),
+		        },
+		      };
+		    },
+		    parseHTML() {
+		      return [{ tag: 'div[data-tt-callout]' }];
+		    },
+		    renderHTML({ node, HTMLAttributes }) {
+		      const kind = normalizeCalloutKind(node?.attrs?.kind);
+		      const cls = String(HTMLAttributes?.class || '').trim();
+		      const nextClass = `tt-callout tt-callout--${kind}${cls ? ` ${cls}` : ''}`;
+		      return [
+		        'div',
+		        {
+		          ...HTMLAttributes,
+		          class: nextClass,
+		          'data-tt-callout': '1',
+		          'data-kind': kind,
+		        },
+		        0,
+		      ];
+		    },
+		    addCommands() {
+		      return {
+		        setCallout:
+		          (kind) =>
+		          ({ editor, commands }) => {
+		            const k = normalizeCalloutKind(kind);
+		            if (editor.isActive('callout')) {
+		              return commands.updateAttributes('callout', { kind: k });
+		            }
+		            return commands.toggleWrap('callout', { kind: k });
+		          },
+		        unsetCallout:
+		          () =>
+		          ({ editor, commands }) => {
+		            if (!editor.isActive('callout')) return false;
+		            return commands.toggleWrap('callout');
+		          },
+		      };
+		    },
+		  });
+
+	  const OutlineHeading = Node.create({
+	    name: 'outlineHeading',
+	    content: 'inline*',
+	    defining: true,
     renderHTML() {
       return ['div', { class: 'outline-heading', 'data-outline-heading': 'true' }, 0];
     },
@@ -12786,10 +12886,11 @@ async function mountOutlineEditor() {
 					    extensions: [
 		      OutlineDocument,
 		      OutlineSection,
-		      OutlineHeading,
-		      OutlineBody,
-		      OutlineChildren,
-	        OutlineTag,
+			      OutlineHeading,
+			      OutlineBody,
+			      OutlineCallout,
+			      OutlineChildren,
+		        OutlineTag,
 	        OutlineTagHighlighter,
 	        OutlineTagSuggestKeys,
 			      OutlineActiveSection,

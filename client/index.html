@@ -553,13 +553,48 @@
 	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetLink">
 	                      <span class="outline-menu__icon"><i class="bx bx-unlink" aria-hidden="true"></i></span><span class="outline-menu__label">Убрать ссылку</span>
 	                    </button>
-                  </div>
-                </div>
+	                  </div>
+	                </div>
 
-                <div class="outline-toolbar__dropdown">
-                  <button
-                    id="outlineListsMenuBtn"
-                    class="ghost small outline-toolbar__dropdown-btn"
+	                <div class="outline-toolbar__dropdown">
+	                  <button
+	                    id="outlineCalloutMenuBtn"
+	                    class="ghost small outline-toolbar__dropdown-btn"
+	                    type="button"
+	                    aria-haspopup="true"
+	                    aria-expanded="false"
+	                    aria-controls="outlineCalloutMenu"
+	                    title="Callout"
+	                  >
+	                    <i class="bx bx-message-square-detail" aria-hidden="true"></i><span class="toolbar-label"> Callout</span>
+	                  </button>
+	                  <div id="outlineCalloutMenu" class="outline-toolbar__menu hidden" role="menu">
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="setCallout:note">
+	                      <span class="outline-menu__icon"><i class="bx bx-notepad" aria-hidden="true"></i></span><span class="outline-menu__label">Note</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="setCallout:info">
+	                      <span class="outline-menu__icon"><i class="bx bx-info-circle" aria-hidden="true"></i></span><span class="outline-menu__label">Info</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="setCallout:success">
+	                      <span class="outline-menu__icon"><i class="bx bx-check-circle" aria-hidden="true"></i></span><span class="outline-menu__label">Success</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="setCallout:warning">
+	                      <span class="outline-menu__icon"><i class="bx bx-error-circle" aria-hidden="true"></i></span><span class="outline-menu__label">Warning</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="setCallout:danger">
+	                      <span class="outline-menu__icon"><i class="bx bx-x-circle" aria-hidden="true"></i></span><span class="outline-menu__label">Danger</span>
+	                    </button>
+	                    <div class="outline-menu__divider" role="separator"></div>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetCallout">
+	                      <span class="outline-menu__icon"><i class="bx bx-x" aria-hidden="true"></i></span><span class="outline-menu__label">Убрать callout</span>
+	                    </button>
+	                  </div>
+	                </div>
+
+	                <div class="outline-toolbar__dropdown">
+	                  <button
+	                    id="outlineListsMenuBtn"
+	                    class="ghost small outline-toolbar__dropdown-btn"
                     type="button"
                     aria-haspopup="true"
                     aria-expanded="false"

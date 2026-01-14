@@ -2536,6 +2536,66 @@ button.icon-button.small {
   border-left: 4px solid rgba(148, 163, 184, 0.65);
   color: rgba(51, 65, 85, 0.95);
 }
+.block-text .tt-callout,
+.outline-body .tt-callout {
+  --tt-callout-accent: #64748b;
+  --tt-callout-bg: rgba(148, 163, 184, 0.16);
+  --tt-callout-border: rgba(100, 116, 139, 0.45);
+  margin: 0.7em 0;
+  padding: 0.7em 0.85em 0.7em 1.05em;
+  border-radius: 14px;
+  border: 1px solid var(--tt-callout-border);
+  background: var(--tt-callout-bg);
+  color: rgba(15, 23, 42, 0.95);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.block-text .tt-callout::before,
+.outline-body .tt-callout::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--tt-callout-accent);
+  opacity: 0.9;
+}
+.block-text .tt-callout.tt-callout--info,
+.outline-body .tt-callout.tt-callout--info {
+  --tt-callout-accent: #0284c7;
+  --tt-callout-bg: rgba(56, 189, 248, 0.14);
+  --tt-callout-border: rgba(2, 132, 199, 0.4);
+}
+.block-text .tt-callout.tt-callout--success,
+.outline-body .tt-callout.tt-callout--success {
+  --tt-callout-accent: #16a34a;
+  --tt-callout-bg: rgba(34, 197, 94, 0.14);
+  --tt-callout-border: rgba(22, 163, 74, 0.38);
+}
+.block-text .tt-callout.tt-callout--warning,
+.outline-body .tt-callout.tt-callout--warning {
+  --tt-callout-accent: #d97706;
+  --tt-callout-bg: rgba(245, 158, 11, 0.16);
+  --tt-callout-border: rgba(217, 119, 6, 0.42);
+}
+.block-text .tt-callout.tt-callout--danger,
+.outline-body .tt-callout.tt-callout--danger {
+  --tt-callout-accent: #e11d48;
+  --tt-callout-bg: rgba(244, 63, 94, 0.14);
+  --tt-callout-border: rgba(225, 29, 72, 0.38);
+}
+.block-text .tt-callout.tt-callout--note,
+.outline-body .tt-callout.tt-callout--note {
+  --tt-callout-accent: #64748b;
+  --tt-callout-bg: rgba(148, 163, 184, 0.16);
+  --tt-callout-border: rgba(100, 116, 139, 0.45);
+}
+.block-text .tt-callout > * + *,
+.outline-body .tt-callout > * + * {
+  margin-top: 0.6em;
+}
 .outline-body code {
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
