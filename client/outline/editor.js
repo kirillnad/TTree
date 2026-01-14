@@ -25,6 +25,7 @@ import { navigate, routing } from '../routing.js';
 import { OUTLINE_ALLOWED_LINK_PROTOCOLS } from './linkProtocols.js';
 import { parseMarkdownOutlineSections, buildOutlineSectionTree } from './structuredPaste.js';
 import { revertLog, docJsonHash } from '../debug/revertLog.js';
+import { clientLog, stackSummary } from '../debug/clientLog.js';
 
 let mounted = false;
 let tiptap = null;
@@ -82,6 +83,27 @@ let outlineTagsIndex = {
 };
 let outlineSelectionMode = false;
 let outlineSelectedSectionIds = new Set();
+let lastOutlineTrace = { atMs: 0, hash: null };
+
+function logOutline(kind, data = {}, { dedupeMs = 250 } = {}) {
+  try {
+    const stack = stackSummary(new Error());
+    const now = Date.now();
+    const isSame = lastOutlineTrace.hash === stack.hash && now - lastOutlineTrace.atMs < dedupeMs;
+    if (isSame) return;
+    lastOutlineTrace = { atMs: now, hash: stack.hash };
+    clientLog(kind, {
+      articleId: outlineArticleId || state.articleId || null,
+      isOutlineEditing: Boolean(state.isOutlineEditing),
+      mode: state.mode,
+      stackHash: stack.hash,
+      stackTop: stack.top,
+      ...data,
+    });
+  } catch {
+    // ignore
+  }
+}
 const OUTLINE_STRUCTURE_SNAPSHOT_DEBOUNCE_MS = 650;
 let lastActiveSnapshotMemo = { articleId: null, sectionId: null, collapsed: null };
 
@@ -6317,6 +6339,12 @@ async function mountOutlineEditor() {
 
   // Защита от двойного mount (например, если юзер кликнул дважды пока грузим tiptap).
   if (mountPromise) return mountPromise;
+  logOutline('outline.mount.start', {
+    outlineArticleId,
+    hadInstance: Boolean(outlineEditorInstance),
+    hadTiptap: Boolean(tiptap),
+    mounted,
+  });
   mountPromise = (async () => {
   const mountStart = perfEnabled() ? performance.now() : 0;
   const loadStart = perfEnabled() ? performance.now() : 0;
@@ -12743,6 +12771,16 @@ async function mountOutlineEditor() {
 
 				  // Plugin/extension order matters: paste handlers should run before generic keymaps where possible.
 				  const createStart = perfEnabled() ? performance.now() : 0;
+		  if (outlineEditorInstance) {
+		    // Unexpected: remount while an instance exists means we are recreating DOM.
+		    logOutline('outline.mount.remountDetected', { outlineArticleId, hadInstance: true });
+		    try {
+		      outlineEditorInstance.destroy();
+		    } catch {
+		      // ignore
+		    }
+		    outlineEditorInstance = null;
+		  }
 		  outlineEditorInstance = new Editor({
 			    element: contentRoot,
 					    extensions: [
@@ -14256,6 +14294,12 @@ async function mountOutlineEditor() {
 		    },
 			  });
 			  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
+			  try {
+			    const docSize = outlineEditorInstance?.state?.doc?.content?.size ?? null;
+			    logOutline('outline.mount.editorCreated', { outlineArticleId, docSize });
+			  } catch {
+			    // ignore
+			  }
 
 	  try {
 	    if (outlineArticleId || state.articleId) {
@@ -14299,6 +14343,10 @@ async function mountOutlineEditor() {
     await mountPromise;
   } finally {
     mountPromise = null;
+    logOutline('outline.mount.done', {
+      outlineArticleId,
+      hasInstance: Boolean(outlineEditorInstance),
+    });
   }
 }
 
@@ -14978,6 +15026,11 @@ export async function openOutlineEditor() {
     return;
   }
   outlineArticleId = state.articleId;
+  logOutline('outline.open.start', {
+    outlineArticleId,
+    updatedAt: state.article?.updatedAt || null,
+    docHash: docJsonHash(state.article?.docJson || null),
+  });
   if (!refs.outlineEditor || !refs.blocksContainer) {
     showToast('Не удалось открыть outline-редактор');
     return;
@@ -15017,6 +15070,10 @@ export async function openOutlineEditor() {
 
 	  try {
 	    await mountOutlineEditor();
+	    logOutline('outline.open.mounted', {
+	      outlineArticleId,
+	      hasInstance: Boolean(outlineEditorInstance),
+	    });
 	    try {
 	      mountOutlineToolbar(outlineEditorInstance);
 	    } catch {
@@ -15046,6 +15103,10 @@ export async function openOutlineEditor() {
     const loading = refs.outlineEditor.querySelector('.outline-editor__loading');
     if (loading) loading.classList.add('hidden');
     setOutlineStatus('Сохраняется автоматически');
+	    logOutline('outline.open.ready', {
+	      outlineArticleId,
+	      currentBlockId: state.currentBlockId || null,
+	    });
 
 	    if (!onlineHandlerAttached) {
       onlineHandlerAttached = true;
@@ -15108,6 +15169,10 @@ export async function openOutlineEditor() {
 }
 
 export function closeOutlineEditor() {
+  logOutline('outline.close', {
+    outlineArticleId,
+    hadInstance: Boolean(outlineEditorInstance),
+  });
   state.isOutlineEditing = false;
   unmountOutlineToolbar();
   outlineEditModeKey = null;

@@ -22,6 +22,7 @@ import { applyPendingPreviewMarkup } from '../undo.js';
 import { navigate, routing } from '../routing.js';
 import { updateArticleHeaderUi } from './header.js';
 import { registerBlockDragSource, updateDragModeUi, clearDragLayer, ensureDragLayer } from './dnd.js';
+import { clientLog, stackSummary } from '../debug/clientLog.js';
 
 let moveBlockFromInboxHandler = null;
 
@@ -497,9 +498,46 @@ export async function rerenderSingleBlock(blockId) {
   cleanupOrphanDomBlocks();
 }
 
-export function renderArticle() {
+let lastRenderTrace = { atMs: 0, hash: null };
+
+export function renderArticle(trace = null) {
   const article = state.article;
   if (!article) return;
+
+  try {
+    const willFullRender = !(!state.isPublicView && !state.isRagView && state.isOutlineEditing);
+    const stack = stackSummary(new Error());
+    const now = Date.now();
+    const isSame = lastRenderTrace.hash === stack.hash && now - lastRenderTrace.atMs < 400;
+    if (!isSame) {
+      lastRenderTrace = { atMs: now, hash: stack.hash };
+      const blocksCount = Array.isArray(article.blocks) ? article.blocks.length : null;
+      let domBlocksCount = null;
+      try {
+        domBlocksCount = willFullRender
+          ? refs.blocksContainer?.querySelectorAll?.('.block[data-block-id]')?.length ?? null
+          : null;
+      } catch {
+        domBlocksCount = null;
+      }
+      clientLog('ui.renderArticle', {
+        articleId: state.articleId || null,
+        mode: state.mode,
+        isOutlineEditing: Boolean(state.isOutlineEditing),
+        willFullRender,
+        currentBlockId: state.currentBlockId || null,
+        editingBlockId: state.editingBlockId || null,
+        blocksCount,
+        domBlocksCount,
+        trace: trace ? String(trace).slice(0, 120) : null,
+        stackHash: stack.hash,
+        stackTop: stack.top,
+      });
+    }
+  } catch {
+    // ignore
+  }
+
   // Outline-only mode: blocks UI is hidden; header + sidebar still refresh.
   if (!state.isPublicView && !state.isRagView && state.isOutlineEditing) {
     renderSidebarArticleList();
@@ -576,4 +614,9 @@ export function renderArticle() {
       refs.blocksContainer.scrollTop = state.editingScrollTop;
     }
   });
+}
+
+// Optional wrapper for call sites that want explicit reason without changing import style.
+export function renderArticleWithTrace(trace) {
+  return renderArticle(trace);
 }

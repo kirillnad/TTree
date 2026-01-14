@@ -54,7 +54,7 @@ async function moveBlockFromInbox(blockId) {
 
     await apiRequest(`/api/articles/${state.articleId}/blocks/${blockId}/move-to/${targetId}`, { method: 'POST' });
     await loadArticle('inbox', { resetUndoStacks: true });
-    renderArticle();
+    renderArticle('views.moveBlockFromInbox.reloadInbox');
     showToast('Блок перенесён');
   } catch (error) {
     showToast(error.message || 'Не удалось перенести блок');
@@ -139,7 +139,7 @@ export async function mergeAllBlocksIntoFirst() {
     // Перезагружаем статью и сразу перерисовываем, чтобы пользователь
     // мгновенно увидел результат без обновления страницы.
     await loadArticle(state.articleId, { resetUndoStacks: false });
-    renderArticle();
+    renderArticle('views.mergeAllBlocksIntoFirst.reloadAfterMerge');
     // Возвращаемся в режим просмотра и фокусируем объединённый блок,
     // чтобы сразу можно было войти в редактирование без перезагрузки.
     state.mode = 'view';
@@ -254,7 +254,7 @@ export async function loadArticleView(id) {
       };
       state.articleId = 'RAG';
       state.currentBlockId = blocks[0]?.id || null;
-      renderArticle();
+      renderArticle('views.loadArticleView.rag.render');
       return;
     }
     const editTarget = state.pendingEditBlockId || undefined;
@@ -262,7 +262,7 @@ export async function loadArticleView(id) {
     // а используем scrollTargetBlockId только для переходов/поиска.
     const desired = state.scrollTargetBlockId || undefined;
     await loadArticle(id, { resetUndoStacks: true, desiredBlockId: desired, editBlockId: editTarget });
-    renderArticle();
+    renderArticle('views.loadArticleView.afterLoadArticle');
     recordArticleOpened(id);
 
     // Inbox is special: keep it fresh across devices.
@@ -273,7 +273,7 @@ export async function loadArticleView(id) {
         // 2) If user is not actively editing, reload once so UI reflects the refreshed cache.
         if (state.articleId === 'inbox' && !state.editingBlockId) {
           await loadArticle('inbox', { resetUndoStacks: false });
-          renderArticle();
+          renderArticle('views.loadArticleView.inbox.refreshCache');
         }
       } catch {
         // ignore
@@ -352,7 +352,7 @@ export async function loadPublicArticleView(slug) {
     state.articleId = article?.id || null;
     const first = flattenVisible(article?.blocks || [])[0];
     state.currentBlockId = first ? first.id : null;
-    renderArticle();
+    renderArticle('views.loadPublicArticleView.render');
   } catch (error) {
     if (refs.blocksContainer) {
       refs.blocksContainer.innerHTML = `<p class="meta">Не удалось открыть публичную статью: ${error.message}</p>`;

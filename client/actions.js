@@ -73,7 +73,7 @@ export async function startEditing() {
     `.block[data-block-id="${targetBlockId}"] .block-text[contenteditable="true"]`,
   );
   if (!editable) {
-    renderArticle();
+    renderArticle('actions.startEditing.fallback.fullRender');
     await rerenderSingleBlock(targetBlockId);
     editable = document.querySelector(
       `.block[data-block-id="${targetBlockId}"] .block-text[contenteditable="true"]`,
@@ -141,7 +141,7 @@ export async function saveEditing() {
     state.currentBlockId = fallbackId;
     state.scrollTargetBlockId = fallbackId;
     removeDomBlockById(editedBlockId);
-    renderArticle();
+    renderArticle('actions.saveEditing.empty.delete.localRender');
 
     (async () => {
       try {
@@ -170,7 +170,7 @@ export async function saveEditing() {
         showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
         try {
           await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
-          renderArticle();
+          renderArticle('actions.saveEditing.empty.delete.reloadAfterError');
         } catch {
           /* ignore reload error */
         }
@@ -243,7 +243,7 @@ export async function saveEditing() {
       showToast(error.message || 'Не удалось сохранить блок, обновляем страницу');
       try {
         await loadArticle(state.articleId, { desiredBlockId: editedBlockId });
-        renderArticle();
+        renderArticle('actions.saveEditing.patchError.reload');
       } catch {
         /* ignore reload error */
       }
@@ -294,7 +294,7 @@ export async function cancelEditing() {
     if (parentIdForRerender) {
       await rerenderSingleBlock(parentIdForRerender);
     } else {
-      renderArticle();
+      renderArticle('actions.cancelEditing.empty.delete.localRender');
     }
 
     (async () => {
@@ -323,7 +323,7 @@ export async function cancelEditing() {
         showToast(error.message || 'Не удалось удалить пустой блок, обновляем страницу');
         try {
           await loadArticle(state.articleId, { desiredBlockId: fallbackId || null });
-          renderArticle();
+          renderArticle('actions.cancelEditing.empty.delete.reloadAfterError');
         } catch {
           /* ignore */
         }

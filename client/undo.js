@@ -313,7 +313,7 @@ async function executeStructureAction(action, options = {}) {
       if (desiredId) {
         await focusBlock(desiredId);
       }
-      renderArticle();
+      renderArticle('undo.executeStructureAction.delete.localRender');
       success = true;
     } catch (error) {
       showToast(error.message);
@@ -389,10 +389,10 @@ async function executeStructureAction(action, options = {}) {
           // eslint-disable-next-line no-await-in-loop
           await rerenderSingleBlock(parentIdForRerender);
         } catch {
-          renderArticle();
+          renderArticle('undo.executeStructureAction.restore.fallbackFullRender');
         }
       } else {
-        renderArticle();
+        renderArticle('undo.executeStructureAction.restore.fullRender');
       }
     }
   }
@@ -420,7 +420,7 @@ async function undoTextChange(entry) {
     if (!located || !state.article || !Array.isArray(state.article.blocks)) {
       // Если локальное дерево потеряло блок — делаем жёсткий ресинк, как раньше.
       await loadArticle(state.articleId, { desiredBlockId: blockId });
-      renderArticle();
+      renderArticle('undo.undoTextChange.hardResync.fullRender');
       return blockId;
     }
 
@@ -471,7 +471,7 @@ async function redoTextChange(entry) {
     const located = findBlock(blockId);
     if (!located || !state.article || !Array.isArray(state.article.blocks)) {
       await loadArticle(state.articleId, { desiredBlockId: blockId });
-      renderArticle();
+      renderArticle('undo.redoTextChange.hardResync.fullRender');
       return blockId;
     }
 
@@ -668,7 +668,7 @@ async function processMoveQueue() {
         try {
           // eslint-disable-next-line no-await-in-loop
           await loadArticle(state.articleId, { desiredBlockId: blockId });
-          renderArticle();
+          renderArticle('undo.processMoveQueue.reloadAfterError');
         } catch {
           // Если и перезагрузка не удалась — просто выходим.
         }
@@ -826,7 +826,7 @@ export async function moveBlock(blockId, direction, options = {}) {
         if (parentIdForRerender) {
           await rerenderSingleBlock(parentIdForRerender);
         } else {
-          renderArticle();
+          renderArticle('undo.moveBlock.reorderDomBlockFallback.fullRender');
         }
       }
     }
@@ -1035,13 +1035,13 @@ export async function moveBlockToParent(blockId, targetParentId = null, targetIn
         }
       } else if (originParentId && !finalParentId) {
         // Блок ушёл из потомка на корень: нужно обновить корневой список целиком.
-        renderArticle();
+        renderArticle('undo.moveBlockToParent.toRoot.fullRender');
       } else if (!originParentId && finalParentId) {
         // Блок с корня ушёл в потомка: корневой список тоже меняется.
-        renderArticle();
+        renderArticle('undo.moveBlockToParent.fromRoot.fullRender');
       } else {
         // Перемещение корневых блоков между собой.
-        renderArticle();
+        renderArticle('undo.moveBlockToParent.rootReorder.fullRender');
       }
     }
     if (!skipRecord) {
@@ -1132,7 +1132,7 @@ export async function indentBlock(blockId, options = {}) {
       if (parentId) {
         await rerenderSingleBlock(parentId);
       } else {
-        renderArticle();
+        renderArticle('undo.indentBlock.fullRender');
       }
     }
     if (!skipRecord) {
@@ -1226,7 +1226,7 @@ export async function indentSelectedBlocks(options = {}) {
     if (parentId) {
       await rerenderSingleBlock(parentId);
     } else {
-      renderArticle();
+      renderArticle('undo.indentSelectedBlocks.fullRender');
     }
     return true;
   } finally {
@@ -1304,7 +1304,7 @@ export async function outdentBlock(blockId, options = {}) {
       if (grandParentId) {
         await rerenderSingleBlock(grandParentId);
       } else {
-        renderArticle();
+        renderArticle('undo.outdentBlock.fullRender');
       }
     }
     if (!skipRecord) {
@@ -1397,7 +1397,7 @@ export async function outdentSelectedBlocks(options = {}) {
     if (newParentId) {
       await rerenderSingleBlock(newParentId);
     } else {
-      renderArticle();
+      renderArticle('undo.outdentSelectedBlocks.fullRender');
     }
     return true;
   } finally {

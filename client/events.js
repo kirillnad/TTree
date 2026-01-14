@@ -1555,7 +1555,7 @@ export function attachEvents() {
           closeOutlineEditor?.();
           await openOutlineEditor?.();
         } else {
-          renderArticle();
+          renderArticle('events.restoreVersion.fullRender');
         }
         hideToast();
         showToast('Версия восстановлена');
@@ -1660,7 +1660,7 @@ export function attachEvents() {
         });
         hideToast();
         await loadArticle(state.articleId, { desiredBlockId: blockId, resetUndoStacks: true });
-        renderArticle();
+        renderArticle('events.blockHistory.restore.fullRender');
         showToast('Блок восстановлен');
       } catch (error) {
         hideToast();
@@ -2157,7 +2157,7 @@ export function attachEvents() {
         const restoredId = (res && res.block && res.block.id) || res.blockId || picked.id;
         const article = await loadArticle(articleId, { desiredBlockId: restoredId || null, resetUndoStacks: true });
         state.article = article;
-        renderArticle();
+        renderArticle('events.blockTrash.restore.fullRender');
         showToast('Блок восстановлен из корзины');
       } catch (error) {
         showToast(error.message || 'Не удалось восстановить блок из корзины');
