@@ -687,7 +687,7 @@ export function showPublicLinkModal(options = {}) {
   return new Promise((resolver) => {
     resolvePromise = resolver;
     confirmBtn.classList.remove('danger-btn');
-    confirmBtn.textContent = '⧉ Скопировать ссылку';
+    confirmBtn.innerHTML = '<i class="bx bx-copy" aria-hidden="true"></i> Скопировать ссылку';
     confirmBtn.setAttribute('aria-label', options.copyLabel || 'Скопировать ссылку');
     // Кнопка «Закрыть» в этом диалоге не нужна.
     cancelBtn.classList.add('hidden');

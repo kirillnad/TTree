@@ -292,8 +292,9 @@ export function renderSidebarArticleList() {
       if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
       const isFav = favs.has(node.id);
       const titleText = escapeHtml(node.title || 'Без названия');
-      const publicIcon = node.publicSlug ? '\uE774 ' : '';
-      button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
+      const publicIcon = node.publicSlug ? '<i class="bx bx-link-external article-public-icon" aria-hidden="true"></i>' : '';
+      const starIconClass = isFav ? 'bxs-star' : 'bx-star';
+      button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}"><i class="bx ${starIconClass}" aria-hidden="true"></i></span>`;
       button.addEventListener('click', () => {
         if (window.__ttreeDraggingArticleId) return;
         state.sidebarSelectedArticleId = node.id;
@@ -337,8 +338,9 @@ export function renderSidebarArticleList() {
     if (!state.isTrashView && node.id === selectedId) button.classList.add('active');
     const isFav = favs.has(node.id);
     const titleText = escapeHtml(node.title || 'Без названия');
-    const publicIcon = node.publicSlug ? '\uE774 ' : '';
-    button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</span>`;
+    const publicIcon = node.publicSlug ? '<i class="bx bx-link-external article-public-icon" aria-hidden="true"></i>' : '';
+    const starIconClass = isFav ? 'bxs-star' : 'bx-star';
+    button.innerHTML = `<span class="sidebar-article-title">${publicIcon}${titleText}</span><span class="star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}"><i class="bx ${starIconClass}" aria-hidden="true"></i></span>`;
     button.addEventListener('click', () => {
       // Игнорируем клик только если перетаскивание запущено из заголовка статьи.
       if (window.__ttreeDraggingArticleId) return;
@@ -478,13 +480,14 @@ export function renderMainArticleList(articles = null) {
     item.dataset.articleId = article.id;
     const isFav = favs.has(article.id);
     const titleText = escapeHtml(article.title || 'Без названия');
-    const publicIcon = article.publicSlug ? '<span class="article-public-icon">&#xE774;</span>' : '';
+    const publicIcon = article.publicSlug ? '<i class="bx bx-link-external article-public-icon" aria-hidden="true"></i>' : '';
+    const starIconClass = isFav ? 'bxs-star' : 'bx-star';
     item.style.paddingLeft = `${depth * 1.25}rem`;
     item.innerHTML = `
       <span>
         <strong>${publicIcon}${titleText}</strong>
       </span>
-      <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}">${isFav ? '\uE735' : '\uE734'}</button>
+      <button class="ghost star-btn ${isFav ? 'active' : ''}" aria-label="Избранное" title="${isFav ? 'Убрать из избранного' : 'В избранное'}"><i class="bx ${starIconClass}" aria-hidden="true"></i></button>
     `;
     const star = item.querySelector('.star-btn');
     if (star) {

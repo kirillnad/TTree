@@ -866,46 +866,46 @@ function ensureContextMenu() {
     document.addEventListener('selectionchange', captureEditableSelectionRange);
     selectionTrackerInitialized = true;
   }
-  const menu = document.createElement('div');
-  menu.className = 'rich-context-menu hidden';
-  menu.innerHTML = `
-    <div class="rich-context-menu__col rich-context-menu__col--buffer">
-      <div class="rich-context-menu__grid">
-        <button class="rich-context-menu__icon-btn" data-action="copy" aria-label="Копировать" title="Копировать">⧉</button>
-        <button class="rich-context-menu__icon-btn" data-action="cut" aria-label="Вырезать" title="Вырезать">✂</button>
-        <button class="rich-context-menu__icon-btn" data-action="paste" aria-label="Вставить" title="Вставить">▣</button>
-        <button class="rich-context-menu__icon-btn" data-action="select-all" aria-label="Выбрать всё" title="Выбрать всё">⛶</button>
-      </div>
-    </div>
-    <div class="rich-context-menu__col">
-      <div class="rich-context-menu__grid">
-        <button class="rich-context-menu__icon-btn" data-action="bold" aria-label="Полужирный" title="Полужирный"><strong>Ж</strong></button>
-        <button class="rich-context-menu__icon-btn" data-action="italic" aria-label="Курсив" title="Курсив"><em>/</em></button>
-        <button class="rich-context-menu__icon-btn" data-action="underline" aria-label="Подчеркнуть" title="Подчеркнуть"><u>Ч</u></button>
-        <button class="rich-context-menu__icon-btn" data-action="remove-format" aria-label="Очистить формат" title="Очистить формат">✕</button>
-      </div>
-    </div>
-    <div class="rich-context-menu__col">
-      <div class="rich-context-menu__grid">
-        <button class="rich-context-menu__icon-btn" data-action="ul" aria-label="Маркированный список" title="Маркированный список">•</button>
-        <button class="rich-context-menu__icon-btn" data-action="ol" aria-label="Нумерованный список" title="Нумерованный список">1.</button>
-        <button class="rich-context-menu__icon-btn" data-action="quote" aria-label="Цитата" title="Цитата">❝</button>
-        <button class="rich-context-menu__icon-btn" data-action="code" aria-label="Код" title="Код">&lt;/&gt;</button>
-      </div>
-    </div>
-    <div class="rich-context-menu__col">
-      <div class="rich-context-menu__grid">
-        <button class="rich-context-menu__icon-btn" data-action="link" aria-label="Ссылка" title="Ссылка">🔗</button>
-        <button class="rich-context-menu__icon-btn" data-action="unlink" aria-label="Убрать ссылку" title="Убрать ссылку">⊘</button>
-        <button class="rich-context-menu__icon-btn" data-action="insert-article-link" aria-label="Ссылка на статью" title="Ссылка на статью">§</button>
-      </div>
-    </div>
-    <div class="rich-context-menu__col">
-      <div class="rich-context-menu__grid">
-        <button class="rich-context-menu__icon-btn" data-action="split-at-caret" aria-label="Разделить блок по курсору" title="Разделить блок по курсору">|↵</button>
-      </div>
-    </div>
-  `;
+	  const menu = document.createElement('div');
+	  menu.className = 'rich-context-menu hidden';
+	  menu.innerHTML = `
+	    <div class="rich-context-menu__col rich-context-menu__col--buffer">
+	      <div class="rich-context-menu__grid">
+	        <button class="rich-context-menu__icon-btn" data-action="copy" aria-label="Копировать" title="Копировать"><i class="bx bx-copy" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="cut" aria-label="Вырезать" title="Вырезать"><i class="bx bx-cut" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="paste" aria-label="Вставить" title="Вставить"><i class="bx bx-paste" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="select-all" aria-label="Выбрать всё" title="Выбрать всё"><i class="bx bx-select-multiple" aria-hidden="true"></i></button>
+	      </div>
+	    </div>
+	    <div class="rich-context-menu__col">
+	      <div class="rich-context-menu__grid">
+	        <button class="rich-context-menu__icon-btn" data-action="bold" aria-label="Полужирный" title="Полужирный"><strong>Ж</strong></button>
+	        <button class="rich-context-menu__icon-btn" data-action="italic" aria-label="Курсив" title="Курсив"><em>/</em></button>
+	        <button class="rich-context-menu__icon-btn" data-action="underline" aria-label="Подчеркнуть" title="Подчеркнуть"><u>Ч</u></button>
+	        <button class="rich-context-menu__icon-btn" data-action="remove-format" aria-label="Очистить формат" title="Очистить формат"><i class="bx bx-eraser" aria-hidden="true"></i></button>
+	      </div>
+	    </div>
+	    <div class="rich-context-menu__col">
+	      <div class="rich-context-menu__grid">
+	        <button class="rich-context-menu__icon-btn" data-action="ul" aria-label="Маркированный список" title="Маркированный список"><i class="bx bx-list-ul" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="ol" aria-label="Нумерованный список" title="Нумерованный список"><i class="bx bx-list-ol" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="quote" aria-label="Цитата" title="Цитата"><i class="bx bx-quote-left" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="code" aria-label="Код" title="Код"><i class="bx bx-code-alt" aria-hidden="true"></i></button>
+	      </div>
+	    </div>
+	    <div class="rich-context-menu__col">
+	      <div class="rich-context-menu__grid">
+	        <button class="rich-context-menu__icon-btn" data-action="link" aria-label="Ссылка" title="Ссылка"><i class="bx bx-link" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="unlink" aria-label="Убрать ссылку" title="Убрать ссылку"><i class="bx bx-unlink" aria-hidden="true"></i></button>
+	        <button class="rich-context-menu__icon-btn" data-action="insert-article-link" aria-label="Ссылка на статью" title="Ссылка на статью"><i class="bx bx-link-alt" aria-hidden="true"></i></button>
+	      </div>
+	    </div>
+	    <div class="rich-context-menu__col">
+	      <div class="rich-context-menu__grid">
+	        <button class="rich-context-menu__icon-btn" data-action="split-at-caret" aria-label="Разделить блок по курсору" title="Разделить блок по курсору"><i class="bx bx-cut" aria-hidden="true"></i></button>
+	      </div>
+	    </div>
+	  `;
   document.body.appendChild(menu);
 
   const hideContextMenu = () => {

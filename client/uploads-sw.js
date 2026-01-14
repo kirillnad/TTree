@@ -3,20 +3,23 @@
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 // (Manual bump note) This file is the single source of truth for app shell cache-busting.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 690;
-const APP_BUILD = '8l11ku4x';
+const APP_VERSION = 721;
+const APP_BUILD = '45tb3885';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
+  '/boxicons/boxicons.css',
   '/style.css',
   '/boot.js',
   '/app.js',
   // Keep TipTap bundle cached for offline outline editing (it is still loaded on-demand).
   '/outline/tiptap.bundle.js',
   '/manifest.webmanifest',
-  '/fonts/SegoeIcons.ttf',
+  '/boxicons/fonts/boxicons.woff2',
+  '/boxicons/fonts/boxicons.woff',
+  '/boxicons/fonts/boxicons.ttf',
   '/fonts/Manrope.cyrillic-ext.woff2',
   '/fonts/Manrope.cyrillic.woff2',
   '/fonts/Manrope.latin-ext.woff2',

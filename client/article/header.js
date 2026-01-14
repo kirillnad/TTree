@@ -30,7 +30,17 @@ export function updateArticleHeaderUi() {
   if (refs.articleFavoriteBtn) {
     const favs = new Set(state.favoriteArticles || []);
     const isFav = favs.has(article.id);
-    refs.articleFavoriteBtn.textContent = isFav ? '\uE735' : '\uE734';
+    const icon =
+      refs.articleFavoriteBtn.querySelector?.('i.bx') ||
+      refs.articleFavoriteBtn.querySelector?.('span.bx') ||
+      refs.articleFavoriteBtn.querySelector?.('.bx') ||
+      null;
+    if (icon && icon.classList) {
+      icon.classList.toggle('bxs-star', isFav);
+      icon.classList.toggle('bx-star', !isFav);
+    } else {
+      refs.articleFavoriteBtn.innerHTML = `<i class="bx ${isFav ? 'bxs-star' : 'bx-star'}" aria-hidden="true"></i>`;
+    }
     refs.articleFavoriteBtn.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
   }
   if (refs.articlePublicLinkBtn) {

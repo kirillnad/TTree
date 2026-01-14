@@ -261,7 +261,7 @@ async function renderBlocks(blocks, container, depth = 1) {
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
       moveBtn.className = 'ghost small move-block-btn';
-      moveBtn.innerHTML = '&#10140;';
+      moveBtn.innerHTML = '<i class="bx bx-transfer-alt" aria-hidden="true"></i>';
       moveBtn.title = 'Перенести блок в другую статью';
       moveBtn.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -305,7 +305,7 @@ async function renderBlocks(blocks, container, depth = 1) {
       attachBtn.type = 'button';
       attachBtn.className = 'ghost small block-attach-btn';
       attachBtn.innerHTML =
-        '<span class="block-attach-btn__icon">&#xE723;</span><span class="block-attach-btn__label">Файл</span>';
+        '<i class="bx bx-paperclip block-attach-btn__icon" aria-hidden="true"></i><span class="block-attach-btn__label">Файл</span>';
       attachBtn.title = 'Прикрепить файл или картинку';
       attachBtn.addEventListener('click', (event) => {
         event.preventDefault();

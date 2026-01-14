@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Scripta.Pro — ваша личная база знаний.</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/boxicons/boxicons.css" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/favicon.ico" type="image/x-icon" />
@@ -240,32 +241,32 @@
 	                …
 	              </button>
 		            <span class="sidebar-version" id="sidebarVersionLabel">v …</span>
-			            <div id="syncMenu" class="article-menu hidden sidebar-sync-menu" role="menu">
-			              <div class="sidebar-user-menu__item" aria-disabled="true">
-			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⭮</span>
-			                <span class="sidebar-user-menu-label" id="syncMenuStatusLabel">Статус: —</span>
+			              <div id="syncMenu" class="article-menu hidden sidebar-sync-menu" role="menu">
+				              <div class="sidebar-user-menu__item" aria-disabled="true">
+				                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-wifi"></i></span>
+				                <span class="sidebar-user-menu-label" id="syncMenuStatusLabel">Статус: —</span>
+				              </div>
+				              <div class="sidebar-user-menu__item" aria-disabled="true">
+				                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-list-ul"></i></span>
+				                <span class="sidebar-user-menu-label" id="syncMenuArticlesLabel">Статьи: —</span>
+				              </div>
+				              <div class="sidebar-user-menu__item" aria-disabled="true">
+				                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-layer"></i></span>
+				                <span class="sidebar-user-menu-label" id="syncMenuOutboxLabel">Очередь: —</span>
+				              </div>
+			              <div id="offlineStatusItem" class="sidebar-user-menu__item" aria-disabled="true">
+			                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-cloud-download"></i></span>
+			                <span class="sidebar-user-menu-label" id="offlineStatusLabel">Оффлайн: —</span>
 			              </div>
-			              <div class="sidebar-user-menu__item" aria-disabled="true">
-			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">≡</span>
-			                <span class="sidebar-user-menu-label" id="syncMenuArticlesLabel">Статьи: —</span>
-			              </div>
-			              <div class="sidebar-user-menu__item" aria-disabled="true">
-			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⋯</span>
-			                <span class="sidebar-user-menu-label" id="syncMenuOutboxLabel">Очередь: —</span>
-			              </div>
-		              <div id="offlineStatusItem" class="sidebar-user-menu__item" aria-disabled="true">
-		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⭳</span>
-		                <span class="sidebar-user-menu-label" id="offlineStatusLabel">Оффлайн: —</span>
-		              </div>
-			              <button id="offlineFetchBtn" class="menu-item hidden" type="button" role="menuitem">
-			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">&#xE896;</span>
-			                <span class="sidebar-user-menu-label">Докачать сейчас</span>
-			              </button>
-			              <button id="offlineRepairBtn" class="menu-item hidden" type="button" role="menuitem">
-			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">↻</span>
-			                <span class="sidebar-user-menu-label">Перезагрузить</span>
-			              </button>
-			            </div>
+				              <button id="offlineFetchBtn" class="menu-item hidden" type="button" role="menuitem">
+				                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-cloud-download"></i></span>
+				                <span class="sidebar-user-menu-label">Докачать сейчас</span>
+				              </button>
+				              <button id="offlineRepairBtn" class="menu-item hidden" type="button" role="menuitem">
+				                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-refresh"></i></span>
+				                <span class="sidebar-user-menu-label">Перезагрузить</span>
+				              </button>
+				            </div>
 		            <div id="userMenu" class="article-menu hidden sidebar-user-menu" role="menu">
 		              <div class="sidebar-user-menu__item" aria-disabled="true">
 		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--user" aria-hidden="true">
@@ -275,53 +276,31 @@
                   </svg>
 	                </span>
 	                <span class="sidebar-user-menu__name" id="currentUserLabel"></span>
-	              </div>
-	              <button id="openUsersViewBtn" class="menu-item" type="button" role="menuitem">
-	                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--users" aria-hidden="true">
-	                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-	                    <circle cx="9" cy="8" r="3.2" fill="currentColor" />
-                    <circle cx="15.5" cy="9" r="2.7" fill="currentColor" />
-                    <path d="M3 18c0-2.4 2.4-4 6-4s6 1.6 6 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                    <path d="M12 17.5c0-1.8 1.7-3 4.3-3s4.3 1.2 4.3 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                  </svg>
-                </span>
-                <span class="sidebar-user-menu-label">Пользователи</span>
-              </button>
-              <button id="telegramLinkBtn" class="menu-item" type="button" role="menuitem">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">
-                  &#xE724;
-                </span>
-                <span class="sidebar-user-menu-label">Привязать Telegram</span>
-              </button>
-              <button id="telegramBotOpenBtn" class="menu-item" type="button" role="menuitem">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">
-                  &#xE725;
-                </span>
-                <span class="sidebar-user-menu-label">Бот быстрых заметок</span>
-              </button>
-              <button id="telegramFeedbackBotOpenBtn" class="menu-item" type="button" role="menuitem">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">
-                  &#xE725;
-                </span>
-                <span class="sidebar-user-menu-label">Обратная связь</span>
-              </button>
-              <button id="semanticReindexBtn" class="menu-item" type="button" role="menuitem">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">
-                  &#xE6A9;
-                </span>
-                <span class="sidebar-user-menu-label">Переиндексировать поиск</span>
-              </button>
-              <button id="logoutBtn" class="menu-item" type="button" role="menuitem">
-                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--logout" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-                    <path d="M5 4h7a1 1 0 0 1 1 1v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    <path d="M13 16v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    <path d="M11 12h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    <path d="M17 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </span>
-                <span class="sidebar-user-menu-label">Выйти</span>
-              </button>
+		              </div>
+		              <button id="openUsersViewBtn" class="menu-item" type="button" role="menuitem">
+		                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-group"></i></span>
+	                <span class="sidebar-user-menu-label">Пользователи</span>
+	              </button>
+	              <button id="telegramLinkBtn" class="menu-item" type="button" role="menuitem">
+	                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bxl-telegram"></i></span>
+	                <span class="sidebar-user-menu-label">Привязать Telegram</span>
+	              </button>
+	              <button id="telegramBotOpenBtn" class="menu-item" type="button" role="menuitem">
+	                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-bot"></i></span>
+	                <span class="sidebar-user-menu-label">Бот быстрых заметок</span>
+	              </button>
+	              <button id="telegramFeedbackBotOpenBtn" class="menu-item" type="button" role="menuitem">
+	                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-message-square-dots"></i></span>
+	                <span class="sidebar-user-menu-label">Обратная связь</span>
+	              </button>
+	              <button id="semanticReindexBtn" class="menu-item" type="button" role="menuitem">
+	                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-revision"></i></span>
+	                <span class="sidebar-user-menu-label">Переиндексировать поиск</span>
+	              </button>
+	              <button id="logoutBtn" class="menu-item" type="button" role="menuitem">
+	                <span class="sidebar-user-menu-icon" aria-hidden="true"><i class="bx bx-log-out"></i></span>
+	                <span class="sidebar-user-menu-label">Выйти</span>
+	              </button>
             </div>
           </div>
         </div>
@@ -336,9 +315,9 @@
               type="button"
               title="Открыть боковую панель"
               aria-label="Открыть боковую панель"
-            >
-              &#xE700;
-            </button>
+	            >
+	              <i class="bx bx-menu" aria-hidden="true"></i>
+	            </button>
             <h2>Список статей</h2>
             <div class="list-tabs">
               <button id="articlesTabBtn" class="ghost small active" type="button" aria-pressed="true">Статьи</button>
@@ -346,16 +325,16 @@
             </div>
             <div class="list-header-actions">
               <button
-                id="listMenuBtn"
-                class="ghost icon-button"
+	                id="listMenuBtn"
+	                class="ghost icon-button"
                 type="button"
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls="list-menu"
                 title="Импорт статей"
-              >
-                &#8942;
-              </button>
+	              >
+	                <i class="bx bx-dots-vertical-rounded" aria-hidden="true"></i>
+	              </button>
               <div id="listMenu" class="article-menu hidden" role="menu">
                 <button id="exportAllHtmlZipBtn" class="menu-item" type="button" role="menuitem">
                   Резервная копия (ZIP)
@@ -381,7 +360,7 @@
         <div id="articleHeader" class="panel-header article-header hidden">
           <div class="title-block">
                 <div class="title-row">
-                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей">&#xE700;</button>
+		                  <button id="mobileSidebarBtn" class="ghost icon-button mobile-only" type="button" title="Открыть список статей" aria-label="Открыть список статей"><i class="bx bx-menu" aria-hidden="true"></i></button>
                   <h2 id="articleTitle"></h2>
                   <input id="articleTitleInput" class="hidden" type="text" />
                   <button
@@ -390,18 +369,18 @@
                     type="button"
                     title="Добавить в избранное"
                     aria-label="Добавить в избранное"
-                  >
-                    &#xE734;
-                  </button>
+	                  >
+	                    <i class="bx bx-star" aria-hidden="true"></i>
+	                  </button>
                   <button
                     id="articlePublicLinkBtn"
                     class="ghost icon-button small public-link-button"
                     type="button"
                     title="Скопировать публичную ссылку"
                     aria-label="Скопировать публичную ссылку"
-                  >
-                    &#xE774;
-                  </button>
+	                  >
+	                    <i class="bx bx-link-external" aria-hidden="true"></i>
+	                  </button>
                   <div class="article-actions">
                     <button
                      id="articleMenuBtn"
@@ -411,9 +390,9 @@
                     aria-expanded="false"
                     aria-controls="article-menu"
                     title="Действия со статьёй"
-                  >
-                    &#xE712;
-                  </button>
+	                  >
+	                    <i class="bx bx-dots-horizontal-rounded" aria-hidden="true"></i>
+	                  </button>
                   <div id="articleMenu" class="article-menu hidden" role="menu">
                     <p id="updatedAt" class="meta article-menu-meta"></p>
                     <button id="articlePublicToggleBtn" class="menu-item" type="button" role="menuitem">
@@ -447,74 +426,74 @@
 	              </div>
 	            </div>
 	            <div id="articleToolbar" class="article-toolbar">
-	              <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
-	                &#xE7A7;<span class="toolbar-label"> Отменить</span>
-                </button>
-                <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
-                  &#xE7A6;<span class="toolbar-label"> Повторить</span>
-                </button>
+		              <button id="articleUndoBtn" class="ghost small" type="button" title="Отменить действие (Ctrl+Z)">
+		                <i class="bx bx-undo" aria-hidden="true"></i><span class="toolbar-label"> Отменить</span>
+	                </button>
+	                <button id="articleRedoBtn" class="ghost small" type="button" title="Повторить действие (Ctrl+Y)">
+	                  <i class="bx bx-redo" aria-hidden="true"></i><span class="toolbar-label"> Повторить</span>
+	                </button>
                 <button
                   id="dragModeToggleBtn"
                   class="ghost small drag-mode-toggle-btn"
                   type="button"
                   aria-pressed="false"
                   title="Переключить режим перетаскивания блоков"
-                >
-                  &#xE14B;<span class="toolbar-label"> Двигать</span>
-                </button>
-                <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
-                  &#xE11C;<span class="toolbar-label"> Слияние</span>
-                </button>
+	                >
+	                  <i class="bx bx-move" aria-hidden="true"></i><span class="toolbar-label"> Двигать</span>
+	                </button>
+	                <button id="mergeBlocksBtn" class="ghost small" type="button" title="Объединить выбранные блоки в один">
+	                  <i class="bx bx-merge" aria-hidden="true"></i><span class="toolbar-label"> Слияние</span>
+	                </button>
                 <button
                   id="splitBlockBtn"
                   class="ghost small"
                   type="button"
                   title="Разделить текущий блок по курсору (Ctrl+↓)"
-                >
-                  &#xE118;<span class="toolbar-label"> Разделить</span>
-                </button>
-                <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
-                  &#xF0E2;<span class="toolbar-label"> Таблица</span>
-                </button>
-                <button id="exportCurrentBlockBtn" class="ghost small" type="button" title="Экспорт текущего блока в HTML">
-                  &#xE74E;<span class="toolbar-label"> Экспорт</span>
-                </button>
-                <button id="deleteCurrentBlockBtn" class="ghost small" type="button" title="Удалить текущий блок">
-                  &#xE74D;<span class="toolbar-label"> Удалить</span>
-                </button>
-                <button id="articleBlockTrashBtn" class="ghost small" type="button" title="Корзина удалённых блоков">
-                  &#xE81C;<span class="toolbar-label"> Корзина</span>
-                </button>
-                <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
-                  &#xE710;<span class="toolbar-label"> Новый</span>
-                </button>
+	                >
+	                  <i class="bx bx-cut" aria-hidden="true"></i><span class="toolbar-label"> Разделить</span>
+	                </button>
+	                <button id="insertTableBtn" class="ghost small" type="button" title="Вставить таблицу 2×2">
+	                  <i class="bx bx-table" aria-hidden="true"></i><span class="toolbar-label"> Таблица</span>
+	                </button>
+	                <button id="exportCurrentBlockBtn" class="ghost small" type="button" title="Экспорт текущего блока в HTML">
+	                  <i class="bx bx-export" aria-hidden="true"></i><span class="toolbar-label"> Экспорт</span>
+	                </button>
+	                <button id="deleteCurrentBlockBtn" class="ghost small" type="button" title="Удалить текущий блок">
+	                  <i class="bx bx-trash" aria-hidden="true"></i><span class="toolbar-label"> Удалить</span>
+	                </button>
+	                <button id="articleBlockTrashBtn" class="ghost small" type="button" title="Корзина удалённых блоков">
+	                  <i class="bx bx-trash-alt" aria-hidden="true"></i><span class="toolbar-label"> Корзина</span>
+	                </button>
+	                <button id="articleNewBlockBtn" class="ghost small" type="button" title="Создать блок ниже текущего">
+	                  <i class="bx bx-plus" aria-hidden="true"></i><span class="toolbar-label"> Новый</span>
+	                </button>
               </div>
               <div id="outlineToolbar" class="outline-toolbar hidden">
-                <button id="outlineUndoBtn" class="ghost small" type="button" title="Отменить (Ctrl+Z)">
-                  &#xE7A7;<span class="toolbar-label"> Отменить</span>
-                </button>
-                <button id="outlineRedoBtn" class="ghost small" type="button" title="Повторить (Ctrl+Y)">
-                  &#xE7A6;<span class="toolbar-label"> Повторить</span>
-                </button>
-                <button id="outlineAttachBtn" class="ghost small outline-toolbar__editbtn" type="button" title="Вложение" hidden>
-                  📎<span class="toolbar-label"> Вложение</span>
-                </button>
+	                <button id="outlineUndoBtn" class="ghost small" type="button" title="Отменить (Ctrl+Z)">
+	                  <i class="bx bx-undo" aria-hidden="true"></i><span class="toolbar-label"> Отменить</span>
+	                </button>
+	                <button id="outlineRedoBtn" class="ghost small" type="button" title="Повторить (Ctrl+Y)">
+	                  <i class="bx bx-redo" aria-hidden="true"></i><span class="toolbar-label"> Повторить</span>
+	                </button>
+	                <button id="outlineAttachBtn" class="ghost small outline-toolbar__editbtn" type="button" title="Вложение" hidden>
+	                  <i class="bx bx-paperclip" aria-hidden="true"></i><span class="toolbar-label"> Вложение</span>
+	                </button>
                 <input id="outlineAttachInput" class="hidden" type="file" multiple />
-                <button id="outlineDeleteBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Удалить блок (в корзину)" hidden>
-                  &#xE74D;<span class="toolbar-label"> Удалить</span>
-                </button>
-                <button id="outlineMoveUpBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вверх (Alt+↑)" hidden>
-                  <span class="outline-toolbar__arrow">&#xE64C;</span><span class="toolbar-label"> Вверх</span>
-                </button>
-                <button id="outlineMoveDownBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вниз (Alt+↓)" hidden>
-                  <span class="outline-toolbar__arrow">&#xE64B;</span><span class="toolbar-label"> Вниз</span>
-                </button>
-                <button id="outlineOutdentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг влево (Alt+←)" hidden>
-                  <span class="outline-toolbar__arrow">&#xE64E;</span><span class="toolbar-label"> Влево</span>
-                </button>
-                <button id="outlineIndentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг вправо (Alt+→)" hidden>
-                  <span class="outline-toolbar__arrow">&#xE64D;</span><span class="toolbar-label"> Вправо</span>
-                </button>
+	                <button id="outlineDeleteBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Удалить блок (в корзину)" hidden>
+	                  <i class="bx bx-trash" aria-hidden="true"></i><span class="toolbar-label"> Удалить</span>
+	                </button>
+	                <button id="outlineMoveUpBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вверх (Alt+↑)" hidden>
+	                  <span class="outline-toolbar__arrow"><i class="bx bx-up-arrow-alt" aria-hidden="true"></i></span><span class="toolbar-label"> Вверх</span>
+	                </button>
+	                <button id="outlineMoveDownBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Переместить блок вниз (Alt+↓)" hidden>
+	                  <span class="outline-toolbar__arrow"><i class="bx bx-down-arrow-alt" aria-hidden="true"></i></span><span class="toolbar-label"> Вниз</span>
+	                </button>
+	                <button id="outlineOutdentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг влево (Alt+←)" hidden>
+	                  <span class="outline-toolbar__arrow"><i class="bx bx-left-arrow-alt" aria-hidden="true"></i></span><span class="toolbar-label"> Влево</span>
+	                </button>
+	                <button id="outlineIndentBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Сдвиг вправо (Alt+→)" hidden>
+	                  <span class="outline-toolbar__arrow"><i class="bx bx-right-arrow-alt" aria-hidden="true"></i></span><span class="toolbar-label"> Вправо</span>
+	                </button>
 	                <div class="outline-toolbar__dropdown outline-toolbar__dropdown--view">
 	                  <button
 	                    id="outlineBlocksMenuBtn"
@@ -524,32 +503,32 @@
                     aria-expanded="false"
                     aria-controls="outlineBlocksMenu"
                     title="Блоки"
-                  >
-                    &#xE8F1;<span class="toolbar-label"> Блоки</span>
-                  </button>
-                  <div id="outlineBlocksMenu" class="outline-toolbar__menu hidden" role="menu">
-                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="toggleSelectMode">
-                      <span class="outline-menu__icon">✓</span><span class="outline-menu__label">Выбрать блоки</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="copy">
-                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8C8;</span><span class="outline-menu__label">Копировать</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="cut">
-                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8C6;</span><span class="outline-menu__label">Вырезать</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="paste">
-                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE77F;</span><span class="outline-menu__label">Вставить</span>
-                    </button>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="clear">
-	                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE74D;</span><span class="outline-menu__label">Очистить буфер</span>
+	                  >
+	                    <i class="bx bx-server" aria-hidden="true"></i><span class="toolbar-label"> Блоки</span>
+	                  </button>
+	                  <div id="outlineBlocksMenu" class="outline-toolbar__menu hidden" role="menu">
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="toggleSelectMode">
+	                      <span class="outline-menu__icon"><i class="bx bx-select-multiple" aria-hidden="true"></i></span><span class="outline-menu__label">Выбрать блоки</span>
 	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="copy">
+	                      <span class="outline-menu__icon"><i class="bx bx-copy" aria-hidden="true"></i></span><span class="outline-menu__label">Копировать</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="cut">
+	                      <span class="outline-menu__icon"><i class="bx bx-cut" aria-hidden="true"></i></span><span class="outline-menu__label">Вырезать</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="paste">
+	                      <span class="outline-menu__icon"><i class="bx bx-paste" aria-hidden="true"></i></span><span class="outline-menu__label">Вставить</span>
+	                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-clipboard-action="clear">
+		                      <span class="outline-menu__icon"><i class="bx bx-eraser" aria-hidden="true"></i></span><span class="outline-menu__label">Очистить буфер</span>
+		                    </button>
 	                    <div class="outline-menu__divider" role="separator"></div>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="collapseAllBlocks">
-	                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8A0;</span><span class="outline-menu__label">Свернуть всё</span>
-	                    </button>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="expandAllBlocks">
-	                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xE8A1;</span><span class="outline-menu__label">Развернуть всё</span>
-	                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-action="collapseAllBlocks">
+		                      <span class="outline-menu__icon"><i class="bx bx-collapse-alt" aria-hidden="true"></i></span><span class="outline-menu__label">Свернуть всё</span>
+		                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-action="expandAllBlocks">
+		                      <span class="outline-menu__icon"><i class="bx bx-expand-alt" aria-hidden="true"></i></span><span class="outline-menu__label">Развернуть всё</span>
+		                    </button>
 	                  </div>
 	                </div>
 	                <div class="outline-toolbar__dropdown">
@@ -561,9 +540,9 @@
                     aria-expanded="false"
                     aria-controls="outlineTextMenu"
                     title="Текст"
-                  >
-                    Aa<span class="toolbar-label"> Текст</span>
-                  </button>
+	                  >
+	                    <i class="bx bx-font" aria-hidden="true"></i><span class="toolbar-label"> Текст</span>
+	                  </button>
                   <div id="outlineTextMenu" class="outline-toolbar__menu hidden" role="menu">
                     <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBold">
                       <span class="outline-menu__icon"><strong>Ж</strong></span><span class="outline-menu__label">Жирный</span>
@@ -581,15 +560,15 @@
                       <span class="outline-menu__icon">❝</span><span class="outline-menu__label">Цитата</span>
                     </button>
                     <div class="outline-menu__divider" role="separator"></div>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertHttpLink">
-                      <span class="outline-menu__icon">🔗</span><span class="outline-menu__label">Ссылка (URL)</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertArticleLink">
-                      <span class="outline-menu__icon">§</span><span class="outline-menu__label">Ссылка на статью</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetLink">
-                      <span class="outline-menu__icon">⊘</span><span class="outline-menu__label">Убрать ссылку</span>
-                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertHttpLink">
+	                      <span class="outline-menu__icon"><i class="bx bx-link" aria-hidden="true"></i></span><span class="outline-menu__label">Ссылка (URL)</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertArticleLink">
+	                      <span class="outline-menu__icon"><i class="bx bx-link-alt" aria-hidden="true"></i></span><span class="outline-menu__label">Ссылка на статью</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetLink">
+	                      <span class="outline-menu__icon"><i class="bx bx-unlink" aria-hidden="true"></i></span><span class="outline-menu__label">Убрать ссылку</span>
+	                    </button>
                   </div>
                 </div>
 
@@ -602,21 +581,21 @@
                     aria-expanded="false"
                     aria-controls="outlineListsMenu"
                     title="Списки"
-                  >
-                    •<span class="toolbar-label"> Списки</span>
-                  </button>
-                  <div id="outlineListsMenu" class="outline-toolbar__menu hidden" role="menu">
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBulletList">
-                      <span class="outline-menu__icon">•</span><span class="outline-menu__label">Маркированный</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleOrderedList">
-                      <span class="outline-menu__icon">1.</span><span class="outline-menu__label">Нумерованный</span>
-                    </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetList">
-                      <span class="outline-menu__icon">✕</span><span class="outline-menu__label">Отменить</span>
-                    </button>
-                  </div>
-                </div>
+	                  >
+	                    <i class="bx bx-list-ul" aria-hidden="true"></i><span class="toolbar-label"> Списки</span>
+	                  </button>
+	                  <div id="outlineListsMenu" class="outline-toolbar__menu hidden" role="menu">
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleBulletList">
+	                      <span class="outline-menu__icon"><i class="bx bx-list-ul" aria-hidden="true"></i></span><span class="outline-menu__label">Маркированный</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleOrderedList">
+	                      <span class="outline-menu__icon"><i class="bx bx-list-ol" aria-hidden="true"></i></span><span class="outline-menu__label">Нумерованный</span>
+	                    </button>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="unsetList">
+	                      <span class="outline-menu__icon"><i class="bx bx-x" aria-hidden="true"></i></span><span class="outline-menu__label">Отменить</span>
+	                    </button>
+	                  </div>
+	                </div>
 
                 <div class="outline-toolbar__dropdown">
                   <button
@@ -627,13 +606,13 @@
                     aria-expanded="false"
                     aria-controls="outlineTableMenu"
                     title="Таблица"
-                  >
-                    &#xF0E2;<span class="toolbar-label"> Таблица</span>
-                  </button>
+	                  >
+	                    <i class="bx bx-table" aria-hidden="true"></i><span class="toolbar-label"> Таблица</span>
+	                  </button>
 			                  <div id="outlineTableMenu" class="outline-toolbar__menu hidden" role="menu">
-			                    <button class="menu-item" type="button" role="menuitem" data-outline-action="insertTable">
-			                      <span class="outline-menu__icon outline-menu__icon--glyph">&#xF0E2;</span><span class="outline-menu__label">Вставить таблицу 2×2</span>
-			                    </button>
+		                      <button class="menu-item" type="button" role="menuitem" data-outline-action="insertTable">
+		                        <span class="outline-menu__icon"><i class="bx bx-table" aria-hidden="true"></i></span><span class="outline-menu__label">Вставить таблицу 2×2</span>
+		                      </button>
                     <button class="menu-item" type="button" role="menuitem" data-outline-action="toggleHeaderRow">
                       <span class="outline-menu__icon">H↔</span><span class="outline-menu__label">Header row</span>
                     </button>
@@ -658,24 +637,24 @@
                     <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteColumn">
                       <span class="outline-menu__icon">−C</span><span class="outline-menu__label">Удалить столбец</span>
                     </button>
-                    <button class="menu-item" type="button" role="menuitem" data-outline-action="mergeCells">
-                      <span class="outline-menu__icon">⇄</span><span class="outline-menu__label">Объединить ячейки</span>
-                    </button>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="splitCell">
-	                      <span class="outline-menu__icon">⊞</span><span class="outline-menu__label">Отменить объединение</span>
+	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="mergeCells">
+	                      <span class="outline-menu__icon"><i class="bx bx-merge" aria-hidden="true"></i></span><span class="outline-menu__label">Объединить ячейки</span>
 	                    </button>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="cancelTable">
-	                      <span class="outline-menu__icon">↩</span><span class="outline-menu__label">Отменить таблицу (в текст)</span>
-	                    </button>
-	                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteTable">
-	                      <span class="outline-menu__icon">✕</span><span class="outline-menu__label">Удалить таблицу</span>
-	                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-action="splitCell">
+		                      <span class="outline-menu__icon"><i class="bx bx-border-inner" aria-hidden="true"></i></span><span class="outline-menu__label">Отменить объединение</span>
+		                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-action="cancelTable">
+		                      <span class="outline-menu__icon"><i class="bx bx-reply" aria-hidden="true"></i></span><span class="outline-menu__label">Отменить таблицу (в текст)</span>
+		                    </button>
+		                    <button class="menu-item" type="button" role="menuitem" data-outline-action="deleteTable">
+		                      <span class="outline-menu__icon"><i class="bx bx-trash" aria-hidden="true"></i></span><span class="outline-menu__label">Удалить таблицу</span>
+		                    </button>
 		                  </div>
 		                </div>
 
-	                <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
-	                  &#xE109;<span class="toolbar-label"> Новый</span>
-	                </button>
+		                <button id="outlineNewBelowBtn" class="ghost small outline-toolbar__viewbtn" type="button" title="Новый блок ниже" hidden>
+		                  <i class="bx bx-plus" aria-hidden="true"></i><span class="toolbar-label"> Новый</span>
+		                </button>
 	              </div>
 	            </div>
           <div id="pasteProgress" class="inline-progress hidden" role="status" aria-live="polite">
