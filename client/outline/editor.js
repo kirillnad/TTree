@@ -8139,20 +8139,55 @@ async function mountOutlineEditor() {
         return true;
       };
 
-      const moveSelectionToSectionHeadingStart = (pmState, dispatch, sectionPos) => {
-        const sectionNode = pmState.doc.nodeAt(sectionPos);
-        if (!sectionNode) return false;
-        const heading = sectionNode.child(0);
-        const headingStart = sectionPos + 1;
-        const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(headingStart + 1), 1));
-        dispatch(tr.scrollIntoView());
-        return true;
-      };
+	      const moveSelectionToSectionHeadingStart = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const heading = sectionNode.child(0);
+	        const headingStart = sectionPos + 1;
+	        const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(headingStart + 1), 1));
+	        dispatch(tr.scrollIntoView());
+	        return true;
+	      };
 
-      const moveSelectionToSectionBodyStart = (pmState, dispatch, sectionPos) => {
-        const sectionNode = pmState.doc.nodeAt(sectionPos);
-        if (!sectionNode) return false;
-        const heading = sectionNode.child(0);
+	      const moveSelectionToSectionLastBodyTextblockStart = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const heading = sectionNode.child(0);
+	        const body = sectionNode.child(1);
+	        if (!body || body.childCount <= 0) {
+	          return moveSelectionToSectionBodyStart(pmState, dispatch, sectionPos);
+	        }
+	        const bodyStart = sectionPos + 1 + heading.nodeSize;
+	        const bodyContentStart = bodyStart + 1;
+	        let lastTextblockPos = null;
+	        try {
+	          body.descendants((node, pos) => {
+	            if (node?.isTextblock) lastTextblockPos = pos;
+	          });
+	        } catch {
+	          lastTextblockPos = null;
+	        }
+	        if (typeof lastTextblockPos !== 'number') {
+	          return moveSelectionToSectionBodyEnd(pmState, dispatch, sectionPos);
+	        }
+	        const inside = bodyContentStart + lastTextblockPos + 1;
+	        const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(inside), 1));
+	        dispatch(tr.scrollIntoView());
+	        return true;
+	      };
+
+	      const moveSelectionForNavIntoSectionFromAbove = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const isCollapsed = Boolean(sectionNode.attrs?.collapsed);
+	        if (isCollapsed) return moveSelectionToSectionHeadingStart(pmState, dispatch, sectionPos);
+	        return moveSelectionToSectionLastBodyTextblockStart(pmState, dispatch, sectionPos);
+	      };
+
+	      const moveSelectionToSectionBodyStart = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const heading = sectionNode.child(0);
         const body = sectionNode.child(1);
         const bodyStart = sectionPos + 1 + heading.nodeSize;
         let tr = pmState.tr;
@@ -9428,23 +9463,23 @@ async function mountOutlineEditor() {
             dispatch(tr.scrollIntoView());
             return true;
           }),
-        ArrowUp: () =>
-          this.editor.commands.command(({ state: pmState, dispatch }) => {
-            const { selection } = pmState;
-            if (!selection?.empty) return false;
-            const { $from } = selection;
-            if ($from.parent?.type?.name !== 'outlineHeading') return false;
-            if ($from.parentOffset !== 0) return false;
-            const sectionPos = findSectionPos(pmState.doc, $from);
-            if (typeof sectionPos !== 'number') return false;
+	        ArrowUp: () =>
+	          this.editor.commands.command(({ state: pmState, dispatch }) => {
+	            const { selection } = pmState;
+	            if (!selection?.empty) return false;
+	            const { $from } = selection;
+	            if ($from.parent?.type?.name !== 'outlineHeading') return false;
+	            if ($from.parentOffset !== 0) return false;
+	            const sectionPos = findSectionPos(pmState.doc, $from);
+	            if (typeof sectionPos !== 'number') return false;
 
             // Навигация должна соответствовать визуальному порядку секций:
             // ищем предыдущую ВИДИМУЮ секцию в порядке обхода документа (DFS),
             // игнорируя секции, скрытые из-за collapsed-родителей.
-            const prevVisible = findPrevVisibleSectionPos(pmState.doc, sectionPos);
-            if (typeof prevVisible === 'number') {
-              return moveSelectionToSectionHeadingStart(pmState, dispatch, prevVisible);
-            }
+	            const prevVisible = findPrevVisibleSectionPos(pmState.doc, sectionPos);
+	            if (typeof prevVisible === 'number') {
+	              return moveSelectionForNavIntoSectionFromAbove(pmState, dispatch, prevVisible);
+	            }
 
             const $pos = pmState.doc.resolve(sectionPos);
             const idx = $pos.index();
