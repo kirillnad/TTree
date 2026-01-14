@@ -72,8 +72,8 @@ async function computeBuildId() {
     hash.update('\0');
   }
   const digest = hash.digest();
-  const hex40 = digest.subarray(0, 5).toString('hex');
-  const n = BigInt(`0x${hex40}`);
+  const hex64 = digest.subarray(0, 8).toString('hex');
+  const n = BigInt(`0x${hex64}`);
   return n.toString(36);
 }
 

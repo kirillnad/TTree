@@ -77,9 +77,9 @@ async function computeBuildId() {
     hash.update('\0');
   }
   const digest = hash.digest();
-  // 40-bit prefix gives ~8 base36 chars (short, low collision risk for our scale).
-  const hex40 = digest.subarray(0, 5).toString('hex');
-  const n = BigInt(`0x${hex40}`);
+  // 64-bit prefix gives ~13 base36 chars (still short, much lower collision risk).
+  const hex64 = digest.subarray(0, 8).toString('hex');
+  const n = BigInt(`0x${hex64}`);
   return n.toString(36);
 }
 

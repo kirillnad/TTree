@@ -628,6 +628,18 @@ html {
   line-height: 1;
 }
 
+/* openInboxBtn должен выглядеть/hover как #quickNoteAddBtn */
+#openInboxBtn {
+  height: var(--sidebar-control-height);
+  padding: 0 var(--sidebar-control-padding-x);
+  border-radius: var(--sidebar-control-radius);
+  border: 1px solid var(--sidebar-border);
+  background: var(--sidebar-surface);
+  color: var(--sidebar-text);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 #searchInput:focus {
   border-color: var(--primary);
   outline: none;
@@ -662,7 +674,8 @@ html {
   gap: 0.35rem;
 }
 .sidebar-articles__header button,
-#quickNoteAddBtn {
+#quickNoteAddBtn,
+#openInboxBtn {
   height: var(--sidebar-control-height);
   padding: 0 var(--sidebar-control-padding-x);
   border-radius: var(--sidebar-control-radius);
@@ -702,9 +715,28 @@ html {
 .sidebar-graph-btn {
   min-width: var(--sidebar-control-height);
   padding: 0;
+  color: var(--sidebar-text);
+}
+.sidebar-graph-btn .bx {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: currentColor;
 }
 .sidebar-articles__header button:hover,
-#quickNoteAddBtn:hover {
+#quickNoteAddBtn:hover,
+#openInboxBtn:hover {
+  color: var(--sidebar-text);
+}
+.sidebar-articles__header button:focus-visible,
+#quickNoteAddBtn:focus-visible,
+#openInboxBtn:focus-visible {
+  color: var(--sidebar-text);
+}
+
+#openInboxBtn:not(:disabled):hover,
+#openInboxBtn:not(:disabled):focus-visible {
+  background: var(--primary-light);
+  border-color: var(--primary);
   color: var(--sidebar-text);
 }
 
@@ -3713,6 +3745,18 @@ h4.block-title {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  color: #64748b;
+  text-align: center;
+  font-weight: 500;
 }
 
 .graph-tooltip {

@@ -44,7 +44,7 @@ function loadVisNetworkCss() {
       }
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/vis-network@9.1.6/styles/vis-network.min.css';
+      link.href = '/vendor/vis-network.min.css';
       link.dataset.visNetworkCss = '1';
       link.onload = () => resolve();
       link.onerror = () => reject(new Error('vis-network css load failed'));
@@ -64,13 +64,10 @@ function loadVisNetwork() {
   if (existing) return Promise.resolve(existing);
   if (visLoadingPromise) return visLoadingPromise;
   visLoadingPromise = (async () => {
-    if (!navigator.onLine) {
-      throw new Error('offline');
-    }
     await loadVisNetworkCss();
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.js';
+      script.src = '/vendor/vis-network.min.js';
       script.async = true;
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('vis-network load failed'));
@@ -343,6 +340,14 @@ function renderWithVis() {
   }
 
   const { nodes, edges } = prepareVisData();
+  if (!nodes || nodes.length === 0) {
+    refs.graphCanvas.innerHTML =
+      '<div class="meta" style="padding:1rem">Нет данных для графа.</div>';
+    return;
+  }
+
+  // Убираем возможные заглушки/сообщения из контейнера перед рендером.
+  if (!network) refs.graphCanvas.textContent = '';
 
   if (!network) {
     nodesDataset = new vis.DataSet(nodes);
@@ -350,6 +355,19 @@ function renderWithVis() {
 
     const options = getVisOptions();
     network = new vis.Network(refs.graphCanvas, { nodes: nodesDataset, edges: edgesDataset }, options);
+    try {
+      // В некоторых случаях (особенно на мобильном) без fit граф может оказаться "за кадром"
+      // и выглядит как будто он пустой. Делаем fit один раз после стабилизации.
+      network.once('stabilizationIterationsDone', () => {
+        try {
+          network.fit({ animation: false });
+        } catch {
+          // ignore
+        }
+      });
+    } catch {
+      // ignore
+    }
 
     // Переход по клику на ноду.
     network.on('click', (params) => {
@@ -390,27 +408,30 @@ export async function openGraphView() {
   if (refs.usersView) refs.usersView.classList.add('hidden');
   refs.graphView.classList.remove('hidden');
 
+  refs.graphCanvas.innerHTML =
+    '<div class="meta" style="padding:1rem">Загрузка графа…</div>';
+
   try {
     await loadVisNetwork();
   } catch (err) {
-    if (!navigator.onLine || err?.message === 'offline') {
-      showToast('Граф недоступен без интернета');
-    } else {
-      showToast('Не удалось загрузить библиотеку графа (vis-network)');
-    }
+    showToast('Не удалось загрузить библиотеку графа (vis-network)');
+    refs.graphCanvas.innerHTML =
+      '<div class="meta" style="padding:1rem">Граф недоступен: не удалось загрузить библиотеку.</div>';
     return;
   }
 
-  if (!graphData) {
-    try {
-      graphData = await apiRequest('/api/graph');
-    } catch (error) {
-      showToast(error.message || 'Не удалось загрузить данные графа');
-      return;
-    }
+  try {
+    // Не кэшируем навсегда: связи и названия могли измениться в текущей сессии.
+    graphData = await apiRequest('/api/graph');
+  } catch (error) {
+    showToast(error.message || 'Не удалось загрузить данные графа');
+    refs.graphCanvas.innerHTML =
+      '<div class="meta" style="padding:1rem">Граф недоступен: не удалось загрузить данные.</div>';
+    return;
   }
 
-  renderWithVis();
+  // Дадим браузеру применить layout (после снятия .hidden), чтобы vis-network получил корректные размеры.
+  requestAnimationFrame(() => renderWithVis());
 }
 
 export function initGraphView() {
