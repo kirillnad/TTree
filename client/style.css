@@ -799,6 +799,11 @@ html {
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
+
+.sidebar-article-item.has-children > .sidebar-article-row > button.active::before {
+  border-right-color: rgba(255, 255, 255, 0.92);
+  border-bottom-color: rgba(255, 255, 255, 0.92);
+}
 .sidebar-article-item .label {
   display: inline-block;
   margin-left: 0.35rem;
