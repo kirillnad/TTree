@@ -8942,16 +8942,16 @@ async function mountOutlineEditor() {
           return true;
         });
 
-      const toggleCollapsed = (collapsed) =>
-        this.editor.commands.command(({ state: pmState, dispatch }) => {
-          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
-          if (typeof sectionPos !== 'number') return false;
-          const sectionNode = pmState.doc.nodeAt(sectionPos);
-          if (!sectionNode) return false;
-          const next = typeof collapsed === 'boolean' ? collapsed : !Boolean(sectionNode.attrs?.collapsed);
-          let tr = pmState.tr
-            .setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next })
-            .setMeta(OUTLINE_ALLOW_META, true);
+	      const toggleCollapsed = (collapsed) =>
+	        this.editor.commands.command(({ state: pmState, dispatch }) => {
+	          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+	          if (typeof sectionPos !== 'number') return false;
+	          const sectionNode = pmState.doc.nodeAt(sectionPos);
+	          if (!sectionNode) return false;
+	          const next = typeof collapsed === 'boolean' ? collapsed : !Boolean(sectionNode.attrs?.collapsed);
+	          let tr = pmState.tr
+	            .setNodeMarkup(sectionPos, undefined, { ...sectionNode.attrs, collapsed: next })
+	            .setMeta(OUTLINE_ALLOW_META, true);
           // Collapsing while editing should exit edit-mode so a hidden body isn't editable.
           try {
             if (next && outlineEditModeKey) {
@@ -8963,14 +8963,51 @@ async function mountOutlineEditor() {
           } catch {
             // ignore
           }
-          dispatch(tr);
-          return true;
-        });
+	          dispatch(tr);
+	          return true;
+	        });
 
-      const collectSectionPositions = (doc, rootPos) => {
-        const rootNode = doc.nodeAt(rootPos);
-        if (!rootNode || rootNode.type?.name !== 'outlineSection') return [];
-        const positions = [rootPos];
+	      const collapseParentFromCollapsedSection = () =>
+	        this.editor.commands.command(({ state: pmState, dispatch }) => {
+	          const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
+	          if (typeof sectionPos !== 'number') return false;
+	          const sectionNode = pmState.doc.nodeAt(sectionPos);
+	          if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+	          if (!Boolean(sectionNode.attrs?.collapsed)) return false;
+	          const parentPos = findImmediateParentSectionPosForSectionPos(pmState.doc, sectionPos);
+	          if (typeof parentPos !== 'number') {
+	            // Top-level: already collapsed. Just normalize caret at the heading start.
+	            const headingStart = sectionPos + 1;
+	            const tr = pmState.tr.setSelection(TextSelection.near(pmState.doc.resolve(headingStart + 1), 1));
+	            dispatch(tr.scrollIntoView());
+	            return true;
+	          }
+	          const parentNode = pmState.doc.nodeAt(parentPos);
+	          if (!parentNode || parentNode.type?.name !== 'outlineSection') return false;
+	          let tr = pmState.tr
+	            .setNodeMarkup(parentPos, undefined, { ...parentNode.attrs, collapsed: true })
+	            .setMeta(OUTLINE_ALLOW_META, true);
+	          // Collapsing while editing should exit edit-mode so a hidden body isn't editable.
+	          try {
+	            if (outlineEditModeKey) {
+	              const st = outlineEditModeKey.getState(pmState) || {};
+	              if (st.editingSectionId) {
+	                tr = tr.setMeta(outlineEditModeKey, { type: 'exit' });
+	              }
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          const headingStart = parentPos + 1;
+	          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingStart + 1), 1));
+	          dispatch(tr.scrollIntoView());
+	          return true;
+	        });
+
+	      const collectSectionPositions = (doc, rootPos) => {
+	        const rootNode = doc.nodeAt(rootPos);
+	        if (!rootNode || rootNode.type?.name !== 'outlineSection') return [];
+	        const positions = [rootPos];
         rootNode.descendants((node, pos) => {
           if (node?.type?.name !== 'outlineSection') return;
           positions.push(rootPos + 1 + pos);
@@ -9202,16 +9239,16 @@ async function mountOutlineEditor() {
         'Alt-Ctrl-ArrowUp': () => (this.editor.isActive('table') ? false : moveSection('up')),
         'Ctrl-Alt-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
         'Alt-Ctrl-ArrowDown': () => (this.editor.isActive('table') ? false : moveSection('down')),
-        'Ctrl-Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
-        'Alt-Ctrl-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
-        'Ctrl-Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
-        'Alt-Ctrl-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
-        'Mod-ArrowRight': () => toggleCollapsed(false),
-        'Mod-ArrowLeft': () => toggleCollapsed(true),
-        // Ctrl+↑: схлопнуть родителя (и всё внутри него)
-	        'Mod-ArrowUp': () => {
-	          try {
-	            const pmState = this.editor.state;
+	        'Ctrl-Alt-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
+	        'Alt-Ctrl-ArrowRight': () => (this.editor.isActive('table') ? false : indentSection()),
+	        'Ctrl-Alt-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
+	        'Alt-Ctrl-ArrowLeft': () => (this.editor.isActive('table') ? false : outdentSection()),
+	        'Mod-ArrowRight': () => toggleCollapsed(false),
+	        'Mod-ArrowLeft': () => (collapseParentFromCollapsedSection() ? true : toggleCollapsed(true)),
+	        // Ctrl+↑: схлопнуть родителя (и всё внутри него)
+		        'Mod-ArrowUp': () => {
+		          try {
+		            const pmState = this.editor.state;
 	            const sectionPos = findSectionPos(pmState.doc, pmState.selection.$from);
 	            if (typeof sectionPos === 'number') {
 	              const sectionNode = pmState.doc.nodeAt(sectionPos);
