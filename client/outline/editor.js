@@ -8728,8 +8728,8 @@ async function mountOutlineEditor() {
           return false;
         });
 
-      const splitSectionAtCaret = () =>
-        this.editor.commands.command(({ state: pmState, dispatch }) => {
+	      const splitSectionAtCaret = () =>
+	        this.editor.commands.command(({ state: pmState, dispatch }) => {
           const { selection } = pmState;
           if (!selection?.empty) return false;
           const { $from } = selection;
@@ -9000,6 +9000,130 @@ async function mountOutlineEditor() {
 	          }
 	          const headingStart = parentPos + 1;
 	          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(headingStart + 1), 1));
+	          dispatch(tr.scrollIntoView());
+	          return true;
+	        });
+
+	      const createSectionFromCurrentBodyLine = () =>
+	        this.editor.commands.command(({ state: pmState, dispatch }) => {
+	          const { selection } = pmState;
+	          if (!selection?.empty) return false;
+	          const { $from } = selection;
+	          if ($from.parent?.type?.name === 'outlineHeading') return false;
+
+	          const sectionPos = findSectionPos(pmState.doc, $from);
+	          if (typeof sectionPos !== 'number') return false;
+	          const sectionNode = pmState.doc.nodeAt(sectionPos);
+	          if (!sectionNode || sectionNode.type?.name !== 'outlineSection') return false;
+	          if (Boolean(sectionNode.attrs?.collapsed)) return false;
+
+	          const schema = pmState.doc.type.schema;
+	          const bodyDepth = findDepth($from, 'outlineBody');
+	          if (bodyDepth === null) return false;
+
+	          // "Текущая строка" = текущий paragraph верхнего уровня внутри outlineBody.
+	          let paragraphDepth = null;
+	          for (let d = $from.depth; d > bodyDepth; d -= 1) {
+	            const node = $from.node(d);
+	            const parent = $from.node(d - 1);
+	            if (node?.type?.name === 'paragraph' && parent?.type?.name === 'outlineBody') {
+	              paragraphDepth = d;
+	              break;
+	            }
+	          }
+	          if (paragraphDepth === null) return false;
+	          const paragraphNode = $from.node(paragraphDepth);
+	          if (!paragraphNode) return false;
+
+	          const headingNode = sectionNode.child(0);
+	          const bodyNode = sectionNode.child(1);
+	          const childrenNode = sectionNode.child(2);
+
+	          const bodyStart = sectionPos + 1 + headingNode.nodeSize;
+	          const bodyContentStart = bodyStart + 1;
+	          const paragraphPos = $from.before(paragraphDepth);
+
+	          // Find the top-level index of the paragraph within outlineBody.
+	          let paragraphIndex = null;
+	          try {
+	            let off = 0;
+	            for (let i = 0; i < bodyNode.childCount; i += 1) {
+	              const pos = bodyContentStart + off;
+	              if (pos === paragraphPos) {
+	                paragraphIndex = i;
+	                break;
+	              }
+	              off += bodyNode.child(i).nodeSize;
+	            }
+	          } catch {
+	            paragraphIndex = null;
+	          }
+	          if (paragraphIndex === null) return false;
+
+	          const offsetInParagraphRaw = $from.pos - $from.start(paragraphDepth);
+	          const offsetInParagraph = Math.max(0, Math.min(offsetInParagraphRaw, paragraphNode.content.size));
+	          const leftText = paragraphNode.textBetween(0, offsetInParagraph, '', '');
+	          const rightText = paragraphNode.textBetween(offsetInParagraph, paragraphNode.content.size, '', '');
+
+	          // Spec:
+	          // - right-of-caret part of the CURRENT paragraph becomes the NEW section heading
+	          // - all content AFTER the current paragraph becomes the NEW section body
+	          // - left-of-caret stays in the old section body (same paragraph)
+	          // - children are moved to the new section
+	          const oldParagraphText = String(leftText || '').trimEnd();
+	          const newHeadingText = String(rightText || '').trim();
+
+	          const oldBodyBlocks = [];
+	          for (let i = 0; i < paragraphIndex; i += 1) oldBodyBlocks.push(bodyNode.child(i));
+	          // Keep the current paragraph in the old body, truncated to the left-of-caret part.
+	          oldBodyBlocks.push(
+	            schema.nodes.paragraph.create({}, oldParagraphText ? [schema.text(oldParagraphText)] : []),
+	          );
+	          // If old body becomes empty, keep an empty paragraph.
+	          if (!oldBodyBlocks.length) {
+	            oldBodyBlocks.push(schema.nodes.paragraph.create({}, []));
+	          }
+
+	          const newBodyBlocks = [];
+	          for (let i = paragraphIndex + 1; i < bodyNode.childCount; i += 1) {
+	            newBodyBlocks.push(bodyNode.child(i));
+	          }
+	          if (!newBodyBlocks.length) {
+	            newBodyBlocks.push(schema.nodes.paragraph.create({}, []));
+	          }
+
+	          const emptyChildren = schema.nodes.outlineChildren.create({}, []);
+	          const oldSection = schema.nodes.outlineSection.create(
+	            { ...sectionNode.attrs, collapsed: false },
+	            [headingNode, schema.nodes.outlineBody.create({}, oldBodyBlocks), emptyChildren],
+	          );
+	          const newId = safeUuid();
+	          const newSection = schema.nodes.outlineSection.create(
+	            { id: newId, collapsed: false },
+	            [
+	              schema.nodes.outlineHeading.create({}, newHeadingText ? [schema.text(newHeadingText)] : []),
+	              schema.nodes.outlineBody.create({}, newBodyBlocks),
+	              childrenNode,
+	            ],
+	          );
+
+	          let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, oldSection);
+	          const insertPos = sectionPos + oldSection.nodeSize;
+	          tr = tr.insert(insertPos, newSection);
+
+	          const inserted = tr.doc.nodeAt(insertPos);
+	          if (inserted && inserted.type?.name === 'outlineSection') {
+	            const h2 = inserted.child(0);
+	            const bStart = insertPos + 1 + h2.nodeSize;
+	            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bStart + 2), 1));
+	          } else {
+	            tr = tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 2), 1));
+	          }
+
+	          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	          if (outlineEditModeKey) {
+	            tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
+	          }
 	          dispatch(tr.scrollIntoView());
 	          return true;
 	        });
@@ -9280,7 +9404,16 @@ async function mountOutlineEditor() {
 	          } catch {
 	            // ignore
 	          }
-	          return splitSectionAtCaret();
+	          try {
+	            const pmState = this.editor.state;
+	            const $from = pmState.selection?.$from;
+	            if ($from?.parent?.type?.name === 'outlineHeading') {
+	              return splitSectionAtCaret();
+	            }
+	          } catch {
+	            // ignore
+	          }
+	          return createSectionFromCurrentBodyLine() ? true : splitSectionAtCaret();
 	        },
 	        Backspace: () =>
 	          this.editor.commands.command(({ state: pmState, dispatch }) => {
