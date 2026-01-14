@@ -3926,7 +3926,7 @@ function mountOutlineToolbar(editor) {
 		      if (action === 'toggleBold') return chain.toggleBold().run();
 		      if (action === 'toggleItalic') return chain.toggleItalic().run();
 		      if (action === 'toggleStrike') return chain.toggleStrike().run();
-		      if (action === 'toggleCodeBlock') {
+			      if (action === 'toggleCodeBlock') {
 		        // TipTap default `toggleCodeBlock()` converts each selected paragraph independently.
 		        // UX: if selection spans multiple blocks, merge into one codeBlock.
 		        return editor.commands.command(({ state: pmState, dispatch }) => {
@@ -3967,6 +3967,15 @@ function mountOutlineToolbar(editor) {
 		        });
 			      }
 			      if (action === 'toggleBlockquote') return chain.toggleBlockquote().run();
+			      if (action.startsWith('setTextBg:')) {
+			        if (!requireEditing()) return false;
+			        const value = action.slice('setTextBg:'.length);
+			        return editor.commands.setTextBg(value);
+			      }
+			      if (action === 'clearTextBg') {
+			        if (!requireEditing()) return false;
+			        return editor.commands.clearTextBg();
+			      }
 			      if (action.startsWith('setCallout:')) {
 			        try {
 			          const st = outlineEditModeKey?.getState?.(editor.state) || null;
@@ -4516,9 +4525,15 @@ function mountOutlineToolbar(editor) {
 	        isActive = editor.isActive('codeBlock');
 	        // We use a custom command for merge-into-one behavior; `can()` doesn't know about it.
 	        isDisabled = !isEditing();
-			      } else if (action === 'toggleBlockquote') {
-			        isActive = editor.isActive('blockquote');
-			        isDisabled = !canRun((c) => c.toggleBlockquote());
+		      } else if (action === 'toggleBlockquote') {
+		        isActive = editor.isActive('blockquote');
+		        isDisabled = !canRun((c) => c.toggleBlockquote());
+		      } else if (action.startsWith('setTextBg:')) {
+		        isActive = false;
+		        isDisabled = !isEditing() || !canRun((c) => c.setTextBg(action.slice('setTextBg:'.length)));
+		      } else if (action === 'clearTextBg') {
+		        isActive = false;
+		        isDisabled = !isEditing() || !canRun((c) => c.clearTextBg());
 		      } else if (action.startsWith('setCallout:')) {
 		        const kind = action.split(':')[1] || '';
 		        isActive = editor.isActive('callout', { kind });
@@ -6391,7 +6406,7 @@ async function mountOutlineEditor() {
   const loadStart = perfEnabled() ? performance.now() : 0;
   const { core, starterKitMod, htmlMod, pmStateMod, pmViewMod } = await loadTiptap();
   if (loadStart) perfLog('loadTiptap()', { ms: Math.round(performance.now() - loadStart) });
-  const { Editor, Node, Extension, InputRule, mergeAttributes } = core;
+  const { Editor, Node, Extension, Mark, InputRule, mergeAttributes } = core;
   const StarterKit = starterKitMod.default || starterKitMod.StarterKit || starterKitMod;
   const { generateJSON, generateHTML } = htmlMod;
   const { TextSelection } = pmStateMod;
@@ -7711,11 +7726,11 @@ async function mountOutlineEditor() {
 		    return OUTLINE_CALLOUT_KINDS.includes(kind) ? kind : 'note';
 		  };
 
-		  const OutlineCallout = Node.create({
-		    name: 'callout',
-		    group: 'block',
-		    content: 'block+',
-		    defining: true,
+			  const OutlineCallout = Node.create({
+			    name: 'callout',
+			    group: 'block',
+			    content: 'block+',
+			    defining: true,
 		    addAttributes() {
 		      return {
 		        kind: {
@@ -7761,8 +7776,227 @@ async function mountOutlineEditor() {
 		            return commands.toggleWrap('callout');
 		          },
 		      };
-		    },
-		  });
+			    },
+			  });
+
+			  const OutlineTextBgMark = Mark.create({
+			    name: 'ttTextBg',
+			    inclusive: false,
+			    addAttributes() {
+			      return {
+			        color: {
+			          default: null,
+			          parseHTML: (el) => {
+			            try {
+			              return String(el?.style?.backgroundColor || '').trim() || null;
+			            } catch {
+			              return null;
+			            }
+			          },
+			          renderHTML: (attrs) => {
+			            const color = attrs?.color ? String(attrs.color).trim() : '';
+			            if (!color) return {};
+			            return { style: `background-color: ${color}` };
+			          },
+			        },
+			      };
+			    },
+			    parseHTML() {
+			      return [{ tag: 'span[data-tt-text-bg="1"]' }];
+			    },
+			    renderHTML({ HTMLAttributes }) {
+			      return [
+			        'span',
+			        mergeAttributes(HTMLAttributes, {
+			          class: 'tt-text-bg',
+			          'data-tt-text-bg': '1',
+			        }),
+			        0,
+			      ];
+			    },
+			  });
+
+			  const OutlineTextBgNodes = Extension.create({
+			    name: 'outlineTextBgNodes',
+			    addGlobalAttributes() {
+			      const parseStyleProp = (el, prop) => {
+			        try {
+			          const v = el?.style?.[prop];
+			          return v ? String(v).trim() : '';
+			        } catch {
+			          return '';
+			        }
+			      };
+			      return [
+			        {
+			          types: ['paragraph', 'outlineHeading'],
+			          attributes: {
+			            nodeBackground: {
+			              default: null,
+			              parseHTML: (el) => {
+			                const v = parseStyleProp(el, 'backgroundColor');
+			                return v ? String(v).replace(/['"]+/g, '') : null;
+			              },
+			              renderHTML: (attrs) => {
+			                const background = attrs?.nodeBackground ? String(attrs.nodeBackground) : '';
+			                if (!background) return {};
+			                return {
+			                  style: `background-color: ${background}`,
+			                  'data-tt-node-bg': '1',
+			                };
+			              },
+			            },
+			          },
+			        },
+			        {
+			          types: ['blockquote'],
+			          attributes: {
+			            nodeBorderColor: {
+			              default: null,
+			              parseHTML: (el) => {
+			                const v = parseStyleProp(el, 'borderLeftColor');
+			                return v ? String(v).replace(/['"]+/g, '') : null;
+			              },
+			              renderHTML: (attrs) => {
+			                const border = attrs?.nodeBorderColor ? String(attrs.nodeBorderColor) : '';
+			                if (!border) return {};
+			                return {
+			                  style: `border-left-color: ${border}`,
+			                  'data-tt-bq-border': '1',
+			                };
+			              },
+			            },
+			          },
+			        },
+			      ];
+			    },
+			    addCommands() {
+			      const findAncestorPos = (pmState, name) => {
+			        try {
+			          const $from = pmState.selection?.$from;
+			          if (!$from) return null;
+			          for (let d = $from.depth; d >= 0; d -= 1) {
+			            const n = $from.node(d);
+			            if (n?.type?.name === name) return $from.before(d);
+			          }
+			          return null;
+			        } catch {
+			          return null;
+			        }
+			      };
+				      const setNodeAttrAtPos = (pmState, dispatch, pos, attr, value) => {
+				        try {
+				          const node = pmState.doc.nodeAt(pos);
+				          if (!node) return false;
+				          // "can()" calls commands without dispatch; treat as "possible" if target node exists.
+				          if (!dispatch) return true;
+				          const next = { ...(node.attrs || {}) };
+				          if (value == null || value === '') delete next[attr];
+				          else next[attr] = value;
+				          let tr = pmState.tr.setNodeMarkup(pos, undefined, next);
+			          tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+			          dispatch(tr);
+			          return true;
+			        } catch {
+			          return false;
+			        }
+			      };
+
+			      return {
+			        setTextBg:
+			          (color) =>
+			          ({ editor, state: pmState, dispatch }) => {
+			            const c = String(color || '').trim();
+				            const sel = pmState.selection;
+				            if (!sel) return false;
+				            const isRange = sel.from !== sel.to;
+				            if (isRange) {
+				              try {
+				                editor.chain().focus().run();
+				              } catch {
+				                // ignore
+				              }
+				              const markType = pmState.schema?.marks?.ttTextBg || null;
+				              if (!markType) return false;
+				              if (!dispatch) return true;
+				              let tr = pmState.tr.addMark(sel.from, sel.to, markType.create({ color: c }));
+				              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				              try {
+				                if (TextSelection) {
+				                  tr = tr.setSelection(TextSelection.create(tr.doc, sel.to, sel.to));
+				                }
+				              } catch {
+				                // ignore
+				              }
+				              dispatch(tr);
+				              try {
+				                window?.getSelection?.()?.removeAllRanges?.();
+				              } catch {
+				                // ignore
+				              }
+				              return true;
+				            }
+
+				            // No selection: block-level behavior.
+				            const bqPos = findAncestorPos(pmState, 'blockquote');
+				            if (typeof bqPos === 'number') {
+				              return setNodeAttrAtPos(pmState, dispatch, bqPos, 'nodeBorderColor', c);
+				            }
+				            const pPos = findAncestorPos(pmState, 'paragraph');
+				            if (typeof pPos === 'number') {
+				              return setNodeAttrAtPos(pmState, dispatch, pPos, 'nodeBackground', c);
+				            }
+				            const hPos = findAncestorPos(pmState, 'outlineHeading');
+				            if (typeof hPos === 'number') {
+				              return setNodeAttrAtPos(pmState, dispatch, hPos, 'nodeBackground', c);
+				            }
+				            return false;
+				          },
+				        clearTextBg:
+				          () =>
+				          ({ editor, state: pmState, dispatch }) => {
+				            const sel = pmState.selection;
+				            if (!sel) return false;
+				            const isRange = sel.from !== sel.to;
+				            let ok = false;
+				            if (isRange) {
+				              try {
+				                editor.chain().focus().run();
+				              } catch {
+				                // ignore
+				              }
+				              const markType = pmState.schema?.marks?.ttTextBg || null;
+				              if (markType) {
+				                if (!dispatch) return true;
+				                let tr = pmState.tr.removeMark(sel.from, sel.to, markType);
+				                tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+				                try {
+				                  if (TextSelection) {
+				                    tr = tr.setSelection(TextSelection.create(tr.doc, sel.to, sel.to));
+				                  }
+				                } catch {
+				                  // ignore
+				                }
+				                dispatch(tr);
+				                ok = true;
+				              }
+				              try {
+				                window?.getSelection?.()?.removeAllRanges?.();
+				              } catch {
+				                // ignore
+				              }
+				            }
+				            const bqPos = findAncestorPos(pmState, 'blockquote');
+				            if (typeof bqPos === 'number') ok = setNodeAttrAtPos(pmState, dispatch, bqPos, 'nodeBorderColor', null) || ok;
+				            const pPos = findAncestorPos(pmState, 'paragraph');
+				            if (typeof pPos === 'number') ok = setNodeAttrAtPos(pmState, dispatch, pPos, 'nodeBackground', null) || ok;
+			            const hPos = findAncestorPos(pmState, 'outlineHeading');
+			            if (typeof hPos === 'number') ok = setNodeAttrAtPos(pmState, dispatch, hPos, 'nodeBackground', null) || ok;
+			            return ok;
+			          },
+			      };
+			    },
+			  });
 
 	  const OutlineHeading = Node.create({
 	    name: 'outlineHeading',
@@ -12890,6 +13124,8 @@ async function mountOutlineEditor() {
 			      OutlineBody,
 			      OutlineCallout,
 			      OutlineChildren,
+			      OutlineTextBgMark,
+			      OutlineTextBgNodes,
 		        OutlineTag,
 	        OutlineTagHighlighter,
 	        OutlineTagSuggestKeys,
