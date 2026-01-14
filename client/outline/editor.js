@@ -9411,28 +9411,57 @@ async function mountOutlineEditor() {
               return true;
             }
 
-            // Enter в начале заголовка: вставляем новый блок выше текущего
-            // и ставим курсор в начало нового заголовка.
-            if ($from.parentOffset === 0) {
-              const schema = pmState.doc.type.schema;
-              const newId = safeUuid();
-              const newSection = schema.nodes.outlineSection.create(
-                { id: newId, collapsed: false },
-                [
-                  schema.nodes.outlineHeading.create({}, []),
-                  schema.nodes.outlineBody.create({}, [schema.nodes.paragraph.create({}, [])]),
-                  schema.nodes.outlineChildren.create({}, []),
-                ],
-              );
-              let tr = pmState.tr.insert(sectionPos, newSection);
-              tr = tr.setSelection(TextSelection.create(tr.doc, sectionPos + 2));
-              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-              if (outlineEditModeKey) {
-                tr = tr.setMeta(outlineEditModeKey, { type: 'enter', sectionId: newId });
-              }
-              dispatch(tr.scrollIntoView());
-              return true;
-            }
+	            // Enter в начале заголовка: переносим весь заголовок в начало body,
+	            // очищаем заголовок и ставим курсор в начале вставленного текста.
+	            if ($from.parentOffset === 0) {
+	              const schema = pmState.doc.type.schema;
+	              const movedText = headingNode.textBetween(0, headingSize, '', '');
+	              const newHeading = schema.nodes.outlineHeading.create({}, []);
+	              const childrenNode = sectionNode.child(2);
+
+	              const existingBlocks = [];
+	              try {
+	                for (let i = 0; i < bodyNode.childCount; i += 1) existingBlocks.push(bodyNode.child(i));
+	              } catch {
+	                // ignore
+	              }
+
+	              let nextBlocks = [];
+	              if (movedText) {
+	                const movedPara = schema.nodes.paragraph.create({}, [schema.text(movedText)]);
+	                const first = existingBlocks[0] || null;
+	                if (first && first.type?.name === 'paragraph' && isEffectivelyEmptyNode(first)) {
+	                  nextBlocks = [movedPara, ...existingBlocks.slice(1)];
+	                } else {
+	                  nextBlocks = [movedPara, ...existingBlocks];
+	                }
+	              } else {
+	                nextBlocks = existingBlocks;
+	              }
+
+	              if (!nextBlocks.length) {
+	                nextBlocks = [schema.nodes.paragraph.create({}, [])];
+	              }
+
+	              const newBody = schema.nodes.outlineBody.create({}, nextBlocks);
+	              const newSection = schema.nodes.outlineSection.create(
+	                { ...sectionNode.attrs, collapsed: false },
+	                [newHeading, newBody, childrenNode],
+	              );
+
+	              let tr = pmState.tr.replaceWith(sectionPos, sectionPos + sectionNode.nodeSize, newSection);
+	              const updated = tr.doc.nodeAt(sectionPos);
+	              if (updated) {
+	                const h2 = updated.child(0);
+	                const bStart = sectionPos + 1 + h2.nodeSize;
+	                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bStart + 2), 1));
+	              } else {
+	                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyStart + 2), 1));
+	              }
+	              tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	              dispatch(tr.scrollIntoView());
+	              return true;
+	            }
 
             // Enter in the middle of heading: move the right-side text into the body (first paragraph),
             // and place the cursor there.
