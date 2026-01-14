@@ -1143,6 +1143,16 @@ main.content {
   align-items: center;
 }
 
+.outline-toolbar__mobile-only {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .outline-toolbar__mobile-only {
+    display: inline-flex;
+  }
+}
+
 .outline-toolbar #outlineNewBelowBtn {
   margin-left: auto;
 }
@@ -1250,6 +1260,16 @@ main.content {
 
 .outline-toolbar .toolbar-label {
   white-space: nowrap;
+}
+
+#outlineAttachInput {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .outline-toolbar__dropdown {

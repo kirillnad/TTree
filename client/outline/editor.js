@@ -141,6 +141,224 @@ function scheduleRevokePendingUploadObjectUrl(token, delayMs = 30000) {
   }
 }
 
+function isOutlineImageLikeFile(file) {
+  if (!file) return false;
+  if (file.type && String(file.type).startsWith('image/')) return true;
+  const name = String(file.name || '').toLowerCase();
+  return Boolean(name && /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(name));
+}
+
+function insertUploadingOutlineImage(view, file) {
+  try {
+    const schema = view?.state?.schema;
+    const imageType = schema?.nodes?.image || null;
+    if (!schema || !imageType) {
+      showToast('Не удалось вставить изображение');
+      return false;
+    }
+    const token = `upl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      pendingUploadObjectUrls.set(token, objectUrl);
+    } catch {
+      // ignore
+    }
+    try {
+      const aid = outlineArticleId || state.articleId || null;
+      void putPendingUpload({
+        token,
+        articleId: aid,
+        kind: 'image',
+        blob: file,
+        fileName: file?.name || 'image',
+        mime: file?.type || '',
+      });
+    } catch {
+      // ignore
+    }
+
+    const imgNode = imageType.create({
+      src: objectUrl,
+      alt: file?.name || 'image',
+      width: 320,
+      uploadToken: token,
+    });
+
+    const TextSelection = tiptap?.pmStateMod?.TextSelection;
+    let tr = view.state.tr;
+    const selFrom = tr.selection.from;
+    const selTo = tr.selection.to;
+    const pad = '\u00a0\u00a0';
+    if (selTo > selFrom) tr = tr.delete(selFrom, selTo);
+    const start = Math.max(0, Math.min(tr.doc.content.size, selFrom));
+    tr = tr.insertText(pad, start, start);
+    const imagePos = Math.max(0, Math.min(tr.doc.content.size, start + pad.length));
+    tr = tr.replaceRangeWith(imagePos, imagePos, imgNode);
+    const afterImagePos = Math.max(0, Math.min(tr.doc.content.size, imagePos + imgNode.nodeSize));
+    tr = tr.insertText(pad, afterImagePos, afterImagePos);
+    const caretPos = Math.max(0, Math.min(tr.doc.content.size, afterImagePos + pad.length));
+    if (TextSelection) tr = tr.setSelection(TextSelection.create(tr.doc, caretPos));
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    view.dispatch(tr.scrollIntoView());
+
+    try {
+      const probe = new Image();
+      probe.decoding = 'async';
+      probe.onload = () => {
+        try {
+          const w = Number(probe.naturalWidth || 0);
+          const h = Number(probe.naturalHeight || 0);
+          if (!(w > 0 && h > 0)) return;
+          const ratio = w / h;
+          const pos = findImagePosByUploadToken(view.state.doc, token);
+          if (typeof pos !== 'number') return;
+          const node = view.state.doc.nodeAt(pos);
+          if (!node || node.type?.name !== 'image') return;
+          if (Number.isFinite(Number(node.attrs?.aspectRatio)) && Number(node.attrs.aspectRatio) > 0) return;
+          const nextAttrs = { ...node.attrs, aspectRatio: ratio };
+          let trR = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+          trR = trR.setMeta(OUTLINE_ALLOW_META, true);
+          view.dispatch(trR);
+        } catch {
+          // ignore
+        }
+      };
+      probe.onerror = () => {};
+      probe.src = objectUrl;
+    } catch {
+      // ignore
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+        showToast('Оффлайн: изображение добавлено и будет загружено при появлении сети');
+        return true;
+      }
+    } catch {
+      // ignore
+    }
+
+    uploadImageFile(file)
+      .then((res) => {
+        const url = String(res?.url || '').trim();
+        if (!url) throw new Error('Upload failed');
+        const pos = findImagePosByUploadToken(view.state.doc, token);
+        if (typeof pos !== 'number') return;
+        const node = view.state.doc.nodeAt(pos);
+        if (!node || node.type?.name !== 'image') return;
+        const nextAttrs = { ...node.attrs, src: url, uploadToken: null };
+        let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+        tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+        view.dispatch(tr2);
+        scheduleRevokePendingUploadObjectUrl(token);
+        void deletePendingUpload(token).catch(() => {});
+      })
+      .catch((err) => {
+        showToast(err?.message || 'Не удалось загрузить изображение');
+        try {
+          const pos = findImagePosByUploadToken(view.state.doc, token);
+          if (typeof pos !== 'number') return;
+          const node = view.state.doc.nodeAt(pos);
+          if (!node || node.type?.name !== 'image') return;
+          const baseTitle = String(node.attrs?.title || '').trim();
+          const nextTitle = baseTitle ? `${baseTitle} (ошибка загрузки)` : 'Ошибка загрузки';
+          const nextAlt = String(node.attrs?.alt || file?.name || 'image');
+          const nextAttrs = { ...node.attrs, src: objectUrl, alt: nextAlt, title: nextTitle, uploadToken: token };
+          let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
+          tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+          view.dispatch(tr2);
+        } catch {
+          // ignore
+        }
+        try {
+          void markPendingUploadError(token, String(err?.message || err || 'error'));
+        } catch {
+          // ignore
+        }
+      });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function insertUploadingOutlineAttachment(view, file) {
+  try {
+    const schema = view?.state?.schema;
+    const linkType = schema?.marks?.link || null;
+    if (!schema || !linkType) {
+      showToast('Не удалось вставить вложение: нет схемы ссылок');
+      return false;
+    }
+    if (!state.articleId) {
+      showToast('Сначала откройте статью');
+      return false;
+    }
+
+    const token = safeUuid();
+    const pendingHref = `pending-attachment:${String(token || '')}`;
+    const safeName = String(file?.name || 'файл');
+    const placeholderText = `${safeName} (загрузка...)`;
+
+    const { from, to } = view.state.selection;
+    let tr = view.state.tr.insertText(placeholderText, from, to);
+    tr = tr.addMark(from, from + placeholderText.length, linkType.create({ href: pendingHref }));
+    tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+    view.dispatch(tr.scrollIntoView());
+
+    let sectionId = null;
+    try {
+      const st = outlineEditModeKey?.getState?.(view.state) || null;
+      sectionId = st?.editingSectionId || null;
+    } catch {
+      sectionId = null;
+    }
+
+    const findAttachmentRangeByToken = (doc, t) => {
+      const href = `pending-attachment:${String(t || '')}`;
+      const lt = doc?.type?.schema?.marks?.link || null;
+      if (!lt) return null;
+      let found = null;
+      doc.descendants((node, pos) => {
+        if (found) return false;
+        if (!node || !node.isText) return;
+        const marks = Array.isArray(node.marks) ? node.marks : [];
+        const has = marks.find((m) => m?.type === lt && String(m?.attrs?.href || '') === href);
+        if (!has) return;
+        found = { from: pos, to: pos + node.nodeSize };
+      });
+      return found;
+    };
+
+    uploadFileToYandexDisk(state.articleId, file, { sectionId })
+      .then((attachment) => {
+        const hrefRaw = String(attachment?.storedPath || attachment?.url || attachment?.path || '').trim();
+        if (!hrefRaw) throw new Error('Не удалось получить ссылку на файл');
+        const finalName = String(attachment?.originalName || file?.name || 'файл');
+        const range = findAttachmentRangeByToken(view.state.doc, token);
+        if (!range) return;
+        let tr2 = view.state.tr.insertText(finalName, range.from, range.to);
+        tr2 = tr2.addMark(range.from, range.from + finalName.length, linkType.create({ href: hrefRaw }));
+        tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+        view.dispatch(tr2);
+      })
+      .catch((err) => {
+        const range = findAttachmentRangeByToken(view.state.doc, token);
+        if (range) {
+          const errorText = `${safeName} (ошибка загрузки)`;
+          let tr2 = view.state.tr.insertText(errorText, range.from, range.to);
+          tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
+          view.dispatch(tr2);
+        }
+        showToast(err?.message || 'Не удалось загрузить файл на Яндекс.Диск');
+      });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeDocJsonForSave(docJson) {
   try {
     if (!docJson || typeof docJson !== 'object') return docJson;
@@ -3562,6 +3780,8 @@ function mountOutlineToolbar(editor) {
 	  const btns = {
 	    undo: refs.outlineUndoBtn,
 	    redo: refs.outlineRedoBtn,
+	    attachBtn: root.querySelector('#outlineAttachBtn'),
+	    attachInput: root.querySelector('#outlineAttachInput'),
 	    deleteBtn: refs.outlineDeleteBtn,
 	    moveUpBtn: refs.outlineMoveUpBtn,
 	    moveDownBtn: refs.outlineMoveDownBtn,
@@ -4167,6 +4387,7 @@ function mountOutlineToolbar(editor) {
 	    if (btns.indentBtn) btns.indentBtn.hidden = editing;
 	    if (btns.newBelowBtn) btns.newBelowBtn.hidden = editing;
 	    if (btns.blocksMenuBtn) btns.blocksMenuBtn.hidden = editing;
+	    if (btns.attachBtn) btns.attachBtn.hidden = !editing;
 	    if (editing && outlineSelectionMode) setOutlineSelectionMode(false);
 
     if (btns.undo) btns.undo.disabled = !canRun((c) => c.undo());
@@ -4330,7 +4551,56 @@ function mountOutlineToolbar(editor) {
   const cleanups = [
     click(btns.undo, () => editor.chain().focus().undo().run()),
     click(btns.redo, () => editor.chain().focus().redo().run()),
+    click(btns.attachBtn, () => {
+      if (!requireEditing()) return;
+      const input = btns.attachInput;
+      if (!input) {
+        showToast('Не удалось открыть выбор файла');
+        return;
+      }
+      try {
+        input.value = '';
+      } catch {
+        // ignore
+      }
+      try {
+        if (typeof input.showPicker === 'function') {
+          input.showPicker();
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      input.click();
+    }),
   ];
+
+  try {
+    const input = btns.attachInput;
+    if (input && !input.__ttreeOutlineAttachBound) {
+      Object.defineProperty(input, '__ttreeOutlineAttachBound', { value: true });
+      input.addEventListener(
+        'change',
+        () => {
+          if (!requireEditing()) return;
+          const files = Array.from(input.files || []);
+          if (!files.length) return;
+          for (const file of files) {
+            if (!file) continue;
+            try {
+              if (isOutlineImageLikeFile(file)) insertUploadingOutlineImage(editor.view, file);
+              else insertUploadingOutlineAttachment(editor.view, file);
+            } catch {
+              // ignore
+            }
+          }
+        },
+        { passive: true },
+      );
+    }
+  } catch {
+    // ignore
+  }
 
   const TextSelection = tiptap?.pmStateMod?.TextSelection || null;
 
@@ -6520,156 +6790,19 @@ async function mountOutlineEditor() {
 	  const OutlineImageUpload = Extension.create({
 	    name: 'outlineImageUpload',
 	    addProseMirrorPlugins() {
-	      const isImageLikeFile = (file) => {
-	        if (!file) return false;
-	        if (file.type && String(file.type).startsWith('image/')) return true;
-	        const name = String(file.name || '').toLowerCase();
-	        return Boolean(name && /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(name));
-	      };
-
 	      const collectFiles = (items, fallbackFiles) => {
 	        const files = [];
 	        Array.from(items || []).forEach((item) => {
 	          if (item.kind !== 'file') return;
 	          const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
-	          if (file && isImageLikeFile(file)) files.push(file);
+	          if (file && isOutlineImageLikeFile(file)) files.push(file);
 	        });
 	        if (!files.length && fallbackFiles?.length) {
 	          Array.from(fallbackFiles).forEach((file) => {
-	            if (isImageLikeFile(file)) files.push(file);
+	            if (isOutlineImageLikeFile(file)) files.push(file);
 	          });
 	        }
 	        return files;
-	      };
-
-			      const insertUploadingImage = (view, file) => {
-			        const token = `upl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-			        const objectUrl = URL.createObjectURL(file);
-			        try {
-			          pendingUploadObjectUrls.set(token, objectUrl);
-			        } catch {
-			          // ignore
-			        }
-			        try {
-			          const aid = outlineArticleId || state.articleId || null;
-			          void putPendingUpload({
-			            token,
-			            articleId: aid,
-			            kind: 'image',
-			            blob: file,
-			            fileName: file?.name || 'image',
-			            mime: file?.type || '',
-			          });
-			        } catch {
-			          // ignore
-			        }
-			        const imgNode = view.state.schema.nodes.image.create({
-			          src: objectUrl,
-			          alt: file?.name || 'image',
-			          width: 320,
-		          uploadToken: token,
-		        });
-		        // Вставляем картинку как inline, обрамляя пробелами, чтобы можно было писать до/после.
-		        let tr = view.state.tr;
-		        const selFrom = tr.selection.from;
-		        const selTo = tr.selection.to;
-		        const pad = '\u00a0\u00a0';
-		        // Удаляем выделение (если было).
-		        if (selTo > selFrom) tr = tr.delete(selFrom, selTo);
-		        // Позиции считаем детерминированно, без `tr.mapping.map(...)`,
-		        // чтобы избежать out-of-range при серии быстрых вставок.
-		        const start = Math.max(0, Math.min(tr.doc.content.size, selFrom));
-		        tr = tr.insertText(pad, start, start);
-		        const imagePos = Math.max(0, Math.min(tr.doc.content.size, start + pad.length));
-		        tr = tr.replaceRangeWith(imagePos, imagePos, imgNode);
-		        const afterImagePos = Math.max(0, Math.min(tr.doc.content.size, imagePos + imgNode.nodeSize));
-		        tr = tr.insertText(pad, afterImagePos, afterImagePos);
-		        const caretPos = Math.max(0, Math.min(tr.doc.content.size, afterImagePos + pad.length));
-		        tr = tr.setSelection(TextSelection.create(tr.doc, caretPos));
-			        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-			        view.dispatch(tr.scrollIntoView());
-
-			        // Compute aspect ratio asynchronously to prevent 0-height collapse on src swaps/loads.
-			        try {
-			          const probe = new Image();
-			          probe.decoding = 'async';
-			          probe.onload = () => {
-			            try {
-			              const w = Number(probe.naturalWidth || 0);
-			              const h = Number(probe.naturalHeight || 0);
-			              if (!(w > 0 && h > 0)) return;
-			              const ratio = w / h;
-			              const pos = findImagePosByUploadToken(view.state.doc, token);
-			              if (typeof pos !== 'number') return;
-			              const node = view.state.doc.nodeAt(pos);
-			              if (!node || node.type?.name !== 'image') return;
-			              if (Number.isFinite(Number(node.attrs?.aspectRatio)) && Number(node.attrs.aspectRatio) > 0) return;
-			              const nextAttrs = { ...node.attrs, aspectRatio: ratio };
-			              let trR = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
-			              trR = trR.setMeta(OUTLINE_ALLOW_META, true);
-			              view.dispatch(trR);
-			            } catch {
-			              // ignore
-			            }
-			          };
-			          probe.onerror = () => {};
-			          probe.src = objectUrl;
-			        } catch {
-			          // ignore
-			        }
-
-			        try {
-			          if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
-			            // We can still insert the image: it's stored in IndexedDB and will upload on next online session.
-			            showToast('Оффлайн: изображение добавлено и будет загружено при появлении сети');
-			            return;
-			          }
-			        } catch {
-			          // ignore
-			        }
-
-			        uploadImageFile(file)
-			          .then((res) => {
-			            const url = String(res?.url || '').trim();
-			            if (!url) throw new Error('Upload failed');
-			            const pos = findImagePosByUploadToken(view.state.doc, token);
-		            if (typeof pos !== 'number') return;
-		            const node = view.state.doc.nodeAt(pos);
-		            if (!node || node.type?.name !== 'image') return;
-		            const nextAttrs = { ...node.attrs, src: url, uploadToken: null };
-		            let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
-		            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-		            view.dispatch(tr2);
-		            // See comment in `flushPendingImageUploadsForArticle`: avoid immediate revoke to prevent flicker.
-		            scheduleRevokePendingUploadObjectUrl(token);
-		            void deletePendingUpload(token).catch(() => {});
-		          })
-		          .catch((err) => {
-		            // IMPORTANT: if upload fails (offline/timeout), we must NOT delete the image.
-		            // Keep the local preview (objectUrl) and mark it as failed so the user doesn't lose content.
-		            showToast(err?.message || 'Не удалось загрузить изображение');
-		            void err;
-		            try {
-		              const pos = findImagePosByUploadToken(view.state.doc, token);
-		              if (typeof pos !== 'number') return;
-		              const node = view.state.doc.nodeAt(pos);
-		              if (!node || node.type?.name !== 'image') return;
-		              const baseTitle = String(node.attrs?.title || '').trim();
-		              const nextTitle = baseTitle ? `${baseTitle} (ошибка загрузки)` : 'Ошибка загрузки';
-		              const nextAlt = String(node.attrs?.alt || file?.name || 'image');
-		              const nextAttrs = { ...node.attrs, src: objectUrl, alt: nextAlt, title: nextTitle, uploadToken: token };
-		              let tr2 = view.state.tr.setNodeMarkup(pos, undefined, nextAttrs);
-		              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-		              view.dispatch(tr2);
-		            } catch {
-		              // ignore
-		            }
-		            try {
-		              void markPendingUploadError(token, String(err?.message || err || 'error'));
-		            } catch {
-		              // ignore
-		            }
-		          });
 	      };
 
 	      const handle = (view, event, items, files) => {
@@ -6684,7 +6817,7 @@ async function mountOutlineEditor() {
 	        event.preventDefault();
 	        event.stopPropagation();
 	        for (const file of imgFiles) {
-	          insertUploadingImage(view, file);
+	          insertUploadingOutlineImage(view, file);
 	        }
 	        return true;
 	      };
@@ -7358,79 +7491,6 @@ async function mountOutlineEditor() {
 		        return out;
 		      };
 
-		      const pendingHrefFor = (token) => `pending-attachment:${String(token || '')}`;
-
-		      const findAttachmentRangeByToken = (doc, token) => {
-		        const pendingHref = pendingHrefFor(token);
-		        const linkType = doc?.type?.schema?.marks?.link || null;
-		        if (!linkType) return null;
-		        let found = null;
-		        doc.descendants((node, pos) => {
-		          if (found) return false;
-		          if (!node || !node.isText) return;
-		          const marks = Array.isArray(node.marks) ? node.marks : [];
-		          const has = marks.find((m) => m?.type === linkType && String(m?.attrs?.href || '') === pendingHref);
-		          if (!has) return;
-		          found = { from: pos, to: pos + node.nodeSize };
-		        });
-		        return found;
-		      };
-
-		      const insertUploadingAttachment = (view, file) => {
-		        const schema = view?.state?.schema;
-		        const linkType = schema?.marks?.link || null;
-		        if (!schema || !linkType) {
-		          showToast('Не удалось вставить вложение: нет схемы ссылок');
-		          return;
-		        }
-		        if (!state.articleId) {
-		          showToast('Сначала откройте статью');
-		          return;
-		        }
-
-		        const token = safeUuid();
-		        const pendingHref = pendingHrefFor(token);
-		        const safeName = String(file?.name || 'файл');
-		        const placeholderText = `${safeName} (загрузка...)`;
-
-		        const { from, to } = view.state.selection;
-		        let tr = view.state.tr.insertText(placeholderText, from, to);
-		        tr = tr.addMark(from, from + placeholderText.length, linkType.create({ href: pendingHref }));
-		        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-		        view.dispatch(tr.scrollIntoView());
-
-		        let sectionId = null;
-		        try {
-		          const st = outlineEditModeKey?.getState?.(view.state) || null;
-		          sectionId = st?.editingSectionId || null;
-		        } catch {
-		          sectionId = null;
-		        }
-
-		        uploadFileToYandexDisk(state.articleId, file, { sectionId })
-		          .then((attachment) => {
-		            const hrefRaw = String(attachment?.storedPath || attachment?.url || attachment?.path || '').trim();
-		            if (!hrefRaw) throw new Error('Не удалось получить ссылку на файл');
-		            const finalName = String(attachment?.originalName || file?.name || 'файл');
-		            const range = findAttachmentRangeByToken(view.state.doc, token);
-		            if (!range) return;
-		            let tr2 = view.state.tr.insertText(finalName, range.from, range.to);
-		            tr2 = tr2.addMark(range.from, range.from + finalName.length, linkType.create({ href: hrefRaw }));
-		            tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-		            view.dispatch(tr2);
-		          })
-		          .catch((err) => {
-		            const range = findAttachmentRangeByToken(view.state.doc, token);
-		            if (range) {
-		              const errorText = `${safeName} (ошибка загрузки)`;
-		              let tr2 = view.state.tr.insertText(errorText, range.from, range.to);
-		              tr2 = tr2.setMeta(OUTLINE_ALLOW_META, true);
-		              view.dispatch(tr2);
-		            }
-		            showToast(err?.message || 'Не удалось загрузить файл на Яндекс.Диск');
-		          });
-		      };
-
 		      const handle = (view, event, items, files) => {
 		        const nonImgFiles = collectNonImageFiles(items, files);
 		        if (!nonImgFiles.length) return false;
@@ -7451,7 +7511,7 @@ async function mountOutlineEditor() {
 		        }
 
 		        for (const f of nonImgFiles) {
-		          insertUploadingAttachment(view, f);
+		          insertUploadingOutlineAttachment(view, f);
 		        }
 		        return true;
 		      };
