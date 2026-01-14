@@ -17,6 +17,21 @@ import { attachArticleMouseDnDHandlers, attachArticleTouchDragSource } from './d
 
 const FAVORITES_KEY = 'ttree_favorites';
 
+function clearSidebarArticlesFilterOnArticleOpen() {
+  try {
+    if (state.sidebarSearchView !== 'list') return;
+    if (!refs.searchInput) return;
+    const hasValue = Boolean((refs.searchInput.value || '').trim() || (state.articleFilterQuery || '').trim());
+    if (!hasValue) return;
+    refs.searchInput.value = '';
+    state.articleFilterQuery = '';
+    // Let the unified handler re-render and update the clear button state.
+    refs.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+  } catch {
+    // ignore
+  }
+}
+
 function loadFavorites() {
   try {
     const raw = localStorage.getItem(FAVORITES_KEY);
@@ -282,6 +297,7 @@ export function renderSidebarArticleList() {
       button.addEventListener('click', () => {
         if (window.__ttreeDraggingArticleId) return;
         state.sidebarSelectedArticleId = node.id;
+        clearSidebarArticlesFilterOnArticleOpen();
         navigate(routing.article(node.id));
         if (state.isSidebarMobileOpen) {
           setSidebarMobileOpen(false);
@@ -341,6 +357,7 @@ export function renderSidebarArticleList() {
       event.preventDefault();
       event.stopPropagation();
       state.sidebarSelectedArticleId = node.id;
+      clearSidebarArticlesFilterOnArticleOpen();
       navigate(routing.article(node.id));
       if (state.isSidebarMobileOpen) {
         setSidebarMobileOpen(false);

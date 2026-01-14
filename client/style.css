@@ -576,7 +576,9 @@ html {
 }
 .sidebar .search-panel__clear:hover,
 .sidebar .search-panel__clear:focus-visible {
-  color: #ffffff;
+  color: var(--primary-hover);
+  background: var(--primary-light);
+  border-color: var(--primary-border);
   outline: none;
 }
 
@@ -610,13 +612,6 @@ html {
   white-space: nowrap;
 }
 
-.search-panel__toggle:hover,
-.search-panel__toggle:focus-visible {
-  border-color: var(--primary);
-  color: #ffffff;
-  outline: none;
-}
-
 /* Активное состояние "Ai" — как у #sidebarRecentBtn.active. */
 #searchModeToggle.search-panel__toggle--active {
   background: var(--primary);
@@ -629,7 +624,6 @@ html {
 }
 .search-panel__toggle:not(.search-panel__toggle--active):hover {
   opacity: 1;
-  border-color: var(--primary);
 }
 
 #quickNoteAddBtn {
@@ -1476,7 +1470,7 @@ main.content {
   padding: 0.45rem 0.6rem;
 }
 .article-menu .menu-item:hover {
-  background: #e8f3ff;
+  background: var(--primary-light);
 }
 .article-menu .menu-item.danger {
   color: #b91c1c;
@@ -1557,7 +1551,7 @@ button {
   cursor: pointer;
   background: #ffffff;
   color: var(--text-main);
-  transition: background 0.2s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 button.primary {
@@ -1577,8 +1571,29 @@ button.ghost {
   border: 1px solid var(--border-strong);
 }
 
-button:hover {
-  opacity: 0.9;
+button:not(:disabled):hover,
+button:not(:disabled):focus-visible {
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+  color: var(--primary-hover);
+  outline: none;
+}
+
+button.primary:not(:disabled):hover,
+button.primary:not(:disabled):focus-visible {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #ffffff;
+}
+
+button.danger:not(:disabled):hover,
+button.danger:not(:disabled):focus-visible,
+.article-menu .menu-item.danger:not(:disabled):hover,
+.article-menu .menu-item.danger:not(:disabled):focus-visible {
+  background: rgba(185, 28, 28, 0.08);
+  border-color: rgba(185, 28, 28, 0.25);
+  color: #b91c1c;
+  outline: none;
 }
 
 button.icon-button {

@@ -12939,11 +12939,135 @@ async function mountOutlineEditor() {
 		            return false;
 		          }
 		        };
+		        const OUTLINE_NAV_DEBUG_KEY = 'ttree_outline_debug_nav_v1';
+		        const navDebugEnabled = () => {
+		          try {
+		            return window?.localStorage?.getItem?.(OUTLINE_NAV_DEBUG_KEY) === '1';
+		          } catch {
+		            return false;
+		          }
+		        };
+		        const navDebug = (stage, payload) => {
+		          if (!navDebugEnabled()) return;
+		          try {
+		            // eslint-disable-next-line no-console
+		            console.log('[outline][nav-debug]', stage, payload);
+		          } catch {
+		            // ignore
+		          }
+		        };
 		        // Right Alt may come as AltGraph without `altKey`. In view-mode, emulate Alt-Arrow shortcuts
 		        // by calling ProseMirror key handlers with a synthetic `altKey:true` event.
 		        try {
 		          const st = outlineEditModeKey?.getState?.(view.state) || null;
 		          const editingSectionId = st?.editingSectionId || null;
+		          navDebug('keydown', {
+		            key: String(event?.key || ''),
+		            code: String(event?.code || ''),
+		            altKey: Boolean(event?.altKey),
+		            altGraph: Boolean(getAltGraph(event)),
+		            ctrlKey: Boolean(event?.ctrlKey),
+		            metaKey: Boolean(event?.metaKey),
+		            shiftKey: Boolean(event?.shiftKey),
+		            repeat: Boolean(event?.repeat),
+		            editingSectionId: editingSectionId ? String(editingSectionId) : null,
+		            selection: {
+		              empty: Boolean(view.state?.selection?.empty),
+		              parent: view.state?.selection?.$from?.parent?.type?.name || null,
+		              parentOffset: view.state?.selection?.$from?.parentOffset ?? null,
+		              pos: view.state?.selection?.$from?.pos ?? null,
+		            },
+		          });
+		          // View-mode: ArrowUp/ArrowDown moves between sections in visual (DFS) order,
+		          // even when the caret is not at the heading start (treat arrows as block navigation).
+		          // This allows moving from the first child to its parent with ArrowUp.
+		          try {
+		            const moveSelectionToSectionHeadingStartLocal = (pmState, dispatch, sectionPos) => {
+		              try {
+		                const TextSelection = tiptap?.pmStateMod?.TextSelection;
+		                if (!TextSelection) return false;
+		                const node = pmState.doc.nodeAt(sectionPos);
+		                if (!node || node.type?.name !== 'outlineSection') return false;
+		                const heading = node.child(0);
+		                const headingStart = sectionPos + 1;
+		                const inside = headingStart + 1;
+		                let tr = pmState.tr;
+		                // Ensure selection points into the heading content (even if heading is empty).
+		                tr = tr.setSelection(TextSelection.near(tr.doc.resolve(inside), 1));
+		                dispatch(tr.scrollIntoView());
+		                return true;
+		              } catch {
+		                return false;
+		              }
+		            };
+		            const key = String(event?.key || '');
+		            const noMods =
+		              !event?.shiftKey &&
+		              !event?.metaKey &&
+		              !event?.ctrlKey &&
+		              !event?.altKey &&
+		              !getAltGraph(event);
+		            if (!editingSectionId && noMods && (key === 'ArrowUp' || key === 'ArrowDown')) {
+		              const pmState = view.state;
+		              const sectionPos = findOutlineSectionPosAtSelection(pmState.doc, pmState.selection.$from);
+		              navDebug('nav.check', { key, sectionPos });
+		              if (typeof sectionPos === 'number') {
+		                const isSectionVisible = (doc, pos) => {
+		                  try {
+		                    const $p = doc.resolve(Math.min(doc.content.size, Math.max(0, pos + 1)));
+		                    for (let d = $p.depth; d > 0; d -= 1) {
+		                      const n = $p.node(d);
+		                      if (n?.type?.name !== 'outlineSection') continue;
+		                      const p = $p.before(d);
+		                      if (p === pos) continue;
+		                      if (Boolean(n.attrs?.collapsed)) return false;
+		                    }
+		                    return true;
+		                  } catch {
+		                    return true;
+		                  }
+		                };
+		                const findPrevVisible = (doc, beforePos) => {
+		                  let prev = null;
+		                  doc.nodesBetween(0, beforePos, (node, pos) => {
+		                    if (pos >= beforePos) return false;
+		                    if (node?.type?.name !== 'outlineSection') return;
+		                    if (!isSectionVisible(doc, pos)) return;
+		                    prev = pos;
+		                  });
+		                  return prev;
+		                };
+		                const findNextVisible = (doc, afterPos) => {
+		                  let next = null;
+		                  doc.nodesBetween(afterPos + 1, doc.content.size, (node, pos) => {
+		                    if (next !== null) return false;
+		                    if (pos <= afterPos) return;
+		                    if (node?.type?.name !== 'outlineSection') return;
+		                    if (!isSectionVisible(doc, pos)) return;
+		                    next = pos;
+		                  });
+		                  return next;
+		                };
+
+		                const target =
+		                  key === 'ArrowUp'
+		                    ? findPrevVisible(pmState.doc, sectionPos)
+		                    : findNextVisible(pmState.doc, sectionPos);
+		                navDebug('nav.target', { key, sectionPos, target });
+		                if (typeof target === 'number') {
+		                  const ok = moveSelectionToSectionHeadingStartLocal(pmState, view.dispatch, target);
+		                  navDebug('nav.apply', { ok });
+		                  if (ok) {
+		                    event.preventDefault();
+		                    event.stopPropagation();
+		                    return true;
+		                  }
+		                }
+		              }
+		            }
+		          } catch {
+		            // ignore
+		          }
 		          const isAltGraphOnly =
 		            Boolean(getAltGraph(event)) &&
 		            !event?.altKey &&
@@ -13008,40 +13132,14 @@ async function mountOutlineEditor() {
 		            const key = String(event.key || '');
 		            if ((key === 'ArrowUp' || key === 'ArrowDown') && Boolean(event.repeat)) {
 		              const $from = view?.state?.selection?.$from;
-		              if ($from) {
-		                // Do not interfere inside tables: keep TipTap defaults there.
-		                let inTable = false;
-		                for (let d = $from.depth; d > 0; d -= 1) {
-		                  const name = $from.node(d)?.type?.name;
-		                  if (name && String(name).startsWith('table')) {
-		                    inTable = true;
-		                    break;
-		                  }
-		                }
-		                if (!inTable) {
-		                  let sectionPos = null;
-		                  for (let d = $from.depth; d > 0; d -= 1) {
-		                    if ($from.node(d)?.type?.name === 'outlineSection') {
-		                      sectionPos = $from.before(d);
-		                      break;
-		                    }
-		                  }
-		                  if (typeof sectionPos === 'number') {
-		                    const $pos = view.state.doc.resolve(sectionPos);
-		                    const parent = $pos.parent;
-		                    if (parent) {
-		                      const idx = $pos.index();
-		                      if (key === 'ArrowUp' && idx <= 0) return true;
-		                      if (key === 'ArrowDown' && idx >= parent.childCount - 1) return true;
-		                    }
-		                  }
-		                }
-		              }
-		            }
-		          }
-		        } catch {
-		          // ignore
-		        }
+			              // NOTE: We intentionally do not block plain ArrowUp/ArrowDown at parent boundaries.
+			              // View-mode navigation should follow the visual DFS order, including moving from the
+			              // first child to its parent (ArrowUp) and vice versa when applicable.
+			            }
+			          }
+			        } catch {
+			          // ignore
+			        }
 		          outlineDebug('editorProps.keydown', {
 			            key: event?.key || null,
 		            repeat: Boolean(event?.repeat),

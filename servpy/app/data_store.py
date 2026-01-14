@@ -1644,6 +1644,16 @@ def upsert_outline_section_content(
         doc_json = prev_doc
         sec = _find_outline_section_by_id(doc_json, sid)
         if sec is None:
+            # Important: do NOT resurrect deleted sections.
+            #
+            # We use `outline_section_meta` to track per-section seq. If a section has meta, it existed
+            # before (we've applied at least one content update). If it's now missing from docJson,
+            # it was deleted by a delete op. Late/duplicate upserts (e.g. delayed spellcheck/autosave)
+            # must be ignored instead of re-creating the section at the end of the article.
+            if meta_row:
+                return {'status': 'ignored', 'reason': 'missing', 'lastSeq': last_seq}
+
+            # New section: allow creating it from the first content upsert.
             sec = _ensure_outline_section_node(sid, heading=heading_json, body=body_json)
             if not isinstance(doc_json.get('content'), list):
                 doc_json['content'] = []

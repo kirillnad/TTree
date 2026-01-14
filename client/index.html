@@ -113,7 +113,18 @@
           </div>
 	          <div class="search-panel sidebar-section">
 	            <div class="search-panel__row">
-	              <div class="search-panel__input-wrap">
+	              <button
+	                id="sidebarSearchViewToggle"
+	                class="search-panel__toggle search-panel__toggle--view"
+	                type="button"
+	                title="Режим: фильтр списка статей"
+	                aria-label="Режим: фильтр списка статей"
+	                data-view="list"
+	              >
+	                <span>Поиск</span>
+	              </button>
+
+                <div class="search-panel__input-wrap">
 	                <input
 	                  id="searchInput"
 	                  type="text"
@@ -130,16 +141,6 @@
 	                  ×
 	                </button>
 	              </div>
-	              <button
-	                id="sidebarSearchViewToggle"
-	                class="search-panel__toggle search-panel__toggle--view"
-	                type="button"
-	                title="Режим: фильтр списка статей"
-	                aria-label="Режим: фильтр списка статей"
-	                data-view="list"
-	              >
-	                <span>Поиск</span>
-	              </button>
 	              <button
 	                id="ragOpenBtn"
 	                class="search-panel__toggle hidden"
