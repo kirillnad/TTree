@@ -6,6 +6,48 @@
 import { state } from '../state.js';
 import { refs } from '../refs.js';
 
+function getLineHeightPx(el) {
+  try {
+    const lh = window.getComputedStyle(el).lineHeight;
+    const n = Number.parseFloat(lh);
+    if (Number.isFinite(n) && n > 0) return n;
+  } catch {
+    // ignore
+  }
+  return 24;
+}
+
+function scrollBlockWithMargins(targetEl, { behavior = 'smooth', topLines = 2, bottomLines = 5 } = {}) {
+  if (!targetEl) return;
+  const container = refs.blocksContainer || document.scrollingElement || document.documentElement;
+  if (!container) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const rect = targetEl.getBoundingClientRect();
+  const lineHeight = getLineHeightPx(container);
+  const topMargin = Math.round(lineHeight * topLines);
+  const bottomMargin = Math.round(lineHeight * bottomLines);
+
+  let delta = 0;
+  const topLimit = containerRect.top + topMargin;
+  const bottomLimit = containerRect.bottom - bottomMargin;
+
+  if (rect.bottom > bottomLimit) {
+    delta = rect.bottom - bottomLimit;
+  } else if (rect.top < topLimit) {
+    delta = rect.top - topLimit;
+  } else {
+    return;
+  }
+
+  // blocksContainer is the primary scroller; fallback to window for document scrolling.
+  if (container === document.body || container === document.documentElement || container === document.scrollingElement) {
+    window.scrollBy({ top: delta, behavior });
+    return;
+  }
+  container.scrollBy({ top: delta, behavior });
+}
+
 export function flattenVisible(blocks = [], acc = []) {
   (blocks || []).forEach((block) => {
     acc.push(block);
@@ -63,7 +105,7 @@ export function updateSelectionUi({ scrollIntoView = false, scrollBehavior = 'sm
   if (scrollIntoView && state.mode === 'view' && state.currentBlockId) {
     const currentEl = document.querySelector(`.block[data-block-id="${state.currentBlockId}"]`);
     if (currentEl) {
-      currentEl.scrollIntoView({ behavior: scrollBehavior || 'smooth', block: 'nearest' });
+      scrollBlockWithMargins(currentEl, { behavior: scrollBehavior || 'smooth', topLines: 2, bottomLines: 5 });
     }
   }
 }
@@ -135,4 +177,3 @@ export function extendSelection(offset) {
   }
   updateSelectionUi({ scrollIntoView: state.mode === 'view' });
 }
-

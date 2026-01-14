@@ -13988,16 +13988,16 @@ async function mountOutlineEditor() {
 		      } catch {
 		        // ignore
 		      }
-		      // View-mode UX: keep some content visible below the selected block so navigation doesn't "hit the bottom".
-		      try {
-		        const st = outlineEditModeKey?.getState?.(pmState) || null;
-		        const editingSectionId = st?.editingSectionId || null;
-		        if (!editingSectionId && prevSectionId && prevSectionId !== sectionId) {
-		          keepOutlineSelectionContextBelow(editor, { lines: 4 });
-		        }
-		      } catch {
-		        // ignore
-		      }
+			      // View-mode UX: keep some content visible below the caret so navigation doesn't "hit the bottom".
+			      try {
+			        const st = outlineEditModeKey?.getState?.(pmState) || null;
+			        const editingSectionId = st?.editingSectionId || null;
+			        if (!editingSectionId) {
+			          keepOutlineSelectionContextBelow(editor, { lines: 5 });
+			        }
+			      } catch {
+			        // ignore
+			      }
 		    },
 			  });
 			  if (createStart) perfLog('new Editor()', { ms: Math.round(performance.now() - createStart) });
