@@ -8351,10 +8351,10 @@ async function mountOutlineEditor() {
         return true;
       };
 
-      const mergeSectionIntoPrevious = (pmState, dispatch, sectionPos) => {
-        const sectionNode = pmState.doc.nodeAt(sectionPos);
-        if (!sectionNode) return false;
-        const sid = String(sectionNode.attrs?.id || '').trim();
+	      const mergeSectionIntoPrevious = (pmState, dispatch, sectionPos) => {
+	        const sectionNode = pmState.doc.nodeAt(sectionPos);
+	        if (!sectionNode) return false;
+	        const sid = String(sectionNode.attrs?.id || '').trim();
         const $pos = pmState.doc.resolve(sectionPos);
         const idx = $pos.index();
         const parent = $pos.parent;
@@ -8373,10 +8373,11 @@ async function mountOutlineEditor() {
           dispatch(tr.scrollIntoView());
           return true;
         }
-        const schema = tr.doc.type.schema;
-        const prevHeading = prevSection.child(0);
-        const prevBody = prevSection.child(1);
-        const prevChildren = prevSection.child(2);
+	        const schema = tr.doc.type.schema;
+	        const prevHeading = prevSection.child(0);
+	        const prevBody = prevSection.child(1);
+	        const prevChildren = prevSection.child(2);
+	        const prevBodyContentSize = Number(prevBody?.content?.size || 0) || 0;
 
         // При merge заголовок текущей секции не должен пропадать:
         // переносим его в body предыдущей секции отдельным абзацем (если не пустой),
@@ -8400,21 +8401,24 @@ async function mountOutlineEditor() {
             schema.nodes.outlineChildren.create({}, mergedChildrenContent),
           ],
         );
-        tr = tr.replaceWith(prevStart, prevStart + prevSection.nodeSize, newPrevSection);
-        const newPrev = tr.doc.nodeAt(prevStart);
-        if (newPrev) {
-          const heading = newPrev.child(0);
-          const body = newPrev.child(1);
-          const bodyStart = prevStart + 1 + heading.nodeSize;
-          const bodyEnd = bodyStart + body.nodeSize - 1;
-          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
-        }
-        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-        dispatch(tr.scrollIntoView());
-        return true;
-      };
+	        tr = tr.replaceWith(prevStart, prevStart + prevSection.nodeSize, newPrevSection);
+	        const newPrev = tr.doc.nodeAt(prevStart);
+	        if (newPrev) {
+	          const heading = newPrev.child(0);
+	          const body = newPrev.child(1);
+	          const bodyStart = prevStart + 1 + heading.nodeSize;
+	          // Cursor should stay before the same word (i.e. at the start of the inserted heading paragraph),
+	          // not jump to the end of the merged body.
+	          const appendedStart = bodyStart + 1 + prevBodyContentSize;
+	          const inside = Math.min(tr.doc.content.size, Math.max(0, appendedStart + 1));
+	          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(inside), 1));
+	        }
+	        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	        dispatch(tr.scrollIntoView());
+	        return true;
+	      };
 
-      const mergeSectionIntoParentBody = (pmState, dispatch, sectionPos) => {
+	      const mergeSectionIntoParentBody = (pmState, dispatch, sectionPos) => {
         const sectionNode = pmState.doc.nodeAt(sectionPos);
         if (!sectionNode) return false;
         const sid = String(sectionNode.attrs?.id || '').trim();
@@ -8455,9 +8459,10 @@ async function mountOutlineEditor() {
         // 2) Переносим содержимое секции в body родителя:
         //    - заголовок секции превращаем в отдельный paragraph (если не пустой),
         //    - затем добавляем body секции.
-        const parentHeading = parentAfter.child(0);
-        const parentBody = parentAfter.child(1);
-        const parentChildren = parentAfter.child(2);
+	        const parentHeading = parentAfter.child(0);
+	        const parentBody = parentAfter.child(1);
+	        const parentChildren = parentAfter.child(2);
+	        const parentBodyContentSize = Number(parentBody?.content?.size || 0) || 0;
 
         const extraBlocks = [];
         const headingText = (childHeading?.textContent || '').replace(/\u00a0/g, ' ').trim();
@@ -8484,21 +8489,22 @@ async function mountOutlineEditor() {
           ],
         );
 
-        tr = tr.replaceWith(parentPos, parentPos + parentAfter.nodeSize, newParentSection);
+	        tr = tr.replaceWith(parentPos, parentPos + parentAfter.nodeSize, newParentSection);
 
-        // 4) Ставим курсор в конец body родителя.
-        const parentFinal = tr.doc.nodeAt(parentPos);
-        if (parentFinal) {
-          const heading = parentFinal.child(0);
-          const body = parentFinal.child(1);
-          const bodyStart = parentPos + 1 + heading.nodeSize;
-          const bodyEnd = bodyStart + body.nodeSize - 1;
-          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(bodyEnd), -1));
-        }
-        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
-        dispatch(tr.scrollIntoView());
-        return true;
-      };
+	        // 4) Ставим курсор в начало вставленного фрагмента (где был курсор до merge),
+	        // а не в конец тела.
+	        const parentFinal = tr.doc.nodeAt(parentPos);
+	        if (parentFinal) {
+	          const heading = parentFinal.child(0);
+	          const bodyStart = parentPos + 1 + heading.nodeSize;
+	          const appendedStart = bodyStart + 1 + parentBodyContentSize;
+	          const inside = Math.min(tr.doc.content.size, Math.max(0, appendedStart + 1));
+	          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(inside), 1));
+	        }
+	        tr = tr.setMeta(OUTLINE_ALLOW_META, true);
+	        dispatch(tr.scrollIntoView());
+	        return true;
+	      };
 
       const mergeSectionWithNextSibling = (pmState, dispatch, sectionPos) => {
         const sectionNode = pmState.doc.nodeAt(sectionPos);
