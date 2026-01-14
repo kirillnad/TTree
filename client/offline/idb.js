@@ -5,6 +5,18 @@ function reqToPromise(req) {
   });
 }
 
+function makeIdbError(kind, err, extra = {}) {
+  const e = err instanceof Error ? err : new Error(String(err?.message || err || 'IndexedDB error'));
+  try {
+    e.idbKind = String(kind || 'unknown');
+    e.cause = err;
+    e.extra = extra;
+  } catch {
+    // ignore
+  }
+  return e;
+}
+
 function txDone(tx) {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -43,7 +55,17 @@ export async function openOfflineIdb({ userKey } = {}) {
   const key = userKey || 'anon';
   rememberKnownUserKey(key);
   const name = dbNameForUser(key);
+  if (typeof indexedDB === 'undefined') {
+    const err = new Error('IndexedDB is not available in this browser');
+    err.name = 'IDBNotSupportedError';
+    throw makeIdbError('no_idb', err, { name });
+  }
   const req = indexedDB.open(name, DB_VERSION);
+  const OPEN_TIMEOUT_MS = 3000;
+  let blocked = false;
+  req.onblocked = () => {
+    blocked = true;
+  };
   req.onupgradeneeded = () => {
     const db = req.result;
 
@@ -119,7 +141,25 @@ export async function openOfflineIdb({ userKey } = {}) {
     }
   };
 
-  const db = await reqToPromise(req);
+  const db = await Promise.race([
+    reqToPromise(req),
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        const err = new Error(blocked ? 'IndexedDB upgrade is blocked by another tab' : 'IndexedDB open timeout');
+        err.name = blocked ? 'IDBBlockedError' : 'IDBTimeoutError';
+        reject(makeIdbError(blocked ? 'blocked' : 'timeout', err, { name }));
+      }, OPEN_TIMEOUT_MS);
+    }),
+  ]).catch((err) => {
+    // Normalize common IDB errors with a stable kind.
+    const n = String(err?.name || '');
+    if (n === 'IDBBlockedError') throw err;
+    if (n === 'IDBTimeoutError') throw err;
+    if (n === 'SecurityError') throw makeIdbError('security', err, { name });
+    if (n === 'InvalidStateError') throw makeIdbError('invalid_state', err, { name });
+    if (n === 'QuotaExceededError') throw makeIdbError('quota', err, { name });
+    throw makeIdbError('unknown', err, { name });
+  });
   try {
     db.onversionchange = () => {
       try {
@@ -132,6 +172,18 @@ export async function openOfflineIdb({ userKey } = {}) {
     // ignore
   }
   return db;
+}
+
+export async function deleteOfflineIdb({ userKey } = {}) {
+  const key = String(userKey || 'anon').trim() || 'anon';
+  const name = dbNameForUser(key);
+  if (typeof indexedDB === 'undefined') return;
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(name);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error || new Error('IndexedDB delete failed'));
+    req.onblocked = () => reject(new Error('IndexedDB delete blocked by another tab'));
+  });
 }
 
 export async function idbGet(db, storeName, key) {

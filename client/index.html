@@ -239,24 +239,32 @@
 	                …
 	              </button>
 		            <span class="sidebar-version" id="sidebarVersionLabel">v …</span>
-		            <div id="syncMenu" class="article-menu hidden sidebar-sync-menu" role="menu">
-		              <div class="sidebar-user-menu__item" aria-disabled="true">
-		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⭮</span>
-		                <span class="sidebar-user-menu-label" id="syncMenuStatusLabel">Статус: —</span>
-		              </div>
-		              <div class="sidebar-user-menu__item" aria-disabled="true">
-		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⋯</span>
-		                <span class="sidebar-user-menu-label" id="syncMenuOutboxLabel">Очередь: —</span>
-		              </div>
+			            <div id="syncMenu" class="article-menu hidden sidebar-sync-menu" role="menu">
+			              <div class="sidebar-user-menu__item" aria-disabled="true">
+			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⭮</span>
+			                <span class="sidebar-user-menu-label" id="syncMenuStatusLabel">Статус: —</span>
+			              </div>
+			              <div class="sidebar-user-menu__item" aria-disabled="true">
+			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">≡</span>
+			                <span class="sidebar-user-menu-label" id="syncMenuArticlesLabel">Статьи: —</span>
+			              </div>
+			              <div class="sidebar-user-menu__item" aria-disabled="true">
+			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⋯</span>
+			                <span class="sidebar-user-menu-label" id="syncMenuOutboxLabel">Очередь: —</span>
+			              </div>
 		              <div id="offlineStatusItem" class="sidebar-user-menu__item" aria-disabled="true">
 		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">⭳</span>
 		                <span class="sidebar-user-menu-label" id="offlineStatusLabel">Оффлайн: —</span>
 		              </div>
-		              <button id="offlineFetchBtn" class="menu-item hidden" type="button" role="menuitem">
-		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">&#xE896;</span>
-		                <span class="sidebar-user-menu-label">Докачать сейчас</span>
-		              </button>
-		            </div>
+			              <button id="offlineFetchBtn" class="menu-item hidden" type="button" role="menuitem">
+			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">&#xE896;</span>
+			                <span class="sidebar-user-menu-label">Докачать сейчас</span>
+			              </button>
+			              <button id="offlineRepairBtn" class="menu-item hidden" type="button" role="menuitem">
+			                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--glyph" aria-hidden="true">↻</span>
+			                <span class="sidebar-user-menu-label">Перезагрузить</span>
+			              </button>
+			            </div>
 		            <div id="userMenu" class="article-menu hidden sidebar-user-menu" role="menu">
 		              <div class="sidebar-user-menu__item" aria-disabled="true">
 		                <span class="sidebar-user-menu-icon sidebar-user-menu-icon--user" aria-hidden="true">

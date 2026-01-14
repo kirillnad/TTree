@@ -58,6 +58,8 @@ import {
   outdentArticleApi,
   createTelegramLinkToken,
 } from './api.js';
+import { getCachedArticlesIndex } from './offline/cache.js';
+import { resetOfflineCacheForCurrentUser } from './offline/index.js';
 import { showToast, showPersistentToast, hideToast } from './toast.js';
 import { insertHtmlAtCaret, htmlToLines } from './utils.js';
 import {
@@ -599,7 +601,7 @@ export function attachEvents() {
   };
   const refreshOfflineStatusOnce = async () => {
     if (offlineStatusInFlight) return;
-    if (!refs.sidebarSyncStatusPill && !refs.offlineStatusLabel && !refs.offlineFetchBtn) return;
+    if (!refs.sidebarSyncStatusPill && !refs.offlineStatusLabel && !refs.offlineFetchBtn && !refs.offlineRepairBtn) return;
     offlineStatusInFlight = true;
     try {
       if (shouldSendOfflineUiLog()) {
@@ -625,7 +627,10 @@ export function attachEvents() {
       const setBtnState = (stateId, title) => {
         if (refs.sidebarSyncStatusPill) {
           refs.sidebarSyncStatusPill.dataset.offline = stateId;
-          if (title) refs.sidebarSyncStatusPill.title = title;
+          if (title) {
+            refs.sidebarSyncStatusPill.dataset.offlineTitle = title;
+            refs.sidebarSyncStatusPill.title = title;
+          }
         }
       };
 
@@ -634,6 +639,7 @@ export function attachEvents() {
         const label = 'Требуется вход';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
         setBtnState('auth', `Аккаунт · ${label}`);
         return;
       }
@@ -650,6 +656,7 @@ export function attachEvents() {
         const label = isOnline ? 'Нет доступа к серверу' : 'Нет интернета';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
         setBtnState('off', `Аккаунт · ${label}`);
         if (shouldSendOfflineUiLog()) {
           postClientLog('offline.ui.not_ready', {
@@ -698,6 +705,7 @@ export function attachEvents() {
           }
           if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: инициализация…';
           if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+          if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
           setBtnState('loading', 'Аккаунт · Оффлайн: инициализация…');
           if (shouldSendOfflineUiLog()) {
             postClientLog('offline.ui.not_ready', {
@@ -720,6 +728,18 @@ export function attachEvents() {
         const label = errText ? `Оффлайн: недоступно (${errText})` : 'Оффлайн: недоступно';
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = label;
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        if (refs.offlineRepairBtn) {
+          const btn = refs.offlineRepairBtn;
+          const labelEl = btn.querySelector('.sidebar-user-menu-label');
+          btn.classList.remove('hidden');
+          if (labelEl) {
+            if (initStatus === 'quota') labelEl.textContent = 'Освободить место';
+            else if (initStatus === 'blocked') labelEl.textContent = 'Перезагрузить (закрыть другие вкладки)';
+            else if (initStatus === 'timeout') labelEl.textContent = 'Перезагрузить';
+            else if (initStatus === 'unavailable') labelEl.textContent = 'Подробнее';
+            else labelEl.textContent = 'Сбросить оффлайн‑кэш';
+          }
+        }
         setBtnState('off', `Аккаунт · ${label}`);
         if (shouldSendOfflineUiLog()) {
           postClientLog('offline.ui.not_ready', {
@@ -761,6 +781,7 @@ export function attachEvents() {
       if (!summary) {
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн: …';
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.remove('hidden');
+        if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
         setBtnState('loading', 'Аккаунт · Оффлайн: …');
         if (shouldSendOfflineUiLog()) {
           postClientLog('offline.ui.summary_pending', {
@@ -792,6 +813,13 @@ export function attachEvents() {
       const missingArticles = Math.max(0, articlesTotal - articlesWithDoc);
       const missingMedia = Math.max(0, mediaTotal - mediaOk);
 
+      try {
+        state.offlineArticlesTotal = Number.isFinite(articlesTotal) ? Math.max(0, articlesTotal) : null;
+        state.offlineArticlesWithDoc = Number.isFinite(articlesWithDoc) ? Math.max(0, articlesWithDoc) : null;
+      } catch {
+        // ignore
+      }
+
       const needsLoginForMedia =
         missingMedia > 0 &&
         mediaErrorKinds &&
@@ -808,6 +836,7 @@ export function attachEvents() {
       if (ok) {
         if (refs.offlineStatusLabel) refs.offlineStatusLabel.textContent = 'Оффлайн режим OK';
         if (refs.offlineFetchBtn) refs.offlineFetchBtn.classList.add('hidden');
+        if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
         setBtnState('ok', 'Аккаунт · Оффлайн OK');
       } else {
         const parts = [];
@@ -858,6 +887,7 @@ export function attachEvents() {
             // ignore
           }
         }
+        if (refs.offlineRepairBtn) refs.offlineRepairBtn.classList.add('hidden');
         setBtnState('loading', `Аккаунт · ${label}`);
       }
     } finally {
@@ -899,6 +929,11 @@ export function attachEvents() {
           outboxN = null;
         }
       }
+      try {
+        state.outboxCount = outboxN == null ? null : Number(outboxN) || 0;
+      } catch {
+        // ignore
+      }
 
       const sync = outboxN != null && outboxN > 0 ? 'dirty' : 'clean';
       let text = '';
@@ -909,7 +944,8 @@ export function attachEvents() {
       pill.dataset.net = net;
       pill.dataset.sync = sync;
       pill.textContent = text;
-      pill.title =
+      const offlineTitle = String(pill.dataset.offlineTitle || '').trim();
+      const syncTitle =
         outboxN != null && outboxN > 0
           ? `В очереди изменений: ${outboxN}`
           : net === 'online'
@@ -917,10 +953,23 @@ export function attachEvents() {
             : net === 'auth'
               ? 'Требуется вход'
               : 'Оффлайн: изменений нет';
+      pill.title = offlineTitle ? `${syncTitle} · ${offlineTitle}` : syncTitle;
 
       if (refs.syncMenuStatusLabel) {
         refs.syncMenuStatusLabel.textContent =
           net === 'online' ? 'Статус: онлайн' : net === 'auth' ? 'Статус: требуется вход' : 'Статус: оффлайн';
+      }
+      if (refs.syncMenuArticlesLabel) {
+        const have = state.offlineArticlesWithDoc;
+        const total = state.offlineArticlesTotal;
+        if (net === 'auth') {
+          refs.syncMenuArticlesLabel.textContent = 'Статьи: требуется вход';
+        } else if (Number.isFinite(total) && total > 0 && Number.isFinite(have)) {
+          const pct = Math.max(0, Math.min(100, Math.round((Number(have) / Number(total)) * 100)));
+          refs.syncMenuArticlesLabel.textContent = `Статьи: ${have}/${total} (${pct}%)`;
+        } else {
+          refs.syncMenuArticlesLabel.textContent = 'Статьи: —';
+        }
       }
       if (refs.syncMenuOutboxLabel) {
         refs.syncMenuOutboxLabel.textContent =
@@ -1018,6 +1067,41 @@ export function attachEvents() {
         refreshOfflineStatusOnce().catch(() => {});
       } catch (err) {
         showToast(err?.message || 'Не удалось запустить докачку');
+      }
+    });
+  }
+
+  if (refs.offlineRepairBtn) {
+    refs.offlineRepairBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const initStatus = String(state.offlineInitStatus || '').trim();
+      if (initStatus === 'blocked' || initStatus === 'timeout') {
+        try {
+          window.location.reload();
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      if (initStatus === 'quota') {
+        showToast('Мало места для локального кэша. Освободите место в браузере/ОС или очистите кэш картинок.');
+        return;
+      }
+      if (initStatus === 'unavailable') {
+        showToast(String(state.offlineInitError || 'Оффлайн недоступен в этом браузере'));
+        return;
+      }
+      try {
+        showToast('Сбрасываем оффлайн‑кэш…');
+        await resetOfflineCacheForCurrentUser();
+      } catch {
+        // ignore
+      }
+      try {
+        window.location.reload();
+      } catch {
+        // ignore
       }
     });
   }

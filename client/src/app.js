@@ -3,6 +3,9 @@ import { attachEvents } from '../events.js';
 import { initAuth, bootstrapAuth } from '../auth.js';
 import { initSidebarStateFromStorage } from '../sidebar.js';
 import { refs } from '../refs.js';
+import { state } from '../state.js';
+import { showToast } from '../toast.js';
+import { showConfirm } from '../modal.js';
 
 // Used by `boot.js` to detect "slow boot" (app module didn't start quickly).
 try {
@@ -72,6 +75,272 @@ function logClient(kind, data) {
   } catch {
     // ignore logging errors
   }
+}
+
+function withTimeout(promise, ms) {
+  const t = typeof ms === 'number' ? Math.max(0, Math.floor(ms)) : 0;
+  if (!t) return Promise.resolve().then(() => promise);
+  let timer = null;
+  return Promise.race([
+    Promise.resolve().then(() => promise),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('timeout')), t);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+async function pingServer({ timeoutMs = 2500 } = {}) {
+  let controller = null;
+  let timer = null;
+  try {
+    if (typeof AbortController !== 'undefined') {
+      controller = new AbortController();
+      timer = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }, Math.max(0, Math.floor(timeoutMs)));
+    }
+    const resp = await fetch('/api/auth/me', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller ? controller.signal : undefined,
+    });
+    return { ok: resp.ok, status: resp.status };
+  } catch (err) {
+    return { ok: false, status: 0, error: String(err?.message || err || '') };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function initResumeRecoveryWatchdog() {
+  // Goal: after long idle/sleep, users can get into a "half-alive" state:
+  // - clicks don't trigger requests
+  // - soft reload doesn't help
+  // This adds:
+  // - lifecycle logging (optional)
+  // - a gentle prompt to reload on "resume after long idle" if server ping fails
+  let lastInteractionAt = Date.now();
+  let lastPromptAt = 0;
+  let wasFrozenAt = 0;
+
+  const recordInteraction = () => {
+    lastInteractionAt = Date.now();
+  };
+  ['pointerdown', 'keydown', 'focus', 'touchstart', 'mousedown'].forEach((evt) => {
+    try {
+      window.addEventListener(evt, recordInteraction, true);
+    } catch {
+      // ignore
+    }
+  });
+
+  const logLife = (kind, extra = {}) => {
+    logClient(kind, {
+      t: new Date().toISOString(),
+      path: window.location.pathname,
+      hidden: Boolean(document.hidden),
+      onLine: (() => {
+        try {
+          return navigator?.onLine !== false;
+        } catch {
+          return null;
+        }
+      })(),
+      serverStatus: String(state.serverStatus || ''),
+      offlineReady: Boolean(state.offlineReady),
+      articlesIndexLen: Array.isArray(state.articlesIndex) ? state.articlesIndex.length : null,
+      ...extra,
+    });
+  };
+
+  const maybePromptReload = async (reason) => {
+    const now = Date.now();
+    if (now - lastPromptAt < 60_000) return;
+    lastPromptAt = now;
+    logLife('app.resume_check.start', { reason });
+
+    const ping = await pingServer({ timeoutMs: 2500 });
+    logLife('app.resume_check.done', { reason, ping });
+
+    // If the server is reachable, do nothing.
+    if (ping && ping.ok) return;
+
+    // If browser says offline, do not spam a reload prompt.
+    try {
+      if (navigator?.onLine === false) {
+        showToast('Нет интернета. Оффлайн режим должен работать после докачки.');
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // If we are in "auth required", the existing auth flow will handle it.
+    if (ping && (ping.status === 401 || ping.status === 403)) return;
+
+    // User-facing: suggest a reload.
+    const action = await showConfirm({
+      title: 'Приложение могло “уснуть”',
+      message:
+        'После долгого бездействия браузер может заморозить вкладку. Если клики/обновление не работают — перезагрузите приложение.',
+      confirmText: 'Перезагрузить',
+      cancelText: 'Позже',
+    }).catch(() => false);
+    if (action) {
+      try {
+        window.location.reload();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const onResume = (src) => {
+    const now = Date.now();
+    const idleMs = now - (lastInteractionAt || now);
+    const frozenMs = wasFrozenAt ? now - wasFrozenAt : 0;
+    logLife('app.lifecycle', { src, idleMs, frozenMs });
+    // Only act on long inactivity (>= 2h) or after a freeze event.
+    if (idleMs < 2 * 60 * 60 * 1000 && !wasFrozenAt) return;
+    if (document.hidden) return;
+    maybePromptReload(src).catch(() => {});
+  };
+
+  try {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) onResume('visibility');
+    });
+  } catch {
+    // ignore
+  }
+  try {
+    window.addEventListener('pageshow', () => onResume('pageshow'));
+    window.addEventListener('pagehide', () => logLife('app.lifecycle', { src: 'pagehide' }));
+  } catch {
+    // ignore
+  }
+  try {
+    document.addEventListener('freeze', () => {
+      wasFrozenAt = Date.now();
+      logLife('app.lifecycle', { src: 'freeze' });
+    });
+    document.addEventListener('resume', () => onResume('resume'));
+  } catch {
+    // ignore
+  }
+}
+
+function initWakeLockManager() {
+  // Screen Wake Lock API can help prevent the display from turning off while the user edits
+  // (or while there are unsynced changes), but browsers may still suspend the page in background.
+  // We request it only after a user gesture, and only when it makes sense.
+  const supported = Boolean(navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function');
+  if (!supported) return;
+
+  let sentinel = null;
+  let hasUserGesture = false;
+  let lastAttemptAt = 0;
+
+  const log = (kind, data) => {
+    logClient(kind, {
+      t: new Date().toISOString(),
+      ...data,
+    });
+  };
+
+  const shouldHold = () => {
+    try {
+      if (document.hidden) return false;
+    } catch {
+      // ignore
+    }
+    const outboxN = (() => {
+      try {
+        return state.outboxCount == null ? 0 : Number(state.outboxCount) || 0;
+      } catch {
+        return 0;
+      }
+    })();
+    return state.mode === 'edit' || Boolean(state.isOutlineEditing) || outboxN > 0;
+  };
+
+  const release = async (reason) => {
+    if (!sentinel) return;
+    try {
+      await sentinel.release();
+    } catch {
+      // ignore
+    } finally {
+      sentinel = null;
+      log('wake_lock.release', { reason });
+    }
+  };
+
+  const ensure = async (reason) => {
+    if (!shouldHold()) {
+      await release(`not_needed:${reason}`);
+      return;
+    }
+    if (!hasUserGesture) return;
+    if (sentinel) return;
+
+    const now = Date.now();
+    if (now - lastAttemptAt < 1500) return;
+    lastAttemptAt = now;
+
+    try {
+      sentinel = await navigator.wakeLock.request('screen');
+      log('wake_lock.acquired', { reason });
+      try {
+        sentinel.addEventListener('release', () => {
+          sentinel = null;
+          log('wake_lock.released', { reason: 'event' });
+        });
+      } catch {
+        // ignore
+      }
+    } catch (err) {
+      sentinel = null;
+      log('wake_lock.failed', { reason, err: String(err?.name || err?.message || err || '') });
+    }
+  };
+
+  const onUserGesture = () => {
+    hasUserGesture = true;
+    ensure('gesture').catch(() => {});
+  };
+
+  ['pointerdown', 'keydown', 'touchstart', 'mousedown'].forEach((evt) => {
+    try {
+      window.addEventListener(evt, onUserGesture, { capture: true, passive: true });
+    } catch {
+      // ignore
+    }
+  });
+
+  try {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        release('hidden').catch(() => {});
+      } else {
+        ensure('visible').catch(() => {});
+      }
+    });
+  } catch {
+    // ignore
+  }
+
+  // Poll: state changes (edit/outbox) aren't centrally observable here, keep it simple.
+  setInterval(() => {
+    ensure('tick').catch(() => {});
+  }, 2000);
 }
 
 function runOnIdle(fn, { timeout = 3000, fallbackDelay = 1200 } = {}) {
@@ -257,6 +526,8 @@ function startApp() {
     ua: navigator.userAgent,
   });
   registerUploadsServiceWorker();
+  initResumeRecoveryWatchdog();
+  initWakeLockManager();
   initRouting();
   attachEvents();
   initSidebarStateFromStorage();

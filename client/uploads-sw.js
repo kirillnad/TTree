@@ -3,8 +3,8 @@
 // - APP_CACHE: app shell (HTML/CSS/JS/icons) for offline startup; bump APP_VERSION to force client refresh.
 // (Manual bump note) This file is the single source of truth for app shell cache-busting.
 const UPLOADS_CACHE = 'u1';
-const APP_VERSION = 596;
-const APP_BUILD = 'v5h4t7i';
+const APP_VERSION = 624;
+const APP_BUILD = '403c4lgb';
 const APP_CACHE = `a${APP_VERSION}`;
   
 const APP_SHELL_URLS = [

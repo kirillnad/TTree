@@ -3,6 +3,10 @@ import { openOfflineIdb } from './idb.js';
 let dbPromise = null;
 let dbUserKey = null;
 
+export function getOfflineDbUserKey() {
+  return dbUserKey;
+}
+
 export async function getOfflineDb({ userKey } = {}) {
   let nextKey = String(userKey || '').trim();
   // Prevent creating `memus_offline_v1_anon` when we already know the real user.

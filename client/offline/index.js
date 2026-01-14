@@ -1,7 +1,7 @@
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
-import { getOfflineDb } from './storage.js';
-import { idbPing } from './idb.js';
+import { getOfflineDb, getOfflineDbUserKey } from './storage.js';
+import { idbPing, deleteOfflineIdb } from './idb.js';
 
 let initPromise = null;
 let currentUserKey = null;
@@ -114,6 +114,52 @@ function buildUserKey(user) {
   return (user && (user.id || user.username)) || 'anon';
 }
 
+function classifyOfflineInitError(err) {
+  const kind = String(err?.idbKind || '').trim();
+  const name = String(err?.name || '').trim();
+  const msg = String(err?.message || '').trim();
+  if (kind === 'no_idb' || name === 'IDBNotSupportedError') {
+    return {
+      status: 'unavailable',
+      message: 'Локальная база недоступна в этом браузере (нет IndexedDB). Оффлайн не работает.',
+    };
+  }
+  if (kind === 'security' || name === 'SecurityError') {
+    return {
+      status: 'unavailable',
+      message: 'Локальная база заблокирована настройками браузера/приватным режимом. Оффлайн не работает.',
+    };
+  }
+  if (kind === 'blocked' || name === 'IDBBlockedError') {
+    return {
+      status: 'blocked',
+      message: 'Локальная база занята другой вкладкой Memus. Закройте другие вкладки и перезагрузите страницу.',
+    };
+  }
+  if (kind === 'timeout' || name === 'IDBTimeoutError') {
+    return {
+      status: 'timeout',
+      message: 'Локальная база не отвечает (вкладка могла “уснуть”). Перезагрузите страницу.',
+    };
+  }
+  if (kind === 'quota' || name === 'QuotaExceededError') {
+    return {
+      status: 'quota',
+      message: 'Недостаточно места для локального кэша. Очистите кэш картинок или освободите место в браузере.',
+    };
+  }
+  if (kind === 'invalid_state' || name === 'InvalidStateError') {
+    return {
+      status: 'error',
+      message: 'Локальная база повреждена или недоступна. Попробуйте перезагрузить страницу или сбросить оффлайн‑кэш.',
+    };
+  }
+  if (msg) {
+    return { status: 'error', message: `Локальная база недоступна: ${msg}` };
+  }
+  return { status: 'error', message: 'Локальная база недоступна.' };
+}
+
 export async function initOfflineForUser(user) {
   const key = buildUserKey(user);
   if (initPromise && currentUserKey === key) return initPromise;
@@ -193,14 +239,15 @@ export async function initOfflineForUser(user) {
       return db;
     } catch (err) {
       state.offlineReady = false;
-      state.offlineInitStatus = 'error';
+      const classified = classifyOfflineInitError(err);
+      state.offlineInitStatus = classified.status || 'error';
       state.offlineInitStartedAt = null;
       try {
         console.error('[offline] init failed', err);
       } catch {
         // ignore
       }
-      const msg = err?.message ? `Offline база недоступна: ${err.message}` : 'Offline база недоступна в этом браузере';
+      const msg = classified.message;
       state.offlineInitError = msg;
       showToast(msg);
       try {
@@ -232,4 +279,9 @@ export async function initOfflineForUser(user) {
 export async function getOfflineDbReady() {
   if (initPromise) return initPromise;
   return initOfflineForUser(state.currentUser);
+}
+
+export async function resetOfflineCacheForCurrentUser() {
+  const key = getOfflineDbUserKey() || buildUserKey(state.currentUser);
+  await deleteOfflineIdb({ userKey: key }).catch(() => {});
 }

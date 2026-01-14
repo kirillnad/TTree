@@ -2,7 +2,7 @@
 
 import { state } from '../state.js';
 import { refs } from '../refs.js';
-import { fetchArticlesIndex, createArticle as createArticleApi } from '../api.js';
+import { fetchArticlesIndex, createArticle as createArticleApi, moveArticleTree } from '../api.js';
 import { showToast } from '../toast.js';
 import { showPrompt } from '../modal.js';
 import { navigate, routing } from '../routing.js';
@@ -366,9 +366,11 @@ export async function createArticle() {
   try {
     let title = '';
     let parentId = null;
-    const candidateId = String(state.sidebarSelectedArticleId || '').trim();
+    const candidateId = String(state.sidebarSelectedArticleId || state.articleId || state.listSelectedArticleId || '').trim();
     const candidate =
-      candidateId && candidateId !== 'inbox' ? state.articlesIndex.find((a) => String(a?.id || '') === candidateId) : null;
+      candidateId && candidateId !== 'inbox' && candidateId !== 'RAG'
+        ? state.articlesIndex.find((a) => String(a?.id || '') === candidateId)
+        : null;
     const candidateTitle = candidate ? String(candidate.title || '').trim() : '';
     try {
       const result = await showPrompt({
@@ -393,7 +395,17 @@ export async function createArticle() {
     title = (title || '').trim();
     if (!title) return;
 
-    const article = await createArticleApi(title, { parentId });
+    let article = await createArticleApi(title, { parentId });
+    // Safety: if the client requested a parent but the create endpoint didn't apply it
+    // (or the client is offline and returned a local draft), fix nesting via move-tree.
+    if (parentId && article?.id && navigator.onLine && String(article.parentId || '') !== String(parentId)) {
+      try {
+        const moved = await moveArticleTree(article.id, { parentId, placement: 'inside' });
+        if (moved && moved.id) article = moved;
+      } catch {
+        // ignore: offline or server rejected; article still exists at root
+      }
+    }
     upsertArticleIndex(article);
     state.pendingEditBlockId = article?.blocks?.[0]?.id || null;
     state.scrollTargetBlockId = state.pendingEditBlockId;

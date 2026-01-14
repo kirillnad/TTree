@@ -270,10 +270,29 @@ export function fetchArticlesIndex() {
         }
         return index;
       })
-      .catch(() => {
+      .catch((err) => {
         cacheSettled = true;
         if (cacheTimer) clearTimeout(cacheTimer);
         cacheTimer = null;
+        // If offline DB was ready but the index read failed, surface it as an offline DB problem
+        // so the UI can instruct the user instead of silently showing "Нет статей".
+        try {
+          if (state.offlineReady) {
+            const kind = String(err?.idbKind || err?.name || '').toLowerCase();
+            if (kind.includes('timeout')) {
+              state.offlineInitStatus = 'timeout';
+              state.offlineInitError = 'Локальная база не отвечает (таймаут чтения списка статей). Перезагрузите страницу.';
+            } else if (kind.includes('quota')) {
+              state.offlineInitStatus = 'quota';
+              state.offlineInitError = 'Недостаточно места для локального кэша. Очистите кэш картинок или освободите место.';
+            } else {
+              state.offlineInitStatus = 'error';
+              state.offlineInitError = 'Не удалось прочитать локальный список статей. Перезагрузите страницу или сбросьте оффлайн‑кэш.';
+            }
+          }
+        } catch {
+          // ignore
+        }
         return null;
       });
 

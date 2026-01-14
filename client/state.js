@@ -84,6 +84,11 @@ export const state = {
   editingScrollTop: null,
   // Предпочтительная позиция каретки при входе в режим редактирования блока: 'start' | 'end'.
   editingCaretPosition: 'start',
+  // Best-effort: current outbox size (set by sidebar status poll).
+  outboxCount: null,
+  // Best-effort: offline coverage (set by offline coverage poll).
+  offlineArticlesWithDoc: null,
+  offlineArticlesTotal: null,
 };
 
 export let isSavingTitle = false;

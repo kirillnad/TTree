@@ -53,7 +53,39 @@ export async function getCachedArticlesIndex() {
   const db = await getOfflineDbReady();
   const tx = db.transaction(['articles'], 'readonly');
   const store = tx.objectStore('articles');
-  const rows = (await reqToPromise(store.getAll()).catch(() => [])) || [];
+  const READ_TIMEOUT_MS = 1200;
+  let timer = null;
+  const rows = await Promise.race([
+    reqToPromise(store.getAll()),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        try {
+          tx.abort();
+        } catch {
+          // ignore
+        }
+        const err = new Error('IndexedDB read timeout (articles index)');
+        err.name = 'IDBTimeoutError';
+        try {
+          err.idbKind = 'timeout';
+        } catch {
+          // ignore
+        }
+        reject(err);
+      }, READ_TIMEOUT_MS);
+    }),
+  ]).catch((err) => {
+    try {
+      // Normalize the most common cases for callers (UI decides what to do).
+      if (String(err?.name || '') === 'QuotaExceededError') {
+        err.idbKind = 'quota';
+      }
+    } catch {
+      // ignore
+    }
+    throw err;
+  });
+  if (timer) clearTimeout(timer);
   await txDone(tx);
   return rows
     .filter((row) => row && !row.deletedAt)
